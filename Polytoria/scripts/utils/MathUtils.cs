@@ -48,6 +48,7 @@ public static class MathUtils
 		);
 	}
 
+
 	public static Vector3 Vector3DegToRad(Vector3 v)
 	{
 		return new(

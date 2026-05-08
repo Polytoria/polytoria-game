@@ -118,7 +118,6 @@ public class PTQuaternion : IScriptGDObject
 		return FromGDClass(Quaternion.FromEuler(euler));
 	}
 
-
 	[ScriptMethod(ConvertParamsToGD = false)]
 	public static Vector3 ToEuler(PTQuaternion euler)
 	{
