@@ -341,6 +341,8 @@ public partial class NetworkedObject : IScriptObject
 	[ScriptProperty] public PTSignal TreeEntered { get; private set; } = new();
 	[ScriptProperty] public PTSignal TreeExited { get; private set; } = new();
 
+	[ScriptProperty] public PTSignal Destroying { get; private set; } = new();
+
 	public NetworkedObject()
 	{
 		InitializeRpcMethods();
@@ -1845,6 +1847,8 @@ public partial class NetworkedObject : IScriptObject
 		{
 			prei.ChildDeleting.Invoke(this);
 		}
+
+		Destroying.Invoke();
 
 		// Propagate deletion
 		foreach (NetworkedObject item in GetNetworkedChildren())
