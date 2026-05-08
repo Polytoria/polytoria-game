@@ -10,6 +10,35 @@ public sealed partial class TextEditorField : CodeEdit
 {
 	public TextEditorRoot Root = null!;
 
+	[Export] public int FontSizeStep { get; set; } = 2;
+	[Export] public int MinFontSize { get; set; } = 8;
+	[Export] public int MaxFontSize { get; set; } = 72;
+	private int _currentFontSize = 16;
+
+	public override void _Ready()
+	{
+		int size = GetThemeFontSize("font_size", "Label");
+    	_currentFontSize = size > 0 ? size : 16;
+		base._Ready();
+	}
+
+	public override void _Process(double delta)
+	{
+		if (Input.IsActionJustPressed("textedit_zoom_in"))
+		{
+			_currentFontSize = Mathf.Clamp(_currentFontSize + FontSizeStep, MinFontSize, MaxFontSize);
+			AddThemeFontSizeOverride("font_size", _currentFontSize);
+		}
+
+		if (Input.IsActionJustPressed("textedit_zoom_out"))
+		{
+			_currentFontSize = Mathf.Clamp(_currentFontSize - FontSizeStep, MinFontSize, MaxFontSize);
+			AddThemeFontSizeOverride("font_size", _currentFontSize);
+		}
+
+		base._Process(delta);
+	}
+
 	public override void _ConfirmCodeCompletion(bool replace)
 	{
 		int index = GetCodeCompletionSelectedIndex();
