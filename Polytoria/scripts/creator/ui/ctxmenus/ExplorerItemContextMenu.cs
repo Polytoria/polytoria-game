@@ -27,6 +27,11 @@ public partial class ExplorerItemContextMenu : ContextMenu
 			AddIconItem("plus", "Add Child", 1);
 			AddIconItem("script", "Add Script", 2);
 			AddSeparator();
+			if (Target is Dynamic dyn)
+			{
+				AddIconItem("camera", "Go To", 5);
+				AddSeparator();
+			}
 			if (Target.LinkedModel != null)
 			{
 				if (Target.EditableChildren)
@@ -95,6 +100,19 @@ public partial class ExplorerItemContextMenu : ContextMenu
 			case 2: // Add script
 				{
 					CreatorService.Interface.PromptCreateScript(Target);
+					break;
+				}
+			case 5: // Go To
+				{
+					if (World.Current != null)
+					{
+						if (Target is Dynamic dyn)
+						{
+							context.Freelook.GDNode3D.GlobalPosition = dyn.GetGlobalPosition();
+						}
+						;
+					}
+					;
 					break;
 				}
 			case 20: // Cut
