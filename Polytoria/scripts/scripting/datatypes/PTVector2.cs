@@ -24,7 +24,7 @@ public class PTVector2 : IScriptGDObject
 	[ScriptProperty] public static PTVector2 Up { get; private set; } = new() { X = 0, Y = 1 };
 
 	[ScriptProperty] public float Magnitude => vector.Length();
-	[ScriptProperty] public PTVector2 Normalized => FromGDClass(-vector.Normalized());
+	[ScriptProperty] public PTVector2 Normalized => FromGDClass(vector.Normalized());
 	[ScriptProperty] public float SqrMagnitude => vector.LengthSquared();
 
 	public static PTVector2 FromGDClass(Vector2 vec)
