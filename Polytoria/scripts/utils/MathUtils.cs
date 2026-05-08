@@ -12,6 +12,13 @@ namespace Polytoria.Utils;
 /// </summary>
 public static class MathUtils
 {
+
+	// Prevent -0 from returning to be sure no unexpected behavior occurs and because people complain
+	public static float NormalizeZero(float value)
+	{
+		return value == 0f ? 0f : value;
+	}
+
 	public static Vector3 FlipVector3(Vector3 vector3)
 	{
 		vector3.X = -vector3.X;
@@ -32,19 +39,19 @@ public static class MathUtils
 	public static Vector3 FlipEuler(Vector3 polyRot)
 	{
 		Vector3 godotEuler = new(
-			polyRot.X,
-			-polyRot.Y,
-			-polyRot.Z
+			NormalizeZero(polyRot.X),
+			NormalizeZero(-polyRot.Y),
+			NormalizeZero(-polyRot.Z)
 		);
 		return godotEuler;
 	}
 
 	public static Vector3 Vector3RadToDeg(Vector3 v)
 	{
-		return new(
-			Mathf.RadToDeg(v.X),
-			Mathf.RadToDeg(v.Y),
-			Mathf.RadToDeg(v.Z)
+		return new Vector3(
+			NormalizeZero(Mathf.RadToDeg(v.X)),
+			NormalizeZero(Mathf.RadToDeg(v.Y)),
+			NormalizeZero(Mathf.RadToDeg(v.Z))
 		);
 	}
 
