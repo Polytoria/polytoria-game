@@ -13,6 +13,7 @@ public partial class PlayOptionsMenu : Control
 	[Export] private Button _playAtCamBtn = null!;
 	[Export] private Button _stopBtn = null!;
 	[Export] private MenuButton _playerCountMenu = null!;
+	[Export] private CheckBox _clearOnPlay = null!;
 	private PopupMenu _plrCountPopup = null!;
 
 	public override void _Ready()
@@ -66,12 +67,12 @@ public partial class PlayOptionsMenu : Control
 
 	private void OnPlayButtonPressed()
 	{
-		CreatorService.Singleton.StartLocalTest();
+		CreatorService.Singleton.StartLocalTest(false, _clearOnPlay.ButtonPressed);
 	}
 
 	private void OnPlayAtCamPressed()
 	{
-		CreatorService.Singleton.StartLocalTest(true);
+		CreatorService.Singleton.StartLocalTest(true, _clearOnPlay.ButtonPressed);
 	}
 
 	private void OnStopButtonPressed()

@@ -486,7 +486,7 @@ public sealed partial class CreatorService : Node, IScriptObject
 		return scriptName;
 	}
 
-	public async void StartLocalTest(bool atCamera = false)
+	public async void StartLocalTest(bool atCamera = false, bool clearConsole = true)
 	{
 		if (World.Current == null) { PT.PrintErr("World is null, did not test"); return; }
 		World game = World.Current;
@@ -504,7 +504,11 @@ public sealed partial class CreatorService : Node, IScriptObject
 		SessionToLocalTestID.Add(session, debugID);
 		await StartLocalTestOnEntry(session.ProjectFolderPath, game.WorldFilePath!, debugID, GD.RandRange(20000, 30000), false, atCamera ? game.CreatorContext.Freelook.Position : null);
 
-		DebugConsole.Singleton.Clear();
+		if (clearConsole == true)
+		{
+			DebugConsole.Singleton.Clear();
+		}
+
 		LocalTestStarted.Invoke();
 	}
 

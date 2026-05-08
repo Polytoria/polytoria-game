@@ -31,6 +31,7 @@
 [ext_resource type="PackedScene" uid="uid://bfh6n2s5op0nu" path="res://scenes/creator/docks/toolbox/toolbox.tscn" id="26_dfqoe"]
 [ext_resource type="Script" uid="uid://dsmyuj4u8d0kx" path="res://scripts/creator/ui/StatusBar.cs" id="26_xdd36"]
 [ext_resource type="PackedScene" uid="uid://c0dcwpeyvcmot" path="res://scenes/creator/docks/filebrowser/file_browser.tscn" id="27_4n5gq"]
+[ext_resource type="Texture2D" uid="uid://co60jcrmb4bkb" path="res://assets/textures/ui-icons/settings.svg" id="30_4fw2t"]
 [ext_resource type="PackedScene" uid="uid://ca8ul4i0eiuch" path="res://scenes/creator/splash/startup_splash.tscn" id="30_8cbqn"]
 [ext_resource type="Script" uid="uid://c5celm4bxr4vy" path="res://scripts/creator/ui/docks/bottombar/console/DebugConsole.cs" id="30_bc04q"]
 [ext_resource type="PackedScene" uid="uid://msq1k3h4a75p" path="res://scenes/creator/wizard/new_project/new_project.tscn" id="31_87ukk"]
@@ -313,6 +314,13 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4fw2t"]
+bg_color = Color(0.08627451, 0.08627451, 0.08627451, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_y8rg4"]
 resource_name = "FooterTheme"
 content_margin_left = 5.0
@@ -455,7 +463,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 alignment = 2
 
-[node name="PlayOptions" type="PanelContainer" parent="GUI/Menu/Layout/Margin/Layout" unique_id=1850775813 node_paths=PackedStringArray("_playBtn", "_playAtCamBtn", "_stopBtn", "_playerCountMenu")]
+[node name="PlayOptions" type="PanelContainer" parent="GUI/Menu/Layout/Margin/Layout" unique_id=1850775813 node_paths=PackedStringArray("_playBtn", "_playAtCamBtn", "_stopBtn", "_playerCountMenu", "_clearOnPlay")]
 layout_mode = 2
 theme = SubResource("Theme_v5oku")
 theme_override_styles/panel = SubResource("StyleBoxFlat_c7ht3")
@@ -464,6 +472,7 @@ _playBtn = NodePath("Layout/Play")
 _playAtCamBtn = NodePath("Layout/PlayAtCam")
 _stopBtn = NodePath("Layout/Stop")
 _playerCountMenu = NodePath("Layout/Play/MenuButton")
+_clearOnPlay = NodePath("../../../../../Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/HBoxContainer/ConsoleSettings/Panel/VBoxContainer/CheckBox")
 
 [node name="Layout" type="HBoxContainer" parent="GUI/Menu/Layout/Margin/Layout/PlayOptions" unique_id=438009992]
 layout_mode = 2
@@ -1051,11 +1060,11 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_ubkni")
 [node name="Tabs" type="TabContainer" parent="GUI/Splitter/Center/BottomTabs" unique_id=1589727556]
 layout_mode = 2
 size_flags_vertical = 3
+current_tab = 0
 tabs_position = 1
 deselect_enabled = true
 
-[node name="Console" type="MarginContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs" unique_id=259802220 node_paths=PackedStringArray("_richLabel", "_searchEdit", "_clearBtn")]
-visible = false
+[node name="Console" type="MarginContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs" unique_id=259802220 node_paths=PackedStringArray("_richLabel", "_searchEdit", "_clearBtn", "_settingsBtn", "_settingsPanel")]
 custom_minimum_size = Vector2(0, 220)
 layout_mode = 2
 theme_override_constants/margin_left = 8
@@ -1065,7 +1074,9 @@ theme_override_constants/margin_bottom = 8
 script = ExtResource("30_bc04q")
 _richLabel = NodePath("VBoxContainer/RichTextLabel")
 _searchEdit = NodePath("VBoxContainer/HBoxContainer/LineEdit")
-_clearBtn = NodePath("VBoxContainer/HBoxContainer/Button")
+_clearBtn = NodePath("VBoxContainer/HBoxContainer/ClearButton")
+_settingsBtn = NodePath("VBoxContainer/HBoxContainer/ConsoleSettings")
+_settingsPanel = NodePath("VBoxContainer/HBoxContainer/ConsoleSettings/Panel")
 metadata/_tab_index = 0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console" unique_id=681967966]
@@ -1084,7 +1095,7 @@ theme_override_font_sizes/italics_font_size = 14
 theme_override_font_sizes/mono_font_size = 14
 theme_override_styles/normal = SubResource("StyleBoxFlat_8cbqn")
 bbcode_enabled = true
-text = "asdasd"
+text = "Hi"
 scroll_following = true
 vertical_alignment = 2
 selection_enabled = true
@@ -1098,11 +1109,44 @@ layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "Search..."
 
-[node name="Button" type="Button" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/HBoxContainer" unique_id=276167707]
+[node name="ClearButton" type="Button" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/HBoxContainer" unique_id=276167707]
 custom_minimum_size = Vector2(28, 0)
 layout_mode = 2
 icon = ExtResource("22_i1txp")
 expand_icon = true
+
+[node name="ConsoleSettings" type="Button" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/HBoxContainer" unique_id=1299346234]
+custom_minimum_size = Vector2(28, 0)
+layout_mode = 2
+icon = ExtResource("30_4fw2t")
+expand_icon = true
+
+[node name="Panel" type="Panel" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/HBoxContainer/ConsoleSettings" unique_id=2090308794]
+visible = false
+layout_mode = 1
+anchors_preset = -1
+anchor_left = -5.75
+anchor_top = -4.5
+anchor_right = 0.96428573
+anchor_bottom = -0.17857143
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_4fw2t")
+metadata/_edit_use_anchors_ = true
+
+[node name="VBoxContainer" type="VBoxContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/HBoxContainer/ConsoleSettings/Panel" unique_id=589377377]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+metadata/_edit_use_anchors_ = true
+
+[node name="CheckBox" type="CheckBox" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/HBoxContainer/ConsoleSettings/Panel/VBoxContainer" unique_id=149931852]
+layout_mode = 2
+button_pressed = true
+text = "Clear on Play"
 
 [node name="Right" type="PanelContainer" parent="GUI/Splitter" unique_id=528512110]
 custom_minimum_size = Vector2(320, 0)

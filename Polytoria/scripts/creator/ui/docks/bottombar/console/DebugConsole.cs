@@ -27,6 +27,8 @@ public partial class DebugConsole : Control
 	[Export] private RichTextLabel _richLabel = null!;
 	[Export] private LineEdit _searchEdit = null!;
 	[Export] private Button _clearBtn = null!;
+	[Export] private Button _settingsBtn = null!;
+	[Export] private Panel _settingsPanel = null!;
 
 	public static DebugConsole Singleton { get; private set; } = null!;
 
@@ -50,6 +52,7 @@ public partial class DebugConsole : Control
 	{
 		VisibilityChanged += OnVisibilityChanged;
 		_clearBtn.Pressed += Clear;
+		_settingsBtn.Pressed += ToggleSettingsPanel;
 		_searchEdit.TextChanged += _ => OnSearch();
 		_richLabel.Text = "";
 	}
@@ -75,6 +78,11 @@ public partial class DebugConsole : Control
 		SearchQuery = _searchEdit.Text;
 		// Search always requires a full rebuild, filtered view can't be incrementally appended
 		ForceFullRebuild();
+	}
+
+	public void ToggleSettingsPanel()
+	{
+		_settingsPanel.Visible = !_settingsPanel.Visible;
 	}
 
 	public void Clear()
