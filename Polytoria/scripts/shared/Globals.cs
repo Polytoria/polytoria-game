@@ -474,7 +474,11 @@ public sealed partial class Globals : Node
 
 	public async Task WaitAsync(float time)
 	{
-		await ToSignal(GetTree().CreateTimer(time), "timeout");
+		var start = Time.GetTicksUsec();
+		var target = start + (ulong)(time * 1_000_000.0);
+
+		while (Time.GetTicksUsec() < target)
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 	}
 
 	public async Task WaitFrame()
