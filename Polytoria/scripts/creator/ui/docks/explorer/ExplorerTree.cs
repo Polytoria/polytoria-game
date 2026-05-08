@@ -78,11 +78,52 @@ public partial class ExplorerTree : Tree
 				}
 			}
 		}
-		else if (@event.IsActionPressed("rename"))
-		{
-			EditSelected();
-		}
 		base._GuiInput(@event);
+	}
+
+
+	// Less Priority Input Calls
+	public override void _UnhandledKeyInput(InputEvent @event)
+	{
+
+		if (@event is not InputEventKey key)
+		{
+			base._UnhandledKeyInput(@event);
+			return;
+		}
+
+		bool renamePressed = @event.IsActionPressed("rename") ||
+			(key.Keycode == Key.F2 && key.Pressed && !key.Echo);
+
+		if (!renamePressed)
+		{
+			base._UnhandledKeyInput(@event);
+			return;
+		}
+
+		if (GetSelected() == null)
+		{
+			List<Instance> selectedInstances = Root.CreatorContext.Selections.SelectedInstances;
+			if (selectedInstances.Count != 1)
+			{
+				base._UnhandledKeyInput(@event);
+				return;
+			}
+
+			Instance selectedInstance = selectedInstances[0];
+
+			TreeItem? treeItem = Explorer.GetTreeItemFromInstance(selectedInstance);
+			if (treeItem == null)
+			{
+				base._UnhandledKeyInput(@event);
+				return;
+			}
+
+			treeItem.Select(0);
+		}
+
+		AcceptEvent();
+		EditSelected(true);
 	}
 
 	private void OnItemActivated()
