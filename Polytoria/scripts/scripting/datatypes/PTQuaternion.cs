@@ -109,13 +109,14 @@ public class PTQuaternion : IScriptGDObject
 	[ScriptMethod]
 	public static PTQuaternion Euler(float x, float y, float z)
 	{
-		return FromGDClass(Quaternion.FromEuler(new(x, y, z)));
+		return FromGDClass(Quaternion.FromEuler(MathUtils.Vector3DegToRad(new(x, y, z)).FlipEuler()));
+
 	}
 
 	[ScriptMethod]
 	public static PTQuaternion Euler(Vector3 euler)
 	{
-		return FromGDClass(Quaternion.FromEuler(euler));
+		return FromGDClass(Quaternion.FromEuler(euler.DegToRad().FlipEuler()));
 	}
 
 	[ScriptMethod(ConvertParamsToGD = false)]
