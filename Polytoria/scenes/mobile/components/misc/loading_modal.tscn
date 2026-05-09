@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://bnoa0l7kacn1h"]
 
 [ext_resource type="Script" uid="uid://d0ucv04j6hodr" path="res://scripts/mobile/ui/components/misc/MobileLoadingScreen.cs" id="1_70eyq"]
-[ext_resource type="Texture2D" uid="uid://df8xl1871aod7" path="res://assets/textures/mobile/loader.png" id="2_fn01a"]
+[ext_resource type="Texture2D" uid="uid://df8xl1871aod7" path="res://assets/textures/mobile/throbber.png" id="2_fn01a"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_387td"]
 bg_color = Color(0, 0, 0, 0.49803922)

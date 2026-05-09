@@ -9,7 +9,7 @@
 [ext_resource type="Texture2D" uid="uid://4ifji13knxu3" path="res://assets/textures/ui-icons/cube.svg" id="6_sm8h3"]
 [ext_resource type="Texture2D" uid="uid://co60jcrmb4bkb" path="res://assets/textures/ui-icons/settings.svg" id="8_5k855"]
 [ext_resource type="Script" uid="uid://5ta4sgcddjrk" path="res://scripts/creator/ui/splash/components/RecentPlaceList.cs" id="9_yyfa2"]
-[ext_resource type="PackedScene" uid="uid://dbaked5s53qqn" path="res://scenes/shared/loader.tscn" id="10_iwf2e"]
+[ext_resource type="PackedScene" uid="uid://dbaked5s53qqn" path="res://scenes/shared/throbber.tscn" id="10_iwf2e"]
 
 [sub_resource type="StyleBoxLine" id="StyleBoxLine_8cbqn"]
 content_margin_left = 4.0

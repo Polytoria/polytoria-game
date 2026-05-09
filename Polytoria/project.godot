@@ -30,7 +30,7 @@ warnings/check_invalid_track_paths=false
 
 config/name="Polytoria"
 config/version="2.0.0"
-run/main_scene="uid://c2tql65t73ak5"
+run/main_scene="uid://eoil47f2j3al"
 config/use_custom_user_dir=true
 config/custom_user_dir_name="PolytoriaClient"
 config/quit_on_go_back=false

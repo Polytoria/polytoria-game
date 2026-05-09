@@ -78,6 +78,19 @@ body:
     validations:
       required: false
 
+  - type: textarea
+    id: system_specs
+    attributes:
+      label: System details
+      description: List any relevant system details such as OS version, CPU, GPU, RAM, etc.
+      placeholder: |
+        OS: Windows 11 26H1
+        CPU: AMD Ryzen 7 9800X3D
+        GPU: NVIDIA GeForce RTX 5070 Ti
+        RAM: 64 GB
+    validations:
+      required: false
+
   - type: dropdown
     id: build_config
     attributes:

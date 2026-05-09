@@ -8,7 +8,12 @@ using Polytoria.Creator.Managers;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Creator;
 using Polytoria.Datamodel.Interfaces;
+using System;
+using System.Linq;
+using System.Text.Json;
 using System.Collections.Generic;
+using System.IO;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Polytoria.Creator.UI;
 
@@ -17,10 +22,29 @@ public partial class ExplorerItemContextMenu : ContextMenu
 	public required List<Instance> Targets;
 	public Instance? Target;
 
+	private string baseUri = "https://v2docs.polytoria.com/api/types/";
+
+	// docmap
+	private Dictionary<string, HashSet<string>> gameData;
+
+	[RequiresUnreferencedCode("JSON deserialization might require types that cannot be statically analyzed")]
+	[RequiresDynamicCode("JSON deserialization creates dynamic code at runtime which is incompatible with NativeAOT")]
 	public override void _Ready()
 	{
-		bool isSingle = Targets.Count == 1;
+		if (gameData == null)
+		{
+			try
+			{
+				string jsonText = File.ReadAllText("assets/docs/doc_map.json");
+				gameData = JsonSerializer.Deserialize<Dictionary<string, HashSet<string>>>(jsonText);
+			}
+			catch (Exception e)
+			{
+				GD.Print("JSON Load Failed: " + e.Message);
+			}
+		}
 
+		bool isSingle = Targets.Count == 1;
 		if (isSingle)
 		{
 			Target = Targets[0];
@@ -60,9 +84,8 @@ public partial class ExplorerItemContextMenu : ContextMenu
 		if (isSingle)
 		{
 			AddIconItem("route", "Copy Lua Path", 51);
+			AddIconItem("book", "Open Documentation", 59);
 
-			// TODO: Implement Open Documentation
-			//AddIconItem("book", "Open Documentation", 59);
 		}
 		AddSeparator();
 		AddIconItem("lock", "Lock/Unlock", 61);
@@ -171,7 +194,35 @@ public partial class ExplorerItemContextMenu : ContextMenu
 				}
 			case 59: // Open Documentation
 				{
-					//OS.ShellOpen(Target!.ClassName);
+					// Setup
+					string item = Target!.LegacyName;
+					var match = gameData.FirstOrDefault(pair => pair.Value.Contains(item));
+					if (match.Key is null)
+					{
+						// Oh no :(
+						GD.Print($"Couldn't find a category for item: {item}");
+						break;
+					}
+					string category = match.Key;
+
+					// Figuring out the link
+					UriBuilder linkBuilder = new UriBuilder(baseUri);
+					linkBuilder.Path += category;
+					linkBuilder.Path += "/";
+					linkBuilder.Path += item;
+					string finalUri = Convert.ToString(linkBuilder.Uri);
+
+					// Tries to open the Uri
+					Error result = OS.ShellOpen(finalUri);
+					if (result != Error.Ok)
+					{
+						// Oh no :(
+						GD.Print($"Something went wrong trying to open the site: {finalUri}");
+						break;
+					}
+
+					// Everything good
+					GD.Print($"Successfully redirected to the site: {finalUri}");
 					break;
 				}
 			case 61: // Lock/Unlock

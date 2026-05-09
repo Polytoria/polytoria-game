@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://c6o0j3ans0w4w" path="res://scripts/creator/ui/popups/publish/PublishPopup.cs" id="2_lg06a"]
 [ext_resource type="StyleBox" uid="uid://bwksp3bsrvcf6" path="res://resources/styles/card_rounded.tres" id="2_sh75v"]
 [ext_resource type="Theme" uid="uid://ba5b14cxxnwe1" path="res://resources/themes/creator/creator.tres" id="2_uyter"]
-[ext_resource type="PackedScene" uid="uid://dbaked5s53qqn" path="res://scenes/shared/loader.tscn" id="3_lg06a"]
+[ext_resource type="PackedScene" uid="uid://dbaked5s53qqn" path="res://scenes/shared/throbber.tscn" id="3_lg06a"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ksoaw"]
 bg_color = Color(0.12, 0.12, 0.12, 1)

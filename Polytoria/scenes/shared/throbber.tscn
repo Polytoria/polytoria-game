@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dbaked5s53qqn"]
 
-[ext_resource type="Texture2D" uid="uid://cvnqisx60k4jp" path="res://assets/textures/ui/loader.png" id="2_nx7c8"]
+[ext_resource type="Texture2D" uid="uid://cvnqisx60k4jp" path="res://assets/textures/ui/throbber.png" id="2_nx7c8"]
 
 [sub_resource type="Animation" id="Animation_nrq8q"]
 length = 0.001
@@ -40,7 +40,7 @@ _data = {
 &"spin": SubResource("Animation_nx7c8")
 }
 
-[node name="Loader" type="Control" unique_id=116749580]
+[node name="Throbber" type="Control" unique_id=116749580]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 3
 anchors_preset = 0
