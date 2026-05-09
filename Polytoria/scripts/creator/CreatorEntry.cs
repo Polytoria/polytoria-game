@@ -44,7 +44,7 @@ public partial class CreatorEntry : Node
 		cmdargs.TryGetValue("liout", out string? legacyImportOut);
 
 		if (legacyImportIn != null && legacyImportOut != null)
-		{
+		{	
 			_ = ProjectManager.ImportLegacyWorld(legacyImportIn, legacyImportOut, new() { MainWorld = "main.poly", ProjectName = new DirectoryInfo(legacyImportOut).Name });
 		}
 

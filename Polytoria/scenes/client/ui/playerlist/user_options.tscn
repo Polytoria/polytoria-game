@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://3bvn0pq3nupi" path="res://scripts/client/ui/playerlist/UILeaderboardUserOptions.cs" id="1_31oub"]
 [ext_resource type="Texture2D" uid="uid://bdl86yw6153s6" path="res://assets/textures/client/ui/chat/bubble_arrow.png" id="2_3wcmt"]
-[ext_resource type="PackedScene" uid="uid://dbaked5s53qqn" path="res://scenes/shared/loader.tscn" id="2_48ua2"]
+[ext_resource type="PackedScene" uid="uid://dbaked5s53qqn" path="res://scenes/shared/throbber.tscn" id="2_48ua2"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4fqi5"]
 content_margin_left = 8.0

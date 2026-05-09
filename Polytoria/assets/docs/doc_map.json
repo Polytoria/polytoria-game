@@ -1,0 +1,17 @@
+{
+	"values": ["BoolValue", "ColorValue", "InstanceValue", "IntValue", "NumberValue", "StringValue", "ValueBase", "Vector2Value", "Vector3Value"],
+	"world": ["Accessory", "Animator", "CharacterModel", "Clothing", "Dynamic", "Folder", "Image3D", "Marker3D", "Mesh", "Model", "NPC", "Part", "PolytorianModel", "Seat", "Text3D", "Tool", "Truss", "World"],
+	"addons": ["AddonObject", "AddonToolItem", "CreatorAddons", "CreatorGUI", "CreatorHistory", "CreatorInterface", "CreatorSelections"],
+	"assets": ["AudioAsset", "BaseAsset", "BuiltInAudioAsset", "BuiltInFontAsset", "FileLinkAsset", "FontAsset", "GradientImageAsset", "ImageAsset", "MeshAnimationAsset", "MeshAsset", "PTAudioAsset", "PTImageAsset", "PTMeshAnimationAsset", "PTMeshAsset", "ResourceAsset"],
+	"effects": ["Explosion", "Particles"],
+	"elements": ["ColorAdjustModifier", "Decal", "Sound"],
+	"game": ["Camera", "Environment", "Hidden", "Inventory", "Lighting", "Player", "PlayerDefaults", "PlayerGUI", "Players", "ServerHidden", "Stat", "Stats", "Team", "Teams"],
+	"lighting": ["GradientSky", "ImageSky", "PointLight", "ProceduralSky", "SpotLight", "SunLight"],
+	"misc": ["HiddenBase", "Instance", "Light", "LightingModifier", "MeshAnimationInfo", "MissingInstance", "NewServerRequestData", "Sky", "Temporary", "TweenObject"],
+	"networking": ["BindableEvent", "NetMessage", "NetworkEvent", "NetworkedObject"],
+	"physics": ["BodyPosition", "Entity", "Grabbable", "Physical", "RigidBody"],
+	"scripting": ["ClientScript", "Datastore", "ModuleScript", "PTCallback", "PTFunction", "PTSignal", "PTSignalConnection", "Script", "ScriptSharedTable", "ServerScript"],
+	"services": ["AchievementsService", "AssetsService", "CaptureService", "ChatService", "CoreUIService", "CreatorContextService", "CreatorService", "DatastoreService", "FilterService", "HttpService", "IOService", "InputService", "InsertService", "PreferencesService", "PresenceService", "PurchasesService", "ScriptService", "SocialService", "TweenService", "WorldsService"],
+	"types": ["Bounds", "Color", "ColorSeries", "HttpRequestData", "HttpResponseData", "NumberRange", "Quaternion", "RayResult", "Vector2", "Vector3"],
+	"ui": ["GUI", "GUI3D", "UIButton", "UIContainer", "UIField", "UIFlowLayout", "UIGridLayout", "UIHFlow", "UIHLayout", "UIHVLayout", "UIImage", "UILabel", "UIScrollView", "UITextInput", "UIVFlow", "UIVLayout", "UIView", "UIViewport"]
+}

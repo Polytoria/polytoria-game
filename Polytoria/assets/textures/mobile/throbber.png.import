@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://df8xl1871aod7"
-path="res://.godot/imported/loader.png-f0014884d9aa6bb385f72db76035d0fc.ctex"
+path="res://.godot/imported/throbber.png-69c16714273e34eefe2ce5bb02919a8a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/textures/mobile/loader.png"
-dest_files=["res://.godot/imported/loader.png-f0014884d9aa6bb385f72db76035d0fc.ctex"]
+source_file="res://assets/textures/mobile/throbber.png"
+dest_files=["res://.godot/imported/throbber.png-69c16714273e34eefe2ce5bb02919a8a.ctex"]
 
 [params]
 

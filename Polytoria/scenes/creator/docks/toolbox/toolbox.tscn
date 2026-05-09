@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://bfh6n2s5op0nu"]
 
 [ext_resource type="Script" uid="uid://c8ij1usmtljxn" path="res://scripts/creator/ui/docks/toolbox/Toolbox.cs" id="1_akuy4"]
-[ext_resource type="PackedScene" uid="uid://dbaked5s53qqn" path="res://scenes/shared/loader.tscn" id="2_h1wj5"]
+[ext_resource type="PackedScene" uid="uid://dbaked5s53qqn" path="res://scenes/shared/throbber.tscn" id="2_h1wj5"]
 [ext_resource type="Texture2D" uid="uid://c60spvojllrt4" path="res://assets/textures/ui-icons/chevron-left.svg" id="3_n2m24"]
 [ext_resource type="Texture2D" uid="uid://yd5kv6j4l3hp" path="res://assets/textures/ui-icons/chevron-right.svg" id="4_q1vt0"]
 
@@ -89,7 +89,7 @@ _resultsContainer = NodePath("Container/Control/ScrollContainer/MarginContainer/
 _pagNavPrev = NodePath("Container/Pagination/Previous")
 _pagNavLabel = NodePath("Container/Pagination/Label")
 _pagNavNext = NodePath("Container/Pagination/Next")
-_loaderView = NodePath("Container/Control/Loader")
+_loaderView = NodePath("Container/Control/Throbber")
 _noResultView = NodePath("Container/Control/NoResultView")
 
 [node name="Container" type="VBoxContainer" parent="Content" unique_id=807622070]
@@ -164,7 +164,7 @@ theme_override_constants/h_separation = 8
 theme_override_constants/v_separation = 8
 alignment = 1
 
-[node name="Loader" parent="Content/Container/Control" unique_id=116749580 instance=ExtResource("2_h1wj5")]
+[node name="Throbber" parent="Content/Container/Control" unique_id=116749580 instance=ExtResource("2_h1wj5")]
 visible = false
 layout_mode = 1
 anchors_preset = 8

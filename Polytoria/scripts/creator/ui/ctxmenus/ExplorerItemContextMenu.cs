@@ -8,27 +8,40 @@ using Polytoria.Creator.Managers;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Creator;
 using Polytoria.Datamodel.Interfaces;
+using System;
+using System.Linq;
+using System.Text.Json;
 using System.Collections.Generic;
+using System.IO;
 
 namespace Polytoria.Creator.UI;
 
-public partial class ExplorerItemContextMenu : ContextMenu
-{
+public partial class ExplorerItemContextMenu : ContextMenu {
 	public required List<Instance> Targets;
 	public Instance? Target;
-
-	public override void _Ready()
-	{
+	
+	private string baseUri = "https://v2docs.polytoria.com/api/types/"
+	
+	// docmap
+	private Dictionary<string, HashSet<string>> gameData;
+	
+	public override void _Ready() {
+		if (gameData == null) {
+			try {
+				string jsonText = File.ReadAllText("assets/docs/doc_map.json");
+				gameData = JsonSerializer.Deserialize<Dictionary<string, HashSet<string>>>(jsonText);
+			} catch (Exception e) {
+				GD.Print("JSON Load Failed: " + e.Message);
+			}
+		}
+		
 		bool isSingle = Targets.Count == 1;
-
-		if (isSingle)
-		{
+		if (isSingle) {
 			Target = Targets[0];
 			AddIconItem("plus", "Add Child", 1);
 			AddIconItem("script", "Add Script", 2);
 			AddSeparator();
-			if (Target.LinkedModel != null)
-			{
+			if (Target.LinkedModel != null) {
 				if (Target.EditableChildren)
 				{
 					AddIconItem("edit", "Close Model", 41);
@@ -49,44 +62,37 @@ public partial class ExplorerItemContextMenu : ContextMenu
 		AddIconItem("select-all", "Select Children", 25);
 		AddSeparator();
 		AddIconItem("group", "Group", 31);
-		if (Target is IGroup)
-		{
+		if (Target is IGroup) {
 			AddIconItem("ungroup", "Ungroup", 32);
 		}
 
 		// TODO: Implement Model publish
 		//AddIconItem("publish", "Publish", 39);
 
-		if (isSingle)
-		{
+		if (isSingle) {
 			AddIconItem("route", "Copy Lua Path", 51);
-
-			// TODO: Implement Open Documentation
-			//AddIconItem("book", "Open Documentation", 59);
+			AddIconItem("book", "Open Documentation", 59);
+		
 		}
 		AddSeparator();
 		AddIconItem("lock", "Lock/Unlock", 61);
-		if (Target is ServerScript)
-		{
+		if (Target is ServerScript) {
 			AddSeparator();
 			AddIconItem("addon", "Install as addon", 71);
 		}
-		if (!Targets[0].GetType().IsDefined(typeof(StaticAttribute), false))
-		{
+		if (!Targets[0].GetType().IsDefined(typeof(StaticAttribute), false)) {
 			AddSeparator();
 			AddIconItem("trash", "Delete", 101);
 		}
-
+		
 		IdPressed += OnIdPressed;
 	}
-
-	private async void OnIdPressed(long id)
-	{
+	
+	private async void OnIdPressed(long id) {
 		Instance[] targets = [.. Targets];
 		CreatorContextService context = targets[0].Root.CreatorContext;
 
-		switch (id)
-		{
+		switch (id) {
 			case 1: // Add child
 				{
 					InsertMenuPopup menu = CreatorService.Interface.OpenInsertMenu(Target);
@@ -171,16 +177,40 @@ public partial class ExplorerItemContextMenu : ContextMenu
 				}
 			case 59: // Open Documentation
 				{
-					//OS.ShellOpen(Target!.ClassName);
+					// Setup
+					string item = Target!.LegacyName;
+					var match = gameData.FirstOrDefault(pair => pair.Value.Contains(item));
+					if (match.Key is null) {
+						// Oh no :(
+						GD.Print($"Couldn't find a category for item: {item}");
+						break;
+					}
+					string category = match.Key;
+					
+					// Figuring out the link
+					UriBuilder linkBuilder = new UriBuilder(baseUri);
+					linkBuilder.Path += category;
+					linkBuilder.Path += "/";
+					linkBuilder.Path += item;
+					string finalUri = Convert.ToString(linkBuilder.Uri);
+					
+					// Tries to open the Uri
+					Error result = OS.ShellOpen(finalUri);
+					if (result != Error.Ok) {
+						// Oh no :(
+						GD.Print($"Something went wrong trying to open the site: {finalUri}");
+						break;
+					}
+					
+					// Everything good
+					GD.Print($"Successfully redirected to the site: {finalUri}");
 					break;
 				}
 			case 61: // Lock/Unlock
 				{
 					List<Dynamic> dyns = [];
-					foreach (Instance item in targets)
-					{
-						if (item is Dynamic dyn)
-						{
+					foreach (Instance item in targets) {
+						if (item is Dynamic dyn) {
 							dyns.Add(dyn);
 						}
 					}
@@ -189,8 +219,7 @@ public partial class ExplorerItemContextMenu : ContextMenu
 				}
 			case 71: // Install as addon
 				{
-					if (Target is ServerScript s)
-					{
+					if (Target is ServerScript s) {
 						await AddonsManager.InstallAddonFromScript(s);
 					}
 					break;
