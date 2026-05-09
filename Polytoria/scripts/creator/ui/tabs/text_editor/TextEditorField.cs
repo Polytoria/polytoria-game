@@ -22,21 +22,25 @@ public sealed partial class TextEditorField : CodeEdit
 		base._Ready();
 	}
 
-	public override void _Process(double delta)
+	public override void _GuiInput(InputEvent @event)
 	{
-		if (Input.IsActionJustPressed("textedit_zoom_in"))
+		if (@event is InputEventMouseButton mb && mb.Pressed)
 		{
-			_currentFontSize = Mathf.Clamp(_currentFontSize + FontSizeStep, MinFontSize, MaxFontSize);
-			AddThemeFontSizeOverride("font_size", _currentFontSize);
+			if (mb.CtrlPressed && mb.ButtonIndex == MouseButton.WheelUp)
+			{
+				_currentFontSize = Mathf.Clamp(_currentFontSize + FontSizeStep, MinFontSize, MaxFontSize);
+				AddThemeFontSizeOverride("font_size", _currentFontSize);
+				AcceptEvent();
+			}
+			else if (mb.CtrlPressed && mb.ButtonIndex == MouseButton.WheelDown)
+			{
+				_currentFontSize = Mathf.Clamp(_currentFontSize - FontSizeStep, MinFontSize, MaxFontSize);
+				AddThemeFontSizeOverride("font_size", _currentFontSize);
+				AcceptEvent();
+			}
 		}
 
-		if (Input.IsActionJustPressed("textedit_zoom_out"))
-		{
-			_currentFontSize = Mathf.Clamp(_currentFontSize - FontSizeStep, MinFontSize, MaxFontSize);
-			AddThemeFontSizeOverride("font_size", _currentFontSize);
-		}
-
-		base._Process(delta);
+		base._GuiInput(@event);
 	}
 
 	public override void _ConfirmCodeCompletion(bool replace)
