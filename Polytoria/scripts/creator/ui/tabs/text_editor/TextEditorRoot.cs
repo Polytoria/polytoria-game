@@ -309,8 +309,8 @@ public partial class TextEditorRoot : Node
 
 	private void UpdateStatusBar()
 	{
-		int lineIndex = CodeEditor.GetCaretLine();
-		int column = CodeEditor.GetCaretColumn();
+		int lineIndex = CodeEditor.GetCaretLine() + 1;
+		int column = CodeEditor.GetCaretColumn() + 1;
 		_statusBar.Text = $"{Container.OriginTabName}: ({lineIndex}:{column})";
 	}
 
