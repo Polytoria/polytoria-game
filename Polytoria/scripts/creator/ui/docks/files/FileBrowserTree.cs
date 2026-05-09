@@ -96,6 +96,12 @@ public partial class FileBrowserTree : Tree
 			AcceptEvent();
 			CreatorService.Interface.PromptDeleteFiles(GetSelectedFiles());
 		}
+		else if (@event.IsActionPressed("rename"))
+		{
+			AcceptEvent();
+			EditSelected(true);
+		}
+
 		base._GuiInput(@event);
 	}
 
