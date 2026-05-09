@@ -124,7 +124,7 @@ public class DefaultMovement : IPlayerMovement
 			// Always rotate in first person
 			if (snapshot.CamLocked)
 			{
-				Target.Rotation = Target.Rotation with { Y = 180 - Mathf.RadToDeg(snapshot.CameraRotation.Y) };
+				Target.Rotation = Target.Rotation with { Y = 180 + Mathf.RadToDeg(snapshot.CameraRotation.Y) };
 			}
 
 			if (moveDirection != Vector3.Zero && !Target.IsClimbing)
