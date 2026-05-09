@@ -77,12 +77,20 @@ public partial class NPC : Physical
 			if (this is Player plr)
 			{
 				plr.LastVelocity = value;
+				plr.ExternalVelocity = value;
 			}
 
 			CharacterVelocity = value.Flip();
 
 			OnPropertyChanged();
 		}
+	}
+
+	internal void ApplyInternalVelocity(Vector3 velocity)
+	{
+		UpdateVelocityInternal(velocity);
+		CharacterVelocity = velocity.Flip();
+		OnPropertyChanged(nameof(Velocity));
 	}
 
 

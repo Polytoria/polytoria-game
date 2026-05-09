@@ -68,6 +68,9 @@ public class DefaultMovement : IPlayerMovement
 
 		double delta = snapshot.Delta;
 
+		Vector3 externalVelocity = Target.ExternalVelocity;
+		bool hasExternalVelocity = externalVelocity.X != 0 || externalVelocity.Z != 0;
+
 		if (Target.CanMove && !Target.IsDead)
 		{
 			float gdWalkSpeed = Target.WalkSpeed;
@@ -128,12 +131,16 @@ public class DefaultMovement : IPlayerMovement
 				Target.Rotation = Target.Rotation with { Y = 180 - Mathf.RadToDeg(snapshot.CameraRotation.Y) };
 			}
 
+			Vector3 pushVelocity = hasExternalVelocity
+				? externalVelocity.Flip() with { Y = 0 }
+				: Vector3.Zero;
+
 			if (moveDirection != Vector3.Zero && !Target.IsClimbing)
 			{
 				Target.IsMoving = true;
 
-				Target.CharacterVelocity.X = moveDirection.X * gdWalkSpeed;
-				Target.CharacterVelocity.Z = moveDirection.Z * gdWalkSpeed;
+				Target.CharacterVelocity.X = (moveDirection.X * gdWalkSpeed) + pushVelocity.X;
+				Target.CharacterVelocity.Z = (moveDirection.Z * gdWalkSpeed) + pushVelocity.Z;
 
 				if (!snapshot.CamLocked)
 				{
@@ -159,12 +166,18 @@ public class DefaultMovement : IPlayerMovement
 			{
 				Target.IsMoving = false;
 
-				// Stop horizontal movement when no input
-				Target.CharacterVelocity.X = Mathf.MoveToward(Target.CharacterVelocity.X, 0, gdWalkSpeed);
-				Target.CharacterVelocity.Z = Mathf.MoveToward(Target.CharacterVelocity.Z, 0, gdWalkSpeed);
-
+				if (hasExternalVelocity)
+				{
+					Target.CharacterVelocity.X = pushVelocity.X;
+					Target.CharacterVelocity.Z = pushVelocity.Z;
+				}
+				else
+				{
+					// Stop horizontal movement when no input
+					Target.CharacterVelocity.X = Mathf.MoveToward(Target.CharacterVelocity.X, 0, gdWalkSpeed);
+					Target.CharacterVelocity.Z = Mathf.MoveToward(Target.CharacterVelocity.Z, 0, gdWalkSpeed);
+				}
 				Target.Character?.SetAnimSpeed(1);
-				finalState = CharacterModel.CharacterModelStateEnum.Idle;
 			}
 
 			if (!isOnFloor && !Target.IsClimbing)
@@ -191,7 +204,17 @@ public class DefaultMovement : IPlayerMovement
 
 		Target.Character?.SetState(finalState);
 
-		Target.Velocity = Target.CharacterVelocity.Flip();
+		if (hasExternalVelocity)
+		{
+			float decay = Target.WalkSpeed * 60f * (float)delta;
+			Target.ExternalVelocity = new Vector3(
+				Mathf.MoveToward(externalVelocity.X, 0, decay),
+				externalVelocity.Y,
+				Mathf.MoveToward(externalVelocity.Z, 0, decay)
+			);
+		}
+
+		Target.ApplyInternalVelocity(Target.CharacterVelocity.Flip());
 		Target.CharBody3D.Velocity = Target.CharacterVelocity;
 		Target.CharBody3D.MoveAndSlide();
 

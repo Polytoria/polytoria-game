@@ -32,6 +32,7 @@ public sealed partial class Player : NPC
 	internal bool IsMoving = false;
 	internal IPlayerMovement? PlayerMovement;
 	internal Vector3 LastVelocity;
+	internal Vector3 ExternalVelocity;
 
 	private float _respawnTime = 5.0f;
 	private bool _canMove = true;
