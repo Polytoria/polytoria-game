@@ -20,7 +20,7 @@ public partial class ExplorerItemContextMenu : ContextMenu {
 	public required List<Instance> Targets;
 	public Instance? Target;
 	
-	private string baseUri = "https://v2docs.polytoria.com/api/types/"
+	private string baseUri = "https://v2docs.polytoria.com/api/types/";
 	
 	// docmap
 	private Dictionary<string, HashSet<string>> gameData;
