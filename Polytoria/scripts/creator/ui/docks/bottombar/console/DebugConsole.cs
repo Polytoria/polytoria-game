@@ -27,6 +27,10 @@ public partial class DebugConsole : Control
 	[Export] private RichTextLabel _richLabel = null!;
 	[Export] private LineEdit _searchEdit = null!;
 	[Export] private Button _clearBtn = null!;
+	private int _currentFontSize = 14;
+	[Export] public int FontSizeStep { get; set; } = 2;
+	[Export] public int MinFontSize { get; set; } = 8;
+	[Export] public int MaxFontSize { get; set; } = 72;
 
 	public static DebugConsole Singleton { get; private set; } = null!;
 
@@ -52,6 +56,8 @@ public partial class DebugConsole : Control
 		_clearBtn.Pressed += Clear;
 		_searchEdit.TextChanged += _ => OnSearch();
 		_richLabel.Text = "";
+		int size = _richLabel.GetThemeFontSize("normal_font_size", "Label");
+    	_currentFontSize = size > 0 ? size : 16;
 	}
 
 	public override void _Process(double delta)
@@ -68,6 +74,27 @@ public partial class DebugConsole : Control
 			AppendPendingLogs();
 
 		base._Process(delta);
+	}
+	
+	public override void _Input(InputEvent @event)
+	{
+		if (@event is InputEventMouseButton mb && mb.Pressed)
+		{
+			if (!GetGlobalRect().HasPoint(mb.GlobalPosition)) return;
+			
+			if (mb.CtrlPressed && mb.ButtonIndex == MouseButton.WheelUp)
+			{
+				_currentFontSize = Mathf.Clamp(_currentFontSize + FontSizeStep, MinFontSize, MaxFontSize);
+				_richLabel.AddThemeFontSizeOverride("normal_font_size", _currentFontSize);
+				GetViewport().SetInputAsHandled();
+			}
+			else if (mb.CtrlPressed && mb.ButtonIndex == MouseButton.WheelDown)
+			{
+				_currentFontSize = Mathf.Clamp(_currentFontSize - FontSizeStep, MinFontSize, MaxFontSize);
+				_richLabel.AddThemeFontSizeOverride("normal_font_size", _currentFontSize);
+				GetViewport().SetInputAsHandled();
+			}
+		}
 	}
 
 	private void OnSearch()
