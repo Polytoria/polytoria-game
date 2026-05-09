@@ -8,11 +8,12 @@ namespace Polytoria.Creator.UI.TextEditor;
 
 public sealed partial class TextEditorField : CodeEdit
 {
-	public TextEditorRoot Root = null!;
+	private const int FontSizeStep = 2;
+	private const int MinFontSize = 8;
+	private const int MaxFontSize = 72;
 
-	[Export] public int FontSizeStep { get; set; } = 2;
-	[Export] public int MinFontSize { get; set; } = 8;
-	[Export] public int MaxFontSize { get; set; } = 72;
+	public TextEditorRoot Root = null!;
+	
 	private int _currentFontSize = 16;
 
 	public override void _Ready()

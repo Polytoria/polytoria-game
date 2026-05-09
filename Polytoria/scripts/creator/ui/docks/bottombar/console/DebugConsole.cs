@@ -22,15 +22,15 @@ public partial class DebugConsole : Control
 
 	private const int MaxLogLength = 16384;
 
+	private const int FontSizeStep = 2;
+	private const int MinFontSize = 8;
+	private const int MaxFontSize = 72;
+	
 	private readonly StringBuilder _textBuilder = new();
 
 	[Export] private RichTextLabel _richLabel = null!;
 	[Export] private LineEdit _searchEdit = null!;
 	[Export] private Button _clearBtn = null!;
-	private int _currentFontSize = 14;
-	[Export] public int FontSizeStep { get; set; } = 2;
-	[Export] public int MinFontSize { get; set; } = 8;
-	[Export] public int MaxFontSize { get; set; } = 72;
 
 	public static DebugConsole Singleton { get; private set; } = null!;
 
@@ -42,6 +42,7 @@ public partial class DebugConsole : Control
 	private int _lastRenderedIndex = 0;
 	private bool _needsFullRebuild = false;
 	private bool _hasPendingAppend = false;
+	private int _currentFontSize = 14;
 
 	private bool IsFiltering => !string.IsNullOrEmpty(SearchQuery);
 
