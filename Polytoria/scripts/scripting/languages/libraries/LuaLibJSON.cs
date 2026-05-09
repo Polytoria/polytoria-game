@@ -66,6 +66,7 @@ public class LuaLibJSON : IScriptObject
 				return element.GetBoolean();
 
 			case JsonValueKind.Null:
+				return JSONNull.Value;
 			default:
 				return null;
 		}
@@ -75,7 +76,7 @@ public class LuaLibJSON : IScriptObject
 	[ScriptMethod("serialize")]
 	public static string Serialize(object? data)
 	{
-		if (data == null) return Null();
+		if (data == null || data is JSONNull) return "null";
 		try
 		{
 			return JsonSerializer.Serialize(data, typeof(object), LuaJSONGenerationContext.Default);
@@ -95,15 +96,15 @@ public class LuaLibJSON : IScriptObject
 	}
 
 	[ScriptMethod("null")]
-	public static string Null()
+	public static object Null()
 	{
-		return "{}";
+		return JSONNull.Value;
 	}
 
 	[ScriptMethod("isNull")]
-	public static bool IsNull(string str)
+	public static bool IsNull(object? value)
 	{
-		return Parse(str) == null;
+		return value == null || value is JSONNull;
 	}
 }
 
@@ -117,4 +118,21 @@ public class LuaLibJSON : IScriptObject
 [JsonSerializable(typeof(bool))]
 [JsonSerializable(typeof(object))]
 [JsonSerializable(typeof(object[]))]
+[JsonSerializable(typeof(JSONNull))]
 internal partial class LuaJSONGenerationContext : JsonSerializerContext { }
+
+[JsonConverter(typeof(JSONNullConverter))]
+internal sealed class JSONNull : IScriptObject
+{
+	public static readonly JSONNull Value = new();
+	JSONNull() { }
+}
+
+internal sealed class JSONNullConverter : JsonConverter<JSONNull>
+{
+	public override JSONNull? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+		=> throw new NotSupportedException();
+
+	public override void Write(Utf8JsonWriter writer, JSONNull value, JsonSerializerOptions options)
+		=> writer.WriteNullValue();
+}
