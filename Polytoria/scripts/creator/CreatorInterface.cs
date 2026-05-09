@@ -620,21 +620,21 @@ public partial class CreatorInterface : Control, IScriptObject
 			dialog.QueueFree();
 		}
 
-		dialog.FileSelected  += path  => OnPathsSelected([path]);
-		dialog.DirSelected   += path  => OnPathsSelected([path]);
+		dialog.FileSelected += path => OnPathsSelected([path]);
+		dialog.DirSelected += path => OnPathsSelected([path]);
 		dialog.FilesSelected += paths => OnPathsSelected(paths);
-		dialog.Canceled      += ()    => { onCancel?.Invoke(); dialog.QueueFree(); };
+		dialog.Canceled += () => { onCancel?.Invoke(); dialog.QueueFree(); };
 
 		dialog.PopupCentered(new Vector2I(800, 600));
 	}
-	
+
 	private static FileDialog.FileModeEnum MapFileMode(DisplayServer.FileDialogMode mode) => mode switch
 	{
-		DisplayServer.FileDialogMode.OpenFile  => FileDialog.FileModeEnum.OpenFile,
+		DisplayServer.FileDialogMode.OpenFile => FileDialog.FileModeEnum.OpenFile,
 		DisplayServer.FileDialogMode.OpenFiles => FileDialog.FileModeEnum.OpenFiles,
-		DisplayServer.FileDialogMode.OpenDir   => FileDialog.FileModeEnum.OpenDir,
-		DisplayServer.FileDialogMode.SaveFile  => FileDialog.FileModeEnum.SaveFile,
-		_                                      => FileDialog.FileModeEnum.OpenFile,
+		DisplayServer.FileDialogMode.OpenDir => FileDialog.FileModeEnum.OpenDir,
+		DisplayServer.FileDialogMode.SaveFile => FileDialog.FileModeEnum.SaveFile,
+		_ => FileDialog.FileModeEnum.OpenFile,
 	};
 
 	public static void ToggleFullscreen()
