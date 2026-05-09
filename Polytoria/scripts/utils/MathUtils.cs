@@ -21,7 +21,8 @@ public static class MathUtils
 
 	public static Vector3 FlipVector3(Vector3 vector3)
 	{
-		vector3.X = -vector3.X;
+		// Flip Z to convert between Polytoria's +Z forward and Godot's -Z forward
+		vector3.Z = -vector3.Z;
 		return vector3;
 	}
 

@@ -34,7 +34,7 @@ public class PTQuaternion : IScriptGDObject
 	[ScriptMethod]
 	public static PTQuaternion New()
 	{
-		return FromGDClass(new Quaternion(0, 0, 0, 0));
+		return Identity;
 	}
 
 	[ScriptMethod]
@@ -91,7 +91,8 @@ public class PTQuaternion : IScriptGDObject
 	[ScriptMethod(ConvertParamsToGD = false)]
 	public static float Angle(PTQuaternion a, PTQuaternion b)
 	{
-		return a.quat.AngleTo(b.quat);
+		// Angle still Works with Deg
+		return Mathf.RadToDeg(a.quat.AngleTo(b.quat));
 	}
 
 	[ScriptMethod]
@@ -192,11 +193,11 @@ public class PTQuaternion : IScriptGDObject
 	public static PTQuaternion LookRotation(Vector3 forward, Vector3 upwards)
 	{
 		forward = forward.Normalized();
+		upwards = upwards.Normalized(); // 5 Hours wasted only for this line to miss
 
-		Vector3 right = upwards.Cross(forward).Normalized();
-		Vector3 up = forward.Cross(right);
+		// Godot expects -Z as forward direction internally
+		var basis = Basis.LookingAt(forward, upwards);
 
-		Basis basis = new(right, up, forward);
 		return FromGDClass(basis.GetRotationQuaternion());
 	}
 
