@@ -80,7 +80,7 @@ public partial class TextEditorRoot : Node
 
 		CreatorSettings.Singleton.GetSettingProperty("CodeEditor.IndentationMode")!.ValueChanged += OnIndentSettingsChanged;
 		CreatorSettings.Singleton.GetSettingProperty("CodeEditor.IndentationSize")!.ValueChanged += OnIndentSettingsChanged;
-		OnIndentSettingsChanged(new object());
+		OnIndentSettingsChanged();
 
 		CodeEditor.CodeCompletionPrefixes = [".", ":", "\n", ",", " ", "("];
 		CodeEditor.CodeCompletionEnabled = true;
@@ -106,7 +106,7 @@ public partial class TextEditorRoot : Node
 		}
 	}
 
-	private void OnIndentSettingsChanged(object _)
+	private void OnIndentSettingsChanged(object? _ = null)
 	{
 		IndentationModeEnum indentationMode = CreatorSettings.Singleton.GetSetting<IndentationModeEnum>("CodeEditor.IndentationMode");
 		int indentationSize = CreatorSettings.Singleton.GetSetting<int>("CodeEditor.IndentationSize");
