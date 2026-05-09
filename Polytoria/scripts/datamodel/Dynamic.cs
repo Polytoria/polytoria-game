@@ -64,11 +64,11 @@ public partial class Dynamic : Instance
 	{
 		get
 		{
-			return GetGlobalPosition().Flip();
+			return GetGlobalPosition();
 		}
 		set
 		{
-			SetGlobalPosition(value.Flip());
+			SetGlobalPosition(value);
 			if (AutoUpdateNetTransform)
 			{
 				UpdateNetTransformReliable();
@@ -85,11 +85,11 @@ public partial class Dynamic : Instance
 			Basis globalBasis = GetGlobalTransform().Basis;
 			Quaternion q = globalBasis.GetRotationQuaternion();
 
-			return MathUtils.Vector3RadToDeg(q.GetEuler()).FlipEuler();
+			return MathUtils.Vector3RadToDeg(q.GetEuler());
 		}
 		set
 		{
-			GDNode3D.GlobalRotationDegrees = value.FlipEuler().SanitizeNaN();
+			GDNode3D.GlobalRotationDegrees = value.SanitizeNaN();
 			if (AutoUpdateNetTransform)
 			{
 				UpdateNetTransformReliable();
@@ -126,11 +126,11 @@ public partial class Dynamic : Instance
 	{
 		get
 		{
-			return GetLocalPosition().Flip();
+			return GetLocalPosition();
 		}
 		set
 		{
-			SetLocalPosition(value.Flip());
+			SetLocalPosition(value);
 			if (AutoUpdateNetTransform)
 			{
 				UpdateNetTransformReliable();
@@ -144,11 +144,11 @@ public partial class Dynamic : Instance
 	{
 		get
 		{
-			return GDNode3D.RotationDegrees.FlipEuler();
+			return GDNode3D.RotationDegrees;
 		}
 		set
 		{
-			GDNode3D.RotationDegrees = value.FlipEuler().SanitizeNaN();
+			GDNode3D.RotationDegrees = value.SanitizeNaN();
 			if (AutoUpdateNetTransform)
 			{
 				UpdateNetTransformReliable();
@@ -182,10 +182,10 @@ public partial class Dynamic : Instance
 	[ScriptProperty, CloneIgnore, NoSync]
 	public Quaternion Quaternion
 	{
-		get => GetGlobalTransform().Basis.GetRotationQuaternion().Flip();
+		get => GetGlobalTransform().Basis.GetRotationQuaternion();
 		set
 		{
-			Quaternion q = value.Flip();
+			Quaternion q = value;
 			GDNode3D.GlobalBasis = new(q);
 			OnPropertyChanged();
 		}
@@ -194,10 +194,10 @@ public partial class Dynamic : Instance
 	[ScriptProperty, CloneIgnore, NoSync]
 	public Quaternion LocalQuaternion
 	{
-		get => GetLocalTransform().Basis.GetRotationQuaternion().Flip();
+		get => GetLocalTransform().Basis.GetRotationQuaternion();
 		set
 		{
-			Quaternion q = value.Flip();
+			Quaternion q = value;
 			GDNode3D.Basis = new(q);
 			OnPropertyChanged();
 		}
@@ -234,9 +234,9 @@ public partial class Dynamic : Instance
 		}
 	}
 
-	[ScriptProperty] public Vector3 Forward => GetGlobalTransform().Basis.Z.Normalized().Flip();
-	[ScriptProperty] public Vector3 Right => -GetGlobalTransform().Basis.X.Normalized().Flip();
-	[ScriptProperty] public Vector3 Up => GetGlobalTransform().Basis.Y.Normalized().Flip();
+	[ScriptProperty] public Vector3 Forward => GetGlobalTransform().Basis.Z.Normalized();
+	[ScriptProperty] public Vector3 Right => -GetGlobalTransform().Basis.X.Normalized();
+	[ScriptProperty] public Vector3 Up => GetGlobalTransform().Basis.Y.Normalized();
 
 	public override Node CreateGDNode()
 	{
@@ -423,7 +423,7 @@ public partial class Dynamic : Instance
 			throw new InvalidOperationException("LookAt Target is invalid");
 		}
 
-		GDNode3D.LookAt(pos.Flip(), up);
+		GDNode3D.LookAt(pos, up);
 
 		// switch coordinates system 
 		GDNode3D.RotateY(Mathf.Pi);

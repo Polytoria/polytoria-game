@@ -269,6 +269,9 @@ public static class XmlFormat
 							return;
 						}
 
+						// Flip axis on dynamics
+						PolyFormat.MigrateAxis(_propName, ref value);
+
 						if (item.Class == typeof(Part))
 						{
 							if (value is int idx)

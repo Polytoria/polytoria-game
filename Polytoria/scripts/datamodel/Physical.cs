@@ -7,7 +7,6 @@ using Polytoria.Attributes;
 using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
-using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -220,7 +219,7 @@ public partial class Physical : Dynamic
 		{
 			if (this is NPC npc)
 			{
-				return npc.CharacterVelocity.Flip();
+				return npc.CharacterVelocity;
 			}
 
 			return _velocity;
@@ -229,7 +228,7 @@ public partial class Physical : Dynamic
 		{
 			_velocity = value;
 
-			var setto = _velocity.Flip();
+			var setto = _velocity;
 
 			if (this is Player plr)
 			{
@@ -1148,7 +1147,7 @@ public partial class Physical : Dynamic
 	[ScriptMethod]
 	public void AddForce(Vector3 force, ForceModeEnum mode = ForceModeEnum.Force)
 	{
-		ApplyAddForce(force.Flip(), mode);
+		ApplyAddForce(force, mode);
 	}
 
 	internal virtual void ApplyAddForce(Vector3 force, ForceModeEnum mode) { throw new NotImplementedException(ClassName + " does not support this force function"); }
@@ -1156,7 +1155,7 @@ public partial class Physical : Dynamic
 	[ScriptMethod]
 	public void AddTorque(Vector3 force, ForceModeEnum mode = ForceModeEnum.Force)
 	{
-		ApplyAddTorque(force.Flip(), mode);
+		ApplyAddTorque(force, mode);
 	}
 
 	internal virtual void ApplyAddTorque(Vector3 force, ForceModeEnum mode) { throw new NotImplementedException(ClassName + " does not support this force function"); }
@@ -1164,7 +1163,7 @@ public partial class Physical : Dynamic
 	[ScriptMethod]
 	public void AddForceAtPosition(Vector3 force, Vector3 position, ForceModeEnum mode = ForceModeEnum.Force)
 	{
-		ApplyAddForceAtPosition(force.Flip(), position.Flip(), mode);
+		ApplyAddForceAtPosition(force, position, mode);
 	}
 
 	internal virtual void ApplyAddForceAtPosition(Vector3 force, Vector3 position, ForceModeEnum mode) { throw new NotImplementedException(ClassName + " does not support this force function"); }
@@ -1172,7 +1171,7 @@ public partial class Physical : Dynamic
 	[ScriptMethod]
 	public void AddRelativeForce(Vector3 force, ForceModeEnum mode = ForceModeEnum.Force)
 	{
-		ApplyAddRelativeForce(force.Flip(), mode);
+		ApplyAddRelativeForce(force, mode);
 	}
 
 	internal virtual void ApplyAddRelativeForce(Vector3 force, ForceModeEnum mode) { throw new NotImplementedException(ClassName + " does not support this force function"); }
@@ -1180,7 +1179,7 @@ public partial class Physical : Dynamic
 	[ScriptMethod]
 	public void AddRelativeTorque(Vector3 torque, ForceModeEnum mode = ForceModeEnum.Force)
 	{
-		ApplyAddRelativeTorque(torque.Flip(), mode);
+		ApplyAddRelativeTorque(torque, mode);
 	}
 
 	internal virtual void ApplyAddRelativeTorque(Vector3 torque, ForceModeEnum mode) { throw new NotImplementedException(ClassName + " does not support this force function"); }

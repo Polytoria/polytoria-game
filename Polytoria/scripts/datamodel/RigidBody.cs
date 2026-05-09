@@ -28,11 +28,11 @@ public partial class RigidBody : Physical
 	{
 		get
 		{
-			return GDRigidBody.LinearVelocity.Flip();
+			return GDRigidBody.LinearVelocity;
 		}
 		set
 		{
-			GDRigidBody.LinearVelocity = value.Flip();
+			GDRigidBody.LinearVelocity = value;
 			OnPropertyChanged();
 		}
 	}
@@ -210,7 +210,7 @@ public partial class RigidBody : Physical
 		}
 		else if (mode == ForceModeEnum.VelocityChange)
 		{
-			Velocity = force.Flip();
+			Velocity = force;
 		}
 		else
 		{
@@ -258,7 +258,7 @@ public partial class RigidBody : Physical
 		}
 		else if (mode == ForceModeEnum.VelocityChange)
 		{
-			Velocity = force.Flip();
+			Velocity = force;
 		}
 		else
 		{

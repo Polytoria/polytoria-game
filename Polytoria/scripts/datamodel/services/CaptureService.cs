@@ -217,7 +217,7 @@ public sealed partial class CaptureService : Instance
 			guiOverlay.GDNode.Reparent(subview);
 		}
 
-		pivot.GlobalPosition = pos.Flip();
+		pivot.GlobalPosition = pos;
 		pivot.GlobalRotationDegrees = rot.FlipEuler();
 		cam.RotationDegrees = new Vector3(0, 180, 0);
 		if (photoSize != null && photoSize != Vector2.Zero && !(photoSize > _photoSizeLimit))

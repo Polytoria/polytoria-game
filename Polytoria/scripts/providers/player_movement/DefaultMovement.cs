@@ -1,6 +1,5 @@
 using Godot;
 using Polytoria.Datamodel;
-using Polytoria.Utils;
 
 namespace Polytoria.Providers.PlayerMovement;
 
@@ -140,7 +139,7 @@ public class DefaultMovement : IPlayerMovement
 					// Apply rotation by move direction
 					Target.Rotation = Target.Rotation with
 					{
-						Y = Mathf.RadToDeg(Mathf.LerpAngle(Mathf.DegToRad(Target.Rotation.Y), Mathf.Atan2(-Target.CharacterVelocity.X, Target.CharacterVelocity.Z), (float)(delta * NPC.BodyRotateLerp)))
+						Y = Mathf.RadToDeg(Mathf.LerpAngle(Mathf.DegToRad(Target.Rotation.Y), Mathf.Atan2(Target.CharacterVelocity.X, Target.CharacterVelocity.Z), (float)(delta * NPC.BodyRotateLerp)))
 					};
 				}
 
@@ -191,7 +190,7 @@ public class DefaultMovement : IPlayerMovement
 
 		Target.Character?.SetState(finalState);
 
-		Target.Velocity = Target.CharacterVelocity.Flip();
+		Target.Velocity = Target.CharacterVelocity;
 		Target.CharBody3D.Velocity = Target.CharacterVelocity;
 		Target.CharBody3D.MoveAndSlide();
 
