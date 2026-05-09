@@ -956,7 +956,15 @@ public class LuaMetatable : LuaObject
 
 			// All fixed params beyond args must have defaults
 			for (int i = args.Length; i < fixedCount; i++)
-				if (!eligible[i].HasDefaultValue) { compatible = false; break; }
+			{
+				if (!eligible[i].HasDefaultValue)
+				{
+					// Allow missing args if the param accepts null
+					Type pt = eligible[i].ParameterType;
+					bool acceptsNull = !pt.IsValueType || Nullable.GetUnderlyingType(pt) != null;
+					if (!acceptsNull) { compatible = false; break; }
+				}
+			}
 
 			for (int i = 0; i < args.Length; i++)
 			{

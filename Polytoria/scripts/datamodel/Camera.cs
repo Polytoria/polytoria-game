@@ -938,7 +938,7 @@ public sealed partial class Camera : Dynamic
 		{
 			if (t is Dynamic dyn)
 			{
-				Aabb bounds = dyn.GetBounds();
+				Aabb bounds = dyn.CalculateBounds();
 				if (first)
 				{
 					combinedBounds = bounds;
