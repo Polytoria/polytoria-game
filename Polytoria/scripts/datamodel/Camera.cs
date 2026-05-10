@@ -668,11 +668,11 @@ public sealed partial class Camera : Dynamic
 				switch (btnEvent2.ButtonIndex)
 				{
 					case MouseButton.WheelUp:
-						_targetZoom = _distance - (ScrollSensitivity / 5);
+						_targetZoom -= ScrollSensitivity / 5;
 						break;
 
 					case MouseButton.WheelDown:
-						_targetZoom = _distance + (ScrollSensitivity / 5);
+						_targetZoom += ScrollSensitivity / 5;
 						break;
 				}
 			}
