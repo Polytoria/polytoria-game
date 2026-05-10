@@ -195,10 +195,12 @@ public partial class TextEditorRoot : Node
 		}
 		else if (@event.IsActionPressed("textedit_find") || @event.IsActionPressed("textedit_replace"))
 		{
+			CodeEditor.AcceptEvent();
 			_finder.Open(CodeEditor.GetSelectedText());
 		}
 		else if (@event.IsActionPressed("ui_cancel"))
 		{
+			CodeEditor.AcceptEvent();
 			_finder.Close();
 		}
 		else
