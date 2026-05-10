@@ -81,7 +81,7 @@ public partial class UIView : UIField
 		NodeControl.AddThemeStyleboxOverride("panel", _styleBox);
 		BorderColor = new(0, 0, 0);
 		Color = new(1, 1, 1);
-		BorderWidth = 2;
+		BorderWidth = 0;
 		CornerRadius = 0;
 		base.Init();
 	}

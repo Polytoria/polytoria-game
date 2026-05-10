@@ -572,10 +572,12 @@ public static partial class PolyFormat
 				val = DeserializePropValue(propVal, propType);
 			}
 
-			// Flip axis on dynamics, for version 2.0.0s
+			string curVer = loadContext.RootData.Version;
+
 			if (SemVersion.Parse(loadContext.RootData.Version, SemVersionStyles.Any)
-					.ComparePrecedenceTo(SemVersion.Parse("2.0.0")) <= 0)
+				.ComparePrecedenceTo(SemVersion.Parse("2.0.0")) < 0 && !curVer.EndsWith("+dev"))
 			{
+				GD.Print("Semver detected, migrating");
 				MigrateAxis(propName, ref val);
 			}
 
@@ -961,6 +963,14 @@ public static partial class PolyFormat
 		else if ((propName == nameof(Dynamic.Rotation) || propName == nameof(Dynamic.LocalRotation) || propName == nameof(Physical.AngularVelocity)) && val is Vector3 vrot3)
 		{
 			val = vrot3.FlipEuler();
+		}
+		else if ((propName == nameof(UIField.PositionRelative) || propName == nameof(UIField.PivotPoint)) && val is Vector2 v2)
+		{
+			val = new Vector2(v2.X, 1 - v2.Y);
+		}
+		else if ((propName == nameof(UIField.PositionOffset)) && val is Vector2 vo2)
+		{
+			val = new Vector2(vo2.X, -vo2.Y);
 		}
 	}
 

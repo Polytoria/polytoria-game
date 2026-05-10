@@ -349,12 +349,12 @@ public partial class UIField : Instance
 		PreRecomputeChildTransforms();
 
 		NodeControl.Size = size;
-		NodeControl.PivotOffsetRatio = new(_pivotPoint.X, 1f - _pivotPoint.Y);
+		NodeControl.PivotOffsetRatio = new(_pivotPoint.X, _pivotPoint.Y);
 
 		if (Parent is not UIContainer)
 		{
 			Vector2 selfSize = AbsoluteSize;
-			Vector2 computedPos = new Vector2(_positionOffset.X, -_positionOffset.Y) + (parentSize * new Vector2(_positionRelative.X, 1 - _positionRelative.Y)) - (new Vector2(_pivotPoint.X, 1 - _pivotPoint.Y) * selfSize);
+			Vector2 computedPos = new Vector2(_positionOffset.X, _positionOffset.Y) + (parentSize * new Vector2(_positionRelative.X, _positionRelative.Y)) - (new Vector2(_pivotPoint.X, _pivotPoint.Y) * selfSize);
 
 			NodeControl.Position = computedPos;
 			NodeControl.Rotation = -Mathf.DegToRad(_rotation);
