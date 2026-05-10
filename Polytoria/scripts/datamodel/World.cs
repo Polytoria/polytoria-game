@@ -124,6 +124,7 @@ public sealed partial class World : Instance
 	public IOService IO => FindChild<IOService>("IO")!;
 	public WorldsService Worlds => FindChild<WorldsService>("Worlds")!;
 	public SocialService Social => FindChild<SocialService>("Social")!;
+	public AudioService Audio => FindChild<AudioService>("Audio")!;
 #if CREATOR
 	public CreatorContextService CreatorContext => FindChild<CreatorContextService>("CreatorContext")!;
 #endif
@@ -769,6 +770,14 @@ public sealed partial class World : Instance
 			socialService.NetworkParent = this;
 		}
 
+		AudioService? audioService = FindChild<AudioService>("Audio");
+		if (audioService == null)
+		{
+			audioService = Globals.LoadInstance<AudioService>(Root);
+			audioService.NameOverride = "Audio";
+			audioService.NetworkParent = this;
+		}
+
 		// Sub childrens
 		Camera? camera = Environment.FindChild<Camera>("Camera");
 
@@ -824,6 +833,7 @@ public sealed partial class World : Instance
 			ioService,
 			worldsService,
 			socialService,
+			audioService,
 		];
 
 		var targetPositions = orderedChildren

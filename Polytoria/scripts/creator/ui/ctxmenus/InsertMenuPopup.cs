@@ -51,6 +51,7 @@ public partial class InsertMenuPopup : PopupPanel
 			"Image3D",
 			"Decal",
 			"Sound",
+			"SoundGroup",
 			"Particles",
 			"NPC",
 			"GUI3D",
@@ -86,6 +87,22 @@ public partial class InsertMenuPopup : PopupPanel
 			"ImageSky",
 			"GradientSky",
 			"ProceduralSky"
+		},
+		[new() { Title = "Audio Effects", RecommendOn = [typeof(SoundGroup)] }] = new()
+		{
+			"ReverbEffect",
+			"ChorusEffect",
+			"CompressorEffect",
+			"LowPassEffect",
+			"HighPassEffect",
+			"DistortionEffect",
+			"PitchShiftEffect",
+			"PhaserEffect",
+			"LimiterEffect",
+			"EQEffect",
+			"DelayEffect",
+			"AmplifyEffect",
+			"PanEffect",
 		},
 		[new() { Title = "Physics" }] = new()
 		{

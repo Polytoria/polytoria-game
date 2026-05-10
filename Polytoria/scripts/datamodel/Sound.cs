@@ -31,6 +31,7 @@ public sealed partial class Sound : Dynamic
 	private bool _paused = false;
 	private float _pitch = 1f;
 	private float _maxDistance = 60f;
+	private SoundGroup? _soundGroup;
 
 	private AudioStream? _currentStream;
 
@@ -164,6 +165,20 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
+	[Editable, ScriptProperty]
+	public SoundGroup? SoundGroup
+	{
+		get => _soundGroup;
+		set
+		{
+			_soundGroup?.UnregisterSound(this);
+			_soundGroup = value;
+			_soundGroup?.RegisterSound(this);
+			UpdateBus();
+			OnPropertyChanged();
+		}
+	}
+
 	[ScriptProperty]
 	public float Time
 	{
@@ -209,8 +224,16 @@ public sealed partial class Sound : Dynamic
 
 	public override void PreDelete()
 	{
+		_soundGroup?.UnregisterSound(this);
+		_soundGroup = null;
 		CleanupAudioPlayer();
 		base.PreDelete();
+	}
+
+	internal void ClearSoundGroup()
+	{
+		_soundGroup = null;
+		UpdateBus();
 	}
 
 	private void CreateAudioPlayer()
@@ -224,7 +247,8 @@ public sealed partial class Sound : Dynamic
 		{
 			_audioPlayer = new AudioStreamPlayer
 			{
-				Stream = _currentStream
+				Stream = _currentStream,
+				PlaybackType = AudioServer.PlaybackType.Stream
 			};
 			GDNode.AddChild(_audioPlayer, @internal: Node.InternalMode.Back);
 			_audioPlayer.Finished += OnPlayerFinished;
@@ -233,10 +257,10 @@ public sealed partial class Sound : Dynamic
 		{
 			_audioPlayer3D = new AudioStreamPlayer3D
 			{
-				Stream = _currentStream
+				Stream = _currentStream,
+				PlaybackType = AudioServer.PlaybackType.Stream
 			};
 			GDNode.AddChild(_audioPlayer3D, @internal: Node.InternalMode.Back);
-			// check issue https://github.com/godotengine/godot/issues/23485
 			_audioPlayer3D.AttenuationFilterCutoffHz = 20500;
 			_audioPlayer3D.Finished += OnPlayerFinished;
 		}
@@ -264,6 +288,7 @@ public sealed partial class Sound : Dynamic
 		UpdateMaxDistance();
 		UpdateVolume();
 		UpdatePitch();
+		UpdateBus();
 	}
 
 	private void UpdateMaxDistance()
@@ -281,6 +306,18 @@ public sealed partial class Sound : Dynamic
 	{
 		_audioPlayer?.PitchScale = _pitch;
 		_audioPlayer3D?.PitchScale = _pitch;
+	}
+
+	private void UpdateBus()
+	{
+		string bus = "Master";
+		if (_soundGroup != null && _soundGroup.BusIndex >= 0)
+			bus = AudioServer.GetBusName(_soundGroup.BusIndex);
+
+		if (_audioPlayer != null)
+			_audioPlayer.Bus = bus;
+		if (_audioPlayer3D != null)
+			_audioPlayer3D.Bus = bus;
 	}
 
 	private void CreatePTAudioAsset()
