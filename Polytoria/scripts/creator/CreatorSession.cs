@@ -48,6 +48,8 @@ public partial class CreatorSession : Node, IDisposable
 	private bool _vscodeFileWritten = false;
 	private bool _fileScanQueued = false;
 
+	private bool _cleanupQueued = false;
+
 	public string ProjectFolderPath = "";
 	public string ProjectFilePath = "";
 	public string OldIndexFilePath = "";
@@ -233,12 +235,13 @@ public partial class CreatorSession : Node, IDisposable
 		StartBackupTimer();
 	}
 
-	public World OpenWorld(string filePath, World? worldOverride = null)
+	public World OpenWorld(string filePath, World? worldOverride = null, bool migrateCoords = false)
 	{
 		filePath = filePath.SanitizePath();
 		if (WorldPathToRoot.ContainsKey(filePath)) throw new InvalidOperationException("World already opened");
 		string placePath = GlobalizePath(filePath);
 		if (!File.Exists(placePath)) throw new FileNotFoundException("World file not found");
+		_cleanupQueued = false;
 		byte[] worldData = File.ReadAllBytes(placePath);
 
 		World root = worldOverride ?? Globals.LoadInstance<World>();
@@ -291,7 +294,7 @@ public partial class CreatorSession : Node, IDisposable
 
 			if (OpenedWorlds.Count == 0)
 			{
-				Dispose();
+				QueueDispose();
 			}
 		}
 
@@ -312,7 +315,7 @@ public partial class CreatorSession : Node, IDisposable
 			// Load world
 			try
 			{
-				PolyFormat.LoadWorld(root, worldData);
+				PolyFormat.LoadWorld(root, worldData, migrateCoords);
 				root.InvokeReady();
 			}
 			catch (Exception ex)
@@ -332,6 +335,22 @@ public partial class CreatorSession : Node, IDisposable
 		AddonsManager.RunAddons(root);
 
 		return root;
+	}
+
+	public void QueueDispose()
+	{
+		_cleanupQueued = true;
+		PT.CallDeferred(() =>
+		{
+			if (_cleanupQueued)
+				Dispose();
+		});
+	}
+
+	public void CloseWorld(string filePath)
+	{
+		if (!WorldPathToRoot.TryGetValue(filePath, out var root)) return;
+		root.ForceDelete();
 	}
 
 	public World? OpenMainWorld(World? worldOverride = null)

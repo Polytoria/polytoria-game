@@ -256,20 +256,20 @@ public static partial class PolyFormat
 		}
 	}
 
-	public static void LoadWorld(World root, byte[] rawdata)
+	public static void LoadWorld(World root, byte[] rawdata, bool forceMigrateCords = false)
 	{
 		// Empty world file
 		if (rawdata.Length == 0) return;
 
 		PolyRootData data = ReadRootDataBytes(rawdata);
-		InternalLoadWorld(root, data);
+		InternalLoadWorld(root, data, forceMigrateCords);
 	}
 
-	private static void InternalLoadWorld(World root, PolyRootData data)
+	private static void InternalLoadWorld(World root, PolyRootData data, bool forceMigrateCords = false)
 	{
 		Stopwatch sw = new();
 		sw.Start();
-		PolyLoadContext context = new() { RootData = data, Root = root };
+		PolyLoadContext context = new() { RootData = data, Root = root, ForceCordMigration = forceMigrateCords };
 
 		// Empty world
 		if (data.Objects == null || data.Objects.Length == 0) return;
@@ -574,8 +574,8 @@ public static partial class PolyFormat
 
 			string curVer = loadContext.RootData.Version;
 
-			if (SemVersion.Parse(loadContext.RootData.Version, SemVersionStyles.Any)
-				.ComparePrecedenceTo(SemVersion.Parse("2.0.0")) < 0 && !curVer.EndsWith("+dev"))
+			if ((SemVersion.Parse(loadContext.RootData.Version, SemVersionStyles.Any)
+				.ComparePrecedenceTo(SemVersion.Parse("2.0.0")) < 0) || loadContext.ForceCordMigration)
 			{
 				GD.Print("Semver detected, migrating");
 				MigrateAxis(propName, ref val);
@@ -895,6 +895,7 @@ public static partial class PolyFormat
 		public HashSet<string> LoadingModelChain = [];
 		public Dictionary<string, string> IndexToFile = [];
 		public Dictionary<string, PolyRootData> LoadedModel = [];
+		public bool ForceCordMigration = false;
 	}
 
 	public partial class PolyRoot

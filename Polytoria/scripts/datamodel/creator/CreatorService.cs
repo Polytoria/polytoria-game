@@ -577,6 +577,13 @@ public sealed partial class CreatorService : Node, IScriptObject
 		DebugServer.SendTerminateProgram();
 	}
 
+	public static void MigrateCoordinates(World root)
+	{
+		string worldFilePath = root.WorldFilePath!;
+		root.ForceDelete();
+		root.LinkedSession.OpenWorld(worldFilePath, migrateCoords: true);
+	}
+
 	private void CleanupLocalTest()
 	{
 		foreach (string item in LocalTestWorlds)
