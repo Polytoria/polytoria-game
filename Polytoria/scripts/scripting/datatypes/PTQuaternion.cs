@@ -97,7 +97,7 @@ public class PTQuaternion : IScriptGDObject
 	[ScriptMethod]
 	public static PTQuaternion AngleAxis(float angle, Vector3 axis)
 	{
-		return FromGDClass(new Quaternion(axis, angle));
+		return FromGDClass(new Quaternion(axis.FlipEuler(), Mathf.DegToRad(angle)).Flip());
 	}
 
 	[ScriptMethod(ConvertParamsToGD = false)]
@@ -109,27 +109,27 @@ public class PTQuaternion : IScriptGDObject
 	[ScriptMethod]
 	public static PTQuaternion Euler(float x, float y, float z)
 	{
-		return FromGDClass(Quaternion.FromEuler(new(x, y, z)));
+		return FromGDClass(Quaternion.FromEuler(MathUtils.Vector3DegToRad(new Vector3(x, y, z).FlipEuler())).Flip());
 	}
 
 	[ScriptMethod]
 	public static PTQuaternion Euler(Vector3 euler)
 	{
-		return FromGDClass(Quaternion.FromEuler(euler));
+		return FromGDClass(Quaternion.FromEuler(MathUtils.Vector3DegToRad(euler.FlipEuler())).Flip());
 	}
 
 
 	[ScriptMethod(ConvertParamsToGD = false)]
 	public static Vector3 ToEuler(PTQuaternion euler)
 	{
-		return MathUtils.Vector3RadToDeg(euler.quat.GetEuler()).FlipEuler();
+		return MathUtils.Vector3RadToDeg(euler.quat.Flip().GetEuler()).FlipEuler();
 	}
 
 	[ScriptMethod]
 	public static PTQuaternion FromToRotation(Vector3 fromDirection, Vector3 toDirection)
 	{
-		Vector3 from = fromDirection.Normalized();
-		Vector3 to = toDirection.Normalized();
+		Vector3 from = fromDirection.Normalized().FlipEuler();
+		Vector3 to = toDirection.Normalized().FlipEuler();
 
 		float dot = from.Dot(to);
 
@@ -143,12 +143,12 @@ public class PTQuaternion : IScriptGDObject
 			Vector3 perpendicular = from.Cross(Vector3.Up);
 			if (perpendicular.LengthSquared() < 1e-6f)
 				perpendicular = from.Cross(Vector3.Right);
-			return FromGDClass(new Quaternion(perpendicular.Normalized(), Mathf.Pi));
+			return FromGDClass(new Quaternion(perpendicular.Normalized().Flip(), Mathf.Pi));
 		}
 
 		Vector3 axis = from.Cross(to).Normalized();
 		float angle = Mathf.Acos(Mathf.Clamp(dot, -1.0f, 1.0f));
-		return FromGDClass(new Quaternion(axis, angle));
+		return FromGDClass(new Quaternion(axis, angle).Flip());
 	}
 
 	[ScriptMethod(ConvertParamsToGD = false)]
@@ -191,13 +191,13 @@ public class PTQuaternion : IScriptGDObject
 	[ScriptMethod]
 	public static PTQuaternion LookRotation(Vector3 forward, Vector3 upwards)
 	{
-		forward = forward.Normalized();
+		forward = forward.Normalized().Flip();
 
-		Vector3 right = upwards.Cross(forward).Normalized();
+		Vector3 right = upwards.Normalized().Flip().Cross(forward);
 		Vector3 up = forward.Cross(right);
 
 		Basis basis = new(right, up, forward);
-		return FromGDClass(basis.GetRotationQuaternion());
+		return FromGDClass(basis.GetRotationQuaternion().Flip());
 	}
 
 	[ScriptMethod(ConvertParamsToGD = false)]
