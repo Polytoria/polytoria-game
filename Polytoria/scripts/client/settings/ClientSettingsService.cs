@@ -44,68 +44,72 @@ public sealed partial class ClientSettingsService : Node, ISettingsContext
 			AddChild(benchmarker);
 
 			PT.Print("Graphics auto-detection selected preset: " + autoPreset);
-			Entry.NetworkEssentialsReady += () =>
+
+			if (Entry != null)
 			{
-				World? world = World.Current;
-				if (world == null)
+				Entry.NetworkEssentialsReady += () =>
 				{
-					PT.PrintErr("Cannot profile graphics because there is no world");
-					return;
-				}
-
-				bool profiling = false;
-
-				void StartProfile()
-				{
-					if (profiling)
+					World? world = World.Current;
+					if (world == null)
 					{
+						PT.PrintErr("Cannot profile graphics because there is no world");
 						return;
 					}
-					profiling = true;
-					GraphicsPreset current = Get<GraphicsPreset>(ClientSettingKeys.Graphics.Preset);
-					if (current == GraphicsPreset.Custom) return;
-					PT.Print("Starting graphics benchmark...");
-					benchmarker.Start();
-					benchmarker.Finished += (avgFps) =>
+
+					bool profiling = false;
+
+					void StartProfile()
 					{
-						profiling = false;
-						PT.Print($"Graphics benchmark finished. Average FPS: {avgFps}");
-						if (avgFps <= 40f)
+						if (profiling)
 						{
-							GraphicsPreset lower = current switch
-							{
-								GraphicsPreset.Ultra => GraphicsPreset.High,
-								GraphicsPreset.High => GraphicsPreset.Medium,
-								GraphicsPreset.Medium => GraphicsPreset.Low,
-								_ => current
-							};
-
-							ApplyGraphicsPreset(lower);
+							return;
 						}
-						else if (avgFps >= 55f)
+						profiling = true;
+						GraphicsPreset current = Get<GraphicsPreset>(ClientSettingKeys.Graphics.Preset);
+						if (current == GraphicsPreset.Custom) return;
+						PT.Print("Starting graphics benchmark...");
+						benchmarker.Start();
+						benchmarker.Finished += (avgFps) =>
 						{
-							GraphicsPreset higher = current switch
+							profiling = false;
+							PT.Print($"Graphics benchmark finished. Average FPS: {avgFps}");
+							if (avgFps <= 40f)
 							{
-								GraphicsPreset.Low => GraphicsPreset.Medium,
-								GraphicsPreset.Medium => GraphicsPreset.High,
-								_ => current
-							};
+								GraphicsPreset lower = current switch
+								{
+									GraphicsPreset.Ultra => GraphicsPreset.High,
+									GraphicsPreset.High => GraphicsPreset.Medium,
+									GraphicsPreset.Medium => GraphicsPreset.Low,
+									_ => current
+								};
 
-							ApplyGraphicsPreset(higher);
-						}
-					};
-				}
+								ApplyGraphicsPreset(lower);
+							}
+							else if (avgFps >= 55f)
+							{
+								GraphicsPreset higher = current switch
+								{
+									GraphicsPreset.Low => GraphicsPreset.Medium,
+									GraphicsPreset.Medium => GraphicsPreset.High,
+									_ => current
+								};
+
+								ApplyGraphicsPreset(higher);
+							}
+						};
+					}
 
 
-				if (world.IsLoaded)
-				{
-					StartProfile();
-				}
-				else
-				{
-					world.Loaded.Connect(StartProfile);
-				}
-			};
+					if (world.IsLoaded)
+					{
+						StartProfile();
+					}
+					else
+					{
+						world.Loaded.Connect(StartProfile);
+					}
+				};
+			}
 		}
 
 		RenderingMethodOption renderingMethod = Get<RenderingMethodOption>(ClientSettingKeys.Graphics.RenderingMethod);

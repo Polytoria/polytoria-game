@@ -57,6 +57,10 @@ public partial class TextEditorRoot : Node
 			await _completion.CloseScriptAsync(Container.TargetFilePathAbsolute);
 			_completion.PublishDiagnostics -= OnPublishDiagnostics;
 		}
+
+		CreatorSettings.Singleton.GetSettingProperty("CodeEditor.IndentationMode")!.ValueChanged -= OnIndentSettingsChanged;
+		CreatorSettings.Singleton.GetSettingProperty("CodeEditor.IndentationSize")!.ValueChanged -= OnIndentSettingsChanged;
+
 		base._ExitTree();
 	}
 
@@ -73,6 +77,10 @@ public partial class TextEditorRoot : Node
 		CodeEditor.ClearUndoHistory();
 		CodeEditor.TextChanged += OnCodeEditTextChanged;
 		InitSyntaxHighlighter();
+
+		CreatorSettings.Singleton.GetSettingProperty("CodeEditor.IndentationMode")!.ValueChanged += OnIndentSettingsChanged;
+		CreatorSettings.Singleton.GetSettingProperty("CodeEditor.IndentationSize")!.ValueChanged += OnIndentSettingsChanged;
+		OnIndentSettingsChanged();
 
 		CodeEditor.CodeCompletionPrefixes = [".", ":", "\n", ",", " ", "("];
 		CodeEditor.CodeCompletionEnabled = true;
@@ -96,6 +104,14 @@ public partial class TextEditorRoot : Node
 		{
 			await _completion.OpenScriptAsync(Container.TargetFilePathAbsolute);
 		}
+	}
+
+	private void OnIndentSettingsChanged(object? _ = null)
+	{
+		IndentationModeEnum indentationMode = CreatorSettings.Singleton.GetSetting<IndentationModeEnum>("CodeEditor.IndentationMode");
+		int indentationSize = CreatorSettings.Singleton.GetSetting<int>("CodeEditor.IndentationSize");
+		CodeEditor.IndentUseSpaces = indentationMode == IndentationModeEnum.Spaces;
+		CodeEditor.IndentSize = indentationSize;
 	}
 
 	private async void OnPublishDiagnostics(string path, List<LspDiagnostic> diagnostics)
