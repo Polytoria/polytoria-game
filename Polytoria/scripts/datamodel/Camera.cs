@@ -459,7 +459,7 @@ public sealed partial class Camera : Dynamic
 				}
 			}
 
-			_currentZoom = (float)Mathf.Lerp(_currentZoom, _targetZoom, delta * ScrollLerpSpeed);
+			_currentZoom = (float)Mathf.Lerp(_currentZoom, _targetZoom, MathUtils.ExpDecay((float)delta, ScrollLerpSpeed));
 			float finalizedZoom = _currentZoom;
 
 			_turnY2.Position = new Vector3(0, 0, _currentZoom);
@@ -502,7 +502,7 @@ public sealed partial class Camera : Dynamic
 			// Apply position/rotation
 			if (FollowLerp)
 			{
-				GDNode3D.GlobalPosition = GDNode3D.GlobalPosition.Lerp(posSetto, (float)(delta * LerpSpeed));
+				GDNode3D.GlobalPosition = GDNode3D.GlobalPosition.Lerp(posSetto, MathUtils.ExpDecay((float)delta, LerpSpeed));
 			}
 			else
 			{

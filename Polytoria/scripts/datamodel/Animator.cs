@@ -213,7 +213,7 @@ public partial class Animator : Instance
 
 		// Smooth step toward target
 		float currentValue = (float)AnimationTree.Get(DynBlendPath);
-		float newValue = Mathf.Lerp(currentValue, _targetDynBlendValue, (float)delta * BlendSpeed);
+		float newValue = Mathf.Lerp(currentValue, _targetDynBlendValue, MathUtils.ExpDecay((float)delta, BlendSpeed));
 		AnimationTree.Set(DynBlendPath, newValue);
 
 		// Check if pending oneshot became active

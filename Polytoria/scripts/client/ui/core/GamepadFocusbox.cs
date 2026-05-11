@@ -53,6 +53,7 @@ public partial class GamepadFocusbox : Control
 			_targetPos = focusOwner.GlobalPosition;
 			_targetSize = focusOwner.Size;
 
+			// TODO: Use MathUtils.ExpDecay to calculate the alpha. I don't think it'd break anything, but I can't currently test this.
 			GlobalPosition = GlobalPosition.Lerp(_targetPos - OutlineOffset / 2, (float)(delta * FocusLerpSpeed));
 			Size = Size.Lerp(_targetSize + OutlineOffset, (float)(delta * FocusLerpSpeed));
 
