@@ -88,7 +88,7 @@ public partial class NPC : Physical
 	internal void ApplyInternalVelocity(Vector3 velocity)
 	{
 		UpdateVelocityInternal(velocity);
-		CharacterVelocity = velocity.Flip();
+		CharacterVelocity = velocity;
 		OnPropertyChanged(nameof(Velocity));
 	}
 

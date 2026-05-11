@@ -131,7 +131,7 @@ public class DefaultMovement : IPlayerMovement
 			}
 
 			Vector3 pushVelocity = hasExternalVelocity
-				? externalVelocity.Flip() with { Y = 0 }
+				? externalVelocity with { Y = 0 }
 				: Vector3.Zero;
 
 			if (moveDirection != Vector3.Zero && !Target.IsClimbing)
