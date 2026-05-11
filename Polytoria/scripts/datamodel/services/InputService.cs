@@ -472,12 +472,6 @@ public sealed partial class InputService : Instance
 		{
 			float axisVal = joypadMotion.AxisValue;
 
-			// flip em axis. (up thumbstick: -1 -> 1)
-			if (joypadMotion.Axis == JoyAxis.LeftY || joypadMotion.Axis == JoyAxis.RightY)
-			{
-				axisVal = -axisVal;
-			}
-
 			_keyWeight[btnEnum] = axisVal;
 			AxisValueChanged.Invoke(btnEnum, axisVal);
 		}
