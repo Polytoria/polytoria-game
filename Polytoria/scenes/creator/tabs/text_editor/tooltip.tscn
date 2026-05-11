@@ -15,6 +15,7 @@ corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
 [node name="Tooltip" type="Control" unique_id=121033142 node_paths=PackedStringArray("_label", "_tooltipPanel")]
+top_level = true
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -29,7 +30,7 @@ _maxDimensions = Vector2(600, 150)
 _label = NodePath("Panel/DescriptionText")
 _tooltipPanel = NodePath("Panel")
 _widthOffset = 0.0
-_positionOffset = Vector2(-8, 8)
+_positionOffset = Vector2(-8, 0)
 
 [node name="Panel" type="PanelContainer" parent="." unique_id=233449887]
 layout_mode = 1

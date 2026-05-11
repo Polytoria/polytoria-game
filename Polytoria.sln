@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Polytoria.Tests", "Polytori
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkdownBBCodeConversion", "MarkdownBBCodeConversion\MarkdownBBCodeConversion.csproj", "{259E411D-FB8B-4583-8E32-BA6FEBBDB5E9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkdownBBCodeConversion.Tests", "MarkdownBBCodeConversion.Tests\MarkdownBBCodeConversion.Tests.csproj", "{7D0EB34E-7AD7-4098-963F-79BFAE8951EF}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Polytoria.SourceGen", "Polytoria.SourceGen\Polytoria.SourceGen.csproj", "{0851C6B0-6B81-4CE6-A240-BA4E8CB0B402}"
 EndProject
 Global
@@ -35,6 +37,12 @@ Global
 		{259E411D-FB8B-4583-8E32-BA6FEBBDB5E9}.ExportDebug|Any CPU.Build.0 = Release|Any CPU
 		{259E411D-FB8B-4583-8E32-BA6FEBBDB5E9}.ExportRelease|Any CPU.ActiveCfg = Release|Any CPU
 		{259E411D-FB8B-4583-8E32-BA6FEBBDB5E9}.ExportRelease|Any CPU.Build.0 = Release|Any CPU
+		{7D0EB34E-7AD7-4098-963F-79BFAE8951EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D0EB34E-7AD7-4098-963F-79BFAE8951EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D0EB34E-7AD7-4098-963F-79BFAE8951EF}.ExportDebug|Any CPU.ActiveCfg = Release|Any CPU
+		{7D0EB34E-7AD7-4098-963F-79BFAE8951EF}.ExportDebug|Any CPU.Build.0 = Release|Any CPU
+		{7D0EB34E-7AD7-4098-963F-79BFAE8951EF}.ExportRelease|Any CPU.ActiveCfg = Release|Any CPU
+		{7D0EB34E-7AD7-4098-963F-79BFAE8951EF}.ExportRelease|Any CPU.Build.0 = Release|Any CPU
 		{0851C6B0-6B81-4CE6-A240-BA4E8CB0B402}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0851C6B0-6B81-4CE6-A240-BA4E8CB0B402}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0851C6B0-6B81-4CE6-A240-BA4E8CB0B402}.ExportDebug|Any CPU.ActiveCfg = Debug|Any CPU

@@ -7,6 +7,9 @@ namespace Polytoria.Creator.UI.TextEditor;
 
 public partial class TextEditorTooltip : Control
 {
+	/// <summary>
+	/// Stores the maximum allowed dimensions for the associated element, in pixels.
+	/// </summary>
 	[Export(PropertyHint.None, "suffix:px")]
 	private Vector2 _maxDimensions;
 
@@ -16,11 +19,21 @@ public partial class TextEditorTooltip : Control
 	[Export]
 	private PanelContainer _tooltipPanel = null!;
 
-	[Export]
-	private float _widthOffset = 4.0f;
+	/// <summary>
+	/// Gets or sets the number of pixels to offset the width.
+	/// If, at some point, the tooltip causes unwanted line breaks, increasing this value may help.
+	/// It is best to keep this value as low as possible, as it adds extra space in the tooltip.
+	/// </summary>
+	[Export(PropertyHint.None, "suffix:px")]
+	private float _widthOffset = 0f;
 
-	[Export]
-	private Vector2 _positionOffset = new(8, 8);
+	/// <summary>
+	/// Gets or sets the offset applied to the position, in pixels.
+	/// The tooltip is shown at the bottom left of the hovered character,
+	/// so a positive X value moves it to the right, and a positive Y value moves it down.
+	/// </summary>
+	[Export(PropertyHint.None, "suffix:px")]
+	private Vector2 _positionOffset = new(0, 0);
 
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
@@ -33,7 +46,6 @@ public partial class TextEditorTooltip : Control
 	/// <summary>
 	/// Updates the size of the tooltip. This requires waiting for about 2 frames.
 	/// </summary>
-	/// <returns></returns>
 	private async Task UpdateSize()
 	{
 		var stylebox = _tooltipPanel.GetThemeStylebox("panel");
@@ -82,7 +94,18 @@ public partial class TextEditorTooltip : Control
 		Size = _tooltipPanel.Size;
 	}
 
-	public async Task UpdateTooltip(string text)
+	/// <summary>
+	/// Updates the tooltip text and repositions the tooltip relative to the specified character rectangle.
+	/// </summary>
+	/// <remarks>
+	/// If the tooltip text is changed during the update, the method will not reposition or show the
+	/// tooltip. The tooltip is automatically hidden if the provided text is null, empty, or consists only of
+	/// whitespace.
+	/// </remarks>
+	/// <param name="text">The text to display in the tooltip. If null, empty, or whitespace, the tooltip will be hidden.</param>
+	/// <param name="charGlobalRect">The global rectangle representing the character's position and size, used to position the tooltip.</param>
+	/// <returns>A task that represents the asynchronous operation.</returns>
+	public async Task UpdateTooltip(string text, Rect2 charGlobalRect)
 	{
 		Visible = false;
 
@@ -92,8 +115,6 @@ public partial class TextEditorTooltip : Control
 			return;
 		}
 
-		Vector2 tooltipPos = GetGlobalMousePosition() + _positionOffset;
-
 		_label.Text = text;
 		await UpdateSize();
 
@@ -101,6 +122,20 @@ public partial class TextEditorTooltip : Control
 		if (_label.Text != text)
 		{
 			return;
+		}
+
+		Vector2 tooltipPos = charGlobalRect.Position + new Vector2(0, charGlobalRect.Size.Y) + _positionOffset;
+		Vector2 windowBounds = GetViewportRect().Size;
+
+		// If the tooltip goes beyond the screen, cap the position to be within the screen bounds
+		if (tooltipPos.X + Size.X > windowBounds.X)
+		{
+			tooltipPos.X = windowBounds.X - Size.X;
+		}
+
+		if (tooltipPos.Y + Size.Y > windowBounds.Y)
+		{
+			tooltipPos.Y = windowBounds.Y - Size.Y;
 		}
 
 		GlobalPosition = tooltipPos;

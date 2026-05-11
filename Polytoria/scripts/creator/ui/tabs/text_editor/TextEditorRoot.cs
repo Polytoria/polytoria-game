@@ -274,7 +274,6 @@ public partial class TextEditorRoot : Node
 
 	private void OnTooltipMouseEntered()
 	{
-		PT.Print("Mouse is in tooltip!");
 		_hideTooltipCts?.Cancel();
 	}
 
@@ -282,7 +281,6 @@ public partial class TextEditorRoot : Node
 	{
 		if (!Tooltip.GetGlobalRect().HasPoint(Tooltip.GetGlobalMousePosition()))
 		{
-			PT.Print("Mouse is out of tooltip!");
 			StartDelayedHideTooltip();
 		}
 	}
@@ -313,6 +311,20 @@ public partial class TextEditorRoot : Node
 		}
 	}
 
+	/// <summary>
+	/// Handles the event when a symbol is hovered in the code editor and displays relevant tooltip information for the
+	/// symbol at the specified line and column.
+	/// </summary>
+	/// <remarks>
+	/// If the hovered position is not over a valid symbol character or the code completion service is not
+	/// ready, the tooltip is hidden or not updated. The tooltip is only shown when hovering over a valid symbol, and its
+	/// content is retrieved asynchronously using Luau-LSP.
+	/// 
+	/// P.S. To this day, I am still baffled by why line and column are longs here instead of ints.
+	/// </remarks>
+	/// <param name="symbol">The symbol being hovered over in the code editor.</param>
+	/// <param name="line">The zero-based line number where the symbol is located.</param>
+	/// <param name="column">The zero-based column number within the line where the symbol is located.</param>
 	private async void OnSymbolHovered(string symbol, long line, long column)
 	{
 		_hideTooltipCts?.Cancel();
@@ -363,9 +375,6 @@ public partial class TextEditorRoot : Node
 
 		if (tooltipDisplayMD == null)
 		{
-			PT.Print("There is nothing to show in the tooltip.");
-			_prevHoverLine = null;
-			Tooltip.Visible = false;
 			return;
 		}
 
@@ -396,7 +405,9 @@ public partial class TextEditorRoot : Node
 
 		string tooltipDisplay = Conversions.MarkdownToBBCode(tooltipDisplayMD);
 
-		await Tooltip.UpdateTooltip(tooltipDisplay);
+		Rect2 hoveredCharDimensions = CodeEditor.GetRectAtLineColumn(hoveredSymbolLine, hoveredSymbolCol);
+		Rect2 globalCharDimensions = new(CodeEditor.GlobalPosition + hoveredCharDimensions.Position, hoveredCharDimensions.Size);
+		await Tooltip.UpdateTooltip(tooltipDisplay, globalCharDimensions);
 	}
 
 	private void InitSyntaxHighlighter()

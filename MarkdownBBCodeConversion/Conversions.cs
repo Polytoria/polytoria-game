@@ -1,4 +1,4 @@
-using System.Reflection.Emit;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
 namespace MarkdownBBCodeConversion;
@@ -9,25 +9,24 @@ public static partial class Conversions
 
 	public static string MarkdownToBBCode(string mdText)
 	{
-		string result = mdText;
-
+		// We match: Fenced Code OR Inline Code OR "The rest"
+		// The (?:(?!```|`).)+ part ensures "other" text is captured in large chunks.
 		return SeparateCodeRegex().Replace(mdText, m =>
 		{
-			// If it's a Fenced Code Block (captured by the first group)
+			// Group 1: Fenced code block
 			if (m.Groups[1].Success)
 			{
-				// Convert the wrapper to BBCode [code]
+				// Strip the ``` markers and wrap in [code]
 				return CodeBlockMDRegex().Replace(m.Value, "[code]$1[/code]");
 			}
 
-			// If it's Inline Code (captured by the second group)
+			// Group 2: Inline code
 			if (m.Groups[2].Success)
 			{
-				// Also convert the wrapper to BBCode [code]
 				return InlineCodeMDRegex().Replace(m.Value, "[code]$1[/code]");
 			}
 
-			// Otherwise, it's regular text: perform your standard conversions here
+			// Group 3: Regular text (the "other" group)
 			string text = m.Value;
 			text = BoldMDRegex().Replace(text, "[b]$1[/b]");
 			text = ItalicsMDRegex().Replace(text, "[i]$1[/i]");
@@ -38,25 +37,31 @@ public static partial class Conversions
 		});
 	}
 
-	public static string BBCodeToMarkdown(string bbcodeText)
-	{
-		throw new NotImplementedException();
-	}
-
-	[GeneratedRegex(@"(?s)(```[^\r\n]*\r?\n.*?\r?\n```)|(`.*?`)|(?<other>.+?)")]
+	[ExcludeFromCodeCoverage]
+	[GeneratedRegex(@"(?s)(```.*?```)|(`.*?`)|(?<other>(?:(?!```|`).)+)")]
 	private static partial Regex SeparateCodeRegex();
 
-	[GeneratedRegex(@"```[^\r\n]*\r?\n(.*?)\r?\n```", RegexOptions.Singleline)]
+	[ExcludeFromCodeCoverage]
+	[GeneratedRegex(@"(?s)```[^\r\n]*\r?\n(.*?)\r?\n```")]
 	private static partial Regex CodeBlockMDRegex();
 
+	[ExcludeFromCodeCoverage]
 	[GeneratedRegex(@"\*\*(.*?)\*\*")]
 	private static partial Regex BoldMDRegex();
-	[GeneratedRegex(@"\*(.*?)\*")]
+
+	[ExcludeFromCodeCoverage]
+	[GeneratedRegex(@"(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)")]
 	private static partial Regex ItalicsMDRegex();
+
+	[ExcludeFromCodeCoverage]
 	[GeneratedRegex(@"`(.*?)`")]
 	private static partial Regex InlineCodeMDRegex();
+
+	[ExcludeFromCodeCoverage]
 	[GeneratedRegex(@"^(\-\-\-|\*\*\*|___)$", RegexOptions.Multiline)]
 	private static partial Regex HorizontalRuleMDRegex();
+
+	[ExcludeFromCodeCoverage]
 	[GeneratedRegex(@"~~(.*?)~~")]
 	private static partial Regex StrikethroughMDRegex();
 }
