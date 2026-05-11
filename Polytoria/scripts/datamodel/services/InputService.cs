@@ -6,6 +6,7 @@ using Godot;
 using Polytoria.Attributes;
 using Polytoria.Client.UI;
 using Polytoria.Datamodel.Data;
+using Polytoria.Datamodel.Resources;
 using Polytoria.Enums;
 using Polytoria.Networking;
 using Polytoria.Scripting;
@@ -217,12 +218,21 @@ public sealed partial class InputService : Instance
 		{MouseButton.Middle, "Mouse2" },
 	};
 
+	public readonly Dictionary<Input.CursorShape, string> CompatCursorShapeMapping = new()
+	{
+		{Input.CursorShape.Arrow, "Arrow" },
+		{Input.CursorShape.PointingHand, "Click" },
+		{Input.CursorShape.Drag, "Grab" },
+		{Input.CursorShape.CanDrop, "Grabbing" },
+	};
+
 	private readonly Dictionary<string, bool> _legacyKeydowns = [];
 	private readonly Dictionary<string, bool> _legacyFrameKeydowns = [];
 	private readonly Dictionary<KeyCodeEnum, bool> _keyStates = [];
 	private readonly Dictionary<KeyCodeEnum, float> _keyWeight = [];
 	private readonly Dictionary<MouseButton, bool> _mouseBtnDown = [];
 	private readonly Dictionary<MouseButton, bool> _mouseFrameBtnDown = [];
+	private readonly Dictionary<Input.CursorShape, (Texture2D? texture, Vector2 hotspot)> _customCursors = new();
 	private float _mouseScrollDelta = 0;
 
 	public override void Init()
@@ -296,12 +306,25 @@ public sealed partial class InputService : Instance
 		base.PreDelete();
 	}
 
-	private static void SetupCursors()
+	private void SetupCursors()
 	{
 		Input.SetCustomMouseCursor(GD.Load<Image>("res://assets/textures/client/cursor/arrow.png"), Input.CursorShape.Arrow);
 		Input.SetCustomMouseCursor(GD.Load<Image>("res://assets/textures/client/cursor/click.png"), Input.CursorShape.PointingHand);
 		Input.SetCustomMouseCursor(GD.Load<Image>("res://assets/textures/client/cursor/grab.png"), Input.CursorShape.Drag);
 		Input.SetCustomMouseCursor(GD.Load<Image>("res://assets/textures/client/cursor/grabbing.png"), Input.CursorShape.CanDrop);
+	}
+
+	private void RecomputeCursors()
+	{
+	    SetupCursors();
+
+	    if (IsGameFocused == true)
+	    {
+	        foreach (var (shape, (texture, hotspot)) in _customCursors)
+	        {
+	            Input.SetCustomMouseCursor(texture, shape, hotspot);
+	        }
+	    }
 	}
 
 	private void OnPeerPreInit(int peerID)
@@ -371,7 +394,9 @@ public sealed partial class InputService : Instance
 				GameUnfocused?.Invoke();
 			}
 			RecomputeMouseMode();
+			RecomputeCursors();
 		}
+
 		ProcessInputs();
 		base.Process(delta);
 	}
@@ -553,6 +578,44 @@ public sealed partial class InputService : Instance
 			}
 		}
 		return null;
+	}
+
+	[ScriptMethod]
+	public void SetCustomMouseCursor(ImageAsset cursor, CursorShapeEnum shape, Vector2? hotspot)
+	{
+	    Input.CursorShape godotShape = shape switch
+	    {
+	        CursorShapeEnum.Arrow    => Input.CursorShape.Arrow,
+	        CursorShapeEnum.Click    => Input.CursorShape.PointingHand,
+	        CursorShapeEnum.Grab     => Input.CursorShape.Drag,
+	        CursorShapeEnum.Grabbing => Input.CursorShape.CanDrop,
+	        _                        => Input.CursorShape.Arrow
+	    };
+
+	    Vector2 resolvedHotspot = hotspot ?? Vector2.Zero;
+
+	    if (cursor == null)
+	    {
+	        _customCursors.Remove(godotShape);
+	        RecomputeCursors();
+	        return;
+	    }
+
+	    void apply(Resource? res)
+	    {
+	        _customCursors[godotShape] = ((Texture2D?)res, resolvedHotspot);
+	        RecomputeCursors();
+	    }
+
+	    if (cursor.IsResourceLoaded && cursor.Resource != null)
+	    {
+	        apply(cursor.Resource);
+	    }
+	    else
+	    {
+	        cursor.ResourceLoaded += apply;
+	        cursor.QueueLoadResource();
+	    }
 	}
 
 	[ScriptMethod]

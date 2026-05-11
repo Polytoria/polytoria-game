@@ -99,6 +99,7 @@ public sealed partial class ScriptService : Instance
 		{ "TextureFilter", typeof(TextureFilterEnum) },
 		{ "CharacterModelState", typeof(CharacterModel.CharacterModelStateEnum) },
 		{ "PlayerMovementMode", typeof(Player.PlayerMovementModeEnum) },
+		{ "CursorShape", typeof(CursorShapeEnum) },
 #if CREATOR
 		{ "CreatorToolMode", typeof(ToolModeEnum) },
 		{ "AddonPermission", typeof(CreatorAddons.AddonPermissionEnum) },
