@@ -1,6 +1,0 @@
-[gd_scene format=3 uid="uid://cfxc1d4sa1sqd"]
-
-[node name="PointLight" type="Node3D" unique_id=986673933]
-
-[node name="OmniLight3D" type="OmniLight3D" parent="." unique_id=1852734719]
-omni_range = 3.0

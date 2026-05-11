@@ -145,7 +145,7 @@ public sealed partial class GraphicsSettingsApplier : Node
 		}
 
 		SunLight sun = world.Lighting.Sun;
-		DirectionalLight3D node = (DirectionalLight3D)sun.LightNode;
+		DirectionalLight3D node = (DirectionalLight3D)sun.GDLight;
 
 		float distance = ClientSettingsService.Instance.Get<float>(ClientSettingKeys.Graphics.ShadowDistance);
 		node.DirectionalShadowMaxDistance = distance;
