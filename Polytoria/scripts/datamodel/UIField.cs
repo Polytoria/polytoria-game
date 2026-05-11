@@ -185,7 +185,7 @@ public partial class UIField : Instance
 		}
 	}
 
-	[ScriptProperty] public Vector2 AbsolutePosition => NodeControl.GlobalPosition.Flip();
+	[ScriptProperty] public Vector2 AbsolutePosition => NodeControl.GlobalPosition;
 	[ScriptProperty] public Vector2 AbsoluteSize => OverrideAbsSize ? OverrideAbsSizeTo : NodeControl.Size;
 
 	[ScriptProperty] public PTSignal MouseEnter { get; private set; } = new();
