@@ -57,6 +57,8 @@ public sealed partial class BaseAssetProperty : Control, IProperty<BaseAsset?>
 			_foldable.Title = baseAsset.ClassName;
 
 			Type typeToLoad = baseAsset.GetType();
+
+			// TODO: Kinda hardcoded, we should look into this
 			if (baseAsset is AudioAsset)
 			{
 				typeToLoad = typeof(AudioAsset);
