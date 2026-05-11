@@ -425,10 +425,6 @@ public partial class Dynamic : Instance
 
 		GDNode3D.LookAt(pos, up);
 
-		// switch coordinates system 
-		GDNode3D.RotateY(Mathf.Pi);
-		GDNode3D.RotationDegrees *= new Vector3(-1, 1, 1);
-
 		UpdateNetTransformReliable();
 	}
 
