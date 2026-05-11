@@ -628,6 +628,9 @@ public partial class LuaState : IDisposable
 			SetReadOnly(-1, true);
 			SetMetaTable(-2);
 
+			PushValue(-1);
+			SetField(-2, "_G");
+
 			Replace(LuaState.LUA_GLOBALSINDEX);
 		}
 	}
