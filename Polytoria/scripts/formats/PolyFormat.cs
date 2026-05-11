@@ -965,6 +965,10 @@ public static partial class PolyFormat
 		{
 			val = vrot3.FlipEuler();
 		}
+		else if ((propName == nameof(UIField.Rotation)) && val is float f)
+		{
+			val = -f;
+		}
 		else if ((propName == nameof(UIField.PositionRelative) || propName == nameof(UIField.PivotPoint)) && val is Vector2 v2)
 		{
 			val = new Vector2(v2.X, 1 - v2.Y);

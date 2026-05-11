@@ -357,7 +357,7 @@ public partial class UIField : Instance
 			Vector2 computedPos = new Vector2(_positionOffset.X, _positionOffset.Y) + (parentSize * new Vector2(_positionRelative.X, _positionRelative.Y)) - (new Vector2(_pivotPoint.X, _pivotPoint.Y) * selfSize);
 
 			NodeControl.Position = computedPos;
-			NodeControl.Rotation = -Mathf.DegToRad(_rotation);
+			NodeControl.Rotation = Mathf.DegToRad(_rotation);
 		}
 
 		Rect2 curTransform = NodeControl.GetGlobalRect();
