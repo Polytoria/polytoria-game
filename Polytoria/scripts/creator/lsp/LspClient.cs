@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+using Godot;
 using Polytoria.Creator.LSP.Schemas;
 using Polytoria.Shared;
 using System;
@@ -50,7 +51,7 @@ public class LspClient : IDisposable
 					},
 					Hover = new()
 					{
-						ContentFormat = ["plaintext"]
+						ContentFormat = ["markdown"]
 					},
 					Synchronization = new()
 					{
@@ -129,6 +130,17 @@ public class LspClient : IDisposable
 		}, cancellationToken);
 
 		return rawResult.Deserialize(LspJsonContext.Default.LspCompletionItemArray);
+	}
+
+	public async Task<LspHover?> RequestHoverAsync(string path, int line, int character, CancellationToken cancellationToken)
+	{
+		JsonElement rawResult = await SendRequestAsync<JsonElement>("textDocument/hover", new LspHoverParams
+		{
+			TextDocument = new() { Uri = PathToUri(path) },
+			Position = new() { Line = line, Character = character }
+		}, cancellationToken);
+
+		return rawResult.Deserialize(LspJsonContext.Default.LspHover);
 	}
 
 #pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code

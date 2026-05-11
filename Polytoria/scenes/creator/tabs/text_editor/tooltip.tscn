@@ -1,0 +1,47 @@
+[gd_scene format=3 uid="uid://byrov2jqjggnd"]
+
+[ext_resource type="FontFile" uid="uid://clwbylh8y2lf2" path="res://assets/fonts/creator/JetBrainsMono-Regular.ttf" id="1_2d40i"]
+[ext_resource type="Script" uid="uid://bn1tgtwt0ip31" path="res://scripts/creator/ui/tabs/text_editor/TextEditorTooltip.cs" id="1_ku8l2"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ku8l2"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0.16, 0.16, 0.16, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="Tooltip" type="Control" unique_id=121033142 node_paths=PackedStringArray("_label", "_tooltipPanel")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = -1152.0
+offset_bottom = -648.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("1_ku8l2")
+_maxDimensions = Vector2(600, 150)
+_label = NodePath("Panel/DescriptionText")
+_tooltipPanel = NodePath("Panel")
+_widthOffset = 0.0
+_positionOffset = Vector2(-8, 8)
+
+[node name="Panel" type="PanelContainer" parent="." unique_id=233449887]
+layout_mode = 1
+offset_right = 17.0
+offset_bottom = 38.0
+pivot_offset_ratio = Vector2(1, 0)
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_ku8l2")
+
+[node name="DescriptionText" type="RichTextLabel" parent="Panel" unique_id=5274423]
+layout_mode = 2
+size_flags_horizontal = 8
+theme_override_fonts/mono_font = ExtResource("1_2d40i")
+bbcode_enabled = true
+text = "[code]number[/code]"

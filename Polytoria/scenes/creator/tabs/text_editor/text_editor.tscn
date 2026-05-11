@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://pajd03mvemjv" path="res://scripts/creator/ui/tabs/text_editor/TextEditorRoot.cs" id="2_07fmf"]
 [ext_resource type="Script" uid="uid://do7oij3iu8c1a" path="res://scripts/creator/ui/tabs/text_editor/TextEditorField.cs" id="3_07fmf"]
 [ext_resource type="PackedScene" uid="uid://bimokjkrp24ow" path="res://scenes/creator/tabs/text_editor/finder.tscn" id="3_ypnaf"]
+[ext_resource type="PackedScene" uid="uid://byrov2jqjggnd" path="res://scenes/creator/tabs/text_editor/tooltip.tscn" id="5_ypnaf"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_bcejg"]
 
@@ -27,7 +28,7 @@ content_margin_right = 8.0
 content_margin_bottom = 8.0
 bg_color = Color(0, 0, 0, 0.49803922)
 
-[node name="TextEditor" type="Control" unique_id=1712163761 node_paths=PackedStringArray("CodeEditor", "_finder", "_diagLabel", "_statusBar")]
+[node name="TextEditor" type="Control" unique_id=1712163761 node_paths=PackedStringArray("CodeEditor", "_finder", "_diagLabel", "_statusBar", "Tooltip")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -40,6 +41,7 @@ CodeEditor = NodePath("VBoxContainer/CodeEdit")
 _finder = NodePath("Finder")
 _diagLabel = NodePath("VBoxContainer/DiagLabel")
 _statusBar = NodePath("VBoxContainer/StatusLabel")
+Tooltip = NodePath("Tooltip")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1925503485]
 layout_mode = 1
@@ -59,6 +61,7 @@ text = "print(\"hi\")"
 minimap_draw = true
 caret_blink = true
 highlight_all_occurrences = true
+symbol_tooltip_on_hover = true
 line_folding = true
 gutters_draw_line_numbers = true
 gutters_draw_fold_gutter = true
@@ -91,3 +94,16 @@ autowrap_mode = 3
 layout_mode = 1
 offset_left = -102.0
 offset_right = -102.0
+
+[node name="Tooltip" parent="." unique_id=121033142 instance=ExtResource("5_ypnaf")]
+visible = false
+layout_mode = 0
+anchors_preset = 0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 543.0
+offset_top = 164.0
+offset_right = 543.0
+offset_bottom = 164.0
+grow_horizontal = 1
+grow_vertical = 1

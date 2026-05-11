@@ -111,6 +111,12 @@
 	<ItemGroup>
 		<Compile Remove="android/build/**/*.cs" />
 	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="scenes\creator\tabs\text_editor\" />
+	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\MarkdownBBCodeConversion\MarkdownBBCodeConversion.csproj" />
+	</ItemGroup>
 
 	<!-- CREATOR Constant -->
 	<PropertyGroup Condition="'$(IsCreator)' == 'true'">
