@@ -735,6 +735,8 @@ public partial class Dynamic : Instance
 		OnPropertyChanged(nameof(LocalPosition), false);
 		OnPropertyChanged(nameof(LocalRotation), false);
 		OnPropertyChanged(nameof(LocalSize), false);
+		OnPropertyChanged(nameof(Quaternion), false);
+		OnPropertyChanged(nameof(LocalQuaternion), false);
 
 		TransformChanged?.Invoke();
 		foreach (Instance item in GetChildren())
