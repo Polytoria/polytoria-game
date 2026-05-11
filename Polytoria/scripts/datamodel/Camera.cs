@@ -374,8 +374,6 @@ public sealed partial class Camera : Dynamic
 		_inputHelper.GodotUnhandledInputEvent += OnInput;
 
 		GDNode3D.AddChild(Camera3D = new());
-		// Flip the camera
-		Camera3D.RotationDegrees = new(0, 180, 0);
 
 		_turnX = new Node3D();
 		_turnY = new Node3D();
@@ -383,8 +381,6 @@ public sealed partial class Camera : Dynamic
 		_turnX.AddChild(_turnY);
 		_turnX.AddChild(_turnY2);
 		GDNode3D.GetParent().AddChild(_turnX);
-
-		_turnY.RotationDegrees = new(0, 180, 0);
 
 		FOV = 75;
 
@@ -525,7 +521,7 @@ public sealed partial class Camera : Dynamic
 			}
 
 			_currentMovement.X = horizontalInput.X;
-			_currentMovement.Y = -verticalInput;
+			_currentMovement.Y = verticalInput;
 			_currentMovement.Z = horizontalInput.Y;
 
 			if (_currentMovement == Vector3.Zero && _currentRotation == Vector2.Zero)
@@ -549,7 +545,7 @@ public sealed partial class Camera : Dynamic
 
 			if (_currentMovement != Vector3.Zero)
 			{
-				temp.Origin -= temp.Basis * (_currentMovement * (_moveSpeed * speedMultipler) * (float)delta);
+				temp.Origin += temp.Basis * (_currentMovement * (_moveSpeed * speedMultipler) * (float)delta);
 			}
 
 			SetGlobalTransform(temp);
@@ -786,7 +782,7 @@ public sealed partial class Camera : Dynamic
 		{
 			if (@event is InputEventMouseMotion motion)
 			{
-				_currentRotation = new(-motion.ScreenRelative.X, motion.ScreenRelative.Y);
+				_currentRotation = -new Vector2(motion.ScreenRelative.X, motion.ScreenRelative.Y);
 			}
 		}
 

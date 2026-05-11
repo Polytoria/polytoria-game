@@ -76,7 +76,6 @@ public sealed partial class CaptureService : Instance
 		}
 
 		_spectatorCam.GlobalTransform = SpectatorAttach.GetGlobalTransform();
-		_spectatorCam.RotateObjectLocal(Vector3.Up, Mathf.DegToRad(180));
 		base.Process(delta);
 	}
 
