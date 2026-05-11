@@ -1,5 +1,6 @@
 using Godot;
 using Polytoria.Datamodel;
+using Polytoria.Shared;
 using Polytoria.Shared.Settings;
 
 namespace Polytoria.Client.Settings.Appliers;
@@ -14,7 +15,11 @@ public sealed partial class GraphicsSettingsApplier : Node
 
 	private void OnChanged(SettingChangedEvent change)
 	{
-		if (change.Key.StartsWith("graphics.post_processing."))
+		if (change.Key == ClientSettingKeys.PostProcessing.NormalMaps)
+		{
+			ApplyNormalMaps();
+		}
+		else if (change.Key.StartsWith("graphics.post_processing."))
 		{
 			ApplyPostProcessing();
 		}
@@ -49,9 +54,20 @@ public sealed partial class GraphicsSettingsApplier : Node
 		world.Lighting.ApplyGraphicsSettings();
 	}
 
+	private void ApplyNormalMaps()
+	{
+		bool enabled = ClientSettingsService.Instance.Get<bool>(ClientSettingKeys.PostProcessing.NormalMaps);
+		if (Globals.IsMobileBuild)
+		{
+			enabled = false;
+		}
+		Globals.SetNormalMapsEnabled(enabled);
+	}
+
 	private void ApplyAll()
 	{
 		ApplyPostProcessing();
+		ApplyNormalMaps();
 		ApplyRenderScale();
 		ApplyMsaa();
 		ApplyShadowQuality();

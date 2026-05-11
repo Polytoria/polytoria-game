@@ -39,6 +39,7 @@ public static class ClientSettingKeys
 		public const string Ssr = "graphics.post_processing.ssr";
 		public const string Ssil = "graphics.post_processing.ssil";
 		public const string Sdfgi = "graphics.post_processing.sdfgi";
+		public const string NormalMaps = "graphics.post_processing.normal_maps";
 
 		public const string SdfgiCellSize = "graphics.post_processing.sdfgi_cell_size";
 		public const string SdfgiCascades = "graphics.post_processing.sdfgi_cascades";

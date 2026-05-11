@@ -28,6 +28,7 @@ public partial class TextEditorRoot : Node
 
 	[Export] private TextEditorFind _finder = null!;
 	[Export] private Label _diagLabel = null!;
+	[Export] private Label _statusBar = null!;
 
 	public static Color ColorDanger { get; private set; } = Color.FromString("D77C79", Colors.White);
 	public static Color ColorOrange { get; private set; } = Color.FromString("E6A472", Colors.White);
@@ -57,6 +58,10 @@ public partial class TextEditorRoot : Node
 			await _completion.CloseScriptAsync(Container.TargetFilePathAbsolute);
 			_completion.PublishDiagnostics -= OnPublishDiagnostics;
 		}
+
+		CreatorSettings.Singleton.GetSettingProperty("CodeEditor.IndentationMode")!.ValueChanged -= OnIndentSettingsChanged;
+		CreatorSettings.Singleton.GetSettingProperty("CodeEditor.IndentationSize")!.ValueChanged -= OnIndentSettingsChanged;
+
 		base._ExitTree();
 	}
 
@@ -73,6 +78,10 @@ public partial class TextEditorRoot : Node
 		CodeEditor.ClearUndoHistory();
 		CodeEditor.TextChanged += OnCodeEditTextChanged;
 		InitSyntaxHighlighter();
+
+		CreatorSettings.Singleton.GetSettingProperty("CodeEditor.IndentationMode")!.ValueChanged += OnIndentSettingsChanged;
+		CreatorSettings.Singleton.GetSettingProperty("CodeEditor.IndentationSize")!.ValueChanged += OnIndentSettingsChanged;
+		OnIndentSettingsChanged();
 
 		CodeEditor.CodeCompletionPrefixes = [".", ":", "\n", ",", " ", "("];
 		CodeEditor.CodeCompletionEnabled = true;
@@ -96,6 +105,16 @@ public partial class TextEditorRoot : Node
 		{
 			await _completion.OpenScriptAsync(Container.TargetFilePathAbsolute);
 		}
+
+		UpdateStatusBar();
+	}
+
+	private void OnIndentSettingsChanged(object? _ = null)
+	{
+		IndentationModeEnum indentationMode = CreatorSettings.Singleton.GetSetting<IndentationModeEnum>("CodeEditor.IndentationMode");
+		int indentationSize = CreatorSettings.Singleton.GetSetting<int>("CodeEditor.IndentationSize");
+		CodeEditor.IndentUseSpaces = indentationMode == IndentationModeEnum.Spaces;
+		CodeEditor.IndentSize = indentationSize;
 	}
 
 	private async void OnPublishDiagnostics(string path, List<LspDiagnostic> diagnostics)
@@ -176,11 +195,17 @@ public partial class TextEditorRoot : Node
 		}
 		else if (@event.IsActionPressed("textedit_find") || @event.IsActionPressed("textedit_replace"))
 		{
+			CodeEditor.AcceptEvent();
 			_finder.Open(CodeEditor.GetSelectedText());
 		}
 		else if (@event.IsActionPressed("ui_cancel"))
 		{
+			CodeEditor.AcceptEvent();
 			_finder.Close();
+		}
+		else
+		{
+			UpdateStatusBar();
 		}
 	}
 
@@ -298,6 +323,13 @@ public partial class TextEditorRoot : Node
 			CodeEditor.AddCodeCompletionOption(item.Kind, item.DisplayText, item.InsertText, icon: icon, location: -1);
 		}
 		CodeEditor.UpdateCodeCompletionOptions(false);
+	}
+
+	private void UpdateStatusBar()
+	{
+		int lineIndex = CodeEditor.GetCaretLine() + 1;
+		int column = CodeEditor.GetCaretColumn() + 1;
+		_statusBar.Text = $"{Container.OriginTabName}: ({lineIndex}:{column})";
 	}
 
 	public string GetWordBeforeCaret()

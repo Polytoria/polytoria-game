@@ -35,6 +35,11 @@ TestResults/
 # Visual Studio
 .vs/
 
+# Visual Studio Code
+.vscode/
+*.code-workspace
+.history/
+
 ## -- Android -- ##
 
 # Generated Android build files (except the manifest)

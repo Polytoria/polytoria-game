@@ -3,6 +3,7 @@
 [ext_resource type="Shader" uid="uid://dylteiumvf3c7" path="res://resources/shaders/part/part.gdshader" id="1_48jsp"]
 [ext_resource type="Texture2D" uid="uid://cddkfxb8mrr88" path="res://assets/textures/parts/Snow/albedo.jpg" id="1_ti61s"]
 [ext_resource type="Texture2D" uid="uid://cmmrfrpg8rcl0" path="res://assets/textures/parts/Snow/orm.jpg" id="3_81iri"]
+[ext_resource type="Texture2D" uid="uid://dsfpjkpxnyyqa" path="res://assets/textures/parts/Snow/normal.jpg" id="4_norm"]
 
 [resource]
 resource_local_to_scene = true
@@ -13,6 +14,8 @@ shader_parameter/albedo = ExtResource("1_ti61s")
 shader_parameter/use_albedo_texture = true
 shader_parameter/orm = ExtResource("3_81iri")
 shader_parameter/use_orm_texture = true
+shader_parameter/normal_tex = ExtResource("4_norm")
+shader_parameter/use_normal_texture = true
 shader_parameter/emissive_strength = 0.0
 shader_parameter/metallic_specular = 0.2
 shader_parameter/roughness = 0.7

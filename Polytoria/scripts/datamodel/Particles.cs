@@ -9,6 +9,10 @@ using Polytoria.Datamodel.Resources;
 using Polytoria.Enums;
 using System;
 
+#if CREATOR
+using Polytoria.Creator.Spatial;
+#endif
+
 namespace Polytoria.Datamodel;
 
 [Instantiable]
@@ -362,6 +366,9 @@ public sealed partial class Particles : Dynamic
 
 	public override void Init()
 	{
+#if CREATOR
+		GDNode.AddChild(new SpatialIcon(ClassName), @internal: Node.InternalMode.Back);
+#endif
 		base.Init();
 		_particle = new();
 		GDNode3D.AddChild(_particles = new() { ProcessMaterial = _particle }, false, Node.InternalMode.Front);

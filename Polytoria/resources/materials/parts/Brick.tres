@@ -3,6 +3,7 @@
 [ext_resource type="Shader" uid="uid://dylteiumvf3c7" path="res://resources/shaders/part/part.gdshader" id="1_0s8vh"]
 [ext_resource type="Texture2D" uid="uid://bfswjptlde67c" path="res://assets/textures/parts/Brick/albedo.jpg" id="1_p863x"]
 [ext_resource type="Texture2D" uid="uid://cjdwf77wue4u8" path="res://assets/textures/parts/Brick/orm.jpg" id="3_7l8jb"]
+[ext_resource type="Texture2D" uid="uid://c5nevvfyjfowi" path="res://assets/textures/parts/Brick/normal.jpg" id="4_norm"]
 
 [resource]
 resource_local_to_scene = true
@@ -13,6 +14,8 @@ shader_parameter/albedo = ExtResource("1_p863x")
 shader_parameter/use_albedo_texture = true
 shader_parameter/orm = ExtResource("3_7l8jb")
 shader_parameter/use_orm_texture = true
+shader_parameter/normal_tex = ExtResource("4_norm")
+shader_parameter/use_normal_texture = true
 shader_parameter/emissive_strength = 0.0
 shader_parameter/metallic_specular = 0.2000000095
 shader_parameter/roughness = 0.850000040375

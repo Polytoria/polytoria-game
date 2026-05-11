@@ -591,29 +591,51 @@ public partial class CreatorInterface : Control, IScriptObject
 		return InsertMenu;
 	}
 
-	public void PromptFileSelect(FileSelectPromptPayload data, Action<string[]> callback)
+	public void PromptFileSelect(FileSelectPromptPayload data, Action<string[]> callback, Action? onCancel = null)
 	{
-		bool replaceCur = false;
-		if (data.CurrentDirectory == "")
+		bool replaceCur = string.IsNullOrEmpty(data.CurrentDirectory);
+		string currentDir = replaceCur ? LastFilePromptFolder : data.CurrentDirectory;
+
+		FileDialog dialog = new()
 		{
-			replaceCur = true;
-			data.CurrentDirectory = LastFilePromptFolder;
+			Title = data.Title,
+			CurrentDir = currentDir,
+			CurrentFile = data.FileName,
+			ShowHiddenFiles = data.ShowHidden,
+			FileMode = MapFileMode(data.DialogMode),
+			Access = FileDialog.AccessEnum.Filesystem,
+			UseNativeDialog = true,
+		};
+
+		if (data.Filters is { Length: > 0 })
+			dialog.Filters = data.Filters;
+
+		AddChild(dialog);
+
+		void OnPathsSelected(string[] paths)
+		{
+			if (replaceCur)
+				LastFilePromptFolder = paths[0].GetBaseDir();
+			callback.Invoke(paths);
+			dialog.QueueFree();
 		}
-		DisplayServer.FileDialogShow(
-			data.Title,
-			data.CurrentDirectory,
-			data.FileName,
-			data.ShowHidden,
-			data.DialogMode,
-			data.Filters,
-			Callable.From<bool, string[], int>((status, paths, index) =>
-			{
-				if (!status) return;
-				if (replaceCur) LastFilePromptFolder = paths[0].GetBaseDir();
-				callback.Invoke(paths);
-			})
-		);
+
+		dialog.FileSelected += path => OnPathsSelected([path]);
+		dialog.DirSelected += path => OnPathsSelected([path]);
+		dialog.FilesSelected += paths => OnPathsSelected(paths);
+		dialog.Canceled += () => { onCancel?.Invoke(); dialog.QueueFree(); };
+
+		dialog.PopupCentered(new Vector2I(800, 600));
 	}
+
+	private static FileDialog.FileModeEnum MapFileMode(DisplayServer.FileDialogMode mode) => mode switch
+	{
+		DisplayServer.FileDialogMode.OpenFile => FileDialog.FileModeEnum.OpenFile,
+		DisplayServer.FileDialogMode.OpenFiles => FileDialog.FileModeEnum.OpenFiles,
+		DisplayServer.FileDialogMode.OpenDir => FileDialog.FileModeEnum.OpenDir,
+		DisplayServer.FileDialogMode.SaveFile => FileDialog.FileModeEnum.SaveFile,
+		_ => FileDialog.FileModeEnum.OpenFile,
+	};
 
 	public static void ToggleFullscreen()
 	{
@@ -655,4 +677,3 @@ public struct FileSelectPromptPayload()
 	public DisplayServer.FileDialogMode DialogMode;
 	public string[] Filters = [];
 }
-

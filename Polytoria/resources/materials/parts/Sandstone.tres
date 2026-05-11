@@ -3,6 +3,7 @@
 [ext_resource type="Shader" uid="uid://dylteiumvf3c7" path="res://resources/shaders/part/part.gdshader" id="1_6w6ex"]
 [ext_resource type="Texture2D" uid="uid://dvpf7d8rl5um8" path="res://assets/textures/parts/Sandstone/albedo.jpg" id="1_y4t3f"]
 [ext_resource type="Texture2D" uid="uid://bavbsxt8pg1w0" path="res://assets/textures/parts/Sandstone/orm.jpg" id="2_pjsih"]
+[ext_resource type="Texture2D" uid="uid://cagbf2ay3qkfd" path="res://assets/textures/parts/Sandstone/normal.jpg" id="4_norm"]
 
 [resource]
 resource_local_to_scene = true
@@ -13,6 +14,8 @@ shader_parameter/albedo = ExtResource("1_y4t3f")
 shader_parameter/use_albedo_texture = true
 shader_parameter/orm = ExtResource("2_pjsih")
 shader_parameter/use_orm_texture = true
+shader_parameter/normal_tex = ExtResource("4_norm")
+shader_parameter/use_normal_texture = true
 shader_parameter/emissive_strength = 0.0
 shader_parameter/metallic_specular = 0.2
 shader_parameter/roughness = 0.7

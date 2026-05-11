@@ -954,10 +954,14 @@ public partial class Dynamic : Instance
 		return false;
 	}
 
+	/// <summary>
+	/// GetBounds for scripting uses, for internal use. use CalculateBounds
+	/// </summary>
+	/// <returns></returns>
 	[ScriptMethod]
 	public Aabb GetBounds()
 	{
-		return CalculateBounds();
+		return CalculateBounds().Flip();
 	}
 
 	internal void SetVisualMaskLayer(int layer, bool to)

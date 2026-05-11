@@ -328,6 +328,19 @@ public static class ClientSettingsRegistry
 				}
 			},
 			{
+				ClientSettingKeys.PostProcessing.NormalMaps,
+				new SettingDef<bool>
+				{
+					Key = ClientSettingKeys.PostProcessing.NormalMaps,
+					SectionKey = "post_processing",
+					Label = "Normal Maps",
+					Description = "Toggle normal maps on part materials.",
+					ValueKind = SettingValueKind.Bool,
+					ControlKind = SettingControlKind.Toggle,
+					DefaultValue = true,
+				}
+			},
+			{
 				ClientSettingKeys.Advanced.ShowAdvancedSettings,
 				new SettingDef<bool>
 				{

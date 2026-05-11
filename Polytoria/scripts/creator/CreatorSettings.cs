@@ -54,7 +54,11 @@ public sealed partial class CreatorSettings : Node
 					Name = "CodeEditor",
 					DisplayName = "Code Editor",
 					Settings = [
-						new("PreferredEditor", "Preferred Editor", PreferredEditorEnum.BuiltIn)
+						new("PreferredEditor", "Preferred Editor", PreferredEditorEnum.BuiltIn),
+						new("IndentationMode", "Indentation Mode", IndentationModeEnum.Tabs),
+						// TODO: Cap IndentationSize between 1 and 8. IndentationSize can be negative.
+						// MinValue and MaxValue is bugged for integer settings.
+						new("IndentationSize", "Indentation Size (In Spaces)", 2) { MinValue = 1, MaxValue = 8 },
 					]
 				},
 				new() {
@@ -296,6 +300,12 @@ public enum PreferredEditorEnum
 	Zed
 }
 
+public enum IndentationModeEnum
+{
+	Tabs,
+	Spaces
+}
+
 public enum RenderingMethodEnum
 {
 	Standard,
@@ -313,5 +323,6 @@ public enum RenderingMethodEnum
 [JsonSerializable(typeof(object))]
 
 [JsonSerializable(typeof(PreferredEditorEnum))]
+[JsonSerializable(typeof(IndentationModeEnum))]
 [JsonSerializable(typeof(RenderingMethodEnum))]
 public partial class CreatorSettingsGenerationContext : JsonSerializerContext { }

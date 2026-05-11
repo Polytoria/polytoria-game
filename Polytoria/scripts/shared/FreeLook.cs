@@ -95,6 +95,9 @@ public sealed partial class FreeLook : Camera3D
 					Input.MouseMode = Input.MouseModeEnum.Visible;
 					Vector2 globalMousePos = GetViewport().GetScreenTransform().Origin + _lastMousePosition;
 					Input.WarpMouse(globalMousePos);
+#if GODOT_WINDOWS
+					Input.WarpMouse(globalMousePos); // Workaround for godotengine/godot#119205
+#endif
 
 					_currentMovement = Vector3.Zero;
 					_currentRotation = Vector2.Zero;

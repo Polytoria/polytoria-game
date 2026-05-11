@@ -651,6 +651,9 @@ public sealed partial class Camera : Dynamic
 			Input.MouseMode = Input.MouseModeEnum.Visible;
 			Root.Input.OverrideMousePos = false;
 			GDNode.GetViewport().WarpMouse(_turnStartPos);
+#if GODOT_WINDOWS
+			GDNode.GetViewport().WarpMouse(_turnStartPos); // Workaround for godotengine/godot#119205
+#endif
 		}
 	}
 
@@ -744,6 +747,9 @@ public sealed partial class Camera : Dynamic
 					Input.MouseMode = Input.MouseModeEnum.Visible;
 					Vector2 globalMousePos = GDNode.GetViewport().GetScreenTransform().Origin + _lastMousePosition;
 					Input.WarpMouse(globalMousePos);
+#if GODOT_WINDOWS
+					Input.WarpMouse(globalMousePos); // Workaround for godotengine/godot#119205
+#endif
 
 					_currentMovement = Vector3.Zero;
 					_currentRotation = Vector2.Zero;
@@ -932,7 +938,7 @@ public sealed partial class Camera : Dynamic
 		{
 			if (t is Dynamic dyn)
 			{
-				Aabb bounds = dyn.GetBounds();
+				Aabb bounds = dyn.CalculateBounds();
 				if (first)
 				{
 					combinedBounds = bounds;

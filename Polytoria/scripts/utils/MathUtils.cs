@@ -89,4 +89,9 @@ public static class MathUtilsExtensions
 	{
 		return MathUtils.FlipQuat(q);
 	}
+
+	public static Aabb Flip(this Aabb a)
+	{
+		return new Aabb(new Vector3(-a.End.X, a.Position.Y, a.Position.Z), a.Size);
+	}
 }

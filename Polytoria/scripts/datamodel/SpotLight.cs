@@ -4,6 +4,9 @@
 
 using Godot;
 using Polytoria.Attributes;
+#if CREATOR
+using Polytoria.Creator.Spatial;
+#endif
 
 namespace Polytoria.Datamodel;
 
@@ -12,10 +15,17 @@ public sealed partial class SpotLight : Light
 {
 	private float _range = 30;
 	private float _angle = 30;
+#if CREATOR
+	private ConeSpatial _cone = null!;
+#endif
 
 	public override void Init()
 	{
 		LightNode = GDNode.GetNode<SpotLight3D>("SpotLight3D");
+
+#if CREATOR
+		GDNode.AddChild(_cone = new() { Visible = false }, @internal: Node.InternalMode.Back);
+#endif
 
 		base.Init();
 	}
@@ -35,6 +45,9 @@ public sealed partial class SpotLight : Light
 		{
 			_range = value;
 			((SpotLight3D)LightNode).SpotRange = value;
+#if CREATOR
+			_cone.Range = value;
+#endif
 			OnPropertyChanged();
 		}
 	}
@@ -47,7 +60,24 @@ public sealed partial class SpotLight : Light
 		{
 			_angle = value;
 			((SpotLight3D)LightNode).SpotAngle = value;
+#if CREATOR
+			_cone.Angle = value;
+#endif
 			OnPropertyChanged();
 		}
 	}
+
+#if CREATOR
+	public override void CreatorSelected()
+	{
+		_cone.Visible = true;
+		base.CreatorSelected();
+	}
+
+	public override void CreatorDeselected()
+	{
+		_cone.Visible = false;
+		base.CreatorDeselected();
+	}
+#endif
 }

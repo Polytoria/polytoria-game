@@ -9,6 +9,9 @@ uniform bool use_albedo_texture = true;
 uniform sampler2D orm;
 uniform bool use_orm_texture = true;
 
+uniform sampler2D normal_tex : hint_normal;
+uniform bool use_normal_texture = false;
+
 uniform float emissive_strength : hint_range(0.0, 5.0) = 0.0;
 
 uniform float metallic_specular : hint_range(0.0, 1.0) = 0.2;
@@ -76,6 +79,10 @@ void fragment() {
 		vec3 orm_values = texture(orm, uv).rgb;
 		roughness_tex = orm_values.g;
 		metallic_tex = orm_values.b;
+	}
+
+	if (use_normal_texture) {
+		NORMAL_MAP = texture(normal_tex, uv).rgb;
 	}
 
 	ALBEDO = albedo_color.rgb * COLOR.rgb;

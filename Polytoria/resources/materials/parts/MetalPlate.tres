@@ -3,6 +3,7 @@
 [ext_resource type="Shader" uid="uid://dylteiumvf3c7" path="res://resources/shaders/part/part.gdshader" id="1_gpnht"]
 [ext_resource type="Texture2D" uid="uid://c77sa0fy287db" path="res://assets/textures/parts/MetalPlate/albedo.jpg" id="1_vk4ct"]
 [ext_resource type="Texture2D" uid="uid://dtnbsjqnddvxp" path="res://assets/textures/parts/MetalPlate/orm.jpg" id="3_gde4x"]
+[ext_resource type="Texture2D" uid="uid://d172fn5vj7wel" path="res://assets/textures/parts/MetalPlate/normal.jpg" id="4_norm"]
 
 [resource]
 resource_local_to_scene = true
@@ -13,6 +14,8 @@ shader_parameter/albedo = ExtResource("1_vk4ct")
 shader_parameter/use_albedo_texture = true
 shader_parameter/orm = ExtResource("3_gde4x")
 shader_parameter/use_orm_texture = true
+shader_parameter/normal_tex = ExtResource("4_norm")
+shader_parameter/use_normal_texture = true
 shader_parameter/emissive_strength = 0.0
 shader_parameter/metallic_specular = 0.2
 shader_parameter/roughness = 0.6

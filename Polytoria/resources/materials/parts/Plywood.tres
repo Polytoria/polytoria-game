@@ -3,6 +3,7 @@
 [ext_resource type="Shader" uid="uid://dylteiumvf3c7" path="res://resources/shaders/part/part.gdshader" id="1_1nh6e"]
 [ext_resource type="Texture2D" uid="uid://cbnanao6ntgv1" path="res://assets/textures/parts/Plywood/albedo.jpg" id="1_dfoi1"]
 [ext_resource type="Texture2D" uid="uid://bhpu1ddonesoh" path="res://assets/textures/parts/Plywood/orm.jpg" id="3_qs0no"]
+[ext_resource type="Texture2D" uid="uid://ctalu6w021how" path="res://assets/textures/parts/Plywood/normal.jpg" id="4_norm"]
 
 [resource]
 resource_local_to_scene = true
@@ -13,6 +14,8 @@ shader_parameter/albedo = ExtResource("1_dfoi1")
 shader_parameter/use_albedo_texture = true
 shader_parameter/orm = ExtResource("3_qs0no")
 shader_parameter/use_orm_texture = true
+shader_parameter/normal_tex = ExtResource("4_norm")
+shader_parameter/use_normal_texture = true
 shader_parameter/emissive_strength = 0.0
 shader_parameter/metallic_specular = 0.150000007125
 shader_parameter/roughness = 0.6000000285

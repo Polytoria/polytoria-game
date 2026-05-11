@@ -8,7 +8,41 @@ namespace Polytoria.Creator.UI.TextEditor;
 
 public sealed partial class TextEditorField : CodeEdit
 {
+	private const int FontSizeStep = 2;
+	private const int MinFontSize = 8;
+	private const int MaxFontSize = 72;
+
 	public TextEditorRoot Root = null!;
+
+	private int _currentFontSize = 16;
+
+	public override void _Ready()
+	{
+		int size = GetThemeFontSize("font_size", "Label");
+		_currentFontSize = size > 0 ? size : 16;
+		base._Ready();
+	}
+
+	public override void _GuiInput(InputEvent @event)
+	{
+		if (@event is InputEventMouseButton mb && mb.Pressed)
+		{
+			if (mb.CtrlPressed && mb.ButtonIndex == MouseButton.WheelUp)
+			{
+				_currentFontSize = Mathf.Clamp(_currentFontSize + FontSizeStep, MinFontSize, MaxFontSize);
+				AddThemeFontSizeOverride("font_size", _currentFontSize);
+				AcceptEvent();
+			}
+			else if (mb.CtrlPressed && mb.ButtonIndex == MouseButton.WheelDown)
+			{
+				_currentFontSize = Mathf.Clamp(_currentFontSize - FontSizeStep, MinFontSize, MaxFontSize);
+				AddThemeFontSizeOverride("font_size", _currentFontSize);
+				AcceptEvent();
+			}
+		}
+
+		base._GuiInput(@event);
+	}
 
 	public override void _ConfirmCodeCompletion(bool replace)
 	{

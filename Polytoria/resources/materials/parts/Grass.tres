@@ -3,6 +3,7 @@
 [ext_resource type="Texture2D" uid="uid://cuqjo8w3o0wmh" path="res://assets/textures/parts/Grass/albedo.jpg" id="1_g14c0"]
 [ext_resource type="Shader" uid="uid://dylteiumvf3c7" path="res://resources/shaders/part/part.gdshader" id="1_o55v0"]
 [ext_resource type="Texture2D" uid="uid://c8qn6dnhdtpo5" path="res://assets/textures/parts/Grass/orm.jpg" id="3_asc4g"]
+[ext_resource type="Texture2D" uid="uid://buda8o4msdo2m" path="res://assets/textures/parts/Grass/normal.jpg" id="4_norm"]
 
 [resource]
 resource_local_to_scene = true
@@ -13,6 +14,8 @@ shader_parameter/albedo = ExtResource("1_g14c0")
 shader_parameter/use_albedo_texture = true
 shader_parameter/orm = ExtResource("3_asc4g")
 shader_parameter/use_orm_texture = true
+shader_parameter/normal_tex = ExtResource("4_norm")
+shader_parameter/use_normal_texture = true
 shader_parameter/emissive_strength = 0.0
 shader_parameter/metallic_specular = 0.10000000475
 shader_parameter/roughness = 0.90000004275

@@ -1,6 +1,7 @@
 [gd_resource type="ShaderMaterial" format=3 uid="uid://dcuvqhbcxjfwo"]
 
 [ext_resource type="Shader" uid="uid://dylteiumvf3c7" path="res://resources/shaders/part/part.gdshader" id="1_2en81"]
+[ext_resource type="Texture2D" uid="uid://bse0djs3rlw5" path="res://assets/textures/parts/Plastic/normal.jpg" id="4_norm"]
 
 [resource]
 resource_local_to_scene = true
@@ -9,6 +10,8 @@ render_priority = 0
 shader = ExtResource("1_2en81")
 shader_parameter/use_albedo_texture = false
 shader_parameter/use_orm_texture = false
+shader_parameter/normal_tex = ExtResource("4_norm")
+shader_parameter/use_normal_texture = true
 shader_parameter/emissive_strength = 0.0
 shader_parameter/metallic_specular = 0.2
 shader_parameter/roughness = 0.7

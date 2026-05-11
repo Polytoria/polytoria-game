@@ -24,6 +24,9 @@ public sealed partial class Gizmos : Node
 	private float _gizmoScale;
 	private bool _isMouseDragging;
 	private bool _isDraggingDyn;
+	private bool _isDragPending;
+	private Vector2 _dragStartPos;
+	private const float DragThreshold = 8f;
 	private Dynamic? _lastHovered;
 	private SelectionBox _paintBox = null!;
 	private SelectionBox _hoverBox = null!;
@@ -492,13 +495,14 @@ public sealed partial class Gizmos : Node
 			if (button.Pressed)
 			{
 				_isMouseDragging = true;
+				_dragStartPos = button.Position;
 			}
 			else
 			{
 				_isMouseDragging = false;
+				_isDragPending = false;
 				if (_isDraggingDyn)
 				{
-					// Stopped dragging
 					_isDraggingDyn = false;
 					CommitHistorySelectedTransform();
 				}
@@ -550,14 +554,7 @@ public sealed partial class Gizmos : Node
 					if (toolMode == ToolModeEnum.Select)
 					{
 						DragSelected.Add(targetDyn);
-
-						if (!_isDraggingDyn)
-						{
-							// Drag started
-							_isDraggingDyn = true;
-							_history.NewAction("Select Drag Transform");
-							RecordHistoryUndo();
-						}
+						_isDragPending = true;
 					}
 				}
 			}
@@ -569,8 +566,20 @@ public sealed partial class Gizmos : Node
 				}
 			}
 		}
-		else if (@event is InputEventMouseMotion)
+		else if (@event is InputEventMouseMotion motion)
 		{
+			if (_isDragPending && !_isDraggingDyn)
+			{
+				float distance = motion.Position.DistanceTo(_dragStartPos);
+				if (distance >= DragThreshold)
+				{
+					_isDraggingDyn = true;
+					_isDragPending = false;
+					_history.NewAction("Select Drag Transform");
+					RecordHistoryUndo();
+				}
+			}
+
 			if (_isDraggingDyn)
 			{
 				DragSelectedDynamics();

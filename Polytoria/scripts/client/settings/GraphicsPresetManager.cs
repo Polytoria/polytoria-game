@@ -13,7 +13,8 @@ public static class GraphicsPresetManager
 			|| key == ClientSettingKeys.PostProcessing.Ssao
 			|| key == ClientSettingKeys.PostProcessing.Ssr
 			|| key == ClientSettingKeys.PostProcessing.Ssil
-			|| key == ClientSettingKeys.PostProcessing.Sdfgi;
+			|| key == ClientSettingKeys.PostProcessing.Sdfgi
+			|| key == ClientSettingKeys.PostProcessing.NormalMaps;
 	}
 
 	public static void ApplyPreset(GraphicsPreset preset)
@@ -32,6 +33,7 @@ public static class GraphicsPresetManager
 				settings.Set(ClientSettingKeys.PostProcessing.Ssr, false);
 				settings.Set(ClientSettingKeys.PostProcessing.Ssil, false);
 				settings.Set(ClientSettingKeys.PostProcessing.Sdfgi, false);
+				settings.Set(ClientSettingKeys.PostProcessing.NormalMaps, false);
 				break;
 			case GraphicsPreset.Medium:
 				settings.Set(ClientSettingKeys.Graphics.RenderScale, 1.0f);
@@ -43,6 +45,7 @@ public static class GraphicsPresetManager
 				settings.Set(ClientSettingKeys.PostProcessing.Ssr, false);
 				settings.Set(ClientSettingKeys.PostProcessing.Ssil, false);
 				settings.Set(ClientSettingKeys.PostProcessing.Sdfgi, false);
+				settings.Set(ClientSettingKeys.PostProcessing.NormalMaps, true);
 				break;
 			case GraphicsPreset.High:
 				settings.Set(ClientSettingKeys.Graphics.RenderScale, 1.0f);
@@ -54,6 +57,7 @@ public static class GraphicsPresetManager
 				settings.Set(ClientSettingKeys.PostProcessing.Ssr, true);
 				settings.Set(ClientSettingKeys.PostProcessing.Ssil, false);
 				settings.Set(ClientSettingKeys.PostProcessing.Sdfgi, false);
+				settings.Set(ClientSettingKeys.PostProcessing.NormalMaps, true);
 				break;
 			case GraphicsPreset.Ultra:
 				settings.Set(ClientSettingKeys.Graphics.RenderScale, 1.0f);
@@ -65,6 +69,7 @@ public static class GraphicsPresetManager
 				settings.Set(ClientSettingKeys.PostProcessing.Ssr, true);
 				settings.Set(ClientSettingKeys.PostProcessing.Ssil, true);
 				settings.Set(ClientSettingKeys.PostProcessing.Sdfgi, false);
+				settings.Set(ClientSettingKeys.PostProcessing.NormalMaps, true);
 				break;
 			case GraphicsPreset.Photo:
 				settings.Set(ClientSettingKeys.Graphics.RenderScale, 1.0f);
@@ -76,6 +81,7 @@ public static class GraphicsPresetManager
 				settings.Set(ClientSettingKeys.PostProcessing.Ssr, true);
 				settings.Set(ClientSettingKeys.PostProcessing.Ssil, true);
 				settings.Set(ClientSettingKeys.PostProcessing.Sdfgi, true);
+				settings.Set(ClientSettingKeys.PostProcessing.NormalMaps, true);
 				break;
 			case GraphicsPreset.Custom:
 			default:
