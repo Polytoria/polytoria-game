@@ -961,7 +961,7 @@ public partial class Dynamic : Instance
 	[ScriptMethod]
 	public Aabb GetBounds()
 	{
-		return CalculateBounds().Flip();
+		return CalculateBounds();
 	}
 
 	internal void SetVisualMaskLayer(int layer, bool to)
