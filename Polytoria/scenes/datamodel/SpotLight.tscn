@@ -1,6 +1,0 @@
-[gd_scene format=3 uid="uid://cdxm8d7kbpb8t"]
-
-[node name="SpotLight" type="Node3D" unique_id=2063334028]
-
-[node name="SpotLight3D" type="SpotLight3D" parent="." unique_id=1776677745]
-transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, 0, 0, 0)

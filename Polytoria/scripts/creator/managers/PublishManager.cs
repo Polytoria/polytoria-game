@@ -5,6 +5,7 @@
 using Godot;
 using Polytoria.Creator.UI;
 using Polytoria.Creator.Utils;
+using Polytoria.Creator.Settings;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Creator;
 using Polytoria.Formats;
@@ -30,7 +31,7 @@ public static class PublishManager
 			loadOverlay?.SetStatus("Uploading now...");
 			CreatorPublishResponse publishRes = await PolyCreatorAPI.UploadWorld(packed, placeID, metadata.MainWorld);
 
-			if (CreatorSettings.Singleton.GetSetting<bool>("Creator.OpenWebAfterPublish")!)
+			if (CreatorSettingsService.Instance.Get<bool>(CreatorSettingKeys.Creator.OpenWebAfterPublish))
 				OS.ShellOpen(publishRes.Link);
 			CreatorService.Interface.StatusBar?.SetStatus("World published");
 			loadOverlay?.Hide();
@@ -55,7 +56,7 @@ public static class PublishManager
 			CreatorPublishResponse publishRes = await PolyCreatorAPI.UploadModel(packed, modelID);
 			CreatorService.Interface.LoadOverlay?.Hide();
 
-			if (CreatorSettings.Singleton.GetSetting<bool>("Creator.OpenWebAfterPublish")!)
+			if (CreatorSettingsService.Instance.Get<bool>(CreatorSettingKeys.Creator.OpenWebAfterPublish))
 				OS.ShellOpen(publishRes.Link);
 			CreatorService.Interface.StatusBar?.SetStatus("Model published");
 			loadOverlay?.Hide();

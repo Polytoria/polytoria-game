@@ -47,7 +47,7 @@ public sealed partial class CreatorContextService : Instance
 			Mode = Camera.CameraModeEnum.Free
 		};
 		Freelook.GDNode3D.GlobalPosition = new(0, 6, -4);
-		Freelook.GDNode3D.RotationDegrees = new(25, 180, 0);
+		Freelook.GDNode3D.RotationDegrees = new(-25, 0, 0);
 
 		Gizmos = new() { Name = "Gizmos" };
 		Gizmos.Attach(Root);

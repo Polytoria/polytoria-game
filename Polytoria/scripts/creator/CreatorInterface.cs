@@ -5,6 +5,7 @@
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Creator.Managers;
+using Polytoria.Creator.Settings;
 using Polytoria.Creator.UI;
 using Polytoria.Creator.UI.Popups;
 using Polytoria.Creator.UI.Splashes;
@@ -15,6 +16,7 @@ using Polytoria.Enums;
 using Polytoria.Formats;
 using Polytoria.Scripting;
 using Polytoria.Shared;
+using Polytoria.Shared.Settings;
 using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
@@ -110,14 +112,34 @@ public partial class CreatorInterface : Control, IScriptObject
 			StartupSplash.Singleton.Open();
 		}
 
-		CreatorSettings.Singleton.GetSettingProperty("Interface.UIScale")!.ValueChanged += (_) => { ApplyUIScale(); };
-		CreatorSettings.Singleton.GetSettingProperty("Interface.UseFullscreen")!.ValueChanged += (_) => { ApplyFullscreen(); };
-		CreatorSettings.Singleton.GetSettingProperty("Graphics.VSync")!.ValueChanged += (_) => { ApplyVSync(); };
+		CreatorSettingsService.Instance.Changed += OnSettingChanged;
 		ApplyUIScale();
 		ApplyFullscreen();
 		ApplyVSync();
 
 		base._Ready();
+	}
+
+	public override void _ExitTree()
+	{
+		CreatorSettingsService.Instance.Changed -= OnSettingChanged;
+		base._ExitTree();
+	}
+
+	private void OnSettingChanged(SettingChangedEvent e)
+	{
+		switch (e.Key)
+		{
+			case CreatorSettingKeys.Interface.UiScale:
+				ApplyUIScale();
+				break;
+			case SharedSettingKeys.Display.Fullscreen:
+				ApplyFullscreen();
+				break;
+			case SharedSettingKeys.Display.VSync:
+				ApplyVSync();
+				break;
+		}
 	}
 
 	public override void _Process(double delta)
@@ -128,7 +150,7 @@ public partial class CreatorInterface : Control, IScriptObject
 
 	private void ApplyUIScale()
 	{
-		float baseUIScale = CreatorSettings.Singleton.GetSetting<float>("Interface.UIScale");
+		float baseUIScale = CreatorSettingsService.Instance.Get<float>(CreatorSettingKeys.Interface.UiScale);
 
 		// Get the OS display scale factor
 		int screenId = DisplayServer.WindowGetCurrentScreen();
@@ -141,12 +163,18 @@ public partial class CreatorInterface : Control, IScriptObject
 
 	private static void ApplyFullscreen()
 	{
-		DisplayServer.WindowSetMode(CreatorSettings.Singleton.GetSetting<bool>("Interface.UseFullscreen") ? DisplayServer.WindowMode.Fullscreen : DisplayServer.WindowMode.Maximized);
+		if (Globals.IsInGDEditor)
+		{
+			DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed);
+			return;
+		}
+
+		DisplayServer.WindowSetMode(CreatorSettingsService.Instance.Get<bool>(SharedSettingKeys.Display.Fullscreen) ? DisplayServer.WindowMode.Fullscreen : DisplayServer.WindowMode.Maximized);
 	}
 
 	private static void ApplyVSync()
 	{
-		bool useVSync = CreatorSettings.Singleton.GetSetting<bool>("Graphics.VSync");
+		bool useVSync = CreatorSettingsService.Instance.Get<bool>(SharedSettingKeys.Display.VSync);
 		DisplayServer.WindowSetVsyncMode(useVSync ? DisplayServer.VSyncMode.Enabled : DisplayServer.VSyncMode.Disabled);
 		OS.LowProcessorUsageMode = useVSync;
 	}
@@ -430,7 +458,7 @@ public partial class CreatorInterface : Control, IScriptObject
 	{
 		if (dismissKey != null)
 		{
-			bool isShown = CreatorSettings.Singleton.GetSetting<bool>(dismissKey);
+			bool isShown = CreatorSettingsService.Instance.Get<bool>(dismissKey);
 			if (!isShown) return true;
 		}
 
@@ -454,7 +482,7 @@ public partial class CreatorInterface : Control, IScriptObject
 			tcs.SetResult(true);
 			if (dismissKey != null)
 			{
-				CreatorSettings.Singleton.SetSetting(dismissKey, false);
+				CreatorSettingsService.Instance.Set(dismissKey, false);
 			}
 			dialog.QueueFree();
 		};
@@ -639,7 +667,8 @@ public partial class CreatorInterface : Control, IScriptObject
 
 	public static void ToggleFullscreen()
 	{
-		CreatorSettings.Singleton.SetSetting("Interface.UseFullscreen", !CreatorSettings.Singleton.GetSetting<bool>("Interface.UseFullscreen"));
+		var settings = CreatorSettingsService.Instance;
+		settings.Set(SharedSettingKeys.Display.Fullscreen, !settings.Get<bool>(SharedSettingKeys.Display.Fullscreen));
 	}
 
 	public void StartFollowCursorLabel(string text)

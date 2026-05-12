@@ -13,13 +13,13 @@ public sealed partial class TextEditorField : CodeEdit
 	private const int MaxFontSize = 72;
 
 	public TextEditorRoot Root = null!;
-	
+
 	private int _currentFontSize = 16;
 
 	public override void _Ready()
 	{
 		int size = GetThemeFontSize("font_size", "Label");
-    	_currentFontSize = size > 0 ? size : 16;
+		_currentFontSize = size > 0 ? size : 16;
 		base._Ready();
 	}
 

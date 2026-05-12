@@ -85,7 +85,7 @@ public partial class Marker3D : Dynamic
 		};
 		stX.SetMaterial(matX);
 		stX.AddVertex(Vector3.Zero);
-		stX.AddVertex(new Vector3(-leng, 0, 0));
+		stX.AddVertex(new Vector3(leng, 0, 0));
 		stX.Commit(mesh);
 
 		// Y-axis

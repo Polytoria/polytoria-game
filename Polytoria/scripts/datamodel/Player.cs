@@ -460,7 +460,7 @@ public sealed partial class Player : NPC
 			UpdateTransformTick(delta);
 			if (Root.Network.IsServer && !IsSitting)
 			{
-				CharBody3D.Velocity = LastVelocity.Flip();
+				CharBody3D.Velocity = LastVelocity;
 				CharBody3D.MoveAndSlide();
 				LastVelocity = Vector3.Zero;
 				ApplyPushForce();

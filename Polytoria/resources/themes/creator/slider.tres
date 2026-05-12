@@ -1,0 +1,32 @@
+[gd_resource type="Theme" format=3 uid="uid://0yt2jwdsb3nb"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1hvxl"]
+bg_color = Color(0.12941177, 0.5882353, 0.9529412, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_eepd8"]
+bg_color = Color(0.12941177, 0.5882353, 0.9529412, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_x4mb6"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.601223, 0.601223, 0.6012228, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+corner_detail = 6
+
+[resource]
+HSlider/styles/grabber_area = SubResource("StyleBoxFlat_1hvxl")
+HSlider/styles/grabber_area_highlight = SubResource("StyleBoxFlat_eepd8")
+HSlider/styles/slider = SubResource("StyleBoxFlat_x4mb6")

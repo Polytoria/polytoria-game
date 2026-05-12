@@ -8,8 +8,10 @@ using Polytoria.Datamodel;
 using Polytoria.Datamodel.Data;
 using Polytoria.Datamodel.Resources;
 using Polytoria.Shared;
+using Polytoria.Utils;
 using Polytoria.Utils.Compression;
 using Polytoria.Utils.DTOs;
+using Semver;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -254,20 +256,20 @@ public static partial class PolyFormat
 		}
 	}
 
-	public static void LoadWorld(World root, byte[] rawdata)
+	public static void LoadWorld(World root, byte[] rawdata, bool forceMigrateCords = false)
 	{
 		// Empty world file
 		if (rawdata.Length == 0) return;
 
 		PolyRootData data = ReadRootDataBytes(rawdata);
-		InternalLoadWorld(root, data);
+		InternalLoadWorld(root, data, forceMigrateCords);
 	}
 
-	private static void InternalLoadWorld(World root, PolyRootData data)
+	private static void InternalLoadWorld(World root, PolyRootData data, bool forceMigrateCords = false)
 	{
 		Stopwatch sw = new();
 		sw.Start();
-		PolyLoadContext context = new() { RootData = data, Root = root };
+		PolyLoadContext context = new() { RootData = data, Root = root, ForceCordMigration = forceMigrateCords };
 
 		// Empty world
 		if (data.Objects == null || data.Objects.Length == 0) return;
@@ -568,6 +570,15 @@ public static partial class PolyFormat
 			else
 			{
 				val = DeserializePropValue(propVal, propType);
+			}
+
+			string curVer = loadContext.RootData.Version;
+
+			if ((SemVersion.Parse(loadContext.RootData.Version, SemVersionStyles.Any)
+				.ComparePrecedenceTo(SemVersion.Parse("2.0.0")) < 0) || loadContext.ForceCordMigration)
+			{
+				GD.Print("Semver detected, migrating");
+				MigrateAxis(propName, ref val);
 			}
 
 			try
@@ -884,6 +895,7 @@ public static partial class PolyFormat
 		public HashSet<string> LoadingModelChain = [];
 		public Dictionary<string, string> IndexToFile = [];
 		public Dictionary<string, PolyRootData> LoadedModel = [];
+		public bool ForceCordMigration = false;
 	}
 
 	public partial class PolyRoot
@@ -941,6 +953,30 @@ public static partial class PolyFormat
 		}
 
 		return className;
+	}
+
+	public static void MigrateAxis(string propName, ref object? val)
+	{
+		if ((propName == nameof(Dynamic.Position) || propName == nameof(Dynamic.LocalPosition) || propName == nameof(Physical.Velocity)) && val is Vector3 v3)
+		{
+			val = v3.Flip();
+		}
+		else if ((propName == nameof(Dynamic.Rotation) || propName == nameof(Dynamic.LocalRotation) || propName == nameof(Physical.AngularVelocity)) && val is Vector3 vrot3)
+		{
+			val = vrot3.FlipEuler();
+		}
+		else if ((propName == nameof(UIField.Rotation)) && val is float f)
+		{
+			val = -f;
+		}
+		else if ((propName == nameof(UIField.PositionRelative) || propName == nameof(UIField.PivotPoint)) && val is Vector2 v2)
+		{
+			val = new Vector2(v2.X, 1 - v2.Y);
+		}
+		else if ((propName == nameof(UIField.PositionOffset)) && val is Vector2 vo2)
+		{
+			val = new Vector2(vo2.X, -vo2.Y);
+		}
 	}
 
 	[JsonSourceGenerationOptions(WriteIndented = true, Converters = [

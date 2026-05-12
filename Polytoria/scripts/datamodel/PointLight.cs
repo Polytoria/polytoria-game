@@ -6,6 +6,7 @@ using Godot;
 using Polytoria.Attributes;
 #if CREATOR
 using Polytoria.Creator.Spatial;
+
 #endif
 
 namespace Polytoria.Datamodel;
@@ -13,20 +14,28 @@ namespace Polytoria.Datamodel;
 [Instantiable]
 public sealed partial class PointLight : Light
 {
+	internal OmniLight3D GDOmniLight = null!;
 	private const float RangeConversion = 3.0f;
 	private float _range;
 #if CREATOR
 	private SphereSpatial _sphere = null!;
 #endif
 
+	public override Node CreateGDNode()
+	{
+		Node3D n = new();
+		OmniLight3D sl = new();
+		n.AddChild(sl, @internal: Node.InternalMode.Back);
+		GDLight = sl;
+		GDOmniLight = sl;
+		return n;
+	}
+
 	public override void Init()
 	{
-		LightNode = GDNode.GetNode<OmniLight3D>("OmniLight3D");
-
 #if CREATOR
 		GDNode.AddChild(_sphere = new() { Visible = false }, @internal: Node.InternalMode.Back);
 #endif
-
 		base.Init();
 	}
 
@@ -44,7 +53,7 @@ public sealed partial class PointLight : Light
 		{
 			_range = value;
 			float v = value / RangeConversion;
-			((OmniLight3D)LightNode).OmniRange = v;
+			GDOmniLight.OmniRange = v;
 #if CREATOR
 			_sphere.Radius = v;
 #endif

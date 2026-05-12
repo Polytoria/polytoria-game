@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+using Polytoria.Creator.Settings;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Creator;
 using Polytoria.Shared;
@@ -179,7 +180,7 @@ public partial class FileBrowserTree : Tree
 
 		if (dragData is FileDragData fileDrag)
 		{
-			if (!await CreatorService.Interface.PromptConfirmation($"Move {fileDrag.Files.Length} file(s)?", dismissKey: "Popups.MoveFileConfirmation")) return;
+			if (!await CreatorService.Interface.PromptConfirmation($"Move {fileDrag.Files.Length} file(s)?", dismissKey: CreatorSettingKeys.Popups.MoveFileConfirmation)) return;
 			AutoSelects.Clear();
 			foreach (string file in fileDrag.Files)
 			{

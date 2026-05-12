@@ -1,10 +1,25 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 using Godot;
+using Polytoria.Shared.Settings;
 using System;
 
 namespace Polytoria.Shared;
 
 public static class RenderingDeviceSwitcher
 {
+	public static RenderingDeviceEnum FromRenderingMethodOption(RenderingMethodOption option)
+	{
+		return option switch
+		{
+			RenderingMethodOption.Standard => RenderingDeviceEnum.Forward,
+			RenderingMethodOption.Performance => RenderingDeviceEnum.Mobile,
+			RenderingMethodOption.Compatibility => RenderingDeviceEnum.GLCompatibility,
+			_ => RenderingDeviceEnum.Forward
+		};
+	}
 	public static void Switch(RenderingDeviceEnum to)
 	{
 		// Mobile are locked to one renderer only, don't change

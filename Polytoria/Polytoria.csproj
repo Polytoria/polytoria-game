@@ -40,6 +40,7 @@
 		<!-- Package References -->
 		<PackageReference Include="QRCoder" Version="1.8.0" />
 		<PackageReference Include="MemoryPack" Version="1.21.4" />
+		<PackageReference Include="Semver" Version="3.0.0" />
 		<PackageReference Include="TurboXml" Version="2.0.3" />
 		<PackageReference Include="ZstdSharp.Port" Version="0.8.7" />
 		<PackageReference Include="Humanizer.Core" Version="3.0.10" />

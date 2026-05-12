@@ -7,7 +7,6 @@ using Polytoria.Attributes;
 using Polytoria.Datamodel.Data;
 using Polytoria.Datamodel.Resources;
 using Polytoria.Enums;
-using Polytoria.Utils;
 using System;
 
 #if CREATOR
@@ -156,7 +155,7 @@ public sealed partial class Particles : Dynamic
 		set
 		{
 			_gravity = value;
-			_particle.Gravity = _gravity.Flip();
+			_particle.Gravity = _gravity;
 
 			OnPropertyChanged();
 		}
@@ -170,7 +169,7 @@ public sealed partial class Particles : Dynamic
 		{
 			_velocityDirection = value;
 
-			_particle.Direction = _velocityDirection.Flip();
+			_particle.Direction = _velocityDirection;
 
 			OnPropertyChanged();
 		}

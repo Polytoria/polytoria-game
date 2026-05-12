@@ -41,7 +41,7 @@ public static class MathUtils
 
 	public static Vector3 Vector3RadToDeg(Vector3 v)
 	{
-		return new(
+		return new Vector3(
 			Mathf.RadToDeg(v.X),
 			Mathf.RadToDeg(v.Y),
 			Mathf.RadToDeg(v.Z)

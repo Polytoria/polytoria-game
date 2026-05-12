@@ -11,6 +11,13 @@ public sealed partial class AudioSettingsApplier : Node
 		ApplyAll();
 	}
 
+	public override void _ExitTree()
+	{
+		if (ClientSettingsService.Instance != null)
+			ClientSettingsService.Instance.Changed -= OnChanged;
+		base._ExitTree();
+	}
+
 	private void OnChanged(SettingChangedEvent change)
 	{
 		switch (change.Key)

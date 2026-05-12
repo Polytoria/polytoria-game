@@ -1,6 +1,13 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 using Godot;
 using Polytoria.Shared;
+using System;
 using System.Linq;
+
+using Polytoria.Shared.Settings;
 
 namespace Polytoria.Client.Settings;
 
@@ -35,6 +42,6 @@ public static class GraphicsAutoDetector
 
 	private static bool ContainsAny(string text, params string[] values)
 	{
-		return values.Any(text.Contains);
+		return values.Any(v => text.Contains(v, StringComparison.OrdinalIgnoreCase));
 	}
 }

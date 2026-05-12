@@ -9,6 +9,7 @@ render_priority = 0
 shader = ExtResource("1_pea6w")
 shader_parameter/use_albedo_texture = false
 shader_parameter/use_orm_texture = false
+shader_parameter/use_normal_texture = false
 shader_parameter/emissive_strength = 2.000000095
 shader_parameter/metallic_specular = 0.2
 shader_parameter/roughness = 0.7

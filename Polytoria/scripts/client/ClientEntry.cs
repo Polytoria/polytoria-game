@@ -11,6 +11,7 @@ using Polytoria.Client.Debugger;
 using Polytoria.Client.Settings;
 using Polytoria.Client.Settings.Appliers;
 using Polytoria.Client.WebAPI;
+using Polytoria.Shared.Settings;
 #if CREATOR
 using Polytoria.Creator.Utils;
 #endif
@@ -200,7 +201,7 @@ public sealed partial class ClientEntry : Node3D
 
 		settings.AddChild(new DisplaySettingsApplier { Name = "DisplaySettingsApplier" }, true, InternalMode.Front);
 		settings.AddChild(new AudioSettingsApplier { Name = "AudioSettingsApplier" }, true, InternalMode.Front);
-		settings.AddChild(new GraphicsSettingsApplier { Name = "GraphicsSettingsApplier" }, true, InternalMode.Front);
+		settings.AddChild(new GraphicsSettingsApplier { Name = GraphicsSettingsApplier.NodeName, Settings = settings }, true, InternalMode.Front);
 
 		DatamodelBridge = new()
 		{
@@ -463,7 +464,7 @@ public sealed partial class ClientEntry : Node3D
 	{
 		if (@event.IsActionPressed("toggle_fullscreen"))
 		{
-			ClientSettingsService.Instance.Set(ClientSettingKeys.Display.Fullscreen, !ClientSettingsService.Instance.Get<bool>(ClientSettingKeys.Display.Fullscreen));
+			ClientSettingsService.Instance.Set(SharedSettingKeys.Display.Fullscreen, !ClientSettingsService.Instance.Get<bool>(SharedSettingKeys.Display.Fullscreen));
 		}
 		base._UnhandledKeyInput(@event);
 	}

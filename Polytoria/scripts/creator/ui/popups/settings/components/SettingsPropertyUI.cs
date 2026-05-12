@@ -5,46 +5,87 @@
 using Godot;
 using Polytoria.Creator.Properties;
 using Polytoria.Shared;
-using static Polytoria.Creator.CreatorSettings;
+using Polytoria.Shared.Settings;
+using System;
 
 namespace Polytoria.Creator.UI.Components;
 
-public partial class SettingsPropertyUI : Node
+public partial class SettingsPropertyUI : Control
 {
 	[Export] private Label _propNameLabel = null!;
 	[Export] private Control _propContainer = null!;
 
-	public SettingsProperty Property = null!;
+	public SettingDef SettingDef { get; private set; } = null!;
+	public ISettingsContext SettingsContext { get; private set; } = null!;
+
+	private IProperty _input = null!;
+	private bool _suppressChanged;
+
+	public void Init(SettingDef def, ISettingsContext context)
+	{
+		SettingDef = def;
+		SettingsContext = context;
+	}
 
 	public override void _Ready()
 	{
-		_propNameLabel.Text = Property.DisplayName;
+		_propNameLabel.Text = SettingDef.Label;
 
-		IProperty input = Globals.LoadProperty(Property.ValueType);
+		Type valueType = SettingDef.ValueType;
+		IProperty input = Globals.LoadProperty(valueType);
 
-		input.PropertyType = Property.ValueType;
+		input.PropertyType = valueType;
 		_propContainer.AddChild((Node)input);
 
-		// Apply min/max value for floats if set
-		if (input is SingleProperty sp && Property.MaxValue != 0)
+		if (input is SingleProperty sp && SettingDef.UntypedMinValue != null && SettingDef.UntypedMaxValue != null)
 		{
-			sp.MinValue = Property.MinValue;
-			sp.MaxValue = Property.MaxValue;
+			sp.MinValue = Convert.ToSingle(SettingDef.UntypedMinValue);
+			sp.MaxValue = Convert.ToSingle(SettingDef.UntypedMaxValue);
 			sp.AllowGreater = false;
 			sp.AllowLesser = false;
 		}
 
 		((Control)input).SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 
-		// Wait one frame for property to be ready
+		_input = input;
+		SettingsContext.Changed += OnExternalChanged;
+
 		Callable.From(() =>
 		{
-			input.SetValue(Property.Value);
+			if (!IsInstanceValid(this))
+				return;
 
-			input.ValueChanged += val =>
+			try
 			{
-				Property.Value = val;
-			};
+				object? currentValue = SettingsContext.GetUntyped(SettingDef.Key);
+				input.SetValue(currentValue);
+
+				input.ValueChanged += val =>
+				{
+					_suppressChanged = true;
+					SettingsContext.Set(SettingDef.Key, val!);
+					_suppressChanged = false;
+				};
+			}
+			catch (Exception e)
+			{
+				PT.PrintErr($"Failed to initialize settings property UI for '{SettingDef.Key}': {e}");
+			}
 		}).CallDeferred();
+	}
+
+	public override void _ExitTree()
+	{
+		if (SettingsContext != null)
+			SettingsContext.Changed -= OnExternalChanged;
+		base._ExitTree();
+	}
+
+	private void OnExternalChanged(SettingChangedEvent e)
+	{
+		if (_suppressChanged || e.Key != SettingDef.Key)
+			return;
+
+		_input.SetValue(e.NewValue);
 	}
 }

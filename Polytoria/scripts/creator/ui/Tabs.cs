@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+using Polytoria.Creator.Settings;
 using Polytoria.Creator.UI.TextEditor;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Creator;
@@ -34,7 +35,7 @@ public sealed partial class Tabs : TabContainer
 			{
 				if (!(control is TextEditorContainer txt && txt.EditorRoot.Saved))
 				{
-					if (!await CreatorService.Interface.PromptConfirmation("Are you sure you want to close this tab? Any unsaved changes will be lost.", dismissKey: "Popups.CloseTabWarning")) return;
+					if (!await CreatorService.Interface.PromptConfirmation("Are you sure you want to close this tab? Any unsaved changes will be lost.", dismissKey: CreatorSettingKeys.Popups.CloseTabWarning)) return;
 				}
 			}
 
@@ -97,6 +98,15 @@ public sealed partial class Tabs : TabContainer
 		{
 			container = new WorldContainer(gt.World);
 			icon = "World";
+
+			void deleted()
+			{
+				gt.World.Deleted -= deleted;
+				if (IsInstanceValid(container))
+					container.QueueFree();
+			}
+
+			gt.World.Deleted += deleted;
 		}
 		else if (other is TextEditorTab txt)
 		{

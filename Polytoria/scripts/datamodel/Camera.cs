@@ -375,8 +375,6 @@ public sealed partial class Camera : Dynamic
 		_inputHelper.GodotUnhandledInputEvent += OnInput;
 
 		GDNode3D.AddChild(Camera3D = new());
-		// Flip the camera
-		Camera3D.RotationDegrees = new(0, 180, 0);
 
 		_turnX = new Node3D();
 		_turnY = new Node3D();
@@ -384,8 +382,6 @@ public sealed partial class Camera : Dynamic
 		_turnX.AddChild(_turnY);
 		_turnX.AddChild(_turnY2);
 		GDNode3D.GetParent().AddChild(_turnX);
-
-		_turnY.RotationDegrees = new(0, 180, 0);
 
 		FOV = 75;
 
@@ -429,7 +425,7 @@ public sealed partial class Camera : Dynamic
 				LimitRotation();
 			}
 
-			Vector3 computedPosition = Target.Position.Flip() + PositionOffset.Flip();
+			Vector3 computedPosition = Target.Position + PositionOffset;
 			Vector3 computedRotation = _targetRotation + RotationOffset;
 
 			_turnX.GlobalPosition = computedPosition;
@@ -441,7 +437,7 @@ public sealed partial class Camera : Dynamic
 			{
 				// Force mouse captured
 				Input.MouseMode = Input.MouseModeEnum.Captured;
-				Root.Input.OverrideMousePosTo = GDNode.GetViewport().GetVisibleRect().GetCenter().Flip();
+				Root.Input.OverrideMousePosTo = GDNode.GetViewport().GetVisibleRect().GetCenter();
 			}
 
 			if (_targetZoom <= 0)
@@ -526,7 +522,7 @@ public sealed partial class Camera : Dynamic
 			}
 
 			_currentMovement.X = horizontalInput.X;
-			_currentMovement.Y = -verticalInput;
+			_currentMovement.Y = verticalInput;
 			_currentMovement.Z = horizontalInput.Y;
 
 			if (_currentMovement == Vector3.Zero && _currentRotation == Vector2.Zero)
@@ -550,7 +546,7 @@ public sealed partial class Camera : Dynamic
 
 			if (_currentMovement != Vector3.Zero)
 			{
-				temp.Origin -= temp.Basis * (_currentMovement * (_moveSpeed * speedMultipler) * (float)delta);
+				temp.Origin += temp.Basis * (_currentMovement * (_moveSpeed * speedMultipler) * (float)delta);
 			}
 
 			SetGlobalTransform(temp);
@@ -652,6 +648,9 @@ public sealed partial class Camera : Dynamic
 			Input.MouseMode = Input.MouseModeEnum.Visible;
 			Root.Input.OverrideMousePos = false;
 			GDNode.GetViewport().WarpMouse(_turnStartPos);
+#if GODOT_WINDOWS
+			GDNode.GetViewport().WarpMouse(_turnStartPos); // Workaround for godotengine/godot#119205
+#endif
 		}
 	}
 
@@ -668,11 +667,11 @@ public sealed partial class Camera : Dynamic
 				switch (btnEvent2.ButtonIndex)
 				{
 					case MouseButton.WheelUp:
-						_targetZoom = _distance - (ScrollSensitivity / 5);
+						_targetZoom -= ScrollSensitivity / 5;
 						break;
 
 					case MouseButton.WheelDown:
-						_targetZoom = _distance + (ScrollSensitivity / 5);
+						_targetZoom += ScrollSensitivity / 5;
 						break;
 				}
 			}
@@ -745,6 +744,9 @@ public sealed partial class Camera : Dynamic
 					Input.MouseMode = Input.MouseModeEnum.Visible;
 					Vector2 globalMousePos = GDNode.GetViewport().GetScreenTransform().Origin + _lastMousePosition;
 					Input.WarpMouse(globalMousePos);
+#if GODOT_WINDOWS
+					Input.WarpMouse(globalMousePos); // Workaround for godotengine/godot#119205
+#endif
 
 					_currentMovement = Vector3.Zero;
 					_currentRotation = Vector2.Zero;
@@ -781,7 +783,7 @@ public sealed partial class Camera : Dynamic
 		{
 			if (@event is InputEventMouseMotion motion)
 			{
-				_currentRotation = new(-motion.ScreenRelative.X, motion.ScreenRelative.Y);
+				_currentRotation = -new Vector2(motion.ScreenRelative.X, motion.ScreenRelative.Y);
 			}
 		}
 
@@ -834,13 +836,13 @@ public sealed partial class Camera : Dynamic
 	[ScriptMethod]
 	public bool IsPositionInView(Vector3 pos)
 	{
-		return Camera3D.IsPositionInFrustum(pos.Flip());
+		return Camera3D.IsPositionInFrustum(pos);
 	}
 
 	[ScriptMethod]
 	public bool IsPositionBehind(Vector3 pos)
 	{
-		return Camera3D.IsPositionBehind(pos.Flip());
+		return Camera3D.IsPositionBehind(pos);
 	}
 
 	[ScriptMethod]
@@ -851,16 +853,15 @@ public sealed partial class Camera : Dynamic
 		Vector2 screenPos = new(pos.X * size.X, pos.Y * size.Y);
 		Vector3 rayOrigin = Camera3D.ProjectRayOrigin(screenPos);
 		Vector3 rayDir = Camera3D.ProjectRayNormal(screenPos);
-		return Root.Environment.Raycast(rayOrigin.Flip(), rayDir.Flip(), maxDistance, ignoreList);
+		return Root.Environment.Raycast(rayOrigin, rayDir, maxDistance, ignoreList);
 	}
 
 	[ScriptMethod]
 	public RayResult? ScreenPointToRay(Vector2 pos, Instance[]? ignoreList = null, float maxDistance = 10000f)
 	{
-		pos = pos.Flip();
 		Vector3 rayOrigin = Camera3D.ProjectRayOrigin(pos);
 		Vector3 rayDir = Camera3D.ProjectRayNormal(pos);
-		return Root.Environment.Raycast(rayOrigin.Flip(), rayDir.Flip(), maxDistance, ignoreList);
+		return Root.Environment.Raycast(rayOrigin, rayDir, maxDistance, ignoreList);
 	}
 
 	[ScriptMethod]
@@ -868,7 +869,7 @@ public sealed partial class Camera : Dynamic
 	{
 		Viewport viewport = GDNode.GetViewport();
 		Vector2 size = viewport.GetVisibleRect().Size;
-		return new Vector2(pos.X * size.X, pos.Y * size.Y).Flip();
+		return new Vector2(pos.X * size.X, pos.Y * size.Y);
 	}
 
 	[ScriptMethod]
@@ -879,13 +880,12 @@ public sealed partial class Camera : Dynamic
 		Vector2 screenPos = new(pos.X * size.X, pos.Y * size.Y);
 		Vector3 origin = Camera3D.ProjectRayOrigin(screenPos);
 		Vector3 direction = Camera3D.ProjectRayNormal(screenPos);
-		return (origin + direction * Camera3D.Near).Flip();
+		return (origin + direction * Camera3D.Near);
 	}
 
 	[ScriptMethod]
 	public Vector2 WorldToViewportPoint(Vector3 pos)
 	{
-		pos = pos.Flip();
 		Viewport viewport = GDNode.GetViewport();
 		Vector2 screenPos = Camera3D.UnprojectPosition(pos);
 		Vector2 size = viewport.GetVisibleRect().Size;
@@ -895,15 +895,13 @@ public sealed partial class Camera : Dynamic
 	[ScriptMethod]
 	public Vector2 WorldToScreenPoint(Vector3 pos)
 	{
-		pos = pos.Flip();
 		Vector2 unprojected = Camera3D.UnprojectPosition(pos);
-		return unprojected.Flip();
+		return unprojected;
 	}
 
 	[ScriptMethod]
 	public Vector2 ScreenToViewportPoint(Vector2 pos)
 	{
-		pos = pos.Flip();
 		Viewport viewport = GDNode.GetViewport();
 		if (viewport == null)
 			return Vector2.Zero;
@@ -915,10 +913,9 @@ public sealed partial class Camera : Dynamic
 	[ScriptMethod]
 	public Vector3 ScreenToWorldPoint(Vector2 pos)
 	{
-		pos = pos.Flip();
 		Vector3 rayOrigin = Camera3D.ProjectRayOrigin(new(pos.X, pos.Y));
 		Vector3 rayDir = Camera3D.ProjectRayNormal(new(pos.X, pos.Y));
-		return (rayOrigin + rayDir * Camera3D.Near).Flip();
+		return (rayOrigin + rayDir * Camera3D.Near);
 	}
 
 
@@ -1003,7 +1000,7 @@ public sealed partial class Camera : Dynamic
 		}
 		else
 		{
-			return (origin + direction * 10f).Flip();
+			return origin + direction * 10f;
 		}
 	}
 
@@ -1014,7 +1011,7 @@ public sealed partial class Camera : Dynamic
 		Vector3 origin = globalTransform.Origin;
 		Vector3 direction = globalTransform.Basis.Z;
 
-		return World.Current.Environment.Raycast(origin.Flip(), direction.Flip(), 20, ignoreList);
+		return World.Current.Environment.Raycast(origin, direction, 20, ignoreList);
 	}
 #endif
 }

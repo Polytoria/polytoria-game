@@ -7,7 +7,6 @@ using Polytoria.Attributes;
 using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
-using Polytoria.Utils;
 using static Polytoria.Datamodel.Environment;
 
 namespace Polytoria.Datamodel;
@@ -263,7 +262,7 @@ public partial class Grabbable : Instance
 					Camera3D camera = viewport.GetCamera3D();
 					Camera? cam = Root.Environment.CurrentCamera;
 					if (cam == null) return;
-					Vector2 mousePos = Root.Input.MousePosition.Flip();
+					Vector2 mousePos = Root.Input.MousePosition;
 					Vector3 rayOrigin = camera.ProjectRayOrigin(mousePos);
 					Vector3 rayDir = camera.ProjectRayNormal(mousePos);
 
@@ -275,16 +274,16 @@ public partial class Grabbable : Instance
 					}
 					else
 					{
-						RayResult? hit = Root.Environment.Raycast(rayOrigin.Flip(), rayDir.Flip(), ignoreList: [Parent]);
+						RayResult? hit = Root.Environment.Raycast(rayOrigin, rayDir, ignoreList: [Parent]);
 						if (hit != null)
 						{
-							targetPos = hit.Value.Position.Flip();
+							targetPos = hit.Value.Position;
 						}
 					}
 
 					if (targetPos == null) return;
 
-					Vector3 anchorPos = _dragger.Position.Flip();
+					Vector3 anchorPos = _dragger.Position;
 					Vector3 direction = targetPos.Value - anchorPos;
 					float distance = direction.Length();
 

@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+using Polytoria.Creator.Settings;
 
 namespace Polytoria.Creator.UI.Components;
 
@@ -13,7 +14,7 @@ public partial class CodeEditorButton : Button
 	public override void _Pressed()
 	{
 		if (!IsVisibleInTree()) return;
-		CreatorSettings.Singleton.SetSetting("CodeEditor.PreferredEditor", Editor);
+		CreatorSettingsService.Instance.Set(CreatorSettingKeys.CodeEditor.PreferredEditor, Editor);
 		base._Pressed();
 	}
 }

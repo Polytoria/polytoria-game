@@ -6,6 +6,7 @@ using Godot;
 using System;
 using System.Globalization;
 using System.Linq;
+using System.IO;
 
 namespace Polytoria.Utils;
 
@@ -212,6 +213,9 @@ public static class NodeExtension
 
 public static class StringExtension
 {
+	private static readonly char[] InvalidFileNameChars =
+			[.. Path.GetInvalidFileNameChars(), '\\', '/', ':', '*', '?', '"', '<', '>', '|'];
+
 	public static string SanitizePath(this string s)
 	{
 		string ns = s.Replace('\\', '/');
@@ -227,6 +231,11 @@ public static class StringExtension
 			ns = "";
 		}
 		return ns;
+	}
+
+	public static string SanitizeFileName(this string s)
+	{
+		return string.Join("_", s.Split(InvalidFileNameChars));
 	}
 
 	public static string TrimExtension(this string s)
