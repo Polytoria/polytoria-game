@@ -19,9 +19,6 @@ public partial class NewProjectWizard : Control
 	public const string DefaultProjectName = "MyProject";
 	public bool ReturnToSplash = false;
 
-	private static readonly char[] InvalidProjectNameChars =
-		[.. Path.GetInvalidFileNameChars(), '\\', '/', ':', '*', '?', '"', '<', '>', '|'];
-
 	[Export] private LineEdit _projectNameEdit = null!;
 	[Export] private LineEdit _projectPathEdit = null!;
 	[Export] private Button _pathBrowseBtn = null!;
@@ -56,7 +53,7 @@ public partial class NewProjectWizard : Control
 	{
 		if (_isSanitizing) return;
 
-		string cleansedName = string.Join("_", newText.Split(InvalidProjectNameChars));
+		string cleansedName = newText.SanitizeFileName();
 
 		if (cleansedName != newText)
 		{
@@ -138,7 +135,7 @@ public partial class NewProjectWizard : Control
 				return;
 			}
 
-			if (projName.IndexOfAny(InvalidProjectNameChars) >= 0)
+			if (projName != projName.SanitizeFileName())
 			{
 				CreatorService.Interface.PopupAlert("Project name contains invalid characters");
 				return;

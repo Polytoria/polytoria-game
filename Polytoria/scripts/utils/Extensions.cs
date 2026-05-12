@@ -6,6 +6,7 @@ using Godot;
 using System;
 using System.Globalization;
 using System.Linq;
+using System.IO;
 
 namespace Polytoria.Utils;
 
@@ -227,6 +228,14 @@ public static class StringExtension
 			ns = "";
 		}
 		return ns;
+	}
+
+	public static string SanitizeFileName(this string s)
+	{
+		char[] characters =
+			[.. Path.GetInvalidFileNameChars(), '\\', '/', ':', '*', '?', '"', '<', '>', '|'];
+
+		return string.Join("_", s.Split(characters));
 	}
 
 	public static string TrimExtension(this string s)
