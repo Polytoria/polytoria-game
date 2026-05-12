@@ -19,6 +19,9 @@ public partial class NewProjectWizard : Control
 	public const string DefaultProjectName = "MyProject";
 	public bool ReturnToSplash = false;
 
+	private static readonly char[] InvalidProjectNameChars =
+		[..Path.GetInvalidFileNameChars(), '\\', '/', ':', '*', '?', '"', '<', '>', '|'];
+
 	[Export] private LineEdit _projectNameEdit = null!;
 	[Export] private LineEdit _projectPathEdit = null!;
 	[Export] private Button _pathBrowseBtn = null!;
@@ -29,6 +32,7 @@ public partial class NewProjectWizard : Control
 	private ButtonGroup _templateBtnGroup = new();
 	private string _targetTemplatePath = "";
 	private string _oldNameText = "";
+	private bool _isSanitizing = false;
 
 	public static NewProjectWizard Singleton { get; private set; } = null!;
 
@@ -50,12 +54,25 @@ public partial class NewProjectWizard : Control
 
 	private void OnNameEditTextChanged(string newText)
 	{
-		if (_projectPathEdit.Text.EndsWith(_oldNameText))
+		if (_isSanitizing) return;
+
+		string cleansedName = string.Join("_", newText.Split(InvalidProjectNameChars));
+
+		if (cleansedName != newText)
 		{
-			_projectPathEdit.Text = _projectPathEdit.Text.GetBaseDir().PathJoin(newText);
+			_isSanitizing = true;
+			int caret = _projectNameEdit.CaretColumn;
+			_projectNameEdit.Text = cleansedName;
+			_projectNameEdit.CaretColumn = Math.Min(caret, cleansedName.Length);
+			_isSanitizing = false;
 		}
 
-		_oldNameText = newText;
+		if (_projectPathEdit.Text.EndsWith(_oldNameText))
+		{
+			_projectPathEdit.Text = _projectPathEdit.Text.GetBaseDir().PathJoin(cleansedName);
+		}
+
+		_oldNameText = cleansedName;
 	}
 
 	private void OnTemplateBtnPressed(BaseButton button)
@@ -121,6 +138,12 @@ public partial class NewProjectWizard : Control
 				return;
 			}
 
+			if (projName.IndexOfAny(InvalidProjectNameChars) >= 0)
+			{
+				CreatorService.Interface.PopupAlert("Project name contains invalid characters");
+				return;
+			}
+
 			if (string.IsNullOrWhiteSpace(projPath))
 			{
 				CreatorService.Interface.PopupAlert("Please specify a folder to create project on");
@@ -144,9 +167,7 @@ public partial class NewProjectWizard : Control
 				}
 				else
 				{
-
 					await ProjectManager.NewProjectFromTemplate(projPath, _targetTemplatePath, new() { ProjectName = projName });
-
 				}
 			}
 			catch (Exception ex)
