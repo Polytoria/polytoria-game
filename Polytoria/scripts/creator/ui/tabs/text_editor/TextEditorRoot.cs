@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace Polytoria.Creator.UI.TextEditor;
 
@@ -21,6 +22,11 @@ public partial class TextEditorRoot : Node
 {
 	private const string CodeCompletionIconPath = "res://assets/textures/creator/tabs/text_editor/code_completion/";
 	private const int DiagDelay = 500;
+	
+	private static readonly string[] CompletionBlacklist =
+	{
+		"getfenv", "setfenv"
+	};
 
 	[Export] public TextEditorField CodeEditor = null!;
 	public TextEditorContainer Container = null!;
@@ -315,18 +321,20 @@ public partial class TextEditorRoot : Node
 
 		foreach (CodeEditCompletionItem item in items)
 		{
-			string? iconTxt = item.Kind switch
-			{
-				CodeEdit.CodeCompletionKind.Member => "Property",
-				CodeEdit.CodeCompletionKind.Function => "Method",
-				_ => "None"
-			};
-			Texture2D? icon = null;
-			if (iconTxt != null)
-			{
-				icon = GD.Load<Texture2D>(CodeCompletionIconPath.PathJoin(iconTxt + ".svg"));
+			if (!CompletionBlacklist.Contains(item.DisplayText)){
+				string? iconTxt = item.Kind switch
+				{
+					CodeEdit.CodeCompletionKind.Member => "Property",
+					CodeEdit.CodeCompletionKind.Function => "Method",
+					_ => "None"
+				};
+				Texture2D? icon = null;
+				if (iconTxt != null)
+				{
+					icon = GD.Load<Texture2D>(CodeCompletionIconPath.PathJoin(iconTxt + ".svg"));
+				}
+				CodeEditor.AddCodeCompletionOption(item.Kind, item.DisplayText, item.InsertText, icon: icon, location: -1);
 			}
-			CodeEditor.AddCodeCompletionOption(item.Kind, item.DisplayText, item.InsertText, icon: icon, location: -1);
 		}
 		CodeEditor.UpdateCodeCompletionOptions(false);
 	}
