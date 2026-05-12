@@ -29,7 +29,7 @@ public class LuaCompletionService(CreatorSession session)
 		"false", "for", "function", "if",
 		"in", "local", "nil", "not", "or", "repeat",
 		"return", "then", "true", "until", "while",
-		"continue"
+		"continue", "const"
 	};
 
 	public async Task InitAsync()
