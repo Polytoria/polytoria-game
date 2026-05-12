@@ -58,7 +58,7 @@ public static class RenderingDeviceSwitcher
 
 		// rebuild command line arguments, replaces existing rendering method argument with the new one
 		OS.CreateProcess(exePath, GetRestartArgs(args, renderingName));
-		
+
 		Globals.Singleton.Quit(force: true);
 		throw new SwitchingRenderingDeviceException();
 	}
