@@ -20,7 +20,7 @@ public partial class NewProjectWizard : Control
 	public bool ReturnToSplash = false;
 
 	private static readonly char[] InvalidProjectNameChars =
-		[..Path.GetInvalidFileNameChars(), '\\', '/', ':', '*', '?', '"', '<', '>', '|'];
+		[.. Path.GetInvalidFileNameChars(), '\\', '/', ':', '*', '?', '"', '<', '>', '|'];
 
 	[Export] private LineEdit _projectNameEdit = null!;
 	[Export] private LineEdit _projectPathEdit = null!;
