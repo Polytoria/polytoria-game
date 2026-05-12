@@ -467,7 +467,7 @@ public sealed partial class PolytorianModel : CharacterModel
 		StandardMaterial3D? DuplicateWithColor(StandardMaterial3D? source, StandardMaterial3D? previous)
 		{
 			if (source == null) return null;
-			var dup = (StandardMaterial3D)source.Duplicate(true);
+			var dup = (StandardMaterial3D)source.Duplicate();
 			if (previous != null) dup.AlbedoColor = previous.AlbedoColor;
 			return dup;
 		}
