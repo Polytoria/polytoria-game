@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://djnt2lbddrfjx"]
 
 [ext_resource type="Script" uid="uid://3bvn0pq3nupi" path="res://scripts/client/ui/playerlist/UILeaderboardUserOptions.cs" id="1_31oub"]
-[ext_resource type="Texture2D" uid="uid://bdl86yw6153s6" path="res://assets/textures/client/ui/chat/bubble_arrow.png" id="2_3wcmt"]
 [ext_resource type="PackedScene" uid="uid://dbaked5s53qqn" path="res://scenes/shared/loader.tscn" id="2_48ua2"]
+[ext_resource type="Texture2D" uid="uid://dyef4qa4syg37" path="res://assets/textures/client/ui/chat/bubble_arrow.svg" id="3_3wcmt"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4fqi5"]
 content_margin_left = 8.0
@@ -162,9 +162,9 @@ anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -168.0
-offset_top = -13.0
+offset_top = -18.0
 offset_right = -8.0
-offset_bottom = 20.0
+offset_bottom = 17.0
 grow_horizontal = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_4fqi5")
 
@@ -220,12 +220,12 @@ grow_vertical = 2
 [node name="TextureRect" type="TextureRect" parent="Pivot" unique_id=280369637]
 self_modulate = Color(0, 0, 0, 0.49803922)
 layout_mode = 0
-offset_left = -8.19574
-offset_top = 6.036133
-offset_right = 4.8403625
-offset_bottom = 15.875244
+offset_left = -8.0
+offset_top = 6.921715
+offset_right = 5.9148483
+offset_bottom = 16.780907
 rotation = -1.5707964
-texture = ExtResource("2_3wcmt")
+texture = ExtResource("3_3wcmt")
 expand_mode = 1
 
 [node name="AnimPlay" type="AnimationPlayer" parent="." unique_id=1994330876]
