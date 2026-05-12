@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+using Polytoria.Utils;
 
 namespace Polytoria.Client;
 
@@ -53,9 +54,9 @@ public partial class GamepadFocusbox : Control
 			_targetPos = focusOwner.GlobalPosition;
 			_targetSize = focusOwner.Size;
 
-			// TODO: Use MathUtils.ExpDecay to calculate the weights here. Idk how to test this class so it's probably best for me not to mess with it
-			GlobalPosition = GlobalPosition.Lerp(_targetPos - OutlineOffset / 2, (float)(delta * FocusLerpSpeed));
-			Size = Size.Lerp(_targetSize + OutlineOffset, (float)(delta * FocusLerpSpeed));
+			float weight = MathUtils.ExpDecay((float)delta, FocusLerpSpeed);
+			GlobalPosition = GlobalPosition.Lerp(_targetPos - OutlineOffset / 2, weight);
+			Size = Size.Lerp(_targetSize + OutlineOffset, weight);
 
 			Visible = true;
 		}
