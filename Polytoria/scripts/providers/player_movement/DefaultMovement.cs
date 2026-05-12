@@ -39,8 +39,7 @@ public class DefaultMovement : IPlayerMovement
 
 			if (Target.SprintHoldAgain)
 			{
-				sprint = false;
-				Target.SprintOverride = false;
+				sprint = Target.SprintOverride = false;
 				if (Input.IsActionJustReleased("sprint") || initialSprintOverride)
 				{
 					Target.SprintHoldAgain = false;
