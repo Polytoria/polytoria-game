@@ -213,6 +213,9 @@ public static class NodeExtension
 
 public static class StringExtension
 {
+	private static readonly char[] characters =
+			[.. Path.GetInvalidFileNameChars(), '\\', '/', ':', '*', '?', '"', '<', '>', '|'];
+			
 	public static string SanitizePath(this string s)
 	{
 		string ns = s.Replace('\\', '/');
@@ -232,9 +235,6 @@ public static class StringExtension
 
 	public static string SanitizeFileName(this string s)
 	{
-		char[] characters =
-			[.. Path.GetInvalidFileNameChars(), '\\', '/', ':', '*', '?', '"', '<', '>', '|'];
-
 		return string.Join("_", s.Split(characters));
 	}
 
