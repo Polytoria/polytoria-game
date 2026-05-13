@@ -422,7 +422,7 @@ public sealed partial class Camera : Dynamic
 				float xAxis = Input.GetAxis("cam_rightward", "cam_leftward");
 				float yAxis = Input.GetAxis("cam_downward", "cam_upward");
 
-				_targetRotation += new Vector3(yAxis * 270f, xAxis * 400f, 0) * (Sensitivity * (float)delta);
+				_targetRotation += new Vector3(yAxis * VerticalSpeed * 2, xAxis * HorizontalSpeed * 3, 0) * (Sensitivity * (float)delta);
 				LimitRotation();
 			}
 
