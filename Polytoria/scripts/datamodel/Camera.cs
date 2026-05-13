@@ -20,7 +20,6 @@ public sealed partial class Camera : Dynamic
 	public const float ClipSafeMargin = 2.0f;
 	public const float DefaultZoomDistance = 10.0f;
 	public const float DefaultScrollSensitivity = 15.0f;
-	public const float GamepadSensitivity = 400.0f;
 
 	private CameraModeEnum _mode;
 	private float _fov;
@@ -423,7 +422,7 @@ public sealed partial class Camera : Dynamic
 				float xAxis = Input.GetAxis("cam_rightward", "cam_leftward");
 				float yAxis = Input.GetAxis("cam_downward", "cam_upward");
 
-				_targetRotation += new Vector3(yAxis * 0.75f, xAxis, 0) * (Sensitivity * GamepadSensitivity * (float)delta);
+				_targetRotation += new Vector3(yAxis * 270f, xAxis * 400f, 0) * (Sensitivity * (float)delta);
 				LimitRotation();
 			}
 
