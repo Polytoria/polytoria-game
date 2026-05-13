@@ -63,6 +63,8 @@ public abstract partial class Entity : RigidBody
 
 			if (_isSpawn)
 			{
+				this.LinearVelocity = Vector3.Zero;
+				this.AngularVelocity = Vector3.Zero;
 				Root.Environment.RegisterSpawnPoint(this);
 			}
 			else
