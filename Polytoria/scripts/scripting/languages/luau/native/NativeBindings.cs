@@ -255,6 +255,10 @@ internal partial class NativeBindings
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
 	internal static partial int lua_error(IntPtr luaState);
 
+	[LibraryImport(LuaLibraryName, StringMarshalling = StringMarshalling.Utf8)]
+	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+	internal static partial int luaL_typeerrorL(IntPtr luaState, int narg, string tname);
+
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
 	internal static partial IntPtr lua_newuserdatauv(IntPtr luaState, UIntPtr size, int nuvalue);

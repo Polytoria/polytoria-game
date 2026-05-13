@@ -62,7 +62,6 @@ public class LuaMetatable : LuaObject
 				tcs.SetResult(0);
 				return;
 			}
-
 			// --------------- HANDLE TASK --------------- 
 			if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
 			{
@@ -110,11 +109,18 @@ public class LuaMetatable : LuaObject
 					}
 					else if (task is Task<object?[]> objectArrayTask)
 					{
-						foreach (object? r in objectArrayTask.Result)
+						if (targetMethod.GetCustomAttribute<ScriptMethodAttribute>()?.ScriptTupleReturn == true)
 						{
-							LangProvider.PushValueToLua(state, r);
+							foreach (object? r in objectArrayTask.Result)
+							{
+								LangProvider.PushValueToLua(state, r);
+							}
+							tcs.SetResult(objectArrayTask.Result.Length);
 						}
-						tcs.SetResult(objectArrayTask.Result.Length);
+						else
+						{
+							LangProvider.PushValueToLua(state, objectArrayTask.Result);
+						}
 						return;
 					}
 					else
@@ -139,7 +145,6 @@ public class LuaMetatable : LuaObject
 	{
 		LuaState state = LuaState.FromIntPtr(L);
 		Script script = LuauProvider.GetScriptInstance(state);
-
 		object? targetObject = LangProvider.LuaToObject(state, 1, false);
 
 		if (IsThisInvalid(targetObject))
@@ -258,7 +263,6 @@ public class LuaMetatable : LuaObject
 			}
 		}
 
-		PropertyInfo? prop = ScriptService.GetScriptPropertyOfName(TargetType, key, script.Compatibility);
 		MethodInfo? method = ScriptService.ResolveMethod(script.Compatibility, key, TargetType);
 
 		if (method != null)
@@ -270,6 +274,7 @@ public class LuaMetatable : LuaObject
 				return (int)method.Invoke(targetObject, [state])!;
 			}
 		}
+		PropertyInfo? prop = ScriptService.GetScriptPropertyOfName(TargetType, key, script.Compatibility);
 
 		if (prop != null)
 		{
@@ -902,8 +907,14 @@ public class LuaMetatable : LuaObject
 		}
 		else
 		{
-			object? result = targetMethod.Invoke(targetObject, invokeArgs);
-			LangProvider.PushValueToLua(state, result);
+			object? @return = targetMethod.Invoke(targetObject, invokeArgs);
+			if (methodAttribute?.ScriptTupleReturn == true && @return is object?[] array)
+			{
+				foreach (object? r in array)
+					LangProvider.PushValueToLua(state, r);
+				return array.Length;
+			}
+			LangProvider.PushValueToLua(state, @return);
 			return 1;
 		}
 	}

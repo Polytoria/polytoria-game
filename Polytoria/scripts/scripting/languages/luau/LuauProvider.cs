@@ -13,6 +13,7 @@ using Polytoria.DatamodelTest;
 using Polytoria.Enums;
 using Polytoria.Scripting.Extensions;
 using Polytoria.Scripting.Libraries;
+using ScriptSharedTable = Polytoria.Scripting.ScriptSharedTable;
 using Polytoria.Shared;
 using System;
 using System.Collections;
@@ -114,6 +115,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		state.PushCFunction(LuaCoroutineResume, "coroutine.resume");
 		state.SetField(-2, "resume");
 
+		// Register custom coroutine.wrap
 		state.PushCFunction(LuaCoroutineWrap, "coroutine.wrap");
 		state.SetField(-2, "wrap");
 
@@ -198,6 +200,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		state.Register("time", LuaTime);
 		state.Register("require", LuaRequire);
 		state.Register("pcall", LuaPCall);
+		state.Register("next", LuaNext);
 
 #if DEBUG
 		// Test special function
@@ -397,6 +400,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 	private void RegisterLuaExtensions(LuaState state)
 	{
+
 		Script s = GetScriptInstance(state);
 		foreach ((string libName, Type type) in LuaExtensions)
 		{
@@ -411,6 +415,8 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 					if (attr == null)
 						continue;
 					HandlesLuaStateAttribute? handleLua = method.GetCustomAttribute<HandlesLuaStateAttribute>();
+
+					bool tupleReturn = attr.ScriptTupleReturn;
 
 					string methodName = attr.MethodName ?? method.Name;
 
@@ -436,6 +442,12 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 						try
 						{
 							object? val = method.Invoke(null, args);
+							if (tupleReturn && val is object?[] array)
+							{
+								foreach (object? r in array)
+									PushValueToLua(innerState, r);
+								return array.Length;
+							}
 							PushValueToLua(innerState, val);
 							return 1;
 						}
@@ -840,6 +852,28 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		return 0;
 	}
 
+	public int LuaNext(IntPtr L)
+	{
+		LuaState state = LuaState.FromIntPtr(L);
+		if (state.IsTable(1))
+		{
+			if (state.Next(1))
+				return 2;
+			return 0;
+		}
+		else if (LuaToObject(state, 1) is ScriptSharedTable shared)
+		{
+			(object? key, object? value) = shared.Next(LuaToObject(state, 2));
+			PushValueToLua(state, key);
+			PushValueToLua(state, value);
+			return 2;
+		}
+		else
+		{
+			state.TypeError(1, "table");
+			return 0;
+		}
+	}
 
 	public int LuaPCall(IntPtr L)
 	{
@@ -1028,7 +1062,6 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 		return task;
 	}
-
 	public void PushValueToLua(LuaState state, object? value)
 	{
 		Type? valType = value?.GetType();

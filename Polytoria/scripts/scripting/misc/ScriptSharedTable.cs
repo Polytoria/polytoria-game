@@ -4,33 +4,51 @@
 
 using Polytoria.Attributes;
 using System.Collections.Generic;
+using Polytoria.Shared;
+using System;
+using Polytoria.Scripting;
 
 namespace Polytoria.Scripting;
 
 public partial class ScriptSharedTable : IScriptObject
 {
-	internal Dictionary<object, object> SharedDict = [];
+	internal record class Entry
+	{
+		public object Key { get; set; }
+		public object Value { get; set; }
+		public Entry(object Key, object Value)
+		{
+			this.Key = Key;
+			this.Value = Value;
+		}
+	}
+	internal Dictionary<object, LinkedListNode<Entry>> NodeDict = [];
+	internal LinkedList<Entry> KeyLinkedList = new();
 
 	[ScriptMethod]
 	public void Clear()
 	{
-		SharedDict.Clear();
+		NodeDict.Clear();
+		KeyLinkedList.Clear();
 	}
-
 	[ScriptMethod]
 	public void Remove(string key)
 	{
-		SharedDict.Remove(key);
+		if (NodeDict.Remove(key, out LinkedListNode<Entry> node))
+		{
+			KeyLinkedList.Remove(node);
+		}
 	}
 
 	[ScriptMethod]
 	public void ClearPrefix(string prefix)
 	{
-		foreach ((object key, _) in SharedDict)
+		foreach ((object key, LinkedListNode<Entry> node) in NodeDict)
 		{
 			if (key is string strk && strk.StartsWith(prefix))
 			{
-				SharedDict.Remove(key);
+				NodeDict.Remove(key);
+				KeyLinkedList.Remove(node);
 			}
 		}
 	}
@@ -38,41 +56,72 @@ public partial class ScriptSharedTable : IScriptObject
 	[ScriptMethod]
 	public void ClearSuffix(string suffix)
 	{
-		foreach ((object key, _) in SharedDict)
+		foreach ((object key, LinkedListNode<Entry> node) in NodeDict)
 		{
 			if (key is string strk && strk.EndsWith(suffix))
 			{
-				SharedDict.Remove(key);
+				NodeDict.Remove(key);
+				KeyLinkedList.Remove(node);
 			}
+		}
+	}
+	public (object?, object?) Next(object? index)
+	{
+		if (index != null)
+		{
+			if (NodeDict.TryGetValue(index, out LinkedListNode<Entry> node))
+			{
+				return node.Next?.Value is { } pair ? (pair.Key, pair.Value) : (null, null);
+			}
+			else
+			{
+				throw new Exception("invalid key to 'next'");
+			}
+		}
+		else
+		{
+			return (KeyLinkedList.First?.Value is { } pair) ? (pair.Key, pair.Value) : (null, null);
 		}
 	}
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Index)]
 	public object? Index(object index)
 	{
-		if (SharedDict.TryGetValue(index, out object? value))
+		if (NodeDict.TryGetValue(index, out LinkedListNode<Entry> node))
 		{
-			return value;
+			return node.Value;
 		}
 		return null;
 	}
 
 	[ScriptMetamethod(ScriptObjectMetamethod.NewIndex)]
-	public void NewIndex(object index, object val)
+	public void NewIndex(object index, object? val)
 	{
-		SharedDict[index] = val;
-		if (val == null)
+		if (NodeDict.TryGetValue(index, out LinkedListNode<Entry> node))
 		{
-			SharedDict.Remove(index);
+			if (val != null)
+			{
+
+				node.Value.Value = val;
+			}
+			else
+			{
+				NodeDict.Remove(index);
+				KeyLinkedList.Remove(node);
+			}
+		}
+		else if (val != null)
+		{
+			NodeDict.Add(index, KeyLinkedList.AddLast(new Entry(index, val)));
 		}
 	}
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Iter)]
 	public static IEnumerable<(object, object)> Iter(ScriptSharedTable sTable)
 	{
-		foreach ((var key, var value) in sTable.SharedDict)
+		foreach (Entry kvp in sTable.KeyLinkedList)
 		{
-			yield return (key, value);
+			yield return (kvp.Key, kvp.Value);
 		}
 	}
 }

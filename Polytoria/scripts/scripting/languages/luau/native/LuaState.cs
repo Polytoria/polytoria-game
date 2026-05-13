@@ -610,6 +610,7 @@ public partial class LuaState : IDisposable
 		}
 	}
 
+	// Unused...
 	public void Sandbox()
 	{
 		lock (_lock)
@@ -673,7 +674,11 @@ public partial class LuaState : IDisposable
 		lock (_lock)
 			return NativeBindings.luaL_errorL(_state, message);
 	}
-
+	public int TypeError(int narg, string tname)
+	{
+		lock (_lock)
+			return NativeBindings.luaL_typeerrorL(_state, narg, tname);
+	}
 	public void PushLightUserdataTagged(IntPtr p, int tag = 0)
 	{
 		lock (_lock)

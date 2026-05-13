@@ -55,6 +55,10 @@ public class ScriptMethodAttribute(string? methodName = null) : Attribute, IScri
 	/// </summary>
 	public bool GetParamsAsFunction { get; set; } = false;
 	public ScriptPermissionFlags Permissions { get; set; } = ScriptPermissionFlags.None;
+	/// <summary>
+	/// Should returning an object?[] array automatically unwrap into a lua tuple
+	/// </summary>
+	public bool ScriptTupleReturn { get; set; } = false;
 }
 
 [AttributeUsage(AttributeTargets.Parameter)]
