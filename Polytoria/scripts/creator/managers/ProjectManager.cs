@@ -25,7 +25,7 @@ namespace Polytoria.Creator.Managers;
 public static class ProjectManager
 {
 	private const string RecentsPath = "user://creator/recents";
-	private const string ProjectTemplatesPath = "res://modules/project-templates/";
+	private const string ProjectTemplatesPath = "res://modules/world-templates/";
 	private const string GitIgnoreContent = "# Polytoria specific ignores\n.poly/\n";
 
 	public static async Task<RecentData[]> GetRecents(bool loadData = true)

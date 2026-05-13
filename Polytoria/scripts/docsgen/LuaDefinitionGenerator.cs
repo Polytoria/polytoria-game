@@ -14,7 +14,7 @@ namespace Polytoria.DocsGen;
 
 public class LuaDefinitionGenerator
 {
-	private const string CodeHintPath = "res://modules/codehint/lua/";
+	private const string CodeHintPath = "res://modules/codehint/luau/";
 	private static readonly string[] SkippedMetamethods = ["__iter"];
 
 	public static void GenerateDocFiles(string atFolder)

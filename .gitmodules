@@ -1,7 +1,0 @@
-[submodule "Polytoria/modules/codehint/lua"]
-	path = Polytoria/modules/codehint/lua
-	url = https://github.com/Polytoria/lua-definitions.git
-[submodule "Polytoria/modules/project-templates"]
-	path = Polytoria/modules/project-templates
-	url = https://github.com/Polytoria/project-templates.git
-	ignore = dirty
