@@ -242,7 +242,7 @@ public partial class Dynamic : Instance
 		}
 	}
 
-	[ScriptProperty] public Vector3 Forward => GetGlobalTransform().Basis.Z.Normalized();
+	[ScriptProperty] public Vector3 Forward => -GetGlobalTransform().Basis.Z.Normalized();
 	[ScriptProperty] public Vector3 Right => GetGlobalTransform().Basis.X.Normalized();
 	[ScriptProperty] public Vector3 Up => GetGlobalTransform().Basis.Y.Normalized();
 
