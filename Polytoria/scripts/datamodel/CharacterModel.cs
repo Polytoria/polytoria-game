@@ -78,6 +78,13 @@ public partial class CharacterModel : Dynamic
 	public override void Init()
 	{
 		base.Init();
+
+		_currentState = CharacterModelStateEnum.Idle;
+		_currentSpeed = 1f;
+		if (_animator != null && !_animator.IsDeleted)
+		{
+			_animator.Play("Idle", 0, 0f);
+		}
 		if (Root != null && Root.Network != null && NetworkService.CheckAuthority(Root.Network.LocalPeerID, NetworkAuthority))
 		{
 			_peerReadySubscribed = true;
