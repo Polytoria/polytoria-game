@@ -21,7 +21,9 @@ public sealed class ScriptEnumGenerator : IIncrementalGenerator
 	private const string AttributeFullName = "Polytoria.Attributes.ScriptEnumAttribute";
 
 	private static readonly DiagnosticDescriptor _duplicateScriptNameRule = new(
+#pragma warning disable RS2008 // Enable analyzer release tracking
 		id: "PTG0001",
+#pragma warning restore RS2008 // Enable analyzer release tracking
 		title: "Conflicting enum name",
 		messageFormat: "Enum name '{0}' is already taken. Use ScriptEnum(\"name\") to provide a unique name.",
 		category: "Polytoria.SourceGen",
@@ -171,19 +173,11 @@ public sealed class ScriptEnumGenerator : IIncrementalGenerator
 		return sb.ToString();
 	}
 
-	private readonly struct EnumEntry
+	private readonly struct EnumEntry(string scriptName, string fullTypeRef, bool isCreatorOnly, Location location)
 	{
-		public readonly string ScriptName;
-		public readonly string FullTypeRef;
-		public readonly bool IsCreatorOnly;
-		public readonly Location Location;
-
-		public EnumEntry(string scriptName, string fullTypeRef, bool isCreatorOnly, Location location)
-		{
-			ScriptName = scriptName;
-			FullTypeRef = fullTypeRef;
-			IsCreatorOnly = isCreatorOnly;
-			Location = location;
-		}
+		public readonly string ScriptName = scriptName;
+		public readonly string FullTypeRef = fullTypeRef;
+		public readonly bool IsCreatorOnly = isCreatorOnly;
+		public readonly Location Location = location;
 	}
 }
