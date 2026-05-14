@@ -612,6 +612,7 @@ public sealed partial class CreatorService : Node, IScriptObject
 	}
 }
 
+[ScriptEnum("CreatorToolMode", IsCreatorOnly = true)]
 public enum ToolModeEnum
 {
 	Select,

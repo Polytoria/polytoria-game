@@ -1055,6 +1055,7 @@ public sealed partial class NetworkService : Instance
 		Renderer
 	}
 
+	[ScriptEnum]
 	public enum ClientPlatformEnum
 	{
 		Desktop,

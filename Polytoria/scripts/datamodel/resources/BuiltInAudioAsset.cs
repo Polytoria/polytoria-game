@@ -42,5 +42,6 @@ public partial class BuiltInAudioAsset : AudioAsset
 		InvokeResourceLoaded(GD.Load<AudioStream>(Globals.BuiltInAudioLocation.PathJoin(AudioMapping[_audioPreset])));
 	}
 
+	[ScriptEnum]
 	public enum BuiltInAudioPresetEnum { Jump, Explosion };
 }

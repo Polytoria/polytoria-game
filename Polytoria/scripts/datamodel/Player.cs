@@ -1045,6 +1045,7 @@ public sealed partial class Player : NPC
 		}
 	}
 
+	[ScriptEnum]
 	public enum PlayerMovementModeEnum
 	{
 		Default,

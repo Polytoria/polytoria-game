@@ -77,6 +77,7 @@ public partial class UIHVLayout : UIContainer
 		}
 	}
 
+	[ScriptEnum]
 	public enum UILayoutAlignmentEnum
 	{
 		Start,

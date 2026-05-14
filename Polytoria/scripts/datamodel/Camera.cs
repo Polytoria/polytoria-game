@@ -317,6 +317,7 @@ public sealed partial class Camera : Dynamic
 		set => _target = value;
 	}
 
+	[ScriptEnum]
 	public enum CameraModeEnum
 	{
 		Follow = 0,

@@ -300,6 +300,7 @@ public partial class Grabbable : Instance
 		base.PhysicsProcess(delta);
 	}
 
+	[ScriptEnum]
 	public enum GrabbablePermissionModeEnum
 	{
 		None,
