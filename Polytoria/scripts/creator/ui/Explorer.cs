@@ -430,6 +430,12 @@ public sealed partial class Explorer : TabContainer
 			return;
 
 		Instance instance = _itemToInstance[item];
+
+		if (selected && !Input.IsKeyPressed(Key.Ctrl))
+		{
+			CurrentRoot?.CreatorContext.Selections.DeselectAll();
+		}
+
 		_isUpdatingSelection = true;
 		try
 		{
