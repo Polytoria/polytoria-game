@@ -40,6 +40,7 @@ public partial class Physical : Dynamic
 	private const float TouchedGapCheck = 20f;
 	private bool _anchored = true;
 	private bool _canCollide = true;
+	private uint _collisionLayers = 1, _collisionMask = 1;
 	private Vector3 _velocity = Vector3.Zero;
 	private Vector3 _angularVelocity = Vector3.Zero;
 
@@ -128,6 +129,44 @@ public partial class Physical : Dynamic
 		}
 	}
 
+	[Editable, ScriptProperty]
+	public virtual uint CollisionLayers
+	{
+		get => _collisionLayers;
+		set
+		{
+			if (_collisionLayers == value)
+			{
+				return;
+			}
+
+			_collisionLayers = value;
+
+			UpdateCollision();
+
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public virtual uint CollisionMask
+	{
+		get => _collisionMask;
+		set
+		{
+			if (_collisionMask == value)
+			{
+				return;
+			}
+
+			_collisionMask = value;
+
+			UpdateCollision();
+
+			OnPropertyChanged();
+		}
+	}
+
 	internal void UpdateFreeze()
 	{
 		bool finalVal = _anchored;
@@ -177,6 +216,14 @@ public partial class Physical : Dynamic
 		{
 			SetCollisionDisabled(!OverrideCanCollideTo);
 			return;
+		}
+
+		CollisionObject3D? collisionObject3D = GetCollisionObject();
+
+		if (collisionObject3D != null)
+		{
+			collisionObject3D.CollisionLayer = _collisionLayers;
+			collisionObject3D.CollisionMask = _collisionMask;
 		}
 
 		// Set each collision
