@@ -98,7 +98,9 @@ public sealed partial class Particles : Dynamic
 			_material.TextureFilter = value switch
 			{
 				TextureFilterEnum.Nearest => BaseMaterial3D.TextureFilterEnum.NearestWithMipmaps,
+				TextureFilterEnum.NearestNoMipmaps => BaseMaterial3D.TextureFilterEnum.Nearest,
 				TextureFilterEnum.Linear => BaseMaterial3D.TextureFilterEnum.LinearWithMipmaps,
+				TextureFilterEnum.LinearNoMipmaps => BaseMaterial3D.TextureFilterEnum.Linear,
 				_ => throw new IndexOutOfRangeException("Texture filter mode out of range"),
 			};
 			OnPropertyChanged();
@@ -473,12 +475,14 @@ public sealed partial class Particles : Dynamic
 		temp.Finished += finishEmit;
 	}
 
+	[ScriptEnum]
 	public enum ParticleSimulationSpaceEnum
 	{
 		Local,
 		World
 	}
 
+	[ScriptEnum]
 	public enum ParticleEmissionShapeEnum
 	{
 		Point,
@@ -488,6 +492,7 @@ public sealed partial class Particles : Dynamic
 		Ring
 	}
 
+	[ScriptEnum]
 	public enum ParticleOrientationEnum
 	{
 		FaceCamera,

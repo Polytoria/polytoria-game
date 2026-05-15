@@ -95,3 +95,6 @@ ers
 
 .DS_Store
 Thumbs.db
+
+# C# Dev Kit language server cache files
+*.lscache

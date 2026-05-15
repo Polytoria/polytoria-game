@@ -21,6 +21,7 @@ public partial class HttpRequestData : IScriptObject
 		return new();
 	}
 
+	[ScriptEnum]
 	public enum HttpRequestMethodEnum
 	{
 		Get,

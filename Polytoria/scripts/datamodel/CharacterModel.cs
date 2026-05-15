@@ -18,6 +18,7 @@ public partial class CharacterModel : Dynamic
 	private readonly Dictionary<CharacterModelBlendEnum, float> _blendValues = [];
 	private Animator? _animator = null!;
 
+	[ScriptEnum]
 	public enum CharacterModelStateEnum
 	{
 		Idle,
@@ -176,6 +177,7 @@ public partial class CharacterModel : Dynamic
 
 	public virtual void ApplyCameraModifier(Camera camera) { }
 
+	[ScriptEnum]
 	public enum CharacterAttachmentEnum
 	{
 		Head,

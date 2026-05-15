@@ -317,6 +317,7 @@ public sealed partial class Camera : Dynamic
 		set => _target = value;
 	}
 
+	[ScriptEnum]
 	public enum CameraModeEnum
 	{
 		Follow = 0,
@@ -634,7 +635,11 @@ public sealed partial class Camera : Dynamic
 	{
 		if (Mode != CameraModeEnum.Follow) return;
 		_turning = true;
+
+		Vector2 screenCenter = GDNode.GetViewport().GetVisibleRect().GetCenter();
 		_turnStartPos = GDNode.GetViewport().GetMousePosition();
+		GDNode.GetViewport().WarpMouse(screenCenter);
+
 		Root.Input.OverrideMousePosTo = Root.Input.MousePosition;
 		Root.Input.OverrideMousePos = true;
 		Input.MouseMode = Input.MouseModeEnum.Captured;
@@ -991,7 +996,8 @@ public sealed partial class Camera : Dynamic
 		if (World.Current == null) throw new InvalidOperationException("World is null");
 		Transform3D globalTransform = GetGlobalTransform();
 		Vector3 origin = globalTransform.Origin;
-		Vector3 direction = globalTransform.Basis.Z;
+		// In GoDot the Z axis points to the Camera
+		Vector3 direction = -globalTransform.Basis.Z;
 
 		Datamodel.Environment.RayResult? hit = GetPlacementRay(ignoreList);
 
@@ -1010,7 +1016,8 @@ public sealed partial class Camera : Dynamic
 		if (World.Current == null) throw new InvalidOperationException("World is null");
 		Transform3D globalTransform = GetGlobalTransform();
 		Vector3 origin = globalTransform.Origin;
-		Vector3 direction = globalTransform.Basis.Z;
+		// In GoDot the Z axis points to the Camera
+		Vector3 direction = -globalTransform.Basis.Z;
 
 		return World.Current.Environment.Raycast(origin, direction, 20, ignoreList);
 	}

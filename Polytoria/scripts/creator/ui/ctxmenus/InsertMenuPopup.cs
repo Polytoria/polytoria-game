@@ -11,6 +11,7 @@ using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Script = Polytoria.Datamodel.Script;
 
 namespace Polytoria.Creator.UI;
 
@@ -284,33 +285,33 @@ public partial class InsertMenuPopup : PopupPanel
 		}
 		else
 		{
-			// Default insert path
-			if (instance is Part)
+			switch (instance)
 			{
-				parentTo = World.Current.Environment;
-			}
-			else if (instance is Light)
-			{
-				parentTo = World.Current.Lighting;
-			}
-			else if (instance is UIField && instance is not GUI)
-			{
-				GUI? existingUI = (GUI?)World.Current.PlayerGUI.FindChild("GUI");
-				if (existingUI == null)
-				{
-					existingUI = World.Current.New<GUI>();
-					existingUI.Parent = World.Current.PlayerGUI;
-				}
+				// Default insert path
+				case Part:
+					parentTo = World.Current.Environment;
+					break;
+				case Light:
+					parentTo = World.Current.Lighting;
+					break;
+				case UIField when instance is not GUI:
+					{
+						GUI? existingUI = (GUI?)World.Current.PlayerGUI.FindChild("GUI");
+						if (existingUI == null)
+						{
+							existingUI = World.Current.New<GUI>();
+							existingUI.Parent = World.Current.PlayerGUI;
+						}
 
-				parentTo = existingUI;
-			}
-			else if (instance is Datamodel.Script)
-			{
-				parentTo = World.Current.ScriptService;
-			}
-			else
-			{
-				parentTo = World.Current.Environment;
+						parentTo = existingUI;
+						break;
+					}
+				case Script:
+					parentTo = World.Current.ScriptService;
+					break;
+				default:
+					parentTo = World.Current.Environment;
+					break;
 			}
 		}
 

@@ -22,6 +22,7 @@ public partial class MeshAnimationAsset : ResourceAsset
 		}
 	}
 
+	[ScriptEnum]
 	public enum MeshAnimationTypeEnum
 	{
 		Normal,

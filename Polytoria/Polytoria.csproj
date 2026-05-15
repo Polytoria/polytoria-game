@@ -46,6 +46,11 @@
 		<PackageReference Include="Humanizer.Core" Version="3.0.10" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<ProjectReference Include="..\Polytoria.SourceGen\Polytoria.SourceGen.csproj"
+			OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	</ItemGroup>
+
 	<!-- ExportRelease configuration -->
 	<PropertyGroup Condition="'$(Configuration)' == 'ExportRelease'">
 		<DefineConstants>$(DefineConstants);CLIENT</DefineConstants>

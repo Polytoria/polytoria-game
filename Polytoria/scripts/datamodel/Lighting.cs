@@ -257,6 +257,7 @@ public sealed partial class Lighting : Instance
 		}
 	}
 
+	[ScriptEnum("SkyboxPreset")]
 	public enum SkyboxEnum
 	{
 		Day1,
@@ -282,6 +283,7 @@ public sealed partial class Lighting : Instance
 		Sunset5
 	}
 
+	[ScriptEnum]
 	public enum AmbientSourceEnum
 	{
 		Skybox,
