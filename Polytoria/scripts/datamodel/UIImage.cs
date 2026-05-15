@@ -21,6 +21,8 @@ public partial class UIImage : UIField
 	private TextureFilterEnum _textureFilter;
 	private Color _color = new(1, 1, 1, 1);
 	private ImageStretchModeEnum _stretchMode = ImageStretchModeEnum.Stretch;
+	private bool _flipH = false;
+	private bool _flipV = false;
 
 	[Editable, ScriptProperty, Export]
 	public ImageAsset? Image
@@ -118,9 +120,35 @@ public partial class UIImage : UIField
 			GDTextureRect.TextureFilter = value switch
 			{
 				TextureFilterEnum.Nearest => CanvasItem.TextureFilterEnum.Nearest,
+				TextureFilterEnum.NearestNoMipmaps => CanvasItem.TextureFilterEnum.Nearest,
 				TextureFilterEnum.Linear => CanvasItem.TextureFilterEnum.Linear,
+				TextureFilterEnum.LinearNoMipmaps => CanvasItem.TextureFilterEnum.Linear,
 				_ => throw new IndexOutOfRangeException("Texture filter mode out of range"),
 			};
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool FlipHorizontal
+	{
+		get => _flipH;
+		set
+		{
+			_flipH = value;
+			GDTextureRect.FlipH = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool FlipVertical
+	{
+		get => _flipV;
+		set
+		{
+			_flipV = value;
+			GDTextureRect.FlipV = value;
 			OnPropertyChanged();
 		}
 	}
@@ -171,6 +199,7 @@ public partial class UIImage : UIField
 		Loading = false;
 	}
 
+	[ScriptEnum]
 	public enum ImageStretchModeEnum
 	{
 		Stretch,

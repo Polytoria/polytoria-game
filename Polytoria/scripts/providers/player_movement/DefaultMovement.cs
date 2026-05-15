@@ -33,17 +33,17 @@ public class DefaultMovement : IPlayerMovement
 			moveDirection.Z = backwardStrength - forwardStrength;
 			moveDirection = moveDirection.Rotated(Vector3.Up, facingRot.Y).LimitLength(1);
 
+			bool initialSprintOverride = Target.SprintOverride;
 			jump = Input.IsActionPressed("jump");
-			sprint = Input.IsActionPressed("sprint") || Target.SprintOverride;
+			sprint = Input.IsActionPressed("sprint") || initialSprintOverride;
 
 			if (Target.SprintHoldAgain)
 			{
-				sprint = false;
-			}
-
-			if (Input.IsActionJustReleased("sprint"))
-			{
-				Target.SprintHoldAgain = false;
+				sprint = Target.SprintOverride = false;
+				if (Input.IsActionJustReleased("sprint") || initialSprintOverride)
+				{
+					Target.SprintHoldAgain = false;
+				}
 			}
 
 			camLocked = cam.IsFirstPerson || cam.CtrlLocked;

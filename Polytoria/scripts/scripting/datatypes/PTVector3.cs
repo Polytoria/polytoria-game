@@ -16,8 +16,8 @@ public class PTVector3 : IScriptGDObject
 	[ScriptProperty] public float Y { get => vector.Y; set => vector.Y = value; }
 	[ScriptProperty] public float Z { get => vector.Z; set => vector.Z = value; }
 
-	[ScriptProperty] public static PTVector3 Forward { get; private set; } = new() { X = 0, Y = 0, Z = 1 };
-	[ScriptProperty] public static PTVector3 Back { get; private set; } = new() { X = 0, Y = 0, Z = -1 };
+	[ScriptProperty] public static PTVector3 Forward { get; private set; } = new() { X = 0, Y = 0, Z = -1 };
+	[ScriptProperty] public static PTVector3 Back { get; private set; } = new() { X = 0, Y = 0, Z = 1 };
 	[ScriptProperty] public static PTVector3 Down { get; private set; } = new() { X = 0, Y = -1, Z = 0 };
 	[ScriptProperty] public static PTVector3 Left { get; private set; } = new() { X = -1, Y = 0, Z = 0 };
 	[ScriptProperty] public static PTVector3 One { get; private set; } = new() { X = 1, Y = 1, Z = 1 };

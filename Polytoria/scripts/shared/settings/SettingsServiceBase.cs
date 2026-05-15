@@ -6,7 +6,6 @@ using Godot;
 using Polytoria.Shared;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Polytoria.Shared.Settings;
 
@@ -21,8 +20,6 @@ public abstract partial class SettingsServiceBase : Node, ISettingsContext
 
 	public event Action<SettingChangedEvent>? Changed;
 
-	[RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
-	[RequiresDynamicCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
 	protected SettingsServiceBase()
 	{
 		_headless = DisplayServer.GetName() == "headless";
@@ -30,8 +27,6 @@ public abstract partial class SettingsServiceBase : Node, ISettingsContext
 			Globals.BeforeQuit += Save;
 	}
 
-	[RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
-	[RequiresDynamicCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
 	public override void _ExitTree()
 	{
 		if (!_headless)
@@ -113,8 +108,6 @@ public abstract partial class SettingsServiceBase : Node, ISettingsContext
 		}).CallDeferred();
 	}
 
-	[RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
-	[RequiresDynamicCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
 	public void Save()
 	{
 		SettingsFileUtility.Save(SettingsPath, _values);

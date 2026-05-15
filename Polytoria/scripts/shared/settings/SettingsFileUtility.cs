@@ -5,22 +5,21 @@
 using Godot;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using FileAccess = Godot.FileAccess;
+using System.IO;
+using System.Text;
 
 namespace Polytoria.Shared.Settings;
 
 internal static class SettingsFileUtility
 {
-	[RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
-	[RequiresDynamicCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
 	internal static bool Save(string path, Dictionary<string, object?> values)
 	{
 		try
 		{
 			// Serialize BEFORE opening the file so a serialization failure doesnt break anything :pray:
-			string json = JsonSerializer.Serialize(values);
+			string json = Serialize(values);
 
 			using var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
 			if (file == null)
@@ -156,4 +155,58 @@ internal static class SettingsFileUtility
 		};
 	}
 
+	private static string Serialize(Dictionary<string, object?> values)
+	{
+		using var stream = new MemoryStream();
+		using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions
+		{
+			Indented = true
+		}))
+		{
+			writer.WriteStartObject();
+
+			foreach ((string key, object? value) in values)
+			{
+				writer.WritePropertyName(key);
+				WriteValue(writer, value);
+			}
+
+			writer.WriteEndObject();
+		}
+
+		return Encoding.UTF8.GetString(stream.ToArray());
+	}
+
+	private static void WriteValue(Utf8JsonWriter writer, object? value)
+	{
+		switch (value)
+		{
+			case null:
+				writer.WriteNullValue();
+				break;
+
+			case bool boolValue:
+				writer.WriteBooleanValue(boolValue);
+				break;
+
+			case int intValue:
+				writer.WriteNumberValue(intValue);
+				break;
+
+			case float floatValue:
+				writer.WriteNumberValue(floatValue);
+				break;
+
+			case string stringValue:
+				writer.WriteStringValue(stringValue);
+				break;
+
+			case Enum enumValue:
+				writer.WriteStringValue(enumValue.ToString());
+				break;
+
+			default:
+				throw new InvalidOperationException($"Unsupported setting value type '{value.GetType().FullName}'.");
+		}
+	}
 }

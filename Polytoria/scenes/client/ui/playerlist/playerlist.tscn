@@ -208,9 +208,9 @@ UserOptions = NodePath("../../../../UserOptions")
 [node name="UserOptions" parent="Pivot/Pivot" unique_id=1089935845 instance=ExtResource("5_h66kp")]
 layout_mode = 1
 offset_left = -266.0
-offset_top = 61.0
+offset_top = 60.0
 offset_right = -266.0
-offset_bottom = 61.0
+offset_bottom = 60.0
 
 [node name="LeaderboardAnim" type="AnimationPlayer" parent="." unique_id=1744649798]
 libraries/ = SubResource("AnimationLibrary_4fqi5")

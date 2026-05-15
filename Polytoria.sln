@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Polytoria", "Polytoria\Poly
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Polytoria.Tests", "Polytoria.Tests\Polytoria.Tests.csproj", "{FA6C0F5E-9494-48FB-A83C-AD158A98E0B1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Polytoria.SourceGen", "Polytoria.SourceGen\Polytoria.SourceGen.csproj", "{0851C6B0-6B81-4CE6-A240-BA4E8CB0B402}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -25,6 +27,12 @@ Global
 		{FA6C0F5E-9494-48FB-A83C-AD158A98E0B1}.ExportDebug|Any CPU.Build.0 = Release|Any CPU
 		{FA6C0F5E-9494-48FB-A83C-AD158A98E0B1}.ExportRelease|Any CPU.ActiveCfg = Release|Any CPU
 		{FA6C0F5E-9494-48FB-A83C-AD158A98E0B1}.ExportRelease|Any CPU.Build.0 = Release|Any CPU
+		{0851C6B0-6B81-4CE6-A240-BA4E8CB0B402}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0851C6B0-6B81-4CE6-A240-BA4E8CB0B402}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0851C6B0-6B81-4CE6-A240-BA4E8CB0B402}.ExportDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0851C6B0-6B81-4CE6-A240-BA4E8CB0B402}.ExportDebug|Any CPU.Build.0 = Debug|Any CPU
+		{0851C6B0-6B81-4CE6-A240-BA4E8CB0B402}.ExportRelease|Any CPU.ActiveCfg = Release|Any CPU
+		{0851C6B0-6B81-4CE6-A240-BA4E8CB0B402}.ExportRelease|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

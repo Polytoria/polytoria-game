@@ -75,9 +75,9 @@ public partial class CoreUIRoot : CanvasLayer
 		{
 			Visible = !Visible;
 		}
-		if (@event.IsActionPressed("open_console"))
+		if (@event.IsActionPressed("toggle_console"))
 		{
-			DevWindow.Popup();
+			DevWindow.Toggle();
 		}
 		base._UnhandledInput(@event);
 	}

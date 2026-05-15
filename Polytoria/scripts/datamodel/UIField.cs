@@ -423,6 +423,7 @@ public partial class UIField : Instance
 		base.HiddenChanged(to);
 	}
 
+	[ScriptEnum("UIMaskMode")]
 	public enum MaskModeEnum
 	{
 		Disabled,

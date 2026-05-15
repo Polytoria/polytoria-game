@@ -11,6 +11,7 @@ using Polytoria.Shared;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -489,6 +490,14 @@ public class APIReferenceGenerator
 		if (type == typeof(ValueType))
 		{
 			return null;
+		}
+
+		if (type.IsEnum)
+		{
+			// Find the Enum's external name
+			string name = ScriptService.EnumMap.FirstOrDefault(x => x.Value == type).Key;
+			if (!string.IsNullOrEmpty(name))
+				return name;
 		}
 
 		return type.Name;

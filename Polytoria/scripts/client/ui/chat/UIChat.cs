@@ -189,12 +189,18 @@ public partial class UIChat : Control
 		}
 		_chatLayout.AddChild(chatLabel);
 		_chatMessages.Add(chatLabel);
-		Callable.From(() =>
+
+		// Scroll to the bottom only if the chat is at the bottom
+		VScrollBar vScrollBar = _chatScroll.GetVScrollBar();
+		bool atBottom = vScrollBar.Value + 5 >= (vScrollBar.MaxValue - vScrollBar.Page);
+		if (atBottom)
 		{
-			// TODO: Come back and check if user has scrolled or not, before updating the vertical
-			int scrollVal = (int)_chatScroll.GetVScrollBar().MaxValue + 1000;
-			_chatScroll.SetDeferred(ScrollContainer.PropertyName.ScrollVertical, scrollVal);
-		}).CallDeferred();
+			PT.CallDeferred(() =>
+			{
+				int scrollVal = (int)vScrollBar.MaxValue + 1000;
+				_chatScroll.SetDeferred(ScrollContainer.PropertyName.ScrollVertical, scrollVal);
+			});
+		}
 
 		// Clean up old chat logs
 		if (_chatMessages.Count > MaxMessages)

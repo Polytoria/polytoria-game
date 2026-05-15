@@ -72,6 +72,7 @@ public sealed partial class Toolbox : Control
 	{
 		if (SearchQuery == _searchEdit.Text) return;
 		SearchQuery = _searchEdit.Text;
+		CurrentPage = 1;
 		Refresh();
 	}
 

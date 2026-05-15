@@ -584,6 +584,7 @@ public sealed partial class TweenService : Instance
 		}
 	}
 
+	[ScriptEnum]
 	public enum TweenTransitionEnum
 	{
 		Linear,
@@ -600,6 +601,7 @@ public sealed partial class TweenService : Instance
 		Spring
 	}
 
+	[ScriptEnum]
 	public enum TweenDirectionEnum
 	{
 		In,
