@@ -4,9 +4,11 @@
 
 using Godot;
 using Polytoria.Attributes;
+using Polytoria.Datamodel.Data;
 using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
+using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -129,7 +131,7 @@ public partial class Physical : Dynamic
 		}
 	}
 
-	[Editable, ScriptProperty]
+	[Editable(CustomPropertyControl = "Bitmap32"), ScriptProperty]
 	public virtual uint CollisionLayers
 	{
 		get => _collisionLayers;
@@ -148,7 +150,7 @@ public partial class Physical : Dynamic
 		}
 	}
 
-	[Editable, ScriptProperty]
+	[Editable(CustomPropertyControl = "Bitmap32"), ScriptProperty]
 	public virtual uint CollisionMask
 	{
 		get => _collisionMask;
@@ -1156,6 +1158,30 @@ public partial class Physical : Dynamic
 		{
 			CreateAreaShape(item);
 		}
+	}
+
+	[ScriptMethod]
+	public void SetCollisionLayer(int layer, bool value)
+	{
+		CollisionLayers = BitmapUtils.Set(CollisionLayers, layer, value);
+	}
+
+	[ScriptMethod]
+	public void SetCollisionMask(int layer, bool value)
+	{
+		CollisionMask = BitmapUtils.Set(CollisionMask, layer, value);
+	}
+
+	[ScriptMethod]
+	public bool GetCollisionLayer(int layer)
+	{
+		return BitmapUtils.Get(CollisionLayers, layer);
+	}
+
+	[ScriptMethod]
+	public bool GetCollisionMask(int layer)
+	{
+		return BitmapUtils.Get(CollisionMask, layer);
 	}
 
 	[ScriptMethod]
