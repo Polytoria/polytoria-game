@@ -79,7 +79,8 @@ public partial class CharacterModel : Dynamic
 	public override void Init()
 	{
 		base.Init();
-
+		
+		// Resets animation state to idle on respawn
 		_currentState = CharacterModelStateEnum.Idle;
 		_currentSpeed = 1f;
 		
