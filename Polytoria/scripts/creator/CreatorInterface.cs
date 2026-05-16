@@ -116,6 +116,7 @@ public partial class CreatorInterface : Control, IScriptObject
 		ApplyUIScale();
 		ApplyFullscreen();
 		ApplyVSync();
+		ApplyFpsCap();
 
 		base._Ready();
 	}
@@ -138,6 +139,9 @@ public partial class CreatorInterface : Control, IScriptObject
 				break;
 			case SharedSettingKeys.Display.VSync:
 				ApplyVSync();
+				break;
+			case SharedSettingKeys.Display.FpsCap:
+				ApplyFpsCap();
 				break;
 		}
 	}
@@ -177,6 +181,11 @@ public partial class CreatorInterface : Control, IScriptObject
 		bool useVSync = CreatorSettingsService.Instance.Get<bool>(SharedSettingKeys.Display.VSync);
 		DisplayServer.WindowSetVsyncMode(useVSync ? DisplayServer.VSyncMode.Enabled : DisplayServer.VSyncMode.Disabled);
 		OS.LowProcessorUsageMode = useVSync;
+	}
+
+	private static void ApplyFpsCap()
+	{
+		Engine.MaxFps = CreatorSettingsService.Instance.Get<int>(SharedSettingKeys.Display.FpsCap);
 	}
 
 	public static void CreateNewWorld()

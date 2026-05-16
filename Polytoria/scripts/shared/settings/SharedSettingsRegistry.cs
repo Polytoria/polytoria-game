@@ -48,6 +48,22 @@ public static class SharedSettingsRegistry
 				}
 			},
 			{
+				SharedSettingKeys.Display.FpsCap,
+				new SettingDef<int>
+				{
+					Key = SharedSettingKeys.Display.FpsCap,
+					SectionKey = "display",
+					Label = "FPS Cap",
+					Description = "Limit the maximum number of frames per second.",
+					ValueKind = SettingValueKind.Int,
+					ControlKind = SettingControlKind.Slider,
+					DefaultValue = 0,
+					MinValue = 0,
+					MaxValue = 300,
+					Step = 6
+				}
+			},
+			{
 				SharedSettingKeys.Graphics.Preset,
 				new SettingDef<GraphicsPreset>
 				{
