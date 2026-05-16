@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://5d6kd6d827c4"
-path="res://.godot/imported/helicopter.png-190ee89a63124aa5991b271118bb2c78.ctex"
+uid="uid://vsxq8jdhjy6f"
+path="res://.godot/imported/disagree.png-4d34e8addf307b129adae6b6552c9def.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/textures/client/ui/emotes/icons/helicopter.png"
-dest_files=["res://.godot/imported/helicopter.png-190ee89a63124aa5991b271118bb2c78.ctex"]
+source_file="res://assets/textures/client/ui/emotes/icons/disagree.png"
+dest_files=["res://.godot/imported/disagree.png-4d34e8addf307b129adae6b6552c9def.ctex"]
 
 [params]
 

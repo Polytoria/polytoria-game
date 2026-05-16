@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://5d6kd6d827c4"
-path="res://.godot/imported/helicopter.png-190ee89a63124aa5991b271118bb2c78.ctex"
+uid="uid://b087ixlxsdm26"
+path="res://.godot/imported/agree.png-9c5dae4c87cf25823068af838f119e06.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/textures/client/ui/emotes/icons/helicopter.png"
-dest_files=["res://.godot/imported/helicopter.png-190ee89a63124aa5991b271118bb2c78.ctex"]
+source_file="res://assets/textures/client/ui/emotes/icons/agree.png"
+dest_files=["res://.godot/imported/agree.png-9c5dae4c87cf25823068af838f119e06.ctex"]
 
 [params]
 
@@ -24,7 +24,7 @@ compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
 mipmaps/generate=true
-mipmaps/limit=-1
+mipmaps/limit=4
 roughness/mode=0
 roughness/src_normal=""
 process/channel_remap/red=0
