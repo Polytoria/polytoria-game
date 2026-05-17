@@ -231,7 +231,7 @@ public sealed partial class InputService : Instance
 	private readonly Dictionary<KeyCodeEnum, float> _keyWeight = [];
 	private readonly Dictionary<MouseButton, bool> _mouseBtnDown = [];
 	private readonly Dictionary<MouseButton, bool> _mouseFrameBtnDown = [];
-	private readonly Dictionary<Input.CursorShape, (Texture2D? texture, Vector2 hotspot)> _customCursors = new();
+	private readonly Dictionary<Input.CursorShape, (Texture2D? texture, Vector2 hotspot)> _customCursors = [];
 	private float _mouseScrollDelta = 0;
 
 	public override void Init()
@@ -305,7 +305,7 @@ public sealed partial class InputService : Instance
 		base.PreDelete();
 	}
 
-	private void SetupCursors()
+	private static void SetupCursors()
 	{
 		Input.SetCustomMouseCursor(GD.Load<Image>("res://assets/textures/client/cursor/arrow.png"), Input.CursorShape.Arrow);
 		Input.SetCustomMouseCursor(GD.Load<Image>("res://assets/textures/client/cursor/click.png"), Input.CursorShape.PointingHand);
@@ -315,15 +315,15 @@ public sealed partial class InputService : Instance
 
 	private void RecomputeCursors()
 	{
-	    SetupCursors();
+		SetupCursors();
 
-	    if (IsGameFocused == true)
-	    {
-	        foreach (var (shape, (texture, hotspot)) in _customCursors)
-	        {
-	            Input.SetCustomMouseCursor(texture, shape, hotspot);
-	        }
-	    }
+		if (IsGameFocused)
+		{
+			foreach (var (shape, (texture, hotspot)) in _customCursors)
+			{
+				Input.SetCustomMouseCursor(texture, shape, hotspot);
+			}
+		}
 	}
 
 	private void OnPeerPreInit(int peerID)
@@ -574,41 +574,41 @@ public sealed partial class InputService : Instance
 	}
 
 	[ScriptMethod]
-	public void SetCustomMouseCursor(ImageAsset cursor, CursorShapeEnum shape, Vector2? hotspot)
+	public void SetCustomMouseCursor(ImageAsset? cursor, CursorShapeEnum shape, Vector2? hotspot)
 	{
-	    Input.CursorShape godotShape = shape switch
-	    {
-	        CursorShapeEnum.Arrow    => Input.CursorShape.Arrow,
-	        CursorShapeEnum.Click    => Input.CursorShape.PointingHand,
-	        CursorShapeEnum.Grab     => Input.CursorShape.Drag,
-	        CursorShapeEnum.Grabbing => Input.CursorShape.CanDrop,
-	        _                        => Input.CursorShape.Arrow
-	    };
+		Input.CursorShape godotShape = shape switch
+		{
+			CursorShapeEnum.Arrow => Input.CursorShape.Arrow,
+			CursorShapeEnum.Click => Input.CursorShape.PointingHand,
+			CursorShapeEnum.Grab => Input.CursorShape.Drag,
+			CursorShapeEnum.Grabbing => Input.CursorShape.CanDrop,
+			_ => Input.CursorShape.Arrow
+		};
 
-	    Vector2 resolvedHotspot = hotspot ?? Vector2.Zero;
+		Vector2 resolvedHotspot = hotspot ?? Vector2.Zero;
 
-	    if (cursor == null)
-	    {
-	        _customCursors.Remove(godotShape);
-	        RecomputeCursors();
-	        return;
-	    }
+		if (cursor == null)
+		{
+			_customCursors.Remove(godotShape);
+			RecomputeCursors();
+			return;
+		}
 
-	    void apply(Resource? res)
-	    {
-	        _customCursors[godotShape] = ((Texture2D?)res, resolvedHotspot);
-	        RecomputeCursors();
-	    }
+		void apply(Resource? res)
+		{
+			_customCursors[godotShape] = ((Texture2D?)res, resolvedHotspot);
+			RecomputeCursors();
+		}
 
-	    if (cursor.IsResourceLoaded && cursor.Resource != null)
-	    {
-	        apply(cursor.Resource);
-	    }
-	    else
-	    {
-	        cursor.ResourceLoaded += apply;
-	        cursor.QueueLoadResource();
-	    }
+		if (cursor.IsResourceLoaded && cursor.Resource != null)
+		{
+			apply(cursor.Resource);
+		}
+		else
+		{
+			cursor.ResourceLoaded += apply;
+			cursor.QueueLoadResource();
+		}
 	}
 
 	[ScriptMethod]
