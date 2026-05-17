@@ -31,6 +31,7 @@ TestResults/
 
 # JetBrains Rider
 .idea/
+*.DotSettings.user
 
 # Visual Studio
 .vs/
@@ -39,6 +40,9 @@ TestResults/
 .vscode/
 *.code-workspace
 .history/
+
+# C# Dev Kit language server cache files
+*.lscache
 
 ## -- Android -- ##
 
@@ -71,7 +75,7 @@ TestResults/
 
 ## -- Sample projects -- ##
 
-# Local world storage for contributors 
+# Local world storage for contributors
 /Polytoria/samples/worlds/temp
 /samples/projects/temp
 
@@ -94,7 +98,3 @@ TestResults/
 ers
 
 .DS_Store
-Thumbs.db
-
-# C# Dev Kit language server cache files
-*.lscache

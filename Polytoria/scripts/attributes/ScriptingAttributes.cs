@@ -55,6 +55,11 @@ public class ScriptMethodAttribute(string? methodName = null) : Attribute, IScri
 	/// </summary>
 	public bool GetParamsAsFunction { get; set; } = false;
 	public ScriptPermissionFlags Permissions { get; set; } = ScriptPermissionFlags.None;
+	/// <summary>
+	/// Should the static method also be name called as a regular method.
+	/// This is achieved by implicitly passing self as the first argument.
+	/// </summary>
+	public bool SemiStatic { get; set; } = false;
 }
 
 [AttributeUsage(AttributeTargets.Parameter)]

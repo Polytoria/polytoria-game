@@ -419,6 +419,15 @@ public sealed partial class Camera : Dynamic
 		{
 			if (Root.Input.IsGameFocused)
 			{
+				if (Input.IsActionPressed("zoom_in"))
+				{
+					_targetZoom = _distance - (ScrollSensitivity / 5);
+				}
+				if (Input.IsActionPressed("zoom_out"))
+				{
+					_targetZoom = _distance + (ScrollSensitivity / 5);
+				}
+
 				// Handle Controller Right stick input
 				float xAxis = Input.GetAxis("cam_rightward", "cam_leftward");
 				float yAxis = Input.GetAxis("cam_downward", "cam_upward");

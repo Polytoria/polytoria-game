@@ -24,7 +24,7 @@ public sealed partial class CreateScriptPopup : PopupWindowBase
 
 	public override void _Ready()
 	{
-		CreateAt ??= "scripts/";
+		CreateAt ??= "scripts/server/";
 		_scriptPath = CreateAt + "script.server.luau";
 		base._Ready();
 		_errorLabel.Text = "";
@@ -45,6 +45,23 @@ public sealed partial class CreateScriptPopup : PopupWindowBase
 		{
 			string baseDir = _pathEdit.Text.GetBaseDir();
 
+			string typeFolder = "";
+			if ((baseDir.EndsWith("/server") ||
+				 baseDir.EndsWith("/client") ||
+				 baseDir.EndsWith("/modules")) &&
+				baseDir.GetBaseDir() == "scripts")
+			{
+				// Removing the script type folder, since we're appending a new one
+				baseDir = baseDir.GetBaseDir();
+				typeFolder = btn.Name;
+				if (typeFolder == "module")
+				{
+					// The filesystem folder for module scripts has a 's' in the end
+					typeFolder = "modules";
+				}
+				typeFolder += '/';
+			}
+
 			string scriptName = CreatorService.GetScriptNameFromPath(_pathEdit.Text);
 			ScriptTypeEnum scriptType = btn.Name.ToString() switch
 			{
@@ -60,13 +77,9 @@ public sealed partial class CreateScriptPopup : PopupWindowBase
 				scriptTypeExtension = "";
 			}
 
-			string pathPrefix = "";
-			if (!string.IsNullOrEmpty(baseDir))
-			{
-				pathPrefix = baseDir + "/";
-			}
+			string pathPrefix = string.IsNullOrEmpty(baseDir) ? "" : baseDir + '/';
 
-			_pathEdit.Text = $"{pathPrefix}{scriptName}{scriptTypeExtension}.luau";
+			_pathEdit.Text = $"{pathPrefix}{typeFolder}{scriptName}{scriptTypeExtension}.luau";
 		};
 
 		_browseBtn.Pressed += () =>

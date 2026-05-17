@@ -742,6 +742,10 @@ public partial class NPC : Physical
 		OverrideCanCollideTo = false;
 		Unsit(false);
 		UpdateCollision();
+
+		Character?.Animator?.StopAnimation();
+		Character?.Animator?.StopOneShotAnimation();
+
 		if (Character is PolytorianModel ptmodel)
 		{
 			ptmodel.StartRagdoll(Velocity);

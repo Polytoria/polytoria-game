@@ -2,7 +2,25 @@
 
 [ext_resource type="Texture2D" uid="uid://eh73dq328feq" path="res://assets/textures/creator/close.svg" id="1_030fu"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_qg106"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_030fu"]
+draw_center = false
+border_width_left = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.12941177, 0.5882353, 0.9529412, 1)
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+expand_margin_left = 1.0
+expand_margin_right = 1.0
+expand_margin_bottom = 1.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_suxfw"]
+content_margin_left = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 2.0
+bg_color = Color(0.11764706, 0.11764706, 0.11764706, 1)
+border_width_top = 2
+border_color = Color(0.129412, 0.588235, 0.952941, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_57nwh"]
 bg_color = Color(0.0862745, 0.0862745, 0.0862745, 1)
@@ -16,23 +34,15 @@ content_margin_right = 6.0
 content_margin_bottom = 6.0
 bg_color = Color(0.14902, 0.14902, 0.14902, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_suxfw"]
-content_margin_left = 6.0
-content_margin_top = 6.0
-content_margin_right = 6.0
-content_margin_bottom = 6.0
-bg_color = Color(0.14902, 0.14902, 0.14902, 1)
-border_width_top = 2
-border_color = Color(0.129412, 0.588235, 0.952941, 1)
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_po7xu"]
 bg_color = Color(0.0862745, 0.0862745, 0.0862745, 1)
 
 [resource]
 resource_name = "TabsTheme"
+default_font_size = 0
 TabBar/icons/close = ExtResource("1_030fu")
-TabBar/styles/button_highlight = SubResource("StyleBoxEmpty_qg106")
-TabBar/styles/button_pressed = SubResource("StyleBoxEmpty_qg106")
+TabBar/styles/tab_focus = SubResource("StyleBoxFlat_030fu")
+TabBar/styles/tab_selected = SubResource("StyleBoxFlat_suxfw")
 TabContainer/constants/icon_max_width = 18
 TabContainer/constants/icon_separation = 6
 TabContainer/constants/side_margin = 0

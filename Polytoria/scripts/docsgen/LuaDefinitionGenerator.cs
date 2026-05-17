@@ -141,7 +141,11 @@ public class LuaDefinitionGenerator
 		{
 			if (m.IsObsolete) continue;
 			if (SkippedMetamethods.Contains(m.Name)) continue;
-			if (m.IsStatic && !m.Name.StartsWith("__")) { hasStatic = true; continue; }
+			if (m.IsStatic && !m.Name.StartsWith("__"))
+			{
+				hasStatic = true;
+				if (!m.IsSemiStatic) { continue; }
+			}
 			List<string> args = [];
 
 			foreach (ScriptParameter param in m.Parameters)
@@ -150,7 +154,8 @@ public class LuaDefinitionGenerator
 				args.Add($"{param.Name}: {ProcessType(param.Type) + (param.IsOptional ? "?" : "")}");
 			}
 
-			args.Insert(0, "self");
+			if (!m.IsSemiStatic) { args.Insert(0, "self"); }
+			else { args[0] = "self"; }
 
 			builder.AppendLine($"\tfunction {m.Name}({string.Join(", ", args)}): {ProcessType(m.ReturnType ?? "")}");
 		}
