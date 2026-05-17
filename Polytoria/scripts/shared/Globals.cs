@@ -635,13 +635,11 @@ public sealed partial class Globals : Node
 
 		string finalPath = dllPath;
 
-		if (UseNodes)
+		if (UseNodes && IsInGDEditor)
 		{
 			// Only resolve full path in Godot env
-			string basePath = OS.GetExecutablePath().GetBaseDir();
+			string basePath = ProjectSettings.GlobalizePath("res://");
 			finalPath = Path.GetFullPath(Path.Join(basePath, dllPath));
-
-			return NativeLibrary.Load(finalPath);
 		}
 
 		return NativeLibrary.Load(finalPath, assembly, searchPath);
