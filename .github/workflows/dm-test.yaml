@@ -32,8 +32,6 @@ jobs:
           use-dotnet: true
           include-templates: false
           cache: true
-      - name: just to make sure
-        run: ldd Polytoria/native/Luau.VM/linux/libLuau.VM.so
       - name: Test Datamodel
         run: |
           dotnet --version
