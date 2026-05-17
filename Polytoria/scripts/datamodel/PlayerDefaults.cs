@@ -13,6 +13,7 @@ public sealed partial class PlayerDefaults : HiddenBase
 	private float _maxHealth;
 	private float _walkSpeed;
 	private float _jumpPower;
+	private bool _jumpEnabled;
 	private Color _chatColor;
 	private float _respawnTime;
 	private bool _canMove;
@@ -68,6 +69,17 @@ public sealed partial class PlayerDefaults : HiddenBase
 		set
 		{
 			_jumpPower = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool JumpEnabled
+	{
+		get => _jumpEnabled;
+		set
+		{
+			_jumpEnabled = value;
 			OnPropertyChanged();
 		}
 	}
@@ -242,6 +254,7 @@ public sealed partial class PlayerDefaults : HiddenBase
 		MaxHealth = 100f;
 		WalkSpeed = 16f;
 		JumpPower = 36f;
+		JumpEnabled = true;
 		ChatColor = new Color(1, 1, 1);
 		RespawnTime = 5.0f;
 		CanMove = true;

@@ -35,6 +35,7 @@ public partial class NPC : Physical
 	private RemoteTransform3D? _toolRemoteTransform;
 	private float _maxHealth = 100;
 	private float _jumpPower = 36;
+	private bool _jumpEnabled = true;
 	private float _walkSpeed = 16;
 	private string _displayName = "";
 	protected RayCast3D FootFwdRaycast = null!;
@@ -252,6 +253,17 @@ public partial class NPC : Physical
 		set
 		{
 			_maxHealth = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool JumpEnabled
+	{
+		get => _jumpEnabled;
+		set
+		{
+			_jumpEnabled = value;
 			OnPropertyChanged();
 		}
 	}
@@ -847,7 +859,7 @@ public partial class NPC : Physical
 	[ScriptMethod]
 	public virtual void Jump()
 	{
-		bool canJump = CharBody3D.IsOnFloor() || (!_coyoteUsed && _timeSinceGrounded <= CoyoteTime);
+		bool canJump = (CharBody3D.IsOnFloor() || (!_coyoteUsed && _timeSinceGrounded <= CoyoteTime)) && _jumpEnabled;
 		bool playJumpSound = false;
 		if (canJump)
 		{
