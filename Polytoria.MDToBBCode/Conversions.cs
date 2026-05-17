@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
-namespace MarkdownBBCodeConversion;
+namespace Polytoria.MDToBBCode;
 
 public static partial class Conversions
 {

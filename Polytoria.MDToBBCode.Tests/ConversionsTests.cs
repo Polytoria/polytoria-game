@@ -1,4 +1,4 @@
-namespace MarkdownBBCodeConversion.Tests
+namespace Polytoria.MDToBBCode.Tests
 {
 	public class ConversionsTests
 	{

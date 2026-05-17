@@ -14,7 +14,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using MarkdownBBCodeConversion;
+using MDToBBCode;
 using System.Runtime.CompilerServices;
 
 namespace Polytoria.Creator.UI.TextEditor;

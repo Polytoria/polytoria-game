@@ -47,8 +47,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Polytoria.SourceGen\Polytoria.SourceGen.csproj"
-			OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<ProjectReference Include="..\Polytoria.MDToBBCode\Polytoria.MDToBBCode.csproj" />
+		<ProjectReference Include="..\Polytoria.SourceGen\Polytoria.SourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 	<!-- ExportRelease configuration -->
@@ -113,9 +113,6 @@
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="scenes\creator\tabs\text_editor\" />
-	</ItemGroup>
-	<ItemGroup>
-	  <ProjectReference Include="..\MarkdownBBCodeConversion\MarkdownBBCodeConversion.csproj" />
 	</ItemGroup>
 
 	<!-- CREATOR Constant -->
