@@ -14,7 +14,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using MDToBBCode;
+using Polytoria.MDToBBCode;
 using System.Runtime.CompilerServices;
 
 namespace Polytoria.Creator.UI.TextEditor;
@@ -23,6 +23,7 @@ public partial class TextEditorRoot : Node
 {
 	private const string CodeCompletionIconPath = "res://assets/textures/creator/tabs/text_editor/code_completion/";
 	private const int DiagDelay = 500;
+	private const int TooltipHideDelayMS = 100;
 
 	[Export] public TextEditorField CodeEditor = null!;
 	public TextEditorContainer Container = null!;
@@ -35,8 +36,6 @@ public partial class TextEditorRoot : Node
 	[Export] private Label _statusBar = null!;
 
 	[Export] public TextEditorTooltip Tooltip = null!;
-	[Export(PropertyHint.Range, "0,1,or_greater,suffix:ms")]
-	public int TooltipHideDelayMS = 150;
 
 	private int? _prevHoverLine = null;
 	private int? _prevHoverStartCol = null;
@@ -248,11 +247,9 @@ public partial class TextEditorRoot : Node
 			return;
 		}
 
-		// Convert the float mouse position to Vector2I
 		Vector2I mousePos = new((int)mouseMotion.Position.X, (int)mouseMotion.Position.Y);
 
-		// The 'false' argument here is CRITICAL. 
-		// It tells Godot: "If the mouse is past the end of the text, return (-1, -1)"
+		// (-1, -1) is returned for going out of bounds.
 		Vector2I hovered = CodeEditor.GetLineColumnAtPos(mousePos, false);
 
 		int currentLine = hovered.Y;
@@ -267,7 +264,6 @@ public partial class TextEditorRoot : Node
 		if (isInsideCachedSymbol)
 		{
 			// We moved, but we are still inside the "safe zone" of the symbol.
-			// Cancel any potential hide operation that might have been triggered by leaving the tooltip.
 			_hideTooltipCts?.Cancel();
 		}
 		else if (Tooltip.Visible)
@@ -311,25 +307,16 @@ public partial class TextEditorRoot : Node
 		}
 		catch (TaskCanceledException)
 		{
-			// Task is cancelled, do nothing.
 			return;
 		}
 	}
 
 	/// <summary>
-	/// Handles the event when a symbol is hovered in the code editor and displays relevant tooltip information for the
-	/// symbol at the specified line and column.
+	/// Handles the event when a symbol is hovered in the code editor.
 	/// </summary>
-	/// <remarks>
-	/// If the hovered position is not over a valid symbol character or the code completion service is not
-	/// ready, the tooltip is hidden or not updated. The tooltip is only shown when hovering over a valid symbol, and its
-	/// content is retrieved asynchronously using Luau-LSP.
-	/// 
-	/// P.S. To this day, I am still baffled by why line and column are longs here instead of ints.
-	/// </remarks>
 	/// <param name="symbol">The symbol being hovered over in the code editor.</param>
-	/// <param name="line">The zero-based line number where the symbol is located.</param>
-	/// <param name="column">The zero-based column number within the line where the symbol is located.</param>
+	/// <param name="line">The zero-based line number where the mouse is located.</param>
+	/// <param name="column">The zero-based column number within the line where the mouse is located.</param>
 	private async void OnSymbolHovered(string symbol, long line, long column)
 	{
 		_hideTooltipCts?.Cancel();
@@ -410,9 +397,12 @@ public partial class TextEditorRoot : Node
 
 		string tooltipDisplay = Conversions.MarkdownToBBCode(tooltipDisplayMD);
 
+		PT.Print($"Markdown: {tooltipDisplayMD}");
+		PT.Print($"BBCode: {tooltipDisplay}");
+
 		Rect2 hoveredCharDimensions = CodeEditor.GetRectAtLineColumn(hoveredSymbolLine, hoveredSymbolCol);
 		Rect2 globalCharDimensions = new(CodeEditor.GlobalPosition + hoveredCharDimensions.Position, hoveredCharDimensions.Size);
-		await Tooltip.UpdateTooltip(tooltipDisplay, globalCharDimensions);
+		Tooltip.UpdateTooltip(tooltipDisplay, globalCharDimensions);
 	}
 
 	private void InitSyntaxHighlighter()

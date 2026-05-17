@@ -2,6 +2,8 @@
 
 [ext_resource type="FontFile" uid="uid://clwbylh8y2lf2" path="res://assets/fonts/creator/JetBrainsMono-Regular.ttf" id="1_2d40i"]
 [ext_resource type="Script" uid="uid://bn1tgtwt0ip31" path="res://scripts/creator/ui/tabs/text_editor/TextEditorTooltip.cs" id="1_ku8l2"]
+[ext_resource type="FontFile" uid="uid://ccsexiq8wregy" path="res://assets/fonts/built-in/Montserrat-VariableFont_wght.ttf" id="2_vcq5d"]
+[ext_resource type="FontFile" uid="uid://8kbetyqtns41" path="res://assets/fonts/built-in/Montserrat-Italic-VariableFont_wght.ttf" id="3_rfw1y"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ku8l2"]
 content_margin_left = 8.0
@@ -13,6 +15,34 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
+
+[sub_resource type="FontVariation" id="FontVariation_1ncfn"]
+base_font = ExtResource("2_vcq5d")
+variation_opentype = {
+2003265652: 500
+}
+
+[sub_resource type="Theme" id="Theme_fhy1e"]
+resource_name = "TooltipTheme"
+default_font = SubResource("FontVariation_1ncfn")
+
+[sub_resource type="FontVariation" id="FontVariation_yubmu"]
+base_font = ExtResource("2_vcq5d")
+variation_opentype = {
+2003265652: 700
+}
+
+[sub_resource type="FontVariation" id="FontVariation_wv1ak"]
+base_font = ExtResource("3_rfw1y")
+variation_opentype = {
+2003265652: 700
+}
+
+[sub_resource type="FontVariation" id="FontVariation_2uqwb"]
+base_font = ExtResource("3_rfw1y")
+variation_opentype = {
+2003265652: 500
+}
 
 [node name="Tooltip" type="Control" unique_id=121033142 node_paths=PackedStringArray("_label", "_tooltipPanel")]
 top_level = true
@@ -26,11 +56,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
 script = ExtResource("1_ku8l2")
-_maxDimensions = Vector2(600, 150)
 _label = NodePath("Panel/DescriptionText")
 _tooltipPanel = NodePath("Panel")
-_widthOffset = 0.0
-_positionOffset = Vector2(-8, 0)
 
 [node name="Panel" type="PanelContainer" parent="." unique_id=233449887]
 layout_mode = 1
@@ -43,6 +70,10 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_ku8l2")
 [node name="DescriptionText" type="RichTextLabel" parent="Panel" unique_id=5274423]
 layout_mode = 2
 size_flags_horizontal = 8
+theme = SubResource("Theme_fhy1e")
+theme_override_fonts/bold_font = SubResource("FontVariation_yubmu")
+theme_override_fonts/bold_italics_font = SubResource("FontVariation_wv1ak")
+theme_override_fonts/italics_font = SubResource("FontVariation_2uqwb")
 theme_override_fonts/mono_font = ExtResource("1_2d40i")
 bbcode_enabled = true
 text = "[code]number[/code]"

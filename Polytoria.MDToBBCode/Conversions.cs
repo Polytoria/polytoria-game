@@ -16,7 +16,6 @@ public static partial class Conversions
 			// Group 1: Fenced code block
 			if (m.Groups[1].Success)
 			{
-				// Strip the ``` markers and wrap in [code]
 				return CodeBlockMDRegex().Replace(m.Value, "[code]$1[/code]");
 			}
 
@@ -28,6 +27,7 @@ public static partial class Conversions
 
 			// Group 3: Regular text (the "other" group)
 			string text = m.Value;
+			text = BoldItalicsMDRegex().Replace(text, "[b][i]$1$2[/i][/b]");
 			text = BoldMDRegex().Replace(text, "[b]$1[/b]");
 			text = ItalicsMDRegex().Replace(text, "[i]$1[/i]");
 			text = StrikethroughMDRegex().Replace(text, "[s]$1[/s]");
@@ -54,11 +54,15 @@ public static partial class Conversions
 	private static partial Regex ItalicsMDRegex();
 
 	[ExcludeFromCodeCoverage]
+	[GeneratedRegex(@"\*\*\*(.*?)\*\*\*|___(.*?)___", RegexOptions.Singleline)]
+	private static partial Regex BoldItalicsMDRegex();
+
+	[ExcludeFromCodeCoverage]
 	[GeneratedRegex(@"`(.*?)`")]
 	private static partial Regex InlineCodeMDRegex();
 
 	[ExcludeFromCodeCoverage]
-	[GeneratedRegex(@"^(\-\-\-|\*\*\*|___)$", RegexOptions.Multiline)]
+	[GeneratedRegex(@"^ {0,3}([\*\-_])( *(\1)){2,} *$", RegexOptions.Multiline)]
 	private static partial Regex HorizontalRuleMDRegex();
 
 	[ExcludeFromCodeCoverage]
