@@ -783,7 +783,7 @@ public sealed partial class Player : NPC
 
 	internal void PlayEmote(string emoteName)
 	{
-		if (IsSitting) return;
+		if (IsSitting || IsDead) return;
 		if (!EmoteList.Contains(emoteName)) return;
 		bool isOneShot = false;
 		if (OneShotEmoteList.Contains(emoteName))

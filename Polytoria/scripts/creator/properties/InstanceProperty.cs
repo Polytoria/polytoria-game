@@ -4,6 +4,7 @@
 
 using Godot;
 using Polytoria.Datamodel;
+using Polytoria.Datamodel.Creator;
 using System;
 using System.Threading.Tasks;
 
@@ -45,6 +46,10 @@ public sealed partial class InstanceProperty : Button, IProperty<Instance?>
 			ValueChanged?.Invoke(i);
 		}
 		catch (TaskCanceledException) { }
+		catch (Exception ex)
+		{
+			CreatorService.Interface.PopupAlert(ex.Message, "Assignment error");
+		}
 		base._Pressed();
 	}
 

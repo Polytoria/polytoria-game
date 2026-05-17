@@ -51,8 +51,7 @@ public sealed partial class CreatorSelections : Instance
 	{
 		if (@event.IsActionPressed("ui_cancel"))
 		{
-			_pickTcs?.SetException(new TaskCanceledException());
-			CreatorService.Interface.StopFollowCursorLabel();
+			CancelPickInstance();
 		}
 	}
 
@@ -82,7 +81,7 @@ public sealed partial class CreatorSelections : Instance
 
 		if (_pickTcs != null)
 		{
-			_pickTcs.SetResult(instance);
+			_pickTcs.TrySetResult(instance);
 			_pickTcs = null;
 			CreatorService.Interface.StopFollowCursorLabel();
 		}
@@ -357,5 +356,12 @@ public sealed partial class CreatorSelections : Instance
 		CreatorService.Interface.StartFollowCursorLabel("Click to pick an instance, or press Esc to cancel.");
 		_pickTcs = new();
 		return _pickTcs.Task;
+	}
+
+	public void CancelPickInstance()
+	{
+		_pickTcs?.TrySetException(new TaskCanceledException());
+		_pickTcs = null;
+		CreatorService.Interface.StopFollowCursorLabel();
 	}
 }

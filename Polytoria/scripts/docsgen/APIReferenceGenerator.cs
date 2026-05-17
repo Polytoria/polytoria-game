@@ -173,6 +173,7 @@ public class APIReferenceGenerator
 					Parameters = paramsDef,
 					IsObsolete = method.GetCustomAttribute<Attributes.ObsoleteAttribute>() != null,
 					IsStatic = method.IsStatic,
+					IsSemiStatic = method.IsStatic && (methodAttribute?.SemiStatic ?? false),
 				};
 
 				methodsDef.Add(methodDef);
@@ -519,6 +520,7 @@ public class APIReferenceGenerator
 		public bool IsAsync;
 		public bool IsObsolete;
 		public bool IsStatic;
+		public bool IsSemiStatic;
 	}
 
 	public struct ScriptProperty

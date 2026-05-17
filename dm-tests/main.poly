@@ -932,6 +932,20 @@
                   "Children": [],
                   "LinkedModel": null,
                   "IsLinkedChild": false
+                },
+                {
+                  "Name": "SemiStaticNamecall",
+                  "ClassName": "ServerScript",
+                  "ID": "258ae160-116d-4f5f-bea5-980dd9bb944d",
+                  "Properties": {
+                    "IsEnabled": true,
+                    "LinkedScript": "f2e9ab36-6861-412d-a497-e316423a1c65",
+                    "Compatibility": false,
+                    "Tags": []
+                  },
+                  "Children": [],
+                  "LinkedModel": null,
+                  "IsLinkedChild": false
                 }
               ],
               "LinkedModel": null,

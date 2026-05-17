@@ -128,7 +128,7 @@ public class PTColor : IScriptGDObject
 		return FromGDClass(Color.FromString(hex, new(1, 1, 1)));
 	}
 
-	[ScriptMethod(ConvertParamsToGD = false)]
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)]
 	public static string ToHex(PTColor c)
 	{
 		return c.color.ToHtml();
@@ -140,7 +140,7 @@ public class PTColor : IScriptGDObject
 		return FromGDClass(Color.FromHsv(h, s, v, a));
 	}
 
-	[ScriptMethod(ConvertParamsToGD = false)]
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)]
 	public static PTColor Lerp(PTColor a, PTColor b, float t)
 	{
 		return FromGDClass(a.color.Lerp(b.color, t));

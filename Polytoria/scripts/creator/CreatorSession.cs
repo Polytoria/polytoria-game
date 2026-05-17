@@ -31,15 +31,15 @@ namespace Polytoria.Creator;
 public partial class CreatorSession : Node, IDisposable
 {
 	private const string LuauRCContent = @"{
-    ""languageMode"": ""nocheck""
+	""languageMode"": ""nocheck""
 }";
 	private const string VSCodeSetupContent = @"{
-    ""luau-lsp.platform.type"": ""standard"",
-    ""luau-lsp.types.definitionFiles"": {
-        ""@poly"": ""./.poly/luau/def.d.luau"",
+	""luau-lsp.platform.type"": ""standard"",
+	""luau-lsp.types.definitionFiles"": {
+		""@poly"": ""./.poly/luau/def.d.luau"",
     },
 	""files.exclude"": {
-        ""**/*.meta"": true
+		""**/*.meta"": true
     }
 }";
 

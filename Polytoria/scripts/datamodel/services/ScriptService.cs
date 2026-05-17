@@ -585,11 +585,15 @@ public sealed partial class ScriptService : Instance
 		bool getParamsAsFunction = methodInfos.Any(m =>
 			m.GetCustomAttributes<ScriptMethodAttribute>().Any(attr => attr.GetParamsAsFunction == true));
 
+		bool semiStatic = methodInfos.Any(m =>
+			m.GetCustomAttributes<ScriptMethodAttribute>().Any(attr => attr.SemiStatic == true));
+
 		MethodsCacheData cacheData = new()
 		{
 			Methods = [.. methodInfos],
 			ConvertParamsToGD = convertParamsToGD,
 			GetParamsAsFunction = getParamsAsFunction,
+			SemiStatic = semiStatic,
 		};
 
 		_methodsCache[cacheKey] = cacheData;
@@ -703,6 +707,7 @@ public sealed partial class ScriptService : Instance
 		public MethodInfo[] Methods;
 		public bool ConvertParamsToGD;
 		public bool GetParamsAsFunction;
+		public bool SemiStatic;
 	}
 
 	private struct CacheKey : IEquatable<CacheKey>
