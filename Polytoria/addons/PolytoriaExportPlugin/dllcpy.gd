@@ -5,8 +5,6 @@ class_name PolytoriaDllCpyExportPlugin
 ## DLLCPY, Dll Copy. Used as a workaround for dll imports AOT bug
 
 var dllpaths = [
-	"res://native/Luau.Compiler/",
-	"res://native/Luau.VM/",
 	"res://native/discord/"
 ]
 

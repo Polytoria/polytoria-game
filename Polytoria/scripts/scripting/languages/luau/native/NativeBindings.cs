@@ -40,12 +40,12 @@ public struct LuauCompileOptions
 
 internal partial class NativeBindings
 {
-#if GODOT_ANDROID
-	private const string LuaLibraryName = "libLuau.VM.so";
-	private const string CompilerLibraryName = "libLuau.Compiler.so";
-#else
+#if DEBUG && !EXPORTDEBUG
 	private const string LuaLibraryName = "Luau.VM";
 	private const string CompilerLibraryName = "Luau.Compiler";
+#else
+	private const string LuaLibraryName = "*";
+	private const string CompilerLibraryName = "*";
 #endif
 
 	[LibraryImport(CompilerLibraryName, StringMarshalling = StringMarshalling.Utf8)]
@@ -60,9 +60,8 @@ internal partial class NativeBindings
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
 	internal static partial IntPtr luaL_newstate();
 
-	[LibraryImport(LuaLibraryName)]
-	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	internal static partial void lua_setsafeenv(IntPtr L, int index, int value);
+	[DllImport(LuaLibraryName, CallingConvention = CallingConvention.Cdecl)]
+	internal static extern void lua_setsafeenv(IntPtr L, int index, int value);
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -71,14 +70,6 @@ internal partial class NativeBindings
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
 	internal static partial void luaL_openlibs(IntPtr L);
-
-	[LibraryImport(LuaLibraryName, StringMarshalling = StringMarshalling.Utf8)]
-	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-	internal static partial int luaL_loadstring(IntPtr L, string s);
-
-	[LibraryImport(LuaLibraryName, StringMarshalling = StringMarshalling.Utf8)]
-	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-	internal static partial int luaL_loadfile(IntPtr L, string filename);
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -134,15 +125,7 @@ internal partial class NativeBindings
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-	internal static partial int lua_isboolean(IntPtr L, int index);
-
-	[LibraryImport(LuaLibraryName)]
-	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
 	internal static partial int lua_iscfunction(IntPtr L, int index);
-
-	[LibraryImport(LuaLibraryName)]
-	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-	internal static partial double lua_tonumber(IntPtr L, int index);
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -183,10 +166,6 @@ internal partial class NativeBindings
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
 	internal static partial IntPtr lua_newuserdatadtor(IntPtr L, UIntPtr sz, LuaUserdataDestructor? dtor);
-
-	[LibraryImport(LuaLibraryName)]
-	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-	internal static partial IntPtr lua_newuserdata(IntPtr L, UIntPtr size);
 
 	[LibraryImport(LuaLibraryName, StringMarshalling = StringMarshalling.Utf8)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -256,10 +235,6 @@ internal partial class NativeBindings
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
 	internal static partial int lua_error(IntPtr luaState);
 
-	[LibraryImport(LuaLibraryName)]
-	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	internal static partial IntPtr lua_newuserdatauv(IntPtr luaState, UIntPtr size, int nuvalue);
-
 	[LibraryImport(LuaLibraryName, StringMarshalling = StringMarshalling.Utf8)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
 	internal static partial int luaL_newmetatable(IntPtr luaState, string name);
@@ -302,10 +277,6 @@ internal partial class NativeBindings
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	internal static partial void luaL_unref(IntPtr luaState, int registryIndex, int reference);
-
-	[LibraryImport(LuaLibraryName)]
-	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
 	internal static partial int lua_gc(IntPtr luaState, int what, int data);
 
 	[LibraryImport(LuaLibraryName)]
@@ -315,14 +286,6 @@ internal partial class NativeBindings
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
 	internal static partial IntPtr lua_tothread(IntPtr luaState, int index);
-
-	[LibraryImport(LuaLibraryName)]
-	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	internal static partial void lua_rawsetp(IntPtr luaState, int index, IntPtr p);
-
-	[LibraryImport(LuaLibraryName)]
-	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	internal static partial int lua_rawgetp(IntPtr luaState, int index, IntPtr p);
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]

@@ -596,8 +596,17 @@ public sealed partial class Globals : Node
 
 	private static IntPtr DllImportResolver(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
 	{
+		bool isLuauLibrary = libraryName is "Luau.Compiler" or "Luau.VM";
+
+		if (isLuauLibrary && !IsInGDEditor)
+		{
+			// Use default resolver on Luau library in prod, these are loaded as static libraries
+			return IntPtr.Zero;
+		}
+
 		if (!IsInGDEditor)
 		{
+			// Use the default resolver if not in editor
 			return IntPtr.Zero;
 		}
 
@@ -670,6 +679,12 @@ public sealed partial class Globals : Node
 		if (!libraryPaths.TryGetValue(libraryName, out string? pathb))
 		{
 			return null;
+		}
+
+		// Add lib prefix
+		if (platform == "macos" || platform == "linux")
+		{
+			libraryName = "lib" + libraryName;
 		}
 
 		if (!IsInGDEditor)

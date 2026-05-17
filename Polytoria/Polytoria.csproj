@@ -20,18 +20,6 @@
 		<TrimmerRootAssembly Include="$(TargetName)" />
 		<TrimmerRootAssembly Include="GodotSharp" />
 
-		<!-- Luau.VM -->
-		<None Include="native/Luau.VM/windows/Luau.VM.dll" Link="Luau.VM.dll" Condition="'$(GodotTargetPlatform)' == 'windows'" CopyToOutputDirectory="Always" />
-		<None Include="native/Luau.VM/macos/Luau.VM.dylib" Link="Luau.VM.dylib" Condition="'$(GodotTargetPlatform)' == 'macos'" CopyToOutputDirectory="Always" />
-		<None Include="native/Luau.VM/linux/Luau.VM.so" Link="Luau.VM.so" Condition="'$(GodotTargetPlatform)' == 'linuxbsd'" CopyToOutputDirectory="Always" />
-		<None Include="native/Luau.VM/android/libLuau.VM.so" Link="libLuau.VM.so" Condition="'$(GodotTargetPlatform)' == 'android'" CopyToOutputDirectory="Always" />
-
-		<!-- Luau.Compiler -->
-		<None Include="native/Luau.Compiler/windows/Luau.Compiler.dll" Link="Luau.Compiler.dll" Condition="'$(GodotTargetPlatform)' == 'windows'" CopyToOutputDirectory="Always" />
-		<None Include="native/Luau.Compiler/macos/Luau.Compiler.dylib" Link="Luau.Compiler.dylib" Condition="'$(GodotTargetPlatform)' == 'macos'" CopyToOutputDirectory="Always" />
-		<None Include="native/Luau.Compiler/linux/Luau.Compiler.so" Link="Luau.Compiler.so" Condition="'$(GodotTargetPlatform)' == 'linuxbsd'" CopyToOutputDirectory="Always" />
-		<None Include="native/Luau.Compiler/android/libLuau.Compiler.so" Link="libLuau.Compiler.so" Condition="'$(GodotTargetPlatform)' == 'android'" CopyToOutputDirectory="Always" />
-
 		<!-- Discord Game SDK -->
 		<None Include="native/discord/windows/discord_game_sdk.dll" Link="discord_game_sdk.dll" Condition="'$(GodotTargetPlatform)' == 'windows'" CopyToOutputDirectory="Always" />
 		<None Include="native/discord/macos/discord_game_sdk.dylib" Link="discord_game_sdk.dylib" Condition="'$(GodotTargetPlatform)' == 'macos'" CopyToOutputDirectory="Always" />
@@ -44,6 +32,45 @@
 		<PackageReference Include="TurboXml" Version="2.0.3" />
 		<PackageReference Include="ZstdSharp.Port" Version="0.8.7" />
 		<PackageReference Include="Humanizer.Core" Version="3.0.10" />
+	</ItemGroup>
+
+	<!-- Windows Luau Static libraries -->
+	<ItemGroup Condition="'$(GodotTargetPlatform)' == 'windows'">
+		<NativeLibrary Include="native/Luau/windows/Luau.VM.lib" />
+		<NativeLibrary Include="native/Luau/windows/Luau.Require.lib" />
+		<NativeLibrary Include="native/Luau/windows/Luau.Config.lib" />
+		<NativeLibrary Include="native/Luau/windows/Luau.Compiler.lib" />
+		<NativeLibrary Include="native/Luau/windows/Luau.Common.lib" />
+		<NativeLibrary Include="native/Luau/windows/Luau.CodeGen.lib" />
+		<NativeLibrary Include="native/Luau/windows/Luau.Bytecode.lib" />
+		<NativeLibrary Include="native/Luau/windows/Luau.Ast.lib" />
+		<NativeLibrary Include="native/Luau/windows/Luau.Analysis.lib" />
+	</ItemGroup>
+
+	<!-- macOS Luau Static libraries -->
+	<ItemGroup Condition="'$(GodotTargetPlatform)' == 'macos'">
+		<NativeLibrary Include="native/Luau/macos/libLuau.VM.a" />
+		<NativeLibrary Include="native/Luau/macos/libLuau.Require.a" />
+		<NativeLibrary Include="native/Luau/macos/libLuau.Config.a" />
+		<NativeLibrary Include="native/Luau/macos/libLuau.Compiler.a" />
+		<NativeLibrary Include="native/Luau/macos/libLuau.Common.a" />
+		<NativeLibrary Include="native/Luau/macos/libLuau.CodeGen.a" />
+		<NativeLibrary Include="native/Luau/macos/libLuau.Bytecode.a" />
+		<NativeLibrary Include="native/Luau/macos/libLuau.Ast.a" />
+		<NativeLibrary Include="native/Luau/macos/libLuau.Analysis.a" />
+	</ItemGroup>
+	
+	<!-- Linux Luau Static libraries -->
+	<ItemGroup Condition="'$(GodotTargetPlatform)' == 'linuxbsd' or '$(GodotTargetPlatform)' == 'android'">
+		<NativeLibrary Include="native/Luau/linux/libLuau.VM.a" />
+		<NativeLibrary Include="native/Luau/linux/libLuau.Require.a" />
+		<NativeLibrary Include="native/Luau/linux/libLuau.Config.a" />
+		<NativeLibrary Include="native/Luau/linux/libLuau.Compiler.a" />
+		<NativeLibrary Include="native/Luau/linux/libLuau.Common.a" />
+		<NativeLibrary Include="native/Luau/linux/libLuau.CodeGen.a" />
+		<NativeLibrary Include="native/Luau/linux/libLuau.Bytecode.a" />
+		<NativeLibrary Include="native/Luau/linux/libLuau.Ast.a" />
+		<NativeLibrary Include="native/Luau/linux/libLuau.Analysis.a" />
 	</ItemGroup>
 
 	<ItemGroup>
