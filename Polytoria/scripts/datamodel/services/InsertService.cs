@@ -22,7 +22,7 @@ namespace Polytoria.Datamodel.Services;
 public sealed partial class InsertService : Instance
 {
 	private readonly PTHttpClient _httpClient = new();
-	private static readonly Dictionary<int, APIStoreItem> _storeItemCache = new();
+	private static readonly Dictionary<int, APIStoreItem> _storeItemCache = [];
 
 	[ScriptMethod, Attributes.Obsolete("Use ModelAsync instead")]
 	public void Model(int id, PTCallback? callback = null)

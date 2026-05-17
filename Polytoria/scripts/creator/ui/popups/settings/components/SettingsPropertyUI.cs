@@ -76,8 +76,7 @@ public partial class SettingsPropertyUI : Control
 
 	public override void _ExitTree()
 	{
-		if (SettingsContext != null)
-			SettingsContext.Changed -= OnExternalChanged;
+		SettingsContext?.Changed -= OnExternalChanged;
 		base._ExitTree();
 	}
 

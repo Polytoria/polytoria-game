@@ -28,7 +28,7 @@ namespace Polytoria.Formats;
 
 public static partial class PolyFormat
 {
-	private static readonly ConditionalWeakTable<Type, Dictionary<string, PropertyInfo>> _propertyCache = new();
+	private static readonly ConditionalWeakTable<Type, Dictionary<string, PropertyInfo>> _propertyCache = [];
 
 	public static object? SerializePropValue(object? propValue)
 	{
@@ -595,10 +595,12 @@ public static partial class PolyFormat
 	private static Dictionary<string, PropertyInfo> GetOrCreatePropertyCache(
 		[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type type)
 	{
-		return _propertyCache.GetValue(type, t =>
+		return _propertyCache.GetValue(type, static t =>
 		{
 			Dictionary<string, PropertyInfo> cache = [];
+#pragma warning disable IL2070 // Datamodel types has the reflections needed
 			PropertyInfo[] properties = t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy);
+#pragma warning restore IL2070
 			foreach (PropertyInfo prop in properties)
 			{
 				if (prop.IsDefined(typeof(EditableAttribute)) || prop.IsDefined(typeof(SaveIncludeAttribute)))

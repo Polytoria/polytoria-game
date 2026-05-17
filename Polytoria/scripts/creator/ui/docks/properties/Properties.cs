@@ -95,7 +95,9 @@ public sealed partial class Properties : TabContainer
 
 		foreach (Type commonType in GetCommonTypes(instances))
 		{
+#pragma warning disable IL2072 // Datamodel types has the reflections needed
 			WalkProperties(list, instances[0], commonType, instances);
+#pragma warning restore IL2072
 		}
 	}
 
@@ -273,7 +275,7 @@ public sealed partial class Properties : TabContainer
 		// Wait one frame for property to be ready
 		Callable.From(() =>
 		{
-			Dictionary<NetworkedObject, object?> previewOldValues = new();
+			Dictionary<NetworkedObject, object?> previewOldValues = [];
 
 			NetworkedObject first = networkedObjects[0];
 			input.SetValue(property.GetValue(first));

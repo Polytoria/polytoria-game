@@ -514,16 +514,16 @@ public sealed partial class NetworkPropSync : Instance
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
 	private void NetRecvBatchedPropsReliable(byte[] propsRaw)
 	{
-		NetRecvBatchedProps(propsRaw, true);
+		NetRecvBatchedProps(propsRaw);
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Unreliable)]
 	private void NetRecvBatchedPropsUnreliable(byte[] propsRaw)
 	{
-		NetRecvBatchedProps(propsRaw, false);
+		NetRecvBatchedProps(propsRaw);
 	}
 
-	private void NetRecvBatchedProps(byte[] propsRaw, bool reliable)
+	private void NetRecvBatchedProps(byte[] propsRaw)
 	{
 		var objects = SerializeUtils.Deserialize<BatchPropObjectData[]>(propsRaw);
 		if (objects == null) return;

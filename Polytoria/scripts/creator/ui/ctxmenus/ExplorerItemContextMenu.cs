@@ -95,7 +95,7 @@ public partial class ExplorerItemContextMenu : ContextMenu
 		{
 			case 1: // Add child
 				{
-					InsertMenuPopup menu = CreatorService.Interface.OpenInsertMenu(Target);
+					CreatorService.Interface.OpenInsertMenu(Target);
 					break;
 				}
 			case 2: // Add script

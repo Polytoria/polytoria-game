@@ -22,7 +22,7 @@ public partial class UIUserCard : Control
 	[Export] private TextureRect _pfpIconRect = null!;
 	private readonly PTImageAsset _plrIconAsset = new();
 	private static World Root => CoreUIRoot.Singleton.Root;
-	internal Player TargetPlayer => Root.Players.LocalPlayer;
+	internal static Player TargetPlayer => Root.Players.LocalPlayer;
 
 	public override void _Ready()
 	{

@@ -442,7 +442,7 @@ public sealed partial class Particles : Dynamic
 
 	// cannot pause in godot
 	[ScriptLegacyMethod("Pause")]
-	public void LegacyPause() { }
+	public static void LegacyPause() { }
 
 	[ScriptMethod]
 	public void Stop()

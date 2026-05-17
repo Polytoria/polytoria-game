@@ -19,9 +19,7 @@ public partial class CreatorEntry : Node
 {
 	public const int CreatorPort = 24220;
 
-	[RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Deserialize<TValue>(String, JsonSerializerOptions)")]
-	[RequiresDynamicCode("Calls System.Text.Json.JsonSerializer.Deserialize<TValue>(String, JsonSerializerOptions)")]
-	public override async void _EnterTree()
+	public async override void _EnterTree()
 	{
 		Dictionary<string, string> cmdargs = Globals.ReadCmdArgs();
 		cmdargs.TryGetValue("token", out string? launchToken);

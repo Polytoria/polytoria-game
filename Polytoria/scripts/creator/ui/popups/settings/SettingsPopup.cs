@@ -18,13 +18,13 @@ public sealed partial class SettingsPopup : PopupWindowBase
 	[Export] private Tree _categoryTree = null!;
 	[Export] private Control _layout = null!;
 
-	private static readonly IReadOnlyDictionary<string, List<SettingDef>> SectionDefs =
+	private static readonly Dictionary<string, List<SettingDef>> SectionDefs =
 		CreatorSettingsRegistry.Definitions.Values
 			.GroupBy(d => d.SectionKey)
 			.ToDictionary(g => g.Key, g => g.ToList());
 
 	private static readonly IReadOnlyList<SettingSectionDef> SortedSections =
-		CreatorSettingsRegistry.Sections.OrderBy(s => s.SortOrder).ToArray();
+		[.. CreatorSettingsRegistry.Sections.OrderBy(s => s.SortOrder)];
 
 	private readonly Dictionary<TreeItem, string> _itemToSectionKey = [];
 	private readonly Dictionary<string, List<SettingsPropertyUI>> _sectionUIs = [];
@@ -59,7 +59,7 @@ public sealed partial class SettingsPopup : PopupWindowBase
 
 	private void OnItemSelected()
 	{
-		if (!_itemToSectionKey.TryGetValue(_categoryTree.GetSelected(), out string sectionKey))
+		if (!_itemToSectionKey.TryGetValue(_categoryTree.GetSelected(), out var sectionKey))
 			return;
 
 		if (sectionKey == _activeSection)

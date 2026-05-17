@@ -14,7 +14,7 @@ public partial class UIFriendRequestNotification : UINotificationBase
 
 	public override void Fire(object? data)
 	{
-		if (data is FriendRequestNotifyPayload payload)
+		if (data is FriendRequestNotifyPayload)
 		{
 			//_iconRect.Texture = payload.Icon;
 			_animPlay.Play("appear");

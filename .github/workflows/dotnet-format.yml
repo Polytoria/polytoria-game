@@ -8,13 +8,5 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2
 
-      - name: Add dotnet-format problem matcher
-        uses: xt0rted/dotnet-format-problem-matcher@v1
-
-      - name: Restore dotnet tools
-        uses: xt0rted/dotnet-tool-restore@v1
-
-      - name: Run dotnet format
-        uses: xt0rted/dotnet-format@v1
-        with:
-          only-changed-files: "true"
+      - name: Run dotnet-format
+        run: dotnet format --verify-no-changes

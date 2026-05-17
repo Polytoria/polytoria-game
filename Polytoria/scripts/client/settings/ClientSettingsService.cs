@@ -39,12 +39,11 @@ public sealed partial class ClientSettingsService : SettingsServiceBase
 			GraphicsPreset autoPreset = GraphicsAutoDetector.Detect();
 			Set(SharedSettingKeys.Graphics.Preset, autoPreset);
 
-			GraphicsBenchmarker benchmarker = new GraphicsBenchmarker();
+			GraphicsBenchmarker benchmarker = new();
 			AddChild(benchmarker);
 
 			PT.Print("Graphics auto-detection selected preset: " + autoPreset);
-			if (Entry != null)
-				Entry.NetworkEssentialsReady += () => SetupBenchmark(benchmarker);
+			Entry?.NetworkEssentialsReady += () => SetupBenchmark(benchmarker);
 		}
 
 		RenderingMethodOption renderingMethod = Get<RenderingMethodOption>(SharedSettingKeys.Graphics.RenderingMethod);

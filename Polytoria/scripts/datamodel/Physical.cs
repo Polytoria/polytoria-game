@@ -490,10 +490,7 @@ public partial class Physical : Dynamic
 			_canTouch = true;
 			PT.CallOnMainThread(() =>
 			{
-				if (PhysicalArea != null)
-				{
-					PhysicalArea.Monitoring = true;
-				}
+				PhysicalArea?.Monitoring = true;
 			});
 		}
 	}
@@ -505,10 +502,7 @@ public partial class Physical : Dynamic
 			_canTouch = false;
 			PT.CallOnMainThread(() =>
 			{
-				if (PhysicalArea != null)
-				{
-					PhysicalArea.Monitoring = false;
-				}
+				PhysicalArea?.Monitoring = false;
 			});
 		}
 	}
@@ -840,7 +834,7 @@ public partial class Physical : Dynamic
 		return null;
 	}
 
-	public static Physical? GetPhysicalFromBodyShape(CollisionObject3D body, int shapeIndex)
+	public static Physical? GetPhysicalFromBodyShape(CollisionObject3D body)
 	{
 		if (_bodyToPhysical.TryGetValue(body, out Physical? val))
 			return val;
@@ -931,7 +925,7 @@ public partial class Physical : Dynamic
 		if (body is not CollisionObject3D collisionBody)
 			return;
 
-		Physical? p = GetPhysicalFromBodyShape(collisionBody, (int)bodyShapeIndex);
+		Physical? p = GetPhysicalFromBodyShape(collisionBody);
 		if (p != null)
 		{
 			InternalInvokeTouched(p);
@@ -943,7 +937,7 @@ public partial class Physical : Dynamic
 		if (body is not CollisionObject3D collisionBody)
 			return;
 
-		Physical? p = GetPhysicalFromBodyShape(collisionBody, (int)bodyShapeIndex);
+		Physical? p = GetPhysicalFromBodyShape(collisionBody);
 		if (p != null)
 		{
 			InternalInvokeTouchEnded(p);

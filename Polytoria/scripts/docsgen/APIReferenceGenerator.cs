@@ -49,8 +49,10 @@ public class APIReferenceGenerator
 				apiRef.InstanceClasses.Add(ProcessClassName(type));
 			}
 
+#pragma warning disable IL2075 // Datamodel types has the reflections needed
 			PropertyInfo[] properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
 			MethodInfo[] methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+#pragma warning restore IL2075
 
 			List<ScriptProperty> propertiesDef = [];
 			List<ScriptMethod> methodsDef = [];
@@ -227,7 +229,7 @@ public class APIReferenceGenerator
 		}
 
 		// Order classes by inheritance hierarchy
-		List<ScriptClass> orderedClasses = OrderClassesByInheritance(classMap, types);
+		List<ScriptClass> orderedClasses = OrderClassesByInheritance(classMap);
 		apiRef.Classes = orderedClasses;
 
 		foreach ((string key, Type enumType) in ScriptService.EnumMap)
@@ -275,7 +277,7 @@ public class APIReferenceGenerator
 		};
 	}
 
-	private static List<ScriptClass> OrderClassesByInheritance(Dictionary<Type, ScriptClass> classMap, Type[] allTypes)
+	private static List<ScriptClass> OrderClassesByInheritance(Dictionary<Type, ScriptClass> classMap)
 	{
 		List<ScriptClass> result = [];
 		HashSet<Type> processed = [];

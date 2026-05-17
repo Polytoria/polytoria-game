@@ -59,8 +59,6 @@ public partial class NPC : Physical
 	private Color? _pendingLeftLegColor;
 	private Color? _pendingRightLegColor;
 	private int? _pendingFaceID;
-	private int? _pendingShirtID;
-	private int? _pendingPantsID;
 
 	protected override float PositionSyncThreshold => 0.1f;
 	protected override float RotationSyncThreshold => 1f;
@@ -822,7 +820,7 @@ public partial class NPC : Physical
 			{
 				From = origin,
 				To = origin + direction,
-				Exclude = new Array<Rid>() { CharBody3D.GetRid() },
+				Exclude = [CharBody3D.GetRid()],
 				CollideWithAreas = false,
 				CollideWithBodies = true,
 			});

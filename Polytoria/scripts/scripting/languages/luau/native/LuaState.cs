@@ -288,7 +288,7 @@ public partial class LuaState : IDisposable
 	public long ToInteger(int index)
 	{
 		lock (_lock)
-			return NativeBindings.lua_tointegerx(_state, index, out int isNum);
+			return NativeBindings.lua_tointegerx(_state, index, out int _);
 	}
 
 	/// <summary>

@@ -51,13 +51,13 @@ public sealed partial class Vector2Property : HBoxContainer, IProperty<Vector2>
 		_x = GetNode<SpinBox>("X");
 		_y = GetNode<SpinBox>("Y");
 
-		ConnectAxis(_x, axisIndex: 0, "X");
-		ConnectAxis(_y, axisIndex: 1, "Y");
+		ConnectAxis(_x, axisIndex: 0);
+		ConnectAxis(_y, axisIndex: 1);
 
 		Refresh();
 	}
 
-	private void ConnectAxis(SpinBox spinBox, int axisIndex, string axisName)
+	private void ConnectAxis(SpinBox spinBox, int axisIndex)
 	{
 		spinBox.ValueChanged += value =>
 		{

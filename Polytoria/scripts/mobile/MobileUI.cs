@@ -36,7 +36,7 @@ public partial class MobileUI : Control
 	[Export] public MobileLoadingScreen LoadingScreen = null!;
 
 	private Deeplink _deepLink = new();
-	private readonly Dictionary<MobileViewEnum, MobileViewBase> _viewCache = new();
+	private readonly Dictionary<MobileViewEnum, MobileViewBase> _viewCache = [];
 
 	public override void _Ready()
 	{
@@ -110,11 +110,8 @@ public partial class MobileUI : Control
 
 	private void HideStartupSplash()
 	{
-		if (StartSplash != null)
-		{
-			StartSplash.HideSplash();
-			StartSplash = null;
-		}
+		StartSplash?.HideSplash();
+		StartSplash = null;
 	}
 
 	private async void OnDeeplinkReceived(DeeplinkURL url)

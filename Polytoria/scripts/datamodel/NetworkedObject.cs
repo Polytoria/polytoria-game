@@ -434,6 +434,7 @@ public partial class NetworkedObject : IScriptObject
 		Type? currentType = type;
 		while (currentType != null)
 		{
+#pragma warning disable IL2075 // Reflection access is already defined
 			foreach (var method in currentType.GetMethods(
 				BindingFlags.Public | BindingFlags.NonPublic |
 				BindingFlags.Instance | BindingFlags.DeclaredOnly))
@@ -446,6 +447,7 @@ public partial class NetworkedObject : IScriptObject
 					id++;
 				}
 			}
+#pragma warning restore IL2075 // 'this' argument does not satisfy 'DynamicallyAccessedMembersAttribute' in call to target method. The return value of the source method does not have matching annotations.
 			currentType = currentType.BaseType;
 		}
 
@@ -665,7 +667,7 @@ public partial class NetworkedObject : IScriptObject
 
 		return _defaultInitsCache.GetOrAdd(type, _ =>
 		{
-			return GetEditableProperties().Select(prop =>
+			return [.. GetEditableProperties().Select(prop =>
 			{
 				DefaultValueAttribute? attr = prop.GetCustomAttribute<DefaultValueAttribute>();
 				if (attr == null)
@@ -673,7 +675,7 @@ public partial class NetworkedObject : IScriptObject
 
 				object? val = ValidateValue(attr.DefaultValue, prop.PropertyType);
 				return new DefaultInit(prop, val);
-			}).Where(x => x != null).Cast<DefaultInit>().ToArray();
+			}).Where(x => x != null).Cast<DefaultInit>()];
 		});
 	}
 
@@ -1776,9 +1778,11 @@ public partial class NetworkedObject : IScriptObject
 		// Search up the inheritance hierarchy
 		while (currentType != null && md == null)
 		{
+#pragma warning disable IL2075 // Method reflection access is already defined
 			md = currentType.GetMethod(methodName,
 				BindingFlags.Public | BindingFlags.NonPublic |
 				BindingFlags.Instance | BindingFlags.DeclaredOnly);
+#pragma warning restore IL2075
 
 			currentType = currentType.BaseType;
 		}
@@ -1991,21 +1995,26 @@ public partial class NetworkedObject : IScriptObject
 
 	internal IEnumerable<PropertyInfo> GetEditableProperties()
 	{
-		return _editablePropertiesCache.GetOrAdd(GetType(), type =>
+#pragma warning disable IL2070 // Reflection access is already defined
+		return _editablePropertiesCache.GetOrAdd(GetType(), static type =>
 		[.. type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy).Where(p => p.IsDefined(typeof(EditableAttribute)))]
 		);
+#pragma warning restore IL2070 // 'this' argument does not satisfy 'DynamicallyAccessedMembersAttribute' in call to target method. The parameter of method does not have matching annotations.
 	}
 
 	internal IEnumerable<PropertyInfo> GetScriptProperties()
 	{
-		return _scriptPropertiesCache.GetOrAdd(GetType(), type =>
+#pragma warning disable IL2070 // Reflection access is already defined
+		return _scriptPropertiesCache.GetOrAdd(GetType(), static type =>
 		[.. type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy).Where(p => p.IsDefined(typeof(ScriptPropertyAttribute)) || p.IsDefined(typeof(ScriptLegacyPropertyAttribute)))]
 		);
+#pragma warning restore IL2070 // 'this' argument does not satisfy 'DynamicallyAccessedMembersAttribute' in call to target method. The parameter of method does not have matching annotations.
 	}
 
 	internal IEnumerable<PropertyInfo> GetSyncProperties()
 	{
-		return _syncPropertiesCache.GetOrAdd(GetType(), type =>
+#pragma warning disable IL2070 // Reflection access is already defined
+		return _syncPropertiesCache.GetOrAdd(GetType(), static type =>
 		[.. type.GetProperties(BindingFlags.Public | BindingFlags.Instance| BindingFlags.FlattenHierarchy)
 			.Where(p =>
 				// Editable or SyncVar, but not NoSync
@@ -2014,6 +2023,7 @@ public partial class NetworkedObject : IScriptObject
 				!p.IsDefined(typeof(NoSyncAttribute))
 			)]
 		);
+#pragma warning restore IL2070 // 'this' argument does not satisfy 'DynamicallyAccessedMembersAttribute' in call to target method. The parameter of method does not have matching annotations.
 	}
 
 	public override bool Equals(object? obj)

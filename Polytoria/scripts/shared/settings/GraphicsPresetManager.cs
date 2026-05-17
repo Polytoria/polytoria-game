@@ -10,8 +10,8 @@ namespace Polytoria.Shared.Settings;
 
 public static class GraphicsPresetManager
 {
-	private static readonly HashSet<string> PresetManagedKeys = new()
-	{
+	private static readonly HashSet<string> PresetManagedKeys =
+	[
 		SharedSettingKeys.Graphics.RenderScale,
 		SharedSettingKeys.Graphics.Msaa,
 		SharedSettingKeys.Graphics.ShadowQuality,
@@ -22,7 +22,7 @@ public static class GraphicsPresetManager
 		SharedSettingKeys.PostProcessing.Ssil,
 		SharedSettingKeys.PostProcessing.Sdfgi,
 		SharedSettingKeys.PostProcessing.NormalMaps,
-	};
+	];
 
 	public static bool IsPresetManagedKey(string key)
 	{

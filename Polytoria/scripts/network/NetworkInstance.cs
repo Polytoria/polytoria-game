@@ -94,8 +94,8 @@ public class NetworkInstance
 	/// <summary>
 	/// Adapt server bandwidth to player count
 	/// </summary>
-	/// <param name="playerCount"></param>
-	public void AdaptBandwidth(int playerCount)
+	/// <param name="_">used to be player count</param>
+	public void AdaptBandwidth(int _)
 	{
 		// TODO: TEMP FIX, unlimit out bandwidth
 		_peer.BandwidthLimit(0, 0);

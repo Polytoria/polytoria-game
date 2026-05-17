@@ -45,7 +45,7 @@ public sealed partial class DisplaySettingsApplier : Node
 		ApplyUiScale();
 	}
 
-	private void ApplyFullscreen()
+	private static void ApplyFullscreen()
 	{
 		bool fullscreen = ClientSettingsService.Instance.Get<bool>(SharedSettingKeys.Display.Fullscreen);
 		var defaultMode = DisplayServer.WindowMode.Maximized;
@@ -56,7 +56,7 @@ public sealed partial class DisplaySettingsApplier : Node
 		DisplayServer.WindowSetMode(fullscreen ? DisplayServer.WindowMode.Fullscreen : defaultMode);
 	}
 
-	private void ApplyVsync()
+	private static void ApplyVsync()
 	{
 		bool vsync = ClientSettingsService.Instance.Get<bool>(SharedSettingKeys.Display.VSync);
 		DisplayServer.WindowSetVsyncMode(vsync ? DisplayServer.VSyncMode.Enabled : DisplayServer.VSyncMode.Disabled);

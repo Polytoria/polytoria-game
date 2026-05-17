@@ -98,7 +98,7 @@ public partial class ExplorerTree : Tree
 
 		if (clickedInstance != null && clickedInstance is Datamodel.Script script)
 		{
-			CreatorService.Singleton.OpenScript(script);
+			CreatorService.OpenScript(script);
 		}
 	}
 

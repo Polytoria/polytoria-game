@@ -17,7 +17,7 @@ public sealed partial class Image3D : Dynamic
 	private ImageAsset? _asset;
 	private string _imageID = "";
 	private ImageTypeEnum _imageType;
-	private StandardMaterial3D _material = new();
+	private readonly StandardMaterial3D _material = new();
 	private BaseMaterial3D.TransparencyEnum _transparencyType = BaseMaterial3D.TransparencyEnum.Disabled;
 	private MeshInstance3D _mesh = null!;
 

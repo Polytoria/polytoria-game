@@ -64,7 +64,7 @@ public sealed partial class Globals : Node
 	private static readonly Dictionary<string, (Mesh, Shape3D)> _shapesCache = [];
 	private static readonly Dictionary<string, Material> _skyboxesCache = [];
 
-	private static Dictionary<(Part.PartMaterialEnum, bool), Material> _materialCache = [];
+	private static readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materialCache = [];
 
 	private static bool _isExiting = false;
 

@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Godot;
 using Polytoria.Shared;
 using Polytoria.Shared.Settings;
@@ -43,8 +44,6 @@ public sealed partial class CreatorSettingsService : SettingsServiceBase
 		Instance = this;
 	}
 
-	[RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Deserialize<TValue>(String, JsonSerializerOptions)")]
-	[RequiresDynamicCode("Calls System.Text.Json.JsonSerializer.Deserialize<TValue>(String, JsonSerializerOptions)")]
 	public void Init()
 	{
 		MigrateFromOldFormat();
@@ -59,9 +58,7 @@ public sealed partial class CreatorSettingsService : SettingsServiceBase
 		RenderingDeviceSwitcher.Switch(renderingMethod);
 	}
 
-	[RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Deserialize<TValue>(String, JsonSerializerOptions)")]
-	[RequiresDynamicCode("Calls System.Text.Json.JsonSerializer.Deserialize<TValue>(String, JsonSerializerOptions)")]
-	private void MigrateFromOldFormat()
+	private static void MigrateFromOldFormat()
 	{
 		const string oldFilePath = "user://creator/creator_settings";
 
@@ -73,7 +70,7 @@ public sealed partial class CreatorSettingsService : SettingsServiceBase
 		try
 		{
 			string oldJson = FileAccess.GetFileAsString(oldFilePath);
-			var oldData = JsonSerializer.Deserialize<Dictionary<string, string>>(oldJson);
+			var oldData = JsonSerializer.Deserialize(oldJson, MigrationJSONGenerationContext.Default.DictionaryStringString);
 
 			if (oldData == null || oldData.Count == 0)
 				return;
@@ -109,7 +106,7 @@ public sealed partial class CreatorSettingsService : SettingsServiceBase
 			if (newData.Count == 0)
 				return;
 
-			string newJson = JsonSerializer.Serialize(newData);
+			string newJson = JsonSerializer.Serialize(newData, MigrationJSONGenerationContext.Default.DictionaryStringString);
 			using var newFile = FileAccess.Open(SettingsPathConst, FileAccess.ModeFlags.Write);
 			newFile.StoreString(newJson);
 			newFile.Close();
@@ -162,3 +159,6 @@ public sealed partial class CreatorSettingsService : SettingsServiceBase
 		GraphicsPresetManager.HandlePresetChange(this, key, normalizedValue);
 	}
 }
+
+[JsonSerializable(typeof(Dictionary<string, string>))]
+internal partial class MigrationJSONGenerationContext : JsonSerializerContext { }

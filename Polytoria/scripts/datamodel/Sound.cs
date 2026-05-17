@@ -252,15 +252,8 @@ public sealed partial class Sound : Dynamic
 
 	private void CleanupAudioPlayer()
 	{
-		if (_audioPlayer != null)
-		{
-			_audioPlayer.Finished -= OnPlayerFinished;
-		}
-
-		if (_audioPlayer3D != null)
-		{
-			_audioPlayer3D.Finished -= OnPlayerFinished;
-		}
+		_audioPlayer?.Finished -= OnPlayerFinished;
+		_audioPlayer3D?.Finished -= OnPlayerFinished;
 
 		_audioPlayer = null;
 		_audioPlayer3D = null;
