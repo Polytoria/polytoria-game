@@ -6,7 +6,6 @@ using Godot;
 #if CREATOR
 using Polytoria.Creator.Properties;
 using Polytoria.Datamodel.Creator;
-using System.IO;
 #endif
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Resources;
@@ -16,9 +15,10 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using Mesh = Godot.Mesh;
 using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using Mesh = Godot.Mesh;
 
 namespace Polytoria.Shared;
 
