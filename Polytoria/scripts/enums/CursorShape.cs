@@ -1,4 +1,8 @@
+using Polytoria.Attributes;
+
 namespace Polytoria.Enums;
+
+[ScriptEnum]
 public enum CursorShapeEnum
 {
     Arrow = 0,
