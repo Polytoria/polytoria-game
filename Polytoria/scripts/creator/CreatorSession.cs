@@ -7,6 +7,7 @@ using Godot;
 using Polytoria.Client;
 using Polytoria.Creator.LSP;
 using Polytoria.Creator.Managers;
+using Polytoria.Creator.Settings;
 using Polytoria.Creator.UI;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Creator;
@@ -30,15 +31,15 @@ namespace Polytoria.Creator;
 public partial class CreatorSession : Node, IDisposable
 {
 	private const string LuauRCContent = @"{
-    ""languageMode"": ""nocheck""
+	""languageMode"": ""nocheck""
 }";
 	private const string VSCodeSetupContent = @"{
-    ""luau-lsp.platform.type"": ""standard"",
-    ""luau-lsp.types.definitionFiles"": {
-        ""@poly"": ""./.poly/luau/def.d.luau"",
+	""luau-lsp.platform.type"": ""standard"",
+	""luau-lsp.types.definitionFiles"": {
+		""@poly"": ""./.poly/luau/def.d.luau"",
     },
 	""files.exclude"": {
-        ""**/*.meta"": true
+		""**/*.meta"": true
     }
 }";
 
@@ -47,6 +48,8 @@ public partial class CreatorSession : Node, IDisposable
 	private Timer _backupTimer = null!;
 	private bool _vscodeFileWritten = false;
 	private bool _fileScanQueued = false;
+
+	private bool _cleanupQueued = false;
 
 	public string ProjectFolderPath = "";
 	public string ProjectFilePath = "";
@@ -223,7 +226,7 @@ public partial class CreatorSession : Node, IDisposable
 
 	private void StartBackupTimer()
 	{
-		float backupInterval = CreatorSettings.Singleton.GetSetting<float>("Backup.BackupInterval")!;
+		float backupInterval = CreatorSettingsService.Instance.Get<float>(CreatorSettingKeys.Backup.BackupInterval);
 		_backupTimer.Start(backupInterval * 60f);
 	}
 
@@ -233,12 +236,13 @@ public partial class CreatorSession : Node, IDisposable
 		StartBackupTimer();
 	}
 
-	public World OpenWorld(string filePath, World? worldOverride = null)
+	public World OpenWorld(string filePath, World? worldOverride = null, bool migrateCoords = false)
 	{
 		filePath = filePath.SanitizePath();
 		if (WorldPathToRoot.ContainsKey(filePath)) throw new InvalidOperationException("World already opened");
 		string placePath = GlobalizePath(filePath);
 		if (!File.Exists(placePath)) throw new FileNotFoundException("World file not found");
+		_cleanupQueued = false;
 		byte[] worldData = File.ReadAllBytes(placePath);
 
 		World root = worldOverride ?? Globals.LoadInstance<World>();
@@ -291,7 +295,7 @@ public partial class CreatorSession : Node, IDisposable
 
 			if (OpenedWorlds.Count == 0)
 			{
-				Dispose();
+				QueueDispose();
 			}
 		}
 
@@ -312,7 +316,7 @@ public partial class CreatorSession : Node, IDisposable
 			// Load world
 			try
 			{
-				PolyFormat.LoadWorld(root, worldData);
+				PolyFormat.LoadWorld(root, worldData, migrateCoords);
 				root.InvokeReady();
 			}
 			catch (Exception ex)
@@ -332,6 +336,22 @@ public partial class CreatorSession : Node, IDisposable
 		AddonsManager.RunAddons(root);
 
 		return root;
+	}
+
+	public void QueueDispose()
+	{
+		_cleanupQueued = true;
+		PT.CallDeferred(() =>
+		{
+			if (_cleanupQueued)
+				Dispose();
+		});
+	}
+
+	public void CloseWorld(string filePath)
+	{
+		if (!WorldPathToRoot.TryGetValue(filePath, out var root)) return;
+		root.ForceDelete();
 	}
 
 	public World? OpenMainWorld(World? worldOverride = null)
@@ -920,7 +940,7 @@ return module";
 			Directory.CreateDirectory(backupFolderPath);
 		}
 
-		int maxCount = CreatorSettings.Singleton.GetSetting<int>("Backup.MaxBackupCount")!;
+		int maxCount = CreatorSettingsService.Instance.Get<int>(CreatorSettingKeys.Backup.MaxBackupCount);
 
 		// Delete oldest folder
 		List<DirectoryInfo> backupFolders = [.. Directory.GetDirectories(backupFolderPath)

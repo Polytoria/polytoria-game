@@ -132,6 +132,7 @@ public sealed partial class CreatorAddons : Instance
 		[ScriptProperty] public PTSignal Pressed { get; private set; } = new();
 	}
 
+	[ScriptEnum(IsCreatorOnly = true)]
 	public enum AddonPermissionEnum
 	{
 		IORead,

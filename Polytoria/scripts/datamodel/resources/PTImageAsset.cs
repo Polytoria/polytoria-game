@@ -74,6 +74,7 @@ public partial class PTImageAsset : ImageAsset
 	}
 }
 
+[ScriptEnum]
 public enum ImageTypeEnum
 {
 	Asset,

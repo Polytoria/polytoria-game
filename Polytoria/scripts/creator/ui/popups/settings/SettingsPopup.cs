@@ -3,10 +3,12 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+using Polytoria.Creator.Settings;
 using Polytoria.Creator.UI.Components;
 using Polytoria.Shared;
+using Polytoria.Shared.Settings;
 using System.Collections.Generic;
-using static Polytoria.Creator.CreatorSettings;
+using System.Linq;
 
 namespace Polytoria.Creator.UI.Popups;
 
@@ -16,49 +18,80 @@ public sealed partial class SettingsPopup : PopupWindowBase
 	[Export] private Tree _categoryTree = null!;
 	[Export] private Control _layout = null!;
 
-	private readonly Dictionary<TreeItem, SettingsCategory> _itemToCat = [];
+	private static readonly IReadOnlyDictionary<string, List<SettingDef>> SectionDefs =
+		CreatorSettingsRegistry.Definitions.Values
+			.GroupBy(d => d.SectionKey)
+			.ToDictionary(g => g.Key, g => g.ToList());
+
+	private static readonly IReadOnlyList<SettingSectionDef> SortedSections =
+		CreatorSettingsRegistry.Sections.OrderBy(s => s.SortOrder).ToArray();
+
+	private readonly Dictionary<TreeItem, string> _itemToSectionKey = [];
+	private readonly Dictionary<string, List<SettingsPropertyUI>> _sectionUIs = [];
+	private string _activeSection = string.Empty;
 
 	public override void _Ready()
 	{
 		TreeItem root = _categoryTree.CreateItem();
-		bool isFirst = true;
 		TreeItem? firstSelected = null;
-		foreach (SettingsCategory cat in Singleton.Root.Categories)
+
+		foreach (var section in SortedSections)
 		{
+			if (!SectionDefs.TryGetValue(section.Key, out var defs) || defs.Count == 0) continue;
+
 			TreeItem ch = root.CreateChild();
-			ch.SetText(0, cat.DisplayName);
-			_itemToCat[ch] = cat;
-			if (isFirst)
-			{
-				firstSelected = ch;
-				isFirst = false;
-			}
+			ch.SetText(0, section.Label);
+			_itemToSectionKey[ch] = section.Key;
+
+			firstSelected ??= ch;
 		}
 
 		_categoryTree.ItemSelected += OnItemSelected;
-
 		firstSelected?.Select(0);
 		base._Ready();
 	}
 
-	private void OnItemSelected()
+	public override void _ExitTree()
 	{
-		ClearSettings();
-		SettingsCategory cat = _itemToCat[_categoryTree.GetSelected()];
-
-		foreach (SettingsProperty item in cat.Settings)
-		{
-			SettingsPropertyUI ui = Globals.CreateInstanceFromScene<SettingsPropertyUI>(SettingsPropertyPath);
-			ui.Property = item;
-			_layout.AddChild(ui);
-		}
+		_categoryTree.ItemSelected -= OnItemSelected;
+		base._ExitTree();
 	}
 
-	private void ClearSettings()
+	private void OnItemSelected()
 	{
-		foreach (Node item in _layout.GetChildren())
+		if (!_itemToSectionKey.TryGetValue(_categoryTree.GetSelected(), out string sectionKey))
+			return;
+
+		if (sectionKey == _activeSection)
+			return;
+
+		if (_sectionUIs.TryGetValue(_activeSection, out var prevUIs))
 		{
-			item.QueueFree();
+			foreach (var ui in prevUIs)
+				ui.Visible = false;
+		}
+
+		_activeSection = sectionKey;
+
+		if (!_sectionUIs.TryGetValue(sectionKey, out var cachedUIs))
+		{
+			cachedUIs = [];
+			if (!SectionDefs.TryGetValue(sectionKey, out var defs))
+				return;
+			foreach (SettingDef def in defs)
+			{
+				SettingsPropertyUI ui = Globals.CreateInstanceFromScene<SettingsPropertyUI>(SettingsPropertyPath);
+				ui.Init(def, CreatorSettingsService.Instance);
+				cachedUIs.Add(ui);
+				_layout.AddChild(ui);
+			}
+
+			_sectionUIs[sectionKey] = cachedUIs;
+		}
+		else
+		{
+			foreach (var ui in cachedUIs)
+				ui.Visible = true;
 		}
 	}
 }

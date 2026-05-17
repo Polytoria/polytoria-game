@@ -84,6 +84,7 @@ public partial class UIScrollView : UIContainer
 		}).CallDeferred();
 	}
 
+	[ScriptEnum("UIScrollMode")]
 	public enum ScrollModeEnum
 	{
 		Disabled,

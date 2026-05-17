@@ -196,6 +196,7 @@ public partial class BuiltInFontAsset : FontAsset
 		};
 	}
 
+	[ScriptEnum("FontPreset")]
 	public enum BuiltInTextFontPresetEnum
 	{
 		SourceSans, PressStart2P, Montserrat, RobotoMono, Rubik, Poppins,

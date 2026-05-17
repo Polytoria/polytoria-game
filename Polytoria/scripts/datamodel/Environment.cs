@@ -258,8 +258,8 @@ public sealed partial class Environment : Instance
 
 		PhysicsRayQueryParameters3D query = new()
 		{
-			From = origin.Flip(),
-			To = origin.Flip() + direction.Flip().Normalized() * maxDistance,
+			From = origin,
+			To = origin + direction.Normalized() * maxDistance,
 			CollideWithAreas = true,
 			CollideWithBodies = true
 		};
@@ -281,9 +281,9 @@ public sealed partial class Environment : Instance
 			{
 				Origin = origin,
 				Direction = direction.Normalized(),
-				Position = hitPos.Flip(),
-				Normal = normal.Flip(),
-				Distance = (origin.Flip() - hitPos).Length(),
+				Position = hitPos,
+				Normal = normal,
+				Distance = (origin - hitPos).Length(),
 				Instance = ColliderToInstance(collider)
 			};
 		}
@@ -307,8 +307,8 @@ public sealed partial class Environment : Instance
 		{
 			Godot.Collections.Dictionary result = spaceState.IntersectRay(new PhysicsRayQueryParameters3D
 			{
-				From = origin.Flip(),
-				To = origin.Flip() + direction.Flip().Normalized() * maxDistance,
+				From = origin,
+				To = origin + direction.Normalized() * maxDistance,
 				CollideWithAreas = true,
 				CollideWithBodies = true,
 				Exclude = ignoreRids
@@ -327,9 +327,9 @@ public sealed partial class Environment : Instance
 			{
 				Origin = origin,
 				Direction = direction.Normalized(),
-				Position = hitPos.Flip(),
-				Normal = normal.Flip(),
-				Distance = (origin.Flip() - hitPos).Length(),
+				Position = hitPos,
+				Normal = normal,
+				Distance = (origin - hitPos).Length(),
 				Instance = ColliderToInstance(collider)
 			});
 		}
@@ -357,7 +357,7 @@ public sealed partial class Environment : Instance
 	[ScriptMethod]
 	public Instance[] OverlapSphere(Vector3 origin, float radius, Instance[]? ignoreList = null)
 	{
-		Transform3D t = new(Basis.Identity, origin.Flip());
+		Transform3D t = new(Basis.Identity, origin);
 
 		PhysicsShapeQueryParameters3D query = new()
 		{
@@ -375,7 +375,7 @@ public sealed partial class Environment : Instance
 	{
 		Transform3D t = new()
 		{
-			Origin = pos.Flip()
+			Origin = pos
 		};
 		Quaternion q = Quaternion.FromEuler(rot.FlipEuler());
 		Basis basis = new(q);

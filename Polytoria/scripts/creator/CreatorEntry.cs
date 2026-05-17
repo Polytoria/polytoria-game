@@ -3,11 +3,14 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+using Polytoria.Client.Settings.Appliers;
 using Polytoria.Creator.Managers;
+using Polytoria.Creator.Settings;
 using Polytoria.Creator.Utils;
 using Polytoria.Datamodel.Creator;
 using Polytoria.Shared;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 namespace Polytoria.Creator;
@@ -16,6 +19,8 @@ public partial class CreatorEntry : Node
 {
 	public const int CreatorPort = 24220;
 
+	[RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Deserialize<TValue>(String, JsonSerializerOptions)")]
+	[RequiresDynamicCode("Calls System.Text.Json.JsonSerializer.Deserialize<TValue>(String, JsonSerializerOptions)")]
 	public override async void _EnterTree()
 	{
 		Dictionary<string, string> cmdargs = Globals.ReadCmdArgs();
@@ -24,11 +29,14 @@ public partial class CreatorEntry : Node
 		CreatorService creatorService = new();
 		AddChild(creatorService);
 
-		CreatorSettings creatorSettings = new()
+		CreatorSettingsService creatorSettingsService = new()
 		{
-			Name = "CreatorSettings"
+			Name = "CreatorSettingsService"
 		};
-		AddChild(creatorSettings, true, InternalMode.Front);
+		AddChild(creatorSettingsService, true, InternalMode.Front);
+		creatorSettingsService.Init();
+
+		creatorSettingsService.AddChild(new GraphicsSettingsApplier { Name = GraphicsSettingsApplier.NodeName, Settings = creatorSettingsService }, true, InternalMode.Front);
 
 		GetViewport().GuiEmbedSubwindows = true;
 

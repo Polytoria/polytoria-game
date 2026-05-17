@@ -17,7 +17,7 @@ public partial class LoadingGuy : Control
 		GetNode("SubViewport").AddChild(_pt.GDNode);
 		_pt.InitEntry();
 		_pt.Position = new(0, 0, -10);
-		_pt.Rotation = new(0, -90, 0);
+		_pt.Rotation = new(0, 90, 0);
 		_pt.PlayRun();
 	}
 

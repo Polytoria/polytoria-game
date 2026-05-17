@@ -200,7 +200,7 @@ public sealed partial class InsertService : Instance
 		mesh.Anchored = true;
 		tool.Name = storeItem.Name;
 
-		mesh.LocalPosition = new Vector3(-1f, -7f, -3f);
+		mesh.LocalPosition = new Vector3(1f, -7f, -3f);
 
 		return tool;
 	}

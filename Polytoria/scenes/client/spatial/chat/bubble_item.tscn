@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dcp7x0jgcpvgs"]
 
 [ext_resource type="Script" uid="uid://c857qex51qbjf" path="res://scripts/client/spatial/chat/BubbleItem.cs" id="1_osey8"]
-[ext_resource type="Texture2D" uid="uid://bdl86yw6153s6" path="res://assets/textures/client/ui/chat/bubble_arrow.png" id="2_goni7"]
+[ext_resource type="Texture2D" uid="uid://dyef4qa4syg37" path="res://assets/textures/client/ui/chat/bubble_arrow.svg" id="2_osey8"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vxagf"]
 content_margin_left = 16.0
@@ -126,7 +126,7 @@ visible_characters_behavior = 1
 modulate = Color(0.89411765, 0.89411765, 0.89411765, 1)
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
-texture = ExtResource("2_goni7")
+texture = ExtResource("2_osey8")
 expand_mode = 1
 stretch_mode = 5
 

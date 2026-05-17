@@ -9,54 +9,20 @@ namespace Polytoria.Scripting.Luau;
 /// </summary>
 public enum LuaType
 {
-	/// <summary>
-	/// 
-	/// </summary>
-	None = -1,
-	/// <summary>
-	/// LUA_TNIL
-	/// </summary>
 	Nil = 0,
-	/// <summary>
-	/// LUA_TBOOLEAN
-	/// </summary>
 	Boolean = 1,
-	/// <summary>
-	/// LUA_TLIGHTUSERDATA
-	/// </summary>
 	LightUserData = 2,
-	/// <summary>
-	/// LUA_TNUMBER
-	/// </summary>
 	Number = 3,
-	/// <summary>
-	/// LUA_TVECTOR
-	/// </summary>
-	Vector = 4,
-	/// <summary>
-	/// LUA_TSTRING
-	/// </summary>
-	String = 5,
-	/// <summary>
-	/// LUA_TTABLE
-	/// </summary>
-	Table = 6,
-	/// <summary>
-	/// LUA_TFUNCTION
-	/// </summary>
-	Function = 7,
-	/// <summary>
-	/// LUA_TUSERDATA
-	/// </summary>
-	UserData = 8,
-	/// <summary>
-	/// LUA_TTHREAD
-	/// </summary>
-	/// //
-	Thread = 9,
-	/// <summary>
-	/// LUA_TBUFFER
-	/// </summary>
-	/// //
-	Buffer = 10
+	Integer = 4,
+	Vector = 5,
+	String = 6,
+	Table = 7,
+	Function = 8,
+	UserData = 9,
+	Thread = 10,
+	Buffer = 11,
+	Proto = 12,
+	UpVal = 13,
+	DeadKey = 14,
+	Count = Proto // = 12
 }

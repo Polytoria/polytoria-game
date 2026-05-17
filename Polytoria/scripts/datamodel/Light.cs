@@ -6,11 +6,12 @@ using System;
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Client.Settings;
+using Polytoria.Shared.Settings;
 
 #if CREATOR
+using Polytoria.Creator.Settings;
 using Polytoria.Creator.Spatial;
 #endif
-using Polytoria.Shared;
 
 namespace Polytoria.Datamodel;
 
@@ -18,7 +19,7 @@ namespace Polytoria.Datamodel;
 public partial class Light : Dynamic
 {
 	const float IntensityConversion = 4f;
-	internal Light3D LightNode = null!;
+	internal Light3D GDLight = null!;
 	private bool _enabled = true;
 	private Color _color = new(1, 1, 1);
 	private float _brightness = 2;
@@ -30,7 +31,7 @@ public partial class Light : Dynamic
 
 	internal override void OnNodeSizeChanged(Vector3 newSize)
 	{
-		LightNode.Scale = newSize;
+		GDLight.Scale = newSize;
 		base.OnNodeSizeChanged(newSize);
 	}
 
@@ -41,7 +42,7 @@ public partial class Light : Dynamic
 		set
 		{
 			_enabled = value;
-			LightNode.Visible = value;
+			GDLight.Visible = value;
 			OnPropertyChanged();
 		}
 	}
@@ -53,7 +54,7 @@ public partial class Light : Dynamic
 		set
 		{
 			_color = value;
-			LightNode.LightColor = value;
+			GDLight.LightColor = value;
 			OnPropertyChanged();
 		}
 	}
@@ -65,7 +66,7 @@ public partial class Light : Dynamic
 		set
 		{
 			_brightness = value;
-			LightNode.LightEnergy = value / IntensityConversion;
+			GDLight.LightEnergy = value / IntensityConversion;
 			OnPropertyChanged();
 		}
 	}
@@ -77,7 +78,7 @@ public partial class Light : Dynamic
 		set
 		{
 			_lightSize = value;
-			LightNode.LightSize = value;
+			GDLight.LightSize = value;
 			OnPropertyChanged();
 		}
 	}
@@ -89,7 +90,7 @@ public partial class Light : Dynamic
 		set
 		{
 			_specular = value;
-			LightNode.LightSpecular = value;
+			GDLight.LightSpecular = value;
 			OnPropertyChanged();
 		}
 	}
@@ -110,21 +111,20 @@ public partial class Light : Dynamic
 	{
 		bool shadows = Shadows;
 
-		ClientSettingsService? settings = ClientSettingsService.Instance;
+		ISettingsContext? settings =
+#if CREATOR
+			(ISettingsContext?)CreatorSettingsService.Instance ??
+#endif
+			ClientSettingsService.Instance;
 		if (settings != null)
 		{
-			ShadowQuality shadowQuality = settings.Get<ShadowQuality>(ClientSettingKeys.Graphics.ShadowQuality);
+			ShadowQuality shadowQuality = settings.Get<ShadowQuality>(SharedSettingKeys.Graphics.ShadowQuality);
 			if (shadowQuality == ShadowQuality.Off)
 			{
 				shadows = false;
 			}
 		}
-		LightNode.ShadowEnabled = shadows;
-	}
-
-	public override Node CreateGDNode()
-	{
-		return Globals.LoadNetworkedObjectScene(ClassName)!;
+		GDLight.ShadowEnabled = shadows;
 	}
 
 	public override void Init()

@@ -138,6 +138,7 @@ public partial class GradientImageAsset : ImageAsset
 		InvokeResourceLoaded(_texture);
 	}
 
+	[ScriptEnum]
 	public enum GradientImageFillEnum
 	{
 		Linear,

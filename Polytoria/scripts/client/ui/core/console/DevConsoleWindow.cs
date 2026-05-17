@@ -104,9 +104,9 @@ public partial class DevConsoleWindow : Control
 		base._ExitTree();
 	}
 
-	public void Popup()
+	public void Toggle()
 	{
-		Visible = true;
+		Visible = !Visible;
 	}
 
 	private void OnCloseRequested()

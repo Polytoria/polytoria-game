@@ -41,7 +41,7 @@ public static class MathUtils
 
 	public static Vector3 Vector3RadToDeg(Vector3 v)
 	{
-		return new(
+		return new Vector3(
 			Mathf.RadToDeg(v.X),
 			Mathf.RadToDeg(v.Y),
 			Mathf.RadToDeg(v.Z)
@@ -55,6 +55,15 @@ public static class MathUtils
 			Mathf.DegToRad(v.Y),
 			Mathf.DegToRad(v.Z)
 		);
+	}
+
+	/// <summary>
+	/// ExpDecay, primarily used for calculating the alpha for lerps
+	/// Multiplying deltatime by a constant is a really unreliable solution, especially at lower framerates, since the result can be > 1. Use this instead
+	/// </summary>
+	public static float ExpDecay(float delta, float lambda)
+	{
+		return 1 - Mathf.Exp(-lambda * delta);
 	}
 }
 

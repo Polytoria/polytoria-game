@@ -71,11 +71,11 @@ render_target_update_mode = 4
 environment = SubResource("Environment_mv8nn")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="TextureRect/SubViewport" unique_id=756222310]
-transform = Transform3D(0.4999999, -0.8535534, -0.14644662, 0.49999997, 0.14644665, 0.85355335, -0.7071068, -0.49999997, 0.5, 0, 0, 0)
+transform = Transform3D(0.49999994, -0.8535535, -0.14644656, 0.5, 0.1464466, 0.8535534, -0.7071069, -0.4999999, 0.5, 0, 0, 0)
 light_energy = 2.0
 
 [node name="X" type="Area3D" parent="TextureRect/SubViewport" unique_id=1674040262]
-transform = Transform3D(-4.371139e-08, -1, 4.371139e-08, 0, -4.371139e-08, -1, 1, -4.371139e-08, 1.9106855e-15, 0, 0, 0)
+transform = Transform3D(1.3113416e-07, 1, -4.371139e-08, 0, -4.371139e-08, -1, -1, 1.3113416e-07, -5.7320566e-15, 0, 0, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="TextureRect/SubViewport/X" unique_id=582125111]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)

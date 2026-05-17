@@ -1,5 +1,5 @@
 {
-  "Version": "2.0.0-beta87\u002Bdev",
+  "Version": "2.0.3\u002Bdev",
   "FileType": 0,
   "Objects": [
     {
@@ -41,14 +41,14 @@
                 "CanLock": true,
                 "SensitivityMultiplier": 1,
                 "LocalPosition": [
-                  -0,
+                  0,
                   0,
                   0
                 ],
                 "LocalRotation": [
                   -0,
-                  -0,
-                  -0
+                  0,
+                  0
                 ],
                 "LocalSize": [
                   1,
@@ -69,26 +69,26 @@
                 "Material": 5,
                 "Color": "aeff9aff",
                 "Velocity": [
-                  0,
+                  -0,
                   0,
                   0
                 ],
                 "AngularVelocity": [
                   0,
-                  0,
-                  0
+                  -0,
+                  -0
                 ],
                 "Anchored": true,
                 "CanCollide": true,
                 "LocalPosition": [
-                  7.9231944E-07,
+                  -7.9231944E-07,
                   0,
                   0
                 ],
                 "LocalRotation": [
                   -0,
-                  -0,
-                  -0
+                  0,
+                  0
                 ],
                 "LocalSize": [
                   500,
@@ -111,26 +111,26 @@
                 "Color": "ffffffff",
                 "IsSpawn": true,
                 "Velocity": [
-                  0,
+                  -0,
                   0,
                   0
                 ],
                 "AngularVelocity": [
                   0,
-                  0,
-                  0
+                  -0,
+                  -0
                 ],
                 "Anchored": true,
                 "CanCollide": true,
                 "LocalPosition": [
-                  -0,
+                  0,
                   3,
                   0
                 ],
                 "LocalRotation": [
                   -0,
-                  -0,
-                  -0
+                  0,
+                  0
                 ],
                 "LocalSize": [
                   5,
@@ -149,14 +149,14 @@
               "ID": "fb82c469-7ec9-4fe5-a522-175c5c6757f0",
               "Properties": {
                 "LocalPosition": [
-                  -0.5,
+                  0.5,
                   5.8333335,
                   -8
                 ],
                 "LocalRotation": [
                   -0,
-                  -0,
-                  -0
+                  0,
+                  0
                 ],
                 "LocalSize": [
                   1,
@@ -173,26 +173,26 @@
                   "Properties": {
                     "Color": "ffffffff",
                     "Velocity": [
-                      0,
+                      -0,
                       0,
                       0
                     ],
                     "AngularVelocity": [
                       0,
-                      0,
-                      0
+                      -0,
+                      -0
                     ],
                     "Anchored": true,
                     "CanCollide": true,
                     "LocalPosition": [
-                      1.5,
+                      -1.5,
                       0.6666665,
                       0
                     ],
                     "LocalRotation": [
                       -0,
-                      -0,
-                      -0
+                      0,
+                      0
                     ],
                     "LocalSize": [
                       1,
@@ -212,26 +212,26 @@
                   "Properties": {
                     "Color": "ffffffff",
                     "Velocity": [
-                      0,
+                      -0,
                       0,
                       0
                     ],
                     "AngularVelocity": [
                       0,
-                      0,
-                      0
+                      -0,
+                      -0
                     ],
                     "Anchored": true,
                     "CanCollide": true,
                     "LocalPosition": [
-                      -1.5,
+                      1.5,
                       -1.3333335,
                       0
                     ],
                     "LocalRotation": [
                       -0,
-                      -0,
-                      -0
+                      0,
+                      0
                     ],
                     "LocalSize": [
                       1,
@@ -251,26 +251,26 @@
                   "Properties": {
                     "Color": "ffffffff",
                     "Velocity": [
-                      0,
+                      -0,
                       0,
                       0
                     ],
                     "AngularVelocity": [
                       0,
-                      0,
-                      0
+                      -0,
+                      -0
                     ],
                     "Anchored": true,
                     "CanCollide": true,
                     "LocalPosition": [
-                      -0,
+                      0,
                       0.6666665,
                       0
                     ],
                     "LocalRotation": [
                       -0,
-                      -0,
-                      -0
+                      0,
+                      0
                     ],
                     "LocalSize": [
                       2,
@@ -320,14 +320,14 @@
               "ID": "0cef0c3f-51b2-4176-9608-d36140190b16",
               "Properties": {
                 "LocalPosition": [
-                  11,
+                  -11,
                   3,
                   -8
                 ],
                 "LocalRotation": [
                   -0,
-                  -0,
-                  -0
+                  0,
+                  0
                 ],
                 "LocalSize": [
                   1,
@@ -344,26 +344,26 @@
                   "Properties": {
                     "Color": "ffffffff",
                     "Velocity": [
-                      -0,
+                      0,
                       0,
                       0
                     ],
                     "AngularVelocity": [
                       0,
-                      0,
-                      0
+                      -0,
+                      -0
                     ],
                     "Anchored": true,
                     "CanCollide": true,
                     "LocalPosition": [
-                      -0,
+                      0,
                       0,
                       0
                     ],
                     "LocalRotation": [
                       -0,
-                      -0,
-                      -0
+                      -179.99998,
+                      0
                     ],
                     "LocalSize": [
                       1,
@@ -383,26 +383,26 @@
                   "Properties": {
                     "Color": "ffffffff",
                     "Velocity": [
-                      -0,
+                      0,
                       0,
                       0
                     ],
                     "AngularVelocity": [
                       0,
-                      0,
-                      0
+                      -0,
+                      -0
                     ],
                     "Anchored": true,
                     "CanCollide": true,
                     "LocalPosition": [
-                      -0,
+                      0,
                       0,
                       4
                     ],
                     "LocalRotation": [
                       -0,
-                      -0,
-                      -0
+                      -179.99998,
+                      0
                     ],
                     "LocalSize": [
                       1,
@@ -422,26 +422,26 @@
                   "Properties": {
                     "Color": "ffffffff",
                     "Velocity": [
-                      -0,
+                      0,
                       0,
                       0
                     ],
                     "AngularVelocity": [
                       0,
-                      0,
-                      0
+                      -0,
+                      -0
                     ],
                     "Anchored": true,
                     "CanCollide": true,
                     "LocalPosition": [
-                      -0,
+                      0,
                       0,
                       7
                     ],
                     "LocalRotation": [
                       -0,
-                      -0,
-                      -0
+                      -179.99998,
+                      0
                     ],
                     "LocalSize": [
                       1,
@@ -460,7 +460,7 @@
                   "ID": "297651b0-836e-4ebd-87c9-99363fcc1e6c",
                   "Properties": {
                     "Velocity": [
-                      -0,
+                      0,
                       0,
                       0
                     ],
@@ -487,18 +487,18 @@
                     "CanCollide": true,
                     "AngularVelocity": [
                       0,
-                      0,
-                      0
+                      -0,
+                      -0
                     ],
                     "LocalPosition": [
-                      -0,
+                      0,
                       3,
                       2
                     ],
                     "LocalRotation": [
                       -0,
-                      -0,
-                      -0
+                      0,
+                      0
                     ],
                     "LocalSize": [
                       1,
@@ -521,14 +521,14 @@
                         "RightLegColor": "ffffffff",
                         "Animator": "6ff8f25d-eec7-4398-a265-0a80f845247c",
                         "LocalPosition": [
-                          -0,
+                          0,
                           0,
                           0
                         ],
                         "LocalRotation": [
                           0,
-                          0,
-                          0
+                          -0,
+                          -0
                         ],
                         "LocalSize": [
                           1,
@@ -567,14 +567,14 @@
                         "Paused": false,
                         "MaxDistance": 60,
                         "LocalPosition": [
-                          -0,
+                          0,
                           0,
                           0
                         ],
                         "LocalRotation": [
                           0,
-                          0,
-                          0
+                          -0,
+                          -0
                         ],
                         "LocalSize": [
                           1,
@@ -619,19 +619,21 @@
               "ClassName": "SunLight",
               "ID": "5f3df07f-79a2-47fd-9f05-80e088ec16c1",
               "Properties": {
+                "Enabled": true,
                 "Color": "fff4d6ff",
                 "Brightness": 1,
+                "LightSize": 0,
                 "Specular": 0.5,
                 "Shadows": true,
                 "LocalPosition": [
-                  -0,
+                  0,
                   15,
                   0
                 ],
                 "LocalRotation": [
                   49.999992,
-                  -30,
-                  -0
+                  30,
+                  0
                 ],
                 "LocalSize": [
                   1,
@@ -924,6 +926,20 @@
                   "Properties": {
                     "IsEnabled": true,
                     "LinkedScript": "24ae6edd-ea4c-4b2d-a8e2-5f0bf2873ac5",
+                    "Compatibility": false,
+                    "Tags": []
+                  },
+                  "Children": [],
+                  "LinkedModel": null,
+                  "IsLinkedChild": false
+                },
+                {
+                  "Name": "SemiStaticNamecall",
+                  "ClassName": "ServerScript",
+                  "ID": "258ae160-116d-4f5f-bea5-980dd9bb944d",
+                  "Properties": {
+                    "IsEnabled": true,
+                    "LinkedScript": "f2e9ab36-6861-412d-a497-e316423a1c65",
                     "Compatibility": false,
                     "Tags": []
                   },

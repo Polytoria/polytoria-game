@@ -11,7 +11,6 @@ using Polytoria.Enums;
 using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
-using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
 using static Polytoria.Datamodel.Environment;
@@ -71,7 +70,7 @@ public sealed partial class InputService : Instance
 		}
 	}
 
-	[ScriptProperty] public Vector2 MousePosition => OverrideMousePos ? OverrideMousePosTo : GDNode.GetViewport().GetMousePosition().Flip();
+	[ScriptProperty] public Vector2 MousePosition => OverrideMousePos ? OverrideMousePosTo : GDNode.GetViewport().GetMousePosition();
 	[ScriptLegacyProperty("MousePosition")] public Vector3 LegacyMousePosition => new(MousePosition.X, ScreenHeight - MousePosition.Y, 0);
 	[ScriptProperty] public int ScreenWidth => (int)GDNode.GetViewport().GetVisibleRect().Size.X;
 	[ScriptProperty] public int ScreenHeight => (int)GDNode.GetViewport().GetVisibleRect().Size.Y;
@@ -498,12 +497,6 @@ public sealed partial class InputService : Instance
 		{
 			float axisVal = joypadMotion.AxisValue;
 
-			// flip em axis. (up thumbstick: -1 -> 1)
-			if (joypadMotion.Axis == JoyAxis.LeftY || joypadMotion.Axis == JoyAxis.RightY)
-			{
-				axisVal = -axisVal;
-			}
-
 			_keyWeight[btnEnum] = axisVal;
 			AxisValueChanged.Invoke(btnEnum, axisVal);
 		}
@@ -626,11 +619,11 @@ public sealed partial class InputService : Instance
 		if (camera == null || viewport == null)
 			return Vector3.Zero;
 
-		Vector2 mousePos = MousePosition.Flip();
+		Vector2 mousePos = MousePosition;
 		Vector3 rayOrigin = camera.ProjectRayOrigin(mousePos);
 		Vector3 rayDir = camera.ProjectRayNormal(mousePos);
 
-		RayResult? hit = Root.Environment.Raycast(rayOrigin.Flip(), rayDir.Flip(), ignoreList: ignoreList);
+		RayResult? hit = Root.Environment.Raycast(rayOrigin, rayDir, ignoreList: ignoreList);
 		return hit != null ? hit.Value.Position : rayOrigin + rayDir * 1000f;
 	}
 
@@ -862,7 +855,7 @@ public sealed partial class InputService : Instance
 		Vector3 rayOrigin = camera.ProjectRayOrigin(mousePos);
 		Vector3 rayDir = camera.ProjectRayNormal(mousePos);
 
-		return (rayOrigin + rayDir * z).Flip();
+		return (rayOrigin + rayDir * z);
 	}
 
 	[ScriptLegacyMethod("ScreenToWorldPoint")]
@@ -875,7 +868,7 @@ public sealed partial class InputService : Instance
 
 		Vector3 rayOrigin = camera.ProjectRayOrigin(new Vector2(pos.X, pos.Y));
 		Vector3 rayDir = camera.ProjectRayNormal(new Vector2(pos.X, pos.Y));
-		return (rayOrigin + rayDir * pos.Z).Flip();
+		return (rayOrigin + rayDir * pos.Z);
 	}
 
 	[ScriptLegacyMethod("ScreenToViewportPoint")]
@@ -923,7 +916,7 @@ public sealed partial class InputService : Instance
 		Vector2 screenPos = new(pos.X * size.X, pos.Y * size.Y);
 		Vector3 origin = camera.ProjectRayOrigin(screenPos);
 		Vector3 direction = camera.ProjectRayNormal(screenPos);
-		return (origin + direction * pos.Z).Flip();
+		return (origin + direction * pos.Z);
 	}
 
 	[ScriptLegacyMethod("ViewportToScreenPoint")]

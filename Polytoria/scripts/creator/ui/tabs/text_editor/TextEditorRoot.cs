@@ -5,8 +5,10 @@
 using Godot;
 using Polytoria.Creator.LSP;
 using Polytoria.Creator.LSP.Schemas;
+using Polytoria.Creator.Settings;
 using Polytoria.Datamodel.Creator;
 using Polytoria.Shared;
+using Polytoria.Shared.Settings;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -58,10 +60,7 @@ public partial class TextEditorRoot : Node
 			await _completion.CloseScriptAsync(Container.TargetFilePathAbsolute);
 			_completion.PublishDiagnostics -= OnPublishDiagnostics;
 		}
-
-		CreatorSettings.Singleton.GetSettingProperty("CodeEditor.IndentationMode")!.ValueChanged -= OnIndentSettingsChanged;
-		CreatorSettings.Singleton.GetSettingProperty("CodeEditor.IndentationSize")!.ValueChanged -= OnIndentSettingsChanged;
-
+		CreatorSettingsService.Instance.Changed -= OnCreatorSettingChanged;
 		base._ExitTree();
 	}
 
@@ -79,9 +78,8 @@ public partial class TextEditorRoot : Node
 		CodeEditor.TextChanged += OnCodeEditTextChanged;
 		InitSyntaxHighlighter();
 
-		CreatorSettings.Singleton.GetSettingProperty("CodeEditor.IndentationMode")!.ValueChanged += OnIndentSettingsChanged;
-		CreatorSettings.Singleton.GetSettingProperty("CodeEditor.IndentationSize")!.ValueChanged += OnIndentSettingsChanged;
-		OnIndentSettingsChanged();
+		CreatorSettingsService.Instance.Changed += OnCreatorSettingChanged;
+		ApplyIndentSettings();
 
 		CodeEditor.CodeCompletionPrefixes = [".", ":", "\n", ",", " ", "("];
 		CodeEditor.CodeCompletionEnabled = true;
@@ -109,10 +107,18 @@ public partial class TextEditorRoot : Node
 		UpdateStatusBar();
 	}
 
-	private void OnIndentSettingsChanged(object? _ = null)
+	private void OnCreatorSettingChanged(SettingChangedEvent e)
 	{
-		IndentationModeEnum indentationMode = CreatorSettings.Singleton.GetSetting<IndentationModeEnum>("CodeEditor.IndentationMode");
-		int indentationSize = CreatorSettings.Singleton.GetSetting<int>("CodeEditor.IndentationSize");
+		if (e.Key == CreatorSettingKeys.CodeEditor.IndentationMode || e.Key == CreatorSettingKeys.CodeEditor.IndentationSize)
+		{
+			ApplyIndentSettings();
+		}
+	}
+
+	private void ApplyIndentSettings()
+	{
+		IndentationModeEnum indentationMode = CreatorSettingsService.Instance.Get<IndentationModeEnum>(CreatorSettingKeys.CodeEditor.IndentationMode);
+		int indentationSize = CreatorSettingsService.Instance.Get<int>(CreatorSettingKeys.CodeEditor.IndentationSize);
 		CodeEditor.IndentUseSpaces = indentationMode == IndentationModeEnum.Spaces;
 		CodeEditor.IndentSize = indentationSize;
 	}
@@ -195,10 +201,17 @@ public partial class TextEditorRoot : Node
 		}
 		else if (@event.IsActionPressed("textedit_find") || @event.IsActionPressed("textedit_replace"))
 		{
+			CodeEditor.AcceptEvent();
 			_finder.Open(CodeEditor.GetSelectedText());
+		}
+		else if (@event.IsActionPressed("textedit_toggle_comment"))
+		{
+			CodeEditor.AcceptEvent();
+			ToggleComment();
 		}
 		else if (@event.IsActionPressed("ui_cancel"))
 		{
+			CodeEditor.AcceptEvent();
 			_finder.Close();
 		}
 		else
@@ -354,6 +367,50 @@ public partial class TextEditorRoot : Node
 			}
 		}
 
-		return lineText.Substring(startPos, column - startPos);
+		return lineText[startPos..column];
+	}
+
+	public IEnumerable<int> GetSelectedLines()
+	{
+		for (int caretIdx = 0; caretIdx < CodeEditor.GetCaretCount(); caretIdx++)
+		{
+			for (int lineIdx = CodeEditor.GetSelectionFromLine(caretIdx); lineIdx <= CodeEditor.GetSelectionToLine(caretIdx); lineIdx++)
+			{
+				yield return lineIdx;
+			}
+		}
+	}
+
+	private bool IsSelectionCommented()
+	{
+		foreach (int lineIdx in GetSelectedLines())
+		{
+			string lineText = CodeEditor.GetLine(lineIdx);
+			if (!lineText.StartsWith("--"))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public void ToggleComment()
+	{
+		if (IsSelectionCommented())
+		{
+			foreach (int lineIdx in GetSelectedLines())
+			{
+				string lineText = CodeEditor.GetLine(lineIdx);
+				CodeEditor.SetLine(lineIdx, lineText[2..]);
+			}
+		}
+		else
+		{
+			foreach (int lineIdx in GetSelectedLines())
+			{
+				string lineText = CodeEditor.GetLine(lineIdx);
+				CodeEditor.SetLine(lineIdx, "--" + lineText);
+			}
+		}
 	}
 }

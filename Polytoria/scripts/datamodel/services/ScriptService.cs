@@ -8,8 +8,6 @@ using Polytoria.Attributes;
 using Polytoria.Datamodel.Creator;
 #endif
 using Polytoria.Datamodel.Data;
-using Polytoria.Datamodel.Resources;
-using Polytoria.Enums;
 using Polytoria.Scripting;
 using Polytoria.Scripting.Datatypes;
 using Polytoria.Scripting.Luau;
@@ -61,50 +59,8 @@ public sealed partial class ScriptService : Instance
 		{ "NumberRange", typeof(NumberRange) },
 	};
 
-	// Dictionary of all enum exposed to scripting
-	public static readonly Dictionary<string, Type> EnumMap = new()
-	{
-		{ "AmbientSource", typeof(Lighting.AmbientSourceEnum) },
-		{ "CameraMode", typeof(Camera.CameraModeEnum) },
-		{ "MeshCollisionType", typeof(Mesh.CollisionTypeEnum) },
-		{ "HorizontalAlignment", typeof(TextHorizontalAlignmentEnum) },
-		{ "VerticalAlignment", typeof(TextVerticalAlignmentEnum) },
-		{ "TextTrimming", typeof(TextTrimmingEnum) },
-		{ "ImageType", typeof(ImageTypeEnum) },
-		{ "PartMaterial", typeof(Part.PartMaterialEnum) },
-		{ "PartShape", typeof(Part.ShapeEnum) },
-		{ "SkyboxPreset", typeof(Lighting.SkyboxEnum) },
-		{ "FontPreset", typeof(BuiltInFontAsset.BuiltInTextFontPresetEnum) },
-		{ "ForceMode", typeof(Entity.ForceModeEnum) },
-		{ "HttpRequestMethod", typeof(HttpRequestData.HttpRequestMethodEnum) },
-		{ "KeyCode", typeof(KeyCodeEnum) },
-		{ "TweenTransition", typeof(TweenService.TweenTransitionEnum) },
-		{ "TweenDirection", typeof(TweenService.TweenDirectionEnum) },
-		{ "CharacterAttachment", typeof(CharacterModel.CharacterAttachmentEnum) },
-		{ "UILayoutAlignment", typeof(UIHVLayout.UILayoutAlignmentEnum) },
-		{ "BuiltInAudioPreset", typeof(BuiltInAudioAsset.BuiltInAudioPresetEnum) },
-		{ "ClientPlatform", typeof(NetworkService.ClientPlatformEnum) },
-		{ "UIMaskMode", typeof(UIView.MaskModeEnum) },
-		{ "UIScrollMode", typeof(UIScrollView.ScrollModeEnum) },
-		{ "ImageStretchMode", typeof(UIImage.ImageStretchModeEnum) },
-		{ "GrabbablePermissionMode", typeof(Grabbable.GrabbablePermissionModeEnum) },
-		{ "ParticleSimulationSpace", typeof(Particles.ParticleSimulationSpaceEnum) },
-		{ "ParticleEmissionShape", typeof(Particles.ParticleEmissionShapeEnum) },
-		{ "GradientImageFill", typeof(GradientImageAsset.GradientImageFillEnum) },
-		{ "BlendMode", typeof(BlendModeEnum) },
-		{ "FontStyle", typeof(FontStyleEnum) },
-		{ "FontWeight", typeof(FontWeightEnum) },
-		{ "MeshAnimationType", typeof(MeshAnimationAsset.MeshAnimationTypeEnum) },
-		{ "ParticleOrientation", typeof(Particles.ParticleOrientationEnum) },
-		{ "TextureFilter", typeof(TextureFilterEnum) },
-		{ "CharacterModelState", typeof(CharacterModel.CharacterModelStateEnum) },
-		{ "PlayerMovementMode", typeof(Player.PlayerMovementModeEnum) },
-		{ "CursorShape", typeof(CursorShapeEnum) },
-#if CREATOR
-		{ "CreatorToolMode", typeof(ToolModeEnum) },
-		{ "AddonPermission", typeof(CreatorAddons.AddonPermissionEnum) },
-#endif
-	};
+	// Dictionary of all enum exposed to scripting (populated by source generator)
+	public static readonly Dictionary<string, Type> EnumMap = new(ScriptEnumMapInitializer.EnumMap);
 
 	private readonly Dictionary<ScriptLanguagesEnum, IScriptLanguageProvider> _languageProviders = [];
 
@@ -629,11 +585,15 @@ public sealed partial class ScriptService : Instance
 		bool getParamsAsFunction = methodInfos.Any(m =>
 			m.GetCustomAttributes<ScriptMethodAttribute>().Any(attr => attr.GetParamsAsFunction == true));
 
+		bool semiStatic = methodInfos.Any(m =>
+			m.GetCustomAttributes<ScriptMethodAttribute>().Any(attr => attr.SemiStatic == true));
+
 		MethodsCacheData cacheData = new()
 		{
 			Methods = [.. methodInfos],
 			ConvertParamsToGD = convertParamsToGD,
 			GetParamsAsFunction = getParamsAsFunction,
+			SemiStatic = semiStatic,
 		};
 
 		_methodsCache[cacheKey] = cacheData;
@@ -747,6 +707,7 @@ public sealed partial class ScriptService : Instance
 		public MethodInfo[] Methods;
 		public bool ConvertParamsToGD;
 		public bool GetParamsAsFunction;
+		public bool SemiStatic;
 	}
 
 	private struct CacheKey : IEquatable<CacheKey>

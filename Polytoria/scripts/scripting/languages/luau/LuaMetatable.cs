@@ -465,6 +465,12 @@ public class LuaMetatable : LuaObject
 		int top = state.GetTop();
 		List<object?> argList = [];
 
+		// Push self if function is semi-static.
+		if (methodInfos.SemiStatic)
+		{
+			argList.Add(LangProvider.LuaToObject(state, 1, methodInfos.ConvertParamsToGD, methodInfos.GetParamsAsFunction));
+		}
+
 		for (int i = 1; i < top; i++)
 		{
 			argList.Add(LangProvider.LuaToObject(state, i + 1, methodInfos.ConvertParamsToGD, methodInfos.GetParamsAsFunction));

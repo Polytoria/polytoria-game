@@ -6,6 +6,7 @@ using Godot;
 using Polytoria.Attributes;
 using Polytoria.Creator;
 using Polytoria.Creator.Debugger;
+using Polytoria.Creator.Settings;
 using Polytoria.Creator.Managers;
 using Polytoria.Creator.UI;
 using Polytoria.Creator.UI.Splashes;
@@ -362,7 +363,7 @@ public sealed partial class CreatorService : Node, IScriptObject
 			return;
 		}
 
-		PreferredEditorEnum userPref = CreatorSettings.Singleton.GetSetting<PreferredEditorEnum>("CodeEditor.PreferredEditor")!;
+		PreferredEditorEnum userPref = CreatorSettingsService.Instance.Get<PreferredEditorEnum>(CreatorSettingKeys.CodeEditor.PreferredEditor);
 
 		if (Globals.ScriptFileExtensions.Contains(path.GetExtension()))
 		{
@@ -577,6 +578,13 @@ public sealed partial class CreatorService : Node, IScriptObject
 		DebugServer.SendTerminateProgram();
 	}
 
+	public static void MigrateCoordinates(World root)
+	{
+		string worldFilePath = root.WorldFilePath!;
+		root.ForceDelete();
+		root.LinkedSession.OpenWorld(worldFilePath, migrateCoords: true);
+	}
+
 	private void CleanupLocalTest()
 	{
 		foreach (string item in LocalTestWorlds)
@@ -604,6 +612,7 @@ public sealed partial class CreatorService : Node, IScriptObject
 	}
 }
 
+[ScriptEnum("CreatorToolMode", IsCreatorOnly = true)]
 public enum ToolModeEnum
 {
 	Select,

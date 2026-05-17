@@ -4,7 +4,6 @@
 
 using Godot;
 using Polytoria.Attributes;
-using Polytoria.Utils;
 
 namespace Polytoria.Datamodel;
 
@@ -56,28 +55,28 @@ public partial class BodyPosition : Instance
 
 	public override void PhysicsProcess(double delta)
 	{
-		Vector3 gdPos = _targetPosition.Flip();
+		Vector3 gdPos = _targetPosition;
 		if (Parent != null)
 		{
 			if (Parent is NPC npc)
 			{
 				if (npc.GetGlobalPosition().DistanceTo(gdPos) > AcceptanceDistance)
 				{
-					Vector3 currentPos = npc.Position.Flip();
+					Vector3 currentPos = npc.Position;
 					Vector3 direction = (TargetPosition - currentPos).Normalized();
 					float distance = currentPos.DistanceTo(TargetPosition);
 
 					float forceMagnitude = Mathf.Min(Force * distance, Force);
 					Vector3 forceVector = direction * forceMagnitude * (float)delta;
 
-					npc.CharacterVelocity += forceVector.Flip();
+					npc.CharacterVelocity += forceVector;
 				}
 			}
 			else if (Parent.GDNode is RigidBody3D rigid3D)
 			{
 				Vector3 currentPos = rigid3D.GlobalPosition;
 
-				if (currentPos.Flip().DistanceTo(gdPos) > AcceptanceDistance)
+				if (currentPos.DistanceTo(gdPos) > AcceptanceDistance)
 				{
 					Vector3 dir = gdPos - currentPos;
 					rigid3D.LinearVelocity = dir * Force;

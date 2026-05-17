@@ -236,7 +236,7 @@ public sealed partial class PolytorianModel : CharacterModel
 	}
 
 	[ScriptProperty] public bool Ragdolling { get; private set; } = false;
-	[ScriptProperty] public Vector3 RagdollPosition => VelocityPhysicalBone == null ? Vector3.Zero : VelocityPhysicalBone.GlobalPosition.Flip();
+	[ScriptProperty] public Vector3 RagdollPosition => VelocityPhysicalBone == null ? Vector3.Zero : VelocityPhysicalBone.GlobalPosition;
 	[ScriptProperty] public Vector3 RagdollRotation => VelocityPhysicalBone == null ? Vector3.Zero : VelocityPhysicalBone.GlobalRotationDegrees.FlipEuler();
 
 	// These two's not reliable yet, as it doesn't wait for mesh to load. TODO: Come back and fix
@@ -430,7 +430,7 @@ public sealed partial class PolytorianModel : CharacterModel
 			{
 				targetBlendSpeed = LookBlendSpeed;
 
-				newValue = Mathf.Lerp(current, target, (float)delta * targetBlendSpeed);
+				newValue = Mathf.Lerp(current, target, MathUtils.ExpDecay((float)delta, targetBlendSpeed));
 			}
 			else
 			{
@@ -466,7 +466,7 @@ public sealed partial class PolytorianModel : CharacterModel
 		StandardMaterial3D? DuplicateWithColor(StandardMaterial3D? source, StandardMaterial3D? previous)
 		{
 			if (source == null) return null;
-			var dup = (StandardMaterial3D)source.Duplicate(true);
+			var dup = (StandardMaterial3D)source.Duplicate();
 			if (previous != null) dup.AlbedoColor = previous.AlbedoColor;
 			return dup;
 		}
@@ -596,7 +596,7 @@ public sealed partial class PolytorianModel : CharacterModel
 
 		_lastPhysicalBoneSim = s;
 
-		VelocityPhysicalBone.LinearVelocity = force.Flip() / VelocityPhysicalBone.GravityScale;
+		VelocityPhysicalBone.LinearVelocity = force / VelocityPhysicalBone.GravityScale;
 		Ragdolling = true;
 		RagdollStarted.Invoke();
 	}

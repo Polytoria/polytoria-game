@@ -480,10 +480,10 @@ public sealed partial class TweenService : Instance
 		[ScriptMethod]
 		public void TweenRotation(Dynamic target, Vector3 destination, float time)
 		{
-			tween.TweenMethod(Callable.From((Quaternion val) =>
+			TweenQuaternion(target.Quaternion, Quaternion.FromEuler(destination.DegToRad()), time, new((q) =>
 			{
-				target.GDNode3D.Quaternion = val;
-			}), target.GDNode3D.Quaternion, Quaternion.FromEuler(destination.FlipEuler()), time);
+				target.Quaternion = (Quaternion)q[0]!;
+			}));
 		}
 
 		[ScriptMethod]
@@ -584,6 +584,7 @@ public sealed partial class TweenService : Instance
 		}
 	}
 
+	[ScriptEnum]
 	public enum TweenTransitionEnum
 	{
 		Linear,
@@ -600,6 +601,7 @@ public sealed partial class TweenService : Instance
 		Spring
 	}
 
+	[ScriptEnum]
 	public enum TweenDirectionEnum
 	{
 		In,

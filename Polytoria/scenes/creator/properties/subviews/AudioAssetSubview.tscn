@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://cio2oo4up16hx"]
+
+[ext_resource type="Script" uid="uid://cpi6sa22i51pl" path="res://scripts/creator/properties/subviews/AudioAssetSubview.cs" id="1_2k3rl"]
+[ext_resource type="Theme" uid="uid://dqibj265alwtm" path="res://resources/themes/creator/property.tres" id="2_jw3lu"]
+[ext_resource type="Texture2D" uid="uid://ca1mu3488yl80" path="res://assets/textures/ui-icons/play-filled.svg" id="3_qr1fs"]
+[ext_resource type="Theme" uid="uid://0yt2jwdsb3nb" path="res://resources/themes/creator/slider.tres" id="4_act0l"]
+
+[node name="AudioAssetView" type="HBoxContainer" unique_id=799791906]
+offset_right = 44.0
+offset_bottom = 32.0
+script = ExtResource("1_2k3rl")
+
+[node name="PreviewButton" type="Button" parent="." unique_id=2004520908]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_vertical = 4
+theme = ExtResource("2_jw3lu")
+icon = ExtResource("3_qr1fs")
+expand_icon = true
+
+[node name="TimeSlider" type="HSlider" parent="." unique_id=2036495371]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme = ExtResource("4_act0l")
+step = 0.0
+allow_greater = true

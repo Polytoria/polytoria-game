@@ -5,7 +5,6 @@
 using Godot;
 using Polytoria.Datamodel;
 using Polytoria.Shared;
-using Polytoria.Utils;
 
 namespace Polytoria.Client;
 
@@ -41,7 +40,7 @@ public partial class Nametag : Node3D
 		// Check distance from camera if is with-in radius
 		if (cam != null && useNametag)
 		{
-			useNametag = (cam.Position.Flip() - GlobalPosition).Length() < Target.NametagVisibleRadius;
+			useNametag = (cam.Position - GlobalPosition).Length() < Target.NametagVisibleRadius;
 		}
 
 		// Hide if self is Target

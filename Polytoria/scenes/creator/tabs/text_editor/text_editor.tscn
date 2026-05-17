@@ -88,12 +88,6 @@ vertical_alignment = 1
 autowrap_mode = 3
 
 [node name="Finder" parent="." unique_id=495200113 instance=ExtResource("3_ypnaf")]
-layout_mode = 0
-anchors_preset = 0
-anchor_left = 0.0
-anchor_right = 0.0
-offset_left = 0.0
-offset_top = 36.0
-offset_right = 1152.0
-offset_bottom = 36.0
-grow_horizontal = 1
+layout_mode = 1
+offset_left = -102.0
+offset_right = -102.0

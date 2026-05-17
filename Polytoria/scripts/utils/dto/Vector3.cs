@@ -5,6 +5,7 @@
 using Godot;
 using MemoryPack;
 using System;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -25,13 +26,21 @@ public partial class Vector3Dto
 	public static string ToString(Vector3 src)
 	{
 		// Limit to 4 decimals
-		return $"{src.X:0.####},{src.Y:0.####},{src.Z:0.####}";
+		return string.Join(",",
+			src.X.ToString("0.####", CultureInfo.InvariantCulture),
+			src.Y.ToString("0.####", CultureInfo.InvariantCulture),
+			src.Z.ToString("0.####", CultureInfo.InvariantCulture)
+		);
 	}
 
 	public static Vector3 FromString(string src)
 	{
 		string[] parts = src.Split(',');
-		return new Vector3(float.Parse(parts[0]), float.Parse(parts[1]), float.Parse(parts[2]));
+		return new Vector3(
+			float.Parse(parts[0], CultureInfo.InvariantCulture),
+			float.Parse(parts[1], CultureInfo.InvariantCulture),
+			float.Parse(parts[2], CultureInfo.InvariantCulture)
+		);
 	}
 }
 

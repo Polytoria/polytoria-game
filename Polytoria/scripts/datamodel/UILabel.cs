@@ -18,6 +18,7 @@ public partial class UILabel : UIView
 	private string _text = "";
 	private Color _textColor;
 	private float _fontSize;
+	private bool _autoSize;
 	private bool _useRichText;
 	private TextHorizontalAlignmentEnum _justify;
 	private TextVerticalAlignmentEnum _verticalAlign;
@@ -39,6 +40,7 @@ public partial class UILabel : UIView
 			_text = value;
 			_richLabel.Text = _text;
 			_label.Text = _text;
+			if (_autoSize) UpdateAutosize();
 			OnPropertyChanged();
 		}
 	}
@@ -142,17 +144,31 @@ public partial class UILabel : UIView
 		set
 		{
 			_fontSize = value;
-			int setto = (int)(_fontSize * FontScaleConversion);
-			_label.AddThemeFontSizeOverride("font_size", setto);
-			_richLabel.AddThemeFontSizeOverride("normal_font_size", setto);
-			_richLabel.AddThemeFontSizeOverride("bold_font_size", setto);
-			_richLabel.AddThemeFontSizeOverride("bold_italics_font_size", setto);
-			_richLabel.AddThemeFontSizeOverride("italics_font_size", setto);
-			_richLabel.AddThemeFontSizeOverride("mono_font_size", setto);
+			if (!_autoSize) SetTextSize(_fontSize);
 			OnPropertyChanged();
 		}
 	}
 
+	[Editable, ScriptProperty]
+	public bool AutoSize
+	{
+		get => _autoSize;
+		set
+		{
+			_autoSize = value;
+			if (_autoSize)
+			{
+				NodeControl.Resized += UpdateAutosize;
+				UpdateAutosize();
+			}
+			else
+			{
+				NodeControl.Resized -= UpdateAutosize;
+				SetTextSize(_fontSize);
+			}
+			OnPropertyChanged();
+		}
+	}
 
 	[Editable, ScriptProperty]
 	public bool UseRichText
@@ -245,6 +261,39 @@ public partial class UILabel : UIView
 		}
 	}
 
+	private void UpdateAutosize()
+	{
+		Font font = _label.GetThemeFont("font");
+		Vector2 bounds = NodeControl.Size;
+		int lo = 1, hi = 512, result = 0;
+
+		while (lo <= hi)
+		{
+			int mid = (lo + hi) / 2;
+			int scaled = (int)(mid * FontScaleConversion);
+			Vector2 textBounds = font.GetStringSize(_text, _label.HorizontalAlignment, -1, scaled);
+			if (textBounds.X <= bounds.X && textBounds.Y <= bounds.Y)
+			{
+				result = mid;
+				lo = mid + 1;
+			}
+			else hi = mid - 1;
+		}
+
+		SetTextSize(result);
+	}
+
+	private void SetTextSize(float size)
+	{
+		int setto = (int)(size * FontScaleConversion);
+		_label.AddThemeFontSizeOverride("font_size", setto);
+		_richLabel.AddThemeFontSizeOverride("normal_font_size", setto);
+		_richLabel.AddThemeFontSizeOverride("bold_font_size", setto);
+		_richLabel.AddThemeFontSizeOverride("bold_italics_font_size", setto);
+		_richLabel.AddThemeFontSizeOverride("italics_font_size", setto);
+		_richLabel.AddThemeFontSizeOverride("mono_font_size", setto);
+	}
+
 	private void OnFontLoaded(Resource resource)
 	{
 		_label.AddThemeFontOverride("font", (Font)resource);
@@ -253,6 +302,7 @@ public partial class UILabel : UIView
 		_richLabel.AddThemeFontOverride("bold_italics_font", (Font)resource);
 		_richLabel.AddThemeFontOverride("italics_font", (Font)resource);
 		_richLabel.AddThemeFontOverride("mono_font", (Font)resource);
+		if (_autoSize) UpdateAutosize();
 	}
 
 	public override void Init()

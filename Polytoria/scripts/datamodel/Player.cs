@@ -460,7 +460,7 @@ public sealed partial class Player : NPC
 			UpdateTransformTick(delta);
 			if (Root.Network.IsServer && !IsSitting)
 			{
-				CharBody3D.Velocity = LastVelocity.Flip();
+				CharBody3D.Velocity = LastVelocity;
 				CharBody3D.MoveAndSlide();
 				LastVelocity = Vector3.Zero;
 				ApplyPushForce();
@@ -783,7 +783,7 @@ public sealed partial class Player : NPC
 
 	internal void PlayEmote(string emoteName)
 	{
-		if (IsSitting) return;
+		if (IsSitting || IsDead) return;
 		if (!EmoteList.Contains(emoteName)) return;
 		bool isOneShot = false;
 		if (OneShotEmoteList.Contains(emoteName))
@@ -1045,6 +1045,7 @@ public sealed partial class Player : NPC
 		}
 	}
 
+	[ScriptEnum]
 	public enum PlayerMovementModeEnum
 	{
 		Default,

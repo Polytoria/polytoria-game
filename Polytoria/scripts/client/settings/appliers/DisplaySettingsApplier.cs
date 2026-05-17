@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 using Godot;
 using Polytoria.Shared;
 using Polytoria.Shared.Settings;
@@ -12,14 +16,20 @@ public sealed partial class DisplaySettingsApplier : Node
 		ApplyAll();
 	}
 
+	public override void _ExitTree()
+	{
+		ClientSettingsService.Instance.Changed -= OnChanged;
+		base._ExitTree();
+	}
+
 	private void OnChanged(SettingChangedEvent change)
 	{
 		switch (change.Key)
 		{
-			case ClientSettingKeys.Display.Fullscreen:
+			case SharedSettingKeys.Display.Fullscreen:
 				ApplyFullscreen();
 				break;
-			case ClientSettingKeys.Display.VSync:
+			case SharedSettingKeys.Display.VSync:
 				ApplyVsync();
 				break;
 			case ClientSettingKeys.Display.UiScale:
@@ -37,7 +47,7 @@ public sealed partial class DisplaySettingsApplier : Node
 
 	private void ApplyFullscreen()
 	{
-		bool fullscreen = ClientSettingsService.Instance.Get<bool>(ClientSettingKeys.Display.Fullscreen);
+		bool fullscreen = ClientSettingsService.Instance.Get<bool>(SharedSettingKeys.Display.Fullscreen);
 		var defaultMode = DisplayServer.WindowMode.Maximized;
 		if (Globals.IsInGDEditor)
 		{
@@ -48,7 +58,7 @@ public sealed partial class DisplaySettingsApplier : Node
 
 	private void ApplyVsync()
 	{
-		bool vsync = ClientSettingsService.Instance.Get<bool>(ClientSettingKeys.Display.VSync);
+		bool vsync = ClientSettingsService.Instance.Get<bool>(SharedSettingKeys.Display.VSync);
 		DisplayServer.WindowSetVsyncMode(vsync ? DisplayServer.VSyncMode.Enabled : DisplayServer.VSyncMode.Disabled);
 	}
 

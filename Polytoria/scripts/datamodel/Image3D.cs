@@ -18,6 +18,7 @@ public sealed partial class Image3D : Dynamic
 	private string _imageID = "";
 	private ImageTypeEnum _imageType;
 	private StandardMaterial3D _material = new();
+	private BaseMaterial3D.TransparencyEnum _transparencyType = BaseMaterial3D.TransparencyEnum.Disabled;
 	private MeshInstance3D _mesh = null!;
 
 	private Texture2D? _prevImg;
@@ -118,6 +119,7 @@ public sealed partial class Image3D : Dynamic
 		{
 			_color = value;
 			_material.AlbedoColor = value;
+			UpdateMaterialTransparency();
 			OnPropertyChanged();
 		}
 	}
@@ -169,7 +171,9 @@ public sealed partial class Image3D : Dynamic
 			_material.TextureFilter = value switch
 			{
 				TextureFilterEnum.Nearest => BaseMaterial3D.TextureFilterEnum.NearestWithMipmaps,
+				TextureFilterEnum.NearestNoMipmaps => BaseMaterial3D.TextureFilterEnum.Nearest,
 				TextureFilterEnum.Linear => BaseMaterial3D.TextureFilterEnum.LinearWithMipmaps,
+				TextureFilterEnum.LinearNoMipmaps => BaseMaterial3D.TextureFilterEnum.Linear,
 				_ => throw new IndexOutOfRangeException("Texture filter mode out of range"),
 			};
 			OnPropertyChanged();
@@ -222,13 +226,22 @@ public sealed partial class Image3D : Dynamic
 			_prevImg = tex;
 			_material.AlbedoTexture = tex;
 
-			// Set transparency depending on image's alpha
-			_material.Transparency = tex.GetImage().DetectAlpha() switch
+			// Set transparency depending on the AlphaMode returned from .DetectAlpha()
+			_transparencyType = tex.GetImage().DetectAlpha() switch
 			{
 				Godot.Image.AlphaMode.Blend => BaseMaterial3D.TransparencyEnum.Alpha,
 				Godot.Image.AlphaMode.Bit => BaseMaterial3D.TransparencyEnum.AlphaScissor,
 				_ => BaseMaterial3D.TransparencyEnum.Disabled,
 			};
+			UpdateMaterialTransparency();
 		}
+	}
+
+	// Updates _material.Transparency depending on _color.A
+	private void UpdateMaterialTransparency()
+	{
+		_material.Transparency = (_color.A == 1)
+			? _transparencyType
+			: BaseMaterial3D.TransparencyEnum.Alpha;
 	}
 }

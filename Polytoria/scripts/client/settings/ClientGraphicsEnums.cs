@@ -1,42 +1,12 @@
-namespace Polytoria.Client.Settings;
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-public enum GraphicsPreset
-{
-	Low,
-	Medium,
-	High,
-	Ultra,
-	Photo,
-	Custom
-}
+namespace Polytoria.Client.Settings;
 
 public enum OverlayMode
 {
 	None,
 	Minimal,
 	Full
-}
-
-public enum RenderingMethodOption
-{
-	Standard,
-	Performance,
-	Compatibility
-}
-
-public enum ShadowQuality
-{
-	Off,
-	Low,
-	Medium,
-	High,
-	Ultra
-}
-
-public enum MsaaOption
-{
-	Disabled = 0,
-	X2 = 2,
-	X4 = 4,
-	X8 = 8
 }

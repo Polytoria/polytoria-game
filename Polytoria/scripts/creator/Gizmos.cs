@@ -288,7 +288,7 @@ public sealed partial class Gizmos : Node
 		{
 			if (_dragStartOffsets.TryGetValue(item, out Vector3 offset))
 			{
-				item.Position = ((vector.Snap(CreatorService.Interface.MoveSnapping)) * new Vector3(-1, 1, 1)) + offset;
+				item.Position = vector.Snap(CreatorService.Interface.MoveSnapping) + offset;
 			}
 		}
 	}

@@ -76,7 +76,6 @@ public sealed partial class CaptureService : Instance
 		}
 
 		_spectatorCam.GlobalTransform = SpectatorAttach.GetGlobalTransform();
-		_spectatorCam.RotateObjectLocal(Vector3.Up, Mathf.DegToRad(180));
 		base.Process(delta);
 	}
 
@@ -217,9 +216,9 @@ public sealed partial class CaptureService : Instance
 			guiOverlay.GDNode.Reparent(subview);
 		}
 
-		pivot.GlobalPosition = pos.Flip();
-		pivot.GlobalRotationDegrees = rot.FlipEuler();
-		cam.RotationDegrees = new Vector3(0, 180, 0);
+		pivot.GlobalPosition = pos;
+		pivot.GlobalRotationDegrees = rot;
+		cam.RotationDegrees = new Vector3(0, 0, 0);
 		if (photoSize != null && photoSize != Vector2.Zero && !(photoSize > _photoSizeLimit))
 		{
 			subview.Size = (Vector2I)photoSize;

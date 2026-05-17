@@ -379,6 +379,14 @@ public sealed partial class Menu : PanelContainer
 				},
 				new MenuSeperatorItem(),
 				new MenuButtonItem() {
+					Text = "Migrate Coordinates",
+					RequireGameOpen = true,
+					Pressed = () => {
+						CreatorService.MigrateCoordinates(World.Current!);
+					}
+				},
+				new MenuSeperatorItem(),
+				new MenuButtonItem() {
 					Text = "Settings",
 					Icon = "settings",
 					Pressed = () => {
