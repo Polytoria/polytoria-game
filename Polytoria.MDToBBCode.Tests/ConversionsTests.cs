@@ -44,5 +44,67 @@ namespace Polytoria.MDToBBCode.Tests
 			string expected = @"This is [b][i]bold and italic[/i][/b] text.";
 			Assert.Equal(expected, Conversions.MarkdownToBBCode(oldText));
 		}
+
+		[Fact]
+		public void MarkdownToBBCode_Lists()
+		{
+			string oldText = @"Here is a list:
+* Item 1
+* Item 2
+* Item 3
+
+
+Here is an ordered list:
+1. Item 1
+2. Item 2
+3. Item 3";
+			string expected = @"Here is a list:
+[ul]
+Item 1
+Item 2
+Item 3
+[/ul]
+
+
+Here is an ordered list:
+[ol]
+Item 1
+Item 2
+Item 3
+[/ol]";
+			Assert.Equal(expected, Conversions.MarkdownToBBCode(oldText));
+		}
+
+		[Fact]
+		public void MarkdownToBBCode_Complex()
+		{
+			string oldText = @"```luau
+function(dt: number): ()
+```
+----------
+Do stuff to the part:
+1. Creates rainbow color animation
+2. Oscillates between large and small size
+
+
+**Parameters**
+
+- `dt` delta time";
+			string expected = @"[code]function(dt: number): ()[/code]
+[hr width=100%]
+Do stuff to the part:
+[ol]
+Creates rainbow color animation
+Oscillates between large and small size
+[/ol]
+
+
+[b]Parameters[/b]
+
+[ul]
+[code]dt[/code] delta time
+[/ul]";
+			Assert.Equal(expected, Conversions.MarkdownToBBCode(oldText));
+		}
 	}
 }
