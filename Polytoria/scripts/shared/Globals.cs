@@ -633,7 +633,16 @@ public sealed partial class Globals : Node
 			return IntPtr.Zero;
 		}
 
-		return NativeLibrary.Load(dllPath, assembly, searchPath);
+		string finalPath = dllPath;
+
+		if (UseNodes)
+		{
+			// Only resolve full path in Godot env
+			string basePath = OS.GetExecutablePath().GetBaseDir();
+			finalPath = Path.GetFullPath(Path.Join(basePath, dllPath));
+		}
+
+		return NativeLibrary.Load(finalPath, assembly, searchPath);
 	}
 
 	internal static string ResolveCurrentPlatform()
