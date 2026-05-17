@@ -397,9 +397,6 @@ public partial class TextEditorRoot : Node
 
 		string tooltipDisplay = Conversions.MarkdownToBBCode(tooltipDisplayMD);
 
-		PT.Print($"Markdown: {tooltipDisplayMD}");
-		PT.Print($"BBCode: {tooltipDisplay}");
-
 		Rect2 hoveredCharDimensions = CodeEditor.GetRectAtLineColumn(hoveredSymbolLine, hoveredSymbolCol);
 		Rect2 globalCharDimensions = new(CodeEditor.GlobalPosition + hoveredCharDimensions.Position, hoveredCharDimensions.Size);
 		Tooltip.UpdateTooltip(tooltipDisplay, globalCharDimensions);
