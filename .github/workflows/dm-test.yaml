@@ -32,6 +32,8 @@ jobs:
           use-dotnet: true
           include-templates: false
           cache: true
+      - name: just to make sure
+        run: ls -la Polytoria/native/Luau.VM/linux/ || echo "Directory not found"
       - name: Test Datamodel
         run: |
           dotnet --version
