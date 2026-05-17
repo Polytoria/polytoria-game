@@ -385,9 +385,15 @@ public sealed partial class PolytorianModel : CharacterModel
 		Animator.ImportAnimationRaw("emote_dance", "Dance");
 		Animator.ImportAnimationRaw("emote_helicopter", "Helicopter");
 		Animator.ImportAnimationRaw("emote_sit", "Sit");
+		Animator.ImportAnimationRaw("emote_dance2", "Dance2");
 
 		Animator.ImportOneShotAnimationRaw("emote_wave", "Wave");
 		Animator.ImportOneShotAnimationRaw("emote_point", "Point");
+		Animator.ImportOneShotAnimationRaw("emote_disagree", "Disagree");
+		Animator.ImportOneShotAnimationRaw("emote_agree", "Agree");
+		Animator.ImportOneShotAnimationRaw("emote_scream", "Scream");
+		Animator.ImportOneShotAnimationRaw("emote_disappointed", "Disappointed");
+		
 		/*
 		Animator.ImportOneShotAnimationRaw("poly_welcome", "polytorian_2/welcome");
 		Animator.ImportOneShotAnimationRaw("avataredit_pose1", "polytorian_2/pose1");

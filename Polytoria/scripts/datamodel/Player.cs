@@ -332,8 +332,11 @@ public sealed partial class Player : NPC
 	[
 		"wave",
 		"dance",
+		"dance2",
 		"helicopter",
 		"sit",
+		"agree",
+		"disagree",
 	];
 
 	// List of all emotes
@@ -344,6 +347,11 @@ public sealed partial class Player : NPC
 		"helicopter",
 		"sit",
 		"point",
+		"agree",
+		"disagree",
+		"scream",
+		"dance2",
+		"disappointed",
 	];
 
 	// Oneshot emotes
@@ -351,6 +359,10 @@ public sealed partial class Player : NPC
 	[
 		"wave",
 		"point",
+		"disagree",
+		"agree",
+		"scream",
+		"disappointed",
 	];
 
 	public override void InitGDNode()
