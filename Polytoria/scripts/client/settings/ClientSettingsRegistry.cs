@@ -143,7 +143,7 @@ public static class ClientSettingsRegistry
 				ValueKind = SettingValueKind.Bool,
 				ControlKind = SettingControlKind.Toggle,
 				RequiresRestart = true,
-				DefaultValue = true
+				DefaultValue = false
 			});
 
 		SettingDef.ValidateAll(defs.Values);
