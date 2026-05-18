@@ -518,8 +518,8 @@ public sealed partial class InputService : Instance
 		}
 		else if (@event is InputEventMouseMotion mouseMotion)
 		{
-			MouseMoved.Invoke(mouseMotion);
 			MouseDelta = mouseMotion.Relative;
+			MouseMoved.Invoke(mouseMotion.Relative);
 		}
 	}
 
