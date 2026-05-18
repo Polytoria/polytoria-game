@@ -996,8 +996,6 @@ public sealed partial class Camera : Dynamic
 
 		GDNode3D.GlobalPosition = newPosition;
 		GDNode3D.LookAt(center, Vector3.Up);
-
-		GDNode3D.RotateObjectLocal(Vector3.Up, Mathf.Pi);
 	}
 
 	public Vector3 GetPlacementPosition(Instance[]? ignoreList = null)
