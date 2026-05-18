@@ -821,12 +821,12 @@ public sealed partial class Camera : Dynamic
 
 	private void SnapForward()
 	{
-		Position += Forward * -_moveSpeed / 10;
+		Position += Forward * _moveSpeed / 10;
 	}
 
 	private void SnapBackward()
 	{
-		Position += Forward * _moveSpeed / 10;
+		Position += Forward * -_moveSpeed / 10;
 	}
 
 	public void ReceiveDragTouchInput(InputEventScreenDrag dragEvent)
