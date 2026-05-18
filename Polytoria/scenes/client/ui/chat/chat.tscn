@@ -2,6 +2,9 @@
 
 [ext_resource type="Script" uid="uid://d0o0v65f7o0u3" path="res://scripts/client/ui/chat/UIChat.cs" id="1_15ajx"]
 [ext_resource type="Texture2D" uid="uid://diu2hnj2i6klb" path="res://assets/textures/ui-icons/chat-send.svg" id="2_b3ukd"]
+[ext_resource type="Texture2D" uid="uid://bctbyvslc3xgd" path="res://assets/textures/ui-icons/resize-handle.svg" id="3_resize"]
+[ext_resource type="PackedScene" uid="uid://yo4rf0hswo46" path="res://scenes/client/ui/chat/emoji_picker.tscn" id="4_picker"]
+[ext_resource type="Texture2D" uid="uid://bm1o0k3aprejc" path="res://assets/textures/ui-icons/face.svg" id="5_face"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_b3ukd"]
 content_margin_left = 0.0
@@ -255,7 +258,7 @@ _data = {
 &"open": SubResource("Animation_ufiqy")
 }
 
-[node name="Chat" type="Control" unique_id=1425853449 node_paths=PackedStringArray("_chatField", "_chatLayout", "_chatScroll", "_animPlayer", "_sendButton", "_sendAnim", "_chatFieldPanel")]
+[node name="Chat" type="Control" unique_id=1425853449 node_paths=PackedStringArray("_chatField", "_chatLayout", "_chatScroll", "_animPlayer", "_sendButton", "_sendAnim", "_chatFieldPanel", "_chatPanel", "_resizeHandle", "_emojiPicker", "_emojiButton")]
 layout_mode = 3
 anchors_preset = 0
 script = ExtResource("1_15ajx")
@@ -266,6 +269,10 @@ _animPlayer = NodePath("AnimPlay")
 _sendButton = NodePath("Point/Panel/Layout/PanelContainer/HBoxContainer/SendButton")
 _sendAnim = NodePath("Point/Panel/Layout/PanelContainer/HBoxContainer/SendButton/SendAnim")
 _chatFieldPanel = NodePath("Point/Panel/Layout/PanelContainer")
+_chatPanel = NodePath("Point/Panel")
+_resizeHandle = NodePath("Point/Panel/ResizeHandle")
+_emojiPicker = NodePath("EmojiPicker")
+_emojiButton = NodePath("Point/Panel/Layout/PanelContainer/HBoxContainer/EmojiButton")
 
 [node name="Point" type="Control" parent="." unique_id=1370297466]
 anchors_preset = 0
@@ -273,8 +280,8 @@ anchors_preset = 0
 [node name="Panel" type="Panel" parent="Point" unique_id=1788639900]
 clip_contents = true
 layout_mode = 1
-offset_right = 400.0
-offset_bottom = 240.0
+offset_right = 500.0
+offset_bottom = 300.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_b3ukd")
 
 [node name="Layout" type="VBoxContainer" parent="Point/Panel" unique_id=1192301819]
@@ -306,6 +313,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_m8q8u")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="Point/Panel/Layout/PanelContainer" unique_id=523220645]
 layout_mode = 2
+theme_override_constants/separation = 2
 
 [node name="ChatField" type="LineEdit" parent="Point/Panel/Layout/PanelContainer/HBoxContainer" unique_id=1345058260]
 custom_minimum_size = Vector2(0, 36)
@@ -317,6 +325,34 @@ theme_override_styles/focus = SubResource("StyleBoxEmpty_05nkb")
 placeholder_text = "Send a chat message..."
 context_menu_enabled = false
 caret_blink = true
+
+[node name="EmojiButton" type="Button" parent="Point/Panel/Layout/PanelContainer/HBoxContainer" unique_id=-1535732825]
+modulate = Color(1, 1, 1, 0.49803922)
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_b3ukd")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_b3ukd")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_b3ukd")
+flat = true
+
+[node name="Icon" type="TextureRect" parent="Point/Panel/Layout/PanelContainer/HBoxContainer/EmojiButton" unique_id=1368446427]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -12.0
+offset_top = -12.0
+offset_right = 12.0
+offset_bottom = 12.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("5_face")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="SendButton" type="Button" parent="Point/Panel/Layout/PanelContainer/HBoxContainer" unique_id=593562]
 modulate = Color(1, 1, 1, 0.49803922)
@@ -347,6 +383,31 @@ stretch_mode = 5
 [node name="SendAnim" type="AnimationPlayer" parent="Point/Panel/Layout/PanelContainer/HBoxContainer/SendButton" unique_id=890791661]
 libraries/ = SubResource("AnimationLibrary_cr8st")
 
+[node name="ResizeHandle" type="TextureRect" parent="Point/Panel" unique_id=1898546123]
+modulate = Color(1, 1, 1, 0.25)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 0
+mouse_default_cursor_shape = 12
+texture = ExtResource("3_resize")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="AnimPlay" type="AnimationPlayer" parent="." unique_id=1362692536]
 libraries/ = SubResource("AnimationLibrary_05nkb")
 autoplay = &"none"
+
+[node name="EmojiPicker" parent="." unique_id=418641159 instance=ExtResource("4_picker")]
+layout_mode = 0
+offset_left = 6.0
+offset_top = 311.0
+offset_right = 406.0
+offset_bottom = 511.0

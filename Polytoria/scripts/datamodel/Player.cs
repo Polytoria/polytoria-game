@@ -14,6 +14,7 @@ using Polytoria.Networking;
 using Polytoria.Shared;
 using Polytoria.Utils;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Polytoria.Providers.PlayerMovement;
 
@@ -26,6 +27,8 @@ public sealed partial class Player : NPC
 	private const float CameraHeight = 2f;
 	public const string CreatorHeadScene = "res://scenes/creator/livecollab/head.tscn";
 	public const string BubbleChatScene = "res://scenes/client/spatial/chat/bubble_chat.tscn";
+	public const string BadgeImageDirPath = "res://assets/textures/client/ui/playerlist/badges/";
+	private static readonly Dictionary<string, string> _badgePathCache = [];
 	private bool _isReady = false;
 	internal bool ClimbDebounce = false;
 	internal bool JustFinishedClimbing = false;
@@ -49,6 +52,7 @@ public sealed partial class Player : NPC
 	private bool _allowAnimationWhileMoving = false;
 	private PlayerMovementModeEnum _movementMode = PlayerMovementModeEnum.Default;
 	private Team? _team;
+	private Color _chatColorBeforeTeam;
 
 	internal bool SprintOverride = false;
 	private float _pingStartTime = 0;
@@ -253,6 +257,13 @@ public sealed partial class Player : NPC
 			{
 				TeamChanged.Invoke(_team);
 				Root.Teams.DispatchTeamUpdate();
+				if (value != null)
+				{
+					_chatColorBeforeTeam = ChatColor;
+					ChatColor = value.Color;
+				}
+				else
+					ChatColor = _chatColorBeforeTeam;
 			}
 			OnPropertyChanged();
 		}
@@ -286,7 +297,61 @@ public sealed partial class Player : NPC
 	public bool IsCreator { get; internal set; }
 
 	[ScriptProperty, SyncVar]
+	public string UserRoleClass { get; internal set; } = "";
+
+	[ScriptProperty, SyncVar]
 	public Color ChatColor { get; set; } = new(1, 1, 1);
+
+	private static readonly Color[] ChatColorPalette =
+		[
+			Color.FromHtml("#4e9aa8"),
+			Color.FromHtml("#00a86b"),
+			Color.FromHtml("#4b3f69"),
+			Color.FromHtml("#d8ad39"),
+			Color.FromHtml("#d6c69a"),
+			Color.FromHtml("#26A69A"),
+			Color.FromHtml("#7CB342"),
+			Color.FromHtml("#5C6BC0"),
+			Color.FromHtml("#FB7EFD"),
+			Color.FromHtml("#54A0FF"),
+			Color.FromHtml("#5F27CD"),
+			Color.FromHtml("#01A3A4"),
+			Color.FromHtml("#F368E0"),
+			Color.FromHtml("#FF9F43"),
+			Color.FromHtml("#1DD1A1"),
+			Color.FromHtml("#48DBFB"),
+			Color.FromHtml("#AB47BC"),
+			Color.FromHtml("#42A5F5"),
+			Color.FromHtml("#66BB6A"),
+			Color.FromHtml("#FFA726"),
+			Color.FromHtml("#8D6E63"),
+			Color.FromHtml("#78909C"),
+			Color.FromHtml("#D4E157"),
+			Color.FromHtml("#B39DDB"),
+		];
+
+	public static Color ChatColorFromUserID(int userID)
+	{
+		return ChatColorPalette[userID % ChatColorPalette.Length];
+	}
+
+	public static string GetBadgeIconPath(Player player)
+	{
+		string badgeName = player.IsAdmin ? "admin"
+			: player.IsCreator ? "creator"
+			: player.UserRoleClass;
+
+		if (string.IsNullOrEmpty(badgeName))
+			return "";
+
+		if (_badgePathCache.TryGetValue(badgeName, out string? cached))
+			return cached;
+
+		string path = BadgeImageDirPath.PathJoin(badgeName + ".png");
+		string result = ResourceLoader.Exists(path) ? path : "";
+		_badgePathCache[badgeName] = result;
+		return result;
+	}
 
 	[ScriptProperty, Attributes.Obsolete("Use Input.IsInputFocused instead")]
 	public bool IsInputFocused => Root.Input.IsInputFocused;

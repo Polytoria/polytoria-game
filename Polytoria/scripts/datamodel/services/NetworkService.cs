@@ -652,6 +652,7 @@ public sealed partial class NetworkService : Instance
 		plr.UserID = userData.Id;
 		plr.Name = username;
 		plr.IsAdmin = userData.IsStaff;
+		plr.UserRoleClass = userData.UserRoleClass ?? "";
 
 		// Apply validation data
 		plr.IsCreator = validateRes.IsCreator;
@@ -664,6 +665,10 @@ public sealed partial class NetworkService : Instance
 		{
 			// Admin chat color
 			plr.ChatColor = Color.FromHtml("#DD5555");
+		}
+		else if (Root.PlayerDefaults.ChatColorsEnabled)
+		{
+			plr.ChatColor = Player.ChatColorFromUserID(userData.Id);
 		}
 		else
 		{

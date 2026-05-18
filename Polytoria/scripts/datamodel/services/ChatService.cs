@@ -12,6 +12,7 @@ using Polytoria.Shared;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Polytoria.Datamodel.Services;
@@ -50,6 +51,7 @@ public sealed partial class ChatService : Instance
 	private readonly PTHttpClient _client = new();
 
 	private static readonly Dictionary<string, string> _builtInEmojis = [];
+	public static IReadOnlyDictionary<string, string> BuiltInEmojis => _builtInEmojis;
 	private const string EmojisPath = "res://assets/textures/client/emojis/";
 
 	private readonly Dictionary<Player, SlidingWindowRateLimiter> _playerToRateLimiter = [];
@@ -217,14 +219,18 @@ public sealed partial class ChatService : Instance
 		UnicastMessage(msg, plr);
 	}
 
-	public static string FormatEmojis(string msg, int sizeMultipler = 1)
+	private static readonly Regex _emojiRegex = new(@":([^:]+):", RegexOptions.Compiled);
+
+	public static string FormatEmojis(string msg, float scale = 1f)
 	{
-		string result = msg;
-		foreach ((string key, string v) in _builtInEmojis)
+		int size = Mathf.RoundToInt(24 * scale);
+		return _emojiRegex.Replace(msg, match =>
 		{
-			result = result.Replace($":{key}:", $"[img={24 * sizeMultipler}x{24 * sizeMultipler}]{v}[/img]");
-		}
-		return result;
+			string name = match.Groups[1].Value;
+			if (_builtInEmojis.TryGetValue(name, out string? path))
+				return $"[img={size}x{size}]{path}[/img]";
+			return match.Value;
+		});
 	}
 
 	// Logging for moderation

@@ -1,0 +1,138 @@
+[gd_scene format=3 uid="uid://yo4rf0hswo46"]
+
+[ext_resource type="Script" uid="uid://bsss05ek57ia0" path="res://scripts/client/ui/chat/UIEmojiPicker.cs" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pickerbg"]
+bg_color = Color(0.1, 0.1, 0.1, 0.96)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_grabber"]
+content_margin_left = 3.0
+content_margin_top = 0.0
+content_margin_right = 3.0
+content_margin_bottom = 0.0
+bg_color = Color(1, 1, 1, 0.76)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+corner_detail = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_grabber_hover"]
+content_margin_left = 3.0
+content_margin_top = 0.0
+content_margin_right = 3.0
+content_margin_bottom = 0.0
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+corner_detail = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_grabber_pressed"]
+content_margin_left = 3.0
+content_margin_top = 0.0
+content_margin_right = 3.0
+content_margin_bottom = 0.0
+bg_color = Color(1, 1, 1, 0.43)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+corner_detail = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_scroll_track"]
+content_margin_left = 3.0
+content_margin_top = 0.0
+content_margin_right = 3.0
+content_margin_bottom = 0.0
+bg_color = Color(1, 1, 1, 0.16)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+corner_detail = 6
+
+[node name="EmojiPicker" type="Control" node_paths=PackedStringArray("_grid", "_row", "_gridScroll", "_rowScroll")]
+custom_minimum_size = Vector2(400, 200)
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_script")
+_grid = NodePath("Panel/GridScroll/Margin/Grid")
+_row = NodePath("Panel/RowScroll/RowMargin/Row")
+_gridScroll = NodePath("Panel/GridScroll")
+_rowScroll = NodePath("Panel/RowScroll")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_pickerbg")
+
+[node name="GridScroll" type="ScrollContainer" parent="Panel"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/scroll = SubResource("StyleBoxFlat_scroll_track")
+theme_override_styles/scroll_focus = SubResource("StyleBoxFlat_scroll_track")
+theme_override_styles/grabber = SubResource("StyleBoxFlat_grabber")
+theme_override_styles/grabber_highlight = SubResource("StyleBoxFlat_grabber_hover")
+theme_override_styles/grabber_pressed = SubResource("StyleBoxFlat_grabber_pressed")
+
+[node name="Margin" type="MarginContainer" parent="Panel/GridScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="Grid" type="GridContainer" parent="Panel/GridScroll/Margin"]
+layout_mode = 2
+size_flags_horizontal = 3
+columns = 7
+theme_override_constants/h_separation = 3
+theme_override_constants/v_separation = 3
+
+[node name="RowScroll" type="ScrollContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+follow_focus = true
+theme_override_styles/scroll = SubResource("StyleBoxFlat_scroll_track")
+theme_override_styles/scroll_focus = SubResource("StyleBoxFlat_scroll_track")
+theme_override_styles/grabber = SubResource("StyleBoxFlat_grabber")
+theme_override_styles/grabber_highlight = SubResource("StyleBoxFlat_grabber_hover")
+theme_override_styles/grabber_pressed = SubResource("StyleBoxFlat_grabber_pressed")
+
+[node name="RowMargin" type="MarginContainer" parent="Panel/RowScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 2
+
+[node name="Row" type="HBoxContainer" parent="Panel/RowScroll/RowMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 3
+alignment = 0
