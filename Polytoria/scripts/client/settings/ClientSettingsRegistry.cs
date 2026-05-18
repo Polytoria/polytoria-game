@@ -132,6 +132,19 @@ public static class ClientSettingsRegistry
 				ControlKind = SettingControlKind.Toggle,
 				DefaultValue = true,
 			});
+			
+		defs.Add(ClientSettingKeys.Advanced.FastAssets,
+			new SettingDef<bool>
+			{
+				Key = ClientSettingKeys.Advanced.FastAssets,
+				SectionKey = "advanced",
+				Label = "Fast Assets",
+				Description = "Loads assets all at once instead of queueing. Can cause lag.",
+				ValueKind = SettingValueKind.Bool,
+				ControlKind = SettingControlKind.Toggle,
+				RequiresRestart = true,
+				DefaultValue = true
+			});
 
 		SettingDef.ValidateAll(defs.Values);
 		return defs;

@@ -4,6 +4,7 @@
 
 using Godot;
 using Polytoria.Providers.AssetLoaders;
+using Polytoria.Client.Settings;
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
@@ -68,7 +69,11 @@ public partial class AssetLoader : Node
 
 	private async Task<CacheItem> LoadItem(CacheItem item, AssetCacheKey key)
 	{
-		await _loadSlots.WaitAsync();
+		bool FastAssets = ClientSettingsService.Instance.Get<bool>(ClientSettingKeys.Advanced.FastAssets);
+		if (!FastAssets)
+		{
+			await _loadSlots.WaitAsync();
+		}
 		try
 		{
 			CacheItem result = await LoadResource(item);
@@ -79,7 +84,11 @@ public partial class AssetLoader : Node
 		finally
 		{
 			_pendingRequests.TryRemove(key, out _);
-			_loadSlots.Release();
+			
+			if (!FastAssets)
+			{
+				_loadSlots.Release();
+			}
 		}
 	}
 
@@ -159,4 +168,3 @@ public struct CacheItem
 		return !(left == right);
 	}
 }
-
