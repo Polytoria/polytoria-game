@@ -132,7 +132,7 @@ public static class ClientSettingsRegistry
 				ControlKind = SettingControlKind.Toggle,
 				DefaultValue = true,
 			});
-			
+
 		defs.Add(ClientSettingKeys.Advanced.FastAssets,
 			new SettingDef<bool>
 			{

@@ -84,7 +84,7 @@ public partial class AssetLoader : Node
 		finally
 		{
 			_pendingRequests.TryRemove(key, out _);
-			
+
 			if (!FastAssets)
 			{
 				_loadSlots.Release();
