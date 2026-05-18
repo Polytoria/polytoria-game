@@ -68,7 +68,7 @@ public sealed partial class InputService : Instance
 			RecomputeMouseMode();
 		}
 	}
-
+	[ScriptProperty] public Vector2 MouseDelta { get; private set; } = Vector2.Zero;
 	[ScriptProperty] public Vector2 MousePosition => OverrideMousePos ? OverrideMousePosTo : GDNode.GetViewport().GetMousePosition();
 	[ScriptLegacyProperty("MousePosition")] public Vector3 LegacyMousePosition => new(MousePosition.X, ScreenHeight - MousePosition.Y, 0);
 	[ScriptProperty] public int ScreenWidth => (int)GDNode.GetViewport().GetVisibleRect().Size.X;
@@ -76,6 +76,8 @@ public sealed partial class InputService : Instance
 
 	internal bool OverrideMousePos { get; set; }
 	internal Vector2 OverrideMousePosTo { get; set; }
+
+	[ScriptProperty] public PTSignal<Vector2> MouseMoved { get; private set; } = new();
 
 	[ScriptProperty] public PTSignal GameFocused { get; private set; } = new();
 	[ScriptProperty] public PTSignal GameUnfocused { get; private set; } = new();
@@ -380,6 +382,7 @@ public sealed partial class InputService : Instance
 		_legacyFrameKeydowns.Clear();
 		_mouseFrameBtnDown.Clear();
 		_mouseScrollDelta = 0;
+		MouseDelta = Vector2.Zero;
 	}
 
 	private void RecomputeMouseMode()
@@ -513,6 +516,11 @@ public sealed partial class InputService : Instance
 				_mouseScrollDelta = -mouseBtn.Factor;
 			}
 		}
+		else if (@event is InputEventMouseMotion mouseMotion)
+		{
+			MouseMoved.Invoke(mouseMotion);
+			MouseDelta = mouseMotion.Relative;
+		}
 	}
 
 	public static KeyCodeEnum? InputEventToKeyCode(InputEvent @event)
@@ -541,6 +549,13 @@ public sealed partial class InputService : Instance
 		else if (@event is InputEventMouseButton mouseBtn)
 		{
 			if (Enum.TryParse("Mouse" + mouseBtn.ButtonIndex, false, out KeyCodeEnum btnEnum))
+			{
+				return btnEnum;
+			}
+		}
+		else if (@event is InputEventMouseMotion mouseMotion)
+		{
+			if (Enum.TryParse("MouseMovement", false, out KeyCodeEnum btnEnum))
 			{
 				return btnEnum;
 			}
