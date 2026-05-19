@@ -44,6 +44,9 @@ public sealed partial class ClientSettingsService : SettingsServiceBase
 
 			PT.Print("Graphics auto-detection selected preset: " + autoPreset);
 			Entry?.NetworkEssentialsReady += () => SetupBenchmark(benchmarker);
+		} else
+		{
+			GraphicsPresetManager.ApplyCurrentPreset(this);
 		}
 
 		RenderingMethodOption renderingMethod = Get<RenderingMethodOption>(SharedSettingKeys.Graphics.RenderingMethod);
