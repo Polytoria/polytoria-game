@@ -389,7 +389,12 @@ public sealed partial class InputService : Instance
 			Input.MouseMode = Input.MouseModeEnum.Visible;
 			return;
 		}
-		Input.MouseMode = _cursorLocked ? Input.MouseModeEnum.Captured : (_cursorVisible ? Input.MouseModeEnum.Visible : Input.MouseModeEnum.Hidden);
+		Camera? cam = Root.Environment.CurrentCamera;
+		bool camCapturing = cam?.IsTurning ?? false;
+
+		Input.MouseMode = (_cursorLocked || camCapturing)
+			? Input.MouseModeEnum.Captured
+			: (_cursorVisible ? Input.MouseModeEnum.Visible : Input.MouseModeEnum.Hidden);
 	}
 
 	private bool RecomputeGameFocused()

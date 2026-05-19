@@ -64,6 +64,7 @@ public sealed partial class Camera : Dynamic
 	private InputHelper _inputHelper = null!;
 
 	internal Camera3D Camera3D = null!;
+	internal bool IsTurning => _turning;
 
 	[Editable, ScriptProperty, DefaultValue(CameraModeEnum.Follow)]
 	public CameraModeEnum Mode
@@ -602,26 +603,19 @@ public sealed partial class Camera : Dynamic
 
 	private void OnGameFocused()
 	{
-		if (IsFirstPerson || AlwaysLocked)
+		if (AlwaysLocked)
 		{
-			if (AlwaysLocked)
-			{
-				CtrlLocked = true;
-			}
-			else
-			{
-				StartTurning();
-			}
+			CtrlLocked = true;
+		}
+
+		if (IsFirstPerson || AlwaysLocked || CtrlLocked)
+		{
+			StartTurning();
 		}
 	}
 
 	private void OnGameUnfocused()
 	{
-		if (CtrlLocked)
-		{
-			CtrlLocked = false;
-			StopTurning();
-		}
 		if (_turning)
 		{
 			StopTurning();
