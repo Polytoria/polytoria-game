@@ -239,7 +239,11 @@ public sealed partial class CaptureService : Instance
 		img.FixAlphaEdges();
 		img.GenerateMipmaps();
 
+
+		CurrentPhoto?.Dispose();
 		CurrentPhoto = ImageTexture.CreateFromImage(img);
+
+		subview.QueueFree();
 
 		PostPhotoTaken();
 	}
