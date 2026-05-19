@@ -552,6 +552,16 @@ public sealed partial class InputService : Instance
 		}
 		return null;
 	}
+	
+	[ScriptMethod]
+	public void StartGamepadVibration(float weakMagnitude, float strongMagnitude, float duration){
+		Input.StartJoyVibration(0,weakMagnitude,strongMagnitude,duration);
+	}
+	
+	[ScriptMethod]
+	public void StopGamepadVibration(){
+		Input.StopJoyVibration(0);
+	}
 
 	[ScriptMethod]
 	public Vector3 GetMouseWorldPosition(Instance[]? ignoreList = null)
