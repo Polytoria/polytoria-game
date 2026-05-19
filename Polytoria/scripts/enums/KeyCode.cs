@@ -643,7 +643,11 @@ public enum KeyCodeEnum
 	/// </summary>
 	GamepadAxisTriggerRight = 3005,
 	/// <summary>
-	/// <para>Mouse movement.</para>
+	/// <para>Mouse movement x-axis.</para>
 	/// </summary>
-	MouseMovement = 3006,
+	MouseAxisX = 3006,
+	/// <summary>
+	/// <para>Mouse movement y-axis.</para>
+	/// </summary>
+	MouseAxisY = 3007,
 }
