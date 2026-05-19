@@ -236,16 +236,13 @@ public sealed partial class CaptureService : Instance
 		subview.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
 
 		await Globals.Singleton.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-		// Extra frame to allow Metal's async command buffer to flush before readback
 		await Globals.Singleton.WaitFrame();
 
 		guiOverlay?.Delete();
 
-		// Capture the RID on the main thread — SubViewport is not thread-safe
 		Rid textureRid = subview.GetTexture().GetRid();
 		subview.QueueFree();
 
-		// Perform the blocking GPU readback and image processing off the main thread
 		Image img = await Task.Run(() =>
 		{
 			Image raw = RenderingServer.Singleton.Texture2DGet(textureRid);

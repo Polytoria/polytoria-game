@@ -695,9 +695,9 @@ public sealed partial class Gizmos : Node
 		Vector3 rayNormal = rayOrigin + _camera.ProjectRayNormal(mousePos) * 1000;
 
 		PhysicsRayQueryParameters3D query = PhysicsRayQueryParameters3D.Create(rayOrigin, rayNormal);
-        query.CollideWithBodies = true;
-        query.CollideWithAreas = true;
-        query.CollisionMask = (1 << 0) | (1 << 1) | (1 << 3);
+		query.CollideWithBodies = true;
+		query.CollideWithAreas = true;
+		query.CollisionMask = (1 << 0) | (1 << 1) | (1 << 3);
 
 		Godot.Collections.Array<Rid> excludeArray = [];
 
