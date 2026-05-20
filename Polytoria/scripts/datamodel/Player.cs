@@ -13,6 +13,7 @@ using Polytoria.Scripting;
 using Polytoria.Networking;
 using Polytoria.Shared;
 using Polytoria.Utils;
+using Polytoria.Utils.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -1074,18 +1075,7 @@ public sealed partial class Player : NPC
 		}
 	}
 
-	internal override Transform3D TransformNetworkPass(int fromPeer, Transform3D newTransform)
-	{
-		if (fromPeer != 1)
-		{
-			// Prevent scaling from client
-			Vector3 existingScale = GetLocalTransform().Basis.Scale;
-			newTransform.Basis = newTransform.Basis.Orthonormalized().Scaled(existingScale);
-		}
-		return newTransform;
-	}
-
-	internal override bool TransformNetworkCheck(Transform3D newTransform)
+	internal override bool TransformNetworkCheck(TransformPayloadDto newTransform)
 	{
 		// TODO: Make sanity checks here
 		return true;

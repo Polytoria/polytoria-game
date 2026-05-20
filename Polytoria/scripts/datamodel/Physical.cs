@@ -36,7 +36,6 @@ public partial class Physical : Dynamic
 		public List<Node> CollisionSyncNodes { get; } = [];
 	}
 
-	public virtual float SyncInterval { get; protected set; } = 0.1f;
 	private const float TouchedGapCheck = 20f;
 	private bool _anchored = true;
 	private bool _canCollide = true;
@@ -49,8 +48,6 @@ public partial class Physical : Dynamic
 
 	private int _touchedListenerCount = 0;
 	private bool _canTouch = false;
-
-	private double _syncClock = 0;
 
 	private readonly Dictionary<Physical, int> _touchContacts = [];
 
@@ -525,16 +522,10 @@ public partial class Physical : Dynamic
 		UpdateTransformTick(delta);
 		if (Root == null || Root?.Network == null) { return; }
 
-		_syncClock += delta;
-
 		// Sync if has authority and not anchored, if so. sync in interval
-		if (_syncClock > SyncInterval)
+		if (NetTransformAuthority == Root.Network.LocalPeerID && !Anchored)
 		{
-			_syncClock = 0;
-			if (NetTransformAuthority == Root.Network.LocalPeerID && !Anchored)
-			{
-				UpdateNetTransform();
-			}
+			UpdateNetTransform();
 		}
 		base.PhysicsProcess(delta);
 	}

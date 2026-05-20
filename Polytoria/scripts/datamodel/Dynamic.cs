@@ -10,6 +10,7 @@ using Polytoria.Creator.Spatial;
 using Polytoria.Datamodel.Interfaces;
 #endif
 using Polytoria.Utils;
+using Polytoria.Utils.DTOs;
 using System;
 using System.Collections.Generic;
 
@@ -98,7 +99,7 @@ public partial class Dynamic : Instance
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, CloneIgnore, SaveIgnore]
+	[Editable, ScriptProperty, CloneIgnore, SaveIgnore]
 	public Vector3 Size
 	{
 		get => GetGlobalTransform().Basis.Scale;
@@ -113,10 +114,6 @@ public partial class Dynamic : Instance
 			var oldN = NodeSize;
 			NodeSize = scale;
 			PropagateParentSizeChanged(oldN);
-			if (AutoUpdateNetTransform)
-			{
-				UpdateNetTransformReliable();
-			}
 			OnPropertyChanged();
 		}
 	}
@@ -157,7 +154,7 @@ public partial class Dynamic : Instance
 		}
 	}
 
-	[Editable, ScriptProperty, CloneIgnore, NoSync]
+	[Editable, ScriptProperty, CloneIgnore]
 	public Vector3 LocalSize
 	{
 		get
@@ -169,12 +166,6 @@ public partial class Dynamic : Instance
 			var oldN = NodeSize;
 			ApplyLocalSize(value);
 			PropagateParentSizeChanged(oldN);
-
-			if (AutoUpdateNetTransform)
-			{
-				UpdateNetTransformReliable();
-			}
-
 			OnPropertyChanged();
 		}
 	}
@@ -586,20 +577,24 @@ public partial class Dynamic : Instance
 	/// <param name="fromPeer"></param>
 	/// <param name="newTransform"></param>
 	/// <returns></returns>
-	internal virtual Transform3D TransformNetworkPass(int fromPeer, Transform3D newTransform)
+	internal virtual TransformPayloadDto TransformNetworkPass(int fromPeer, TransformPayloadDto newTransform)
 	{
 		return newTransform;
 	}
 
-	internal virtual bool TransformNetworkCheck(Transform3D newTransform)
+	internal virtual bool TransformNetworkCheck(TransformPayloadDto newTransform)
 	{
 		return true;
 	}
 
-	internal void UpdateTransformFromNet(Transform3D transform, bool isReliable, bool lerpTransform)
+	internal void UpdateTransformFromNet(TransformPayloadDto transform, bool isReliable, bool lerpTransform)
 	{
 		if (OverrideNetworkTransform) return;
-		_netTransform = transform;
+		Vector3 scale = GetLocalTransform().Basis.Scale;
+		_netTransform = new Transform3D(
+			new Basis(transform.Rotation).Scaled(scale),
+			transform.Position
+		);
 		_isDirty = true;
 
 		// TODO: SetPhysicsProcess affects Physical.cs's tick, but could also affect other behaviour.
@@ -613,8 +608,8 @@ public partial class Dynamic : Instance
 			_lerpUnreliable = false;
 			SetPhysicsProcessWAuthor(false);
 
-			_currentTransform = transform;
-			SetLocalTransform(transform);
+			_currentTransform = _netTransform;
+			SetLocalTransform(_netTransform);
 		}
 		else if (lerpTransform && !Root.Network.IsServer)
 		{
