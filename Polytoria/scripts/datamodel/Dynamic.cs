@@ -368,29 +368,25 @@ public partial class Dynamic : Instance
 		}
 		else
 		{
-			// Lerp position and rotation
 			Vector3 newPosition = _currentTransform.Origin.Lerp(_netTransform.Origin, MathUtils.ExpDecay((float)delta, LerpSpeed));
-			Quaternion currentRotation = _currentTransform.Basis.GetRotationQuaternion().Normalized();
-			Quaternion targetRotation = _netTransform.Basis.GetRotationQuaternion().Normalized();
-			Quaternion newRotation = currentRotation.Slerp(targetRotation, MathUtils.ExpDecay((float)delta, LerpSpeed));
-
 			Vector3 newScale = _netTransform.Basis.Scale;
+			Quaternion targetRotation = _netTransform.Basis.Orthonormalized().GetRotationQuaternion();
+			Quaternion currentRotation = (this is Part)
+				? GDNode3D.Transform.Basis.Orthonormalized().GetRotationQuaternion()
+				: _currentTransform.Basis.Orthonormalized().GetRotationQuaternion();
 
-			_currentTransform = new Transform3D(new Basis(newRotation).Scaled(newScale), newPosition);
+			Quaternion smoothRot = currentRotation.Slerp(targetRotation, MathUtils.ExpDecay((float)delta, LerpSpeed));
 
-			// Check if close enough to snap to final position
-			if (positionDistance < 0.01f && currentRotation.AngleTo(targetRotation) < 0.1f)
+			_currentTransform = new Transform3D(new Basis(smoothRot).Scaled(newScale), newPosition);
+			if (positionDistance < 0.01f && currentRotation.AngleTo(targetRotation) < 0.01f)
 			{
 				_isDirty = false;
 				_currentTransform = _netTransform;
 			}
 
-			// TODO: Could have some rework here?
-			// If using SetLocalTransformRaw directly, the part size would appear bigger than usual.
 			if (this is Part)
 			{
-				Transform3D setto = new(new Basis(newRotation), _currentTransform.Origin);
-
+				Transform3D setto = new(new Basis(smoothRot), newPosition);
 				// Only update when changed
 				if (!_oldPartTransformApplied.IsEqualApprox(setto))
 				{
