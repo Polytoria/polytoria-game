@@ -71,6 +71,7 @@ public sealed partial class WorldContainer : SubViewportContainer
 		{
 			GrabFocus();
 		}
+		Overlay.GetNode<ViewportAxis>("ViewportAxis").HandleInput(@event);
 		_subViewport.PushInput(@event);
 		GodotInputEvent?.Invoke(@event);
 	}
