@@ -82,6 +82,7 @@ public sealed partial class NetworkPropSync : Instance
 		else if (propValue is Transform3D t) propValue = new Transform3DDto(t);
 		else if (propValue is ColorSeries cs) propValue = new ColorSeriesDto(cs);
 		else if (propValue is NumberRange nr) propValue = new NumberRangeDto(nr);
+		else if (propValue is UIScale us) propValue = new UIScaleDto(us);
 
 		Type propType = propValue.GetType();
 
@@ -147,6 +148,11 @@ public sealed partial class NetworkPropSync : Instance
 			NumberRangeDto? dto = SerializeUtils.Deserialize<NumberRangeDto?>(data);
 			if (dto != null) intermediateValue = dto.ToNumberRange();
 		}
+		else if (targetType == typeof(UIScale))
+		{
+			UIScaleDto? dto = SerializeUtils.Deserialize<UIScaleDto?>(data);
+			if (dto != null) intermediateValue = dto.ToUIScale();
+		}
 		else
 		{
 			// Standard source-generated type info
@@ -190,6 +196,9 @@ public sealed partial class NetworkPropSync : Instance
 		else if (propValue is Vector3 v3) propValue = new Vector3Dto(v3);
 		else if (propValue is Color c) propValue = new ColorDto(c);
 		else if (propValue is Transform3D t) propValue = new Transform3DDto(t);
+		else if (propValue is ColorSeries cs) propValue = new ColorSeriesDto(cs);
+		else if (propValue is NumberRange nr) propValue = new NumberRangeDto(nr);
+		else if (propValue is UIScale us) propValue = new UIScaleDto(us);
 		Type propType = propValue.GetType();
 
 		using var ms = new MemoryStream();
@@ -244,6 +253,21 @@ public sealed partial class NetworkPropSync : Instance
 		{
 			Transform3DDto? dto = await SerializeUtils.DeserializeAsync<Transform3DDto?>(mem);
 			if (dto != null) intermediateValue = dto.ToTransform3D();
+		}
+		else if (targetType == typeof(ColorSeries))
+		{
+			ColorSeriesDto? dto = await SerializeUtils.DeserializeAsync<ColorSeriesDto?>(mem);
+			if (dto != null) intermediateValue = dto.ToColorRange();
+		}
+		else if (targetType == typeof(NumberRange))
+		{
+			NumberRangeDto? dto = await SerializeUtils.DeserializeAsync<NumberRangeDto?>(mem);
+			if (dto != null) intermediateValue = dto.ToNumberRange();
+		}
+		else if (targetType == typeof(UIScale))
+		{
+			UIScaleDto? dto = await SerializeUtils.DeserializeAsync<UIScaleDto?>(mem);
+			if (dto != null) intermediateValue = dto.ToUIScale();
 		}
 		else
 		{

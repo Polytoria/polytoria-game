@@ -999,6 +999,9 @@ public static partial class PolyFormat
 
 	[JsonSerializable(typeof(ColorSeries))]
 	[JsonSerializable(typeof(NumberRange))]
+	[JsonSerializable(typeof(UIScale))]
+	[JsonSerializable(typeof(ShadowLayer))]
+	[JsonSerializable(typeof(ShadowLayer[]))]
 
 	[JsonSerializable(typeof(string[]))]
 	[JsonSerializable(typeof(byte[]))]
