@@ -572,6 +572,11 @@ public static partial class PolyFormat
 				val = DeserializePropValue(propVal, propType);
 			}
 
+			if (loadContext.ForceCordMigration)
+			{
+				MigrateAxis(propName, ref val);
+			}
+
 			try
 			{
 				property.SetValue(netObj, val);
