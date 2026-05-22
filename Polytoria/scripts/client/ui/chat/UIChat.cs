@@ -467,7 +467,7 @@ public partial class UIChat : Control
 	{
 		if (!Input.IsKeyPressed(Key.Shift))
 			CloseEmojiPicker();
-		
+
 		_suppressAutocomplete = true;
 
 		try
