@@ -143,13 +143,14 @@ public static class ClientSettingsRegistry
 				ValueKind = SettingValueKind.Int,
 				ControlKind = SettingControlKind.Dropdown,
 				RequiresRestart = true,
-				DefaultValue = 3,
+				DefaultValue = 5,
 				Options =
 				[
-					new() { Value = 3, Label = "Default (3)" },
-					new() { Value = 6, Label = "Medium (6)" },
-					new() { Value = 9, Label = "Fast (9)" },
-					new() { Value = 15, Label = "Faster (15)" },
+					new() { Value = 5, Label = "Default (5)" },
+					new() { Value = 8, Label = "Medium (8)" },
+					new() { Value = 12, Label = "High (12)" },
+					new() { Value = 17, Label = "Fast (17)" },
+					new() { Value = 20, Label = "Faster (22)" },
 					new() { Value = 30, Label = "Aggressive (30)" },
 					new() { Value = 60, Label = "SPEED (60)" },
 				]
