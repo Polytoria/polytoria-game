@@ -12,23 +12,33 @@ namespace Polytoria.Utils.DTOs;
 [MemoryPackable]
 public partial class TransformPayloadDto
 {
-	public float[] Values { get; set; } = null!;
+	public byte[] Data { get; set; } = null!;
 
 	public Vector3 Position
 	{
-		get => new Vector3(Values[0], Values[1], Values[2]);
+		get => new Vector3(
+			BitConverter.ToSingle(Data, 0),
+			BitConverter.ToSingle(Data, 4),
+			BitConverter.ToSingle(Data, 8)
+		);
 		set
 		{
-			Values[0] = value.X; Values[1] = value.Y; Values[2] = value.Z;
+			byte[] newData = [
+				..BitConverter.GetBytes(value.X),
+				..BitConverter.GetBytes(value.Y),
+				..BitConverter.GetBytes(value.Z)
+			];
+			Array.Copy(newData, Data, 12);
 		}
 	}
 
 	public uint RawRotation
 	{
-		get => BitConverter.ToUInt32(BitConverter.GetBytes(Values[3]), 0);
+		get => BitConverter.ToUInt32(Data, 12);
 		set
 		{
-			Values[3] = BitConverter.ToSingle(BitConverter.GetBytes(value), 0);
+			byte[] rot = BitConverter.GetBytes(value);
+			Array.Copy(rot, 0, Data, 12, 4);
 		}
 	}
 
@@ -43,13 +53,13 @@ public partial class TransformPayloadDto
 
 	[MemoryPackConstructor, JsonConstructor]
 	public TransformPayloadDto() { }
-	public TransformPayloadDto(float[] values)
+	public TransformPayloadDto(byte[] bytes)
 	{
-		Values = values;
+		Data = bytes;
 	}
 	public TransformPayloadDto(Vector3 position, Quaternion rotation)
 	{
-		Values = ToArray(position, rotation);
+		Data = ToArray(position, rotation);
 	}
 
 	public bool IsEqualApprox(TransformPayloadDto other) => Position.IsEqualApprox(other.Position) && Rotation.IsEqualApprox(other.Rotation);
@@ -66,14 +76,16 @@ public partial class TransformPayloadDto
 		return $"{Vector3Dto.ToString(Position)}|{UnitQuaternionDto.ToString(Rotation)}";
 	}
 
-	public static float[] ToArray(Vector3 Position, uint Rotation) => [
-		Position.X, Position.Y, Position.Z,
-		BitConverter.ToSingle(BitConverter.GetBytes(Rotation), 0)
+	public static byte[] ToArray(Vector3 Position, uint Rotation) => [
+		..BitConverter.GetBytes(Position.X),
+		..BitConverter.GetBytes(Position.Y),
+		..BitConverter.GetBytes(Position.Z),
+		..BitConverter.GetBytes(Rotation)
 	];
-	public static float[] ToArray(Vector3 Position, Quaternion Rotation) => ToArray(Position, UnitQuaternionDto.ToCompressed(Rotation));
-	public static float[] ToArray(Transform3D t) => ToArray(t.Origin, t.Basis.GetRotationQuaternion());
-	public static float[] ToArray(TransformPayloadDto t) => ToArray(t.Position, t.RawRotation);
+	public static byte[] ToArray(Vector3 Position, Quaternion Rotation) => ToArray(Position, UnitQuaternionDto.ToCompressed(Rotation));
+	public static byte[] ToArray(Transform3D t) => ToArray(t.Origin, t.Basis.GetRotationQuaternion());
+	public static byte[] ToArray(TransformPayloadDto t) => ToArray(t.Position, t.RawRotation);
 
-	public static TransformPayloadDto FromArray(float[] f) => new(f);
+	public static TransformPayloadDto FromArray(byte[] f) => new(f);
 	public static TransformPayloadDto FromGDTransform(Transform3D t) => new(t.Origin, t.Basis.GetRotationQuaternion());
 }
