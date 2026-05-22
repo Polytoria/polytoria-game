@@ -4,7 +4,6 @@
 
 using Godot;
 using Polytoria.Datamodel;
-using Polytoria.Datamodel.Services;
 using Polytoria.Shared;
 using System.Collections.Generic;
 
@@ -47,7 +46,7 @@ public partial class BubbleChat : Node3D
 		}
 
 		BubbleItem item = Globals.CreateInstanceFromScene<BubbleItem>(BubbleItemPath);
-		item.Content = ChatService.FormatEmojis(msg, 2);
+		item.Content = msg;
 		_itemContainer.AddChild(item);
 
 		_activeBubbles.Add(item);

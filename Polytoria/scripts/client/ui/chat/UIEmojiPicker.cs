@@ -208,7 +208,7 @@ public partial class UIEmojiPicker : Control
 		string text = field.Text;
 
 		int colonIdx = text.LastIndexOf(':', cursorPos - 1);
-		int splitPoint = colonIdx >= 0 ? colonIdx : cursorPos;
+		int splitPoint = colonIdx >= 0 && colonIdx != cursorPos - 1 ? colonIdx : cursorPos;
 		string before = text[..splitPoint];
 		string after = text[cursorPos..];
 		field.Text = before + $":{emojiName}:" + after;
