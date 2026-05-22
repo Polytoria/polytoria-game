@@ -21,6 +21,9 @@ public sealed partial class Camera : Dynamic
 	public const float DefaultZoomDistance = 10.0f;
 	public const float DefaultScrollSensitivity = 15.0f;
 
+	// override default +Z forward orientation as that would be incorrect for the camera
+	[ScriptProperty] new public Vector3 Forward => -GetGlobalTransform().Basis.Z.Normalized();
+
 	private CameraModeEnum _mode;
 	private float _fov;
 	private bool _clipThroughWalls;
