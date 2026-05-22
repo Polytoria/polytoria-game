@@ -26,8 +26,6 @@ public partial class AssetLoader : Node
 	public static AssetLoader Singleton { get; private set; } = null!;
 	public bool UseAssetLoader { get; set; } = true;
 
-	private const int MaxConcurrentRequests = 3;
-
 	private long _assetSizeBytes = 0;
 	internal long AssetSizeBytes => _assetSizeBytes;
 	internal int PendingAssetsCount => _pendingRequests.Count;
@@ -35,7 +33,7 @@ public partial class AssetLoader : Node
 
 	private readonly ConcurrentDictionary<AssetCacheKey, CacheItem> _cache = [];
 	private readonly ConcurrentDictionary<AssetCacheKey, Lazy<Task<CacheItem>>> _pendingRequests = [];
-	private readonly SemaphoreSlim _loadSlots = new(MaxConcurrentRequests);
+	private SemaphoreSlim _loadSlots = null!;
 
 	public IAssetProvider AssetProvider = null!;
 
@@ -69,11 +67,13 @@ public partial class AssetLoader : Node
 
 	private async Task<CacheItem> LoadItem(CacheItem item, AssetCacheKey key)
 	{
-		bool FastAssets = ClientSettingsService.Instance.Get<bool>(ClientSettingKeys.Advanced.FastAssets);
-		if (!FastAssets)
+		if (_loadSlots == null)
 		{
-			await _loadSlots.WaitAsync();
+			int MaxConcurrentRequests = ClientSettingsService.Instance.Get<int>(ClientSettingKeys.Advanced.AssetQueue);
+			_loadSlots = new(MaxConcurrentRequests);
 		}
+		
+		await _loadSlots.WaitAsync();
 		try
 		{
 			CacheItem result = await LoadResource(item);
@@ -84,11 +84,7 @@ public partial class AssetLoader : Node
 		finally
 		{
 			_pendingRequests.TryRemove(key, out _);
-
-			if (!FastAssets)
-			{
-				_loadSlots.Release();
-			}
+			_loadSlots.Release();
 		}
 	}
 

@@ -27,6 +27,6 @@ public static class ClientSettingKeys
 	public static class Advanced
 	{
 		public const string ShowAdvancedSettings = "advanced.show_advanced_settings";
-		public const string FastAssets = "advanced.fast_assets";
+		public const string AssetQueue = "advanced.asset_queue";
 	}
 }
