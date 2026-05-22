@@ -175,7 +175,7 @@ public class APIReferenceGenerator
 					Parameters = paramsDef,
 					IsObsolete = method.GetCustomAttribute<Attributes.ObsoleteAttribute>() != null,
 					IsStatic = method.IsStatic,
-					IsSemiStatic = method.IsStatic && (methodAttribute?.SemiStatic ?? false),
+					IsSemiStatic = metaMethodAttribute != null || (method.IsStatic && (methodAttribute?.SemiStatic ?? false)),
 				};
 
 				methodsDef.Add(methodDef);
