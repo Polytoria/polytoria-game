@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://bnym10lah4do7"]
+
+[ext_resource type="Script" uid="uid://cn4favunkx01" path="res://scripts/creator/properties/ShadowLayerArrayProperty.cs" id="1_ul8n3"]
+
+[node name="ShadowLayerArray" type="VBoxContainer" unique_id=1093767390]
+size_flags_horizontal = 3
+script = ExtResource("1_ul8n3")
+
+[node name="Layers" type="VBoxContainer" parent="." unique_id=1388230647]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="AddButton" type="Button" parent="." unique_id=1950041694]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Add Layer"

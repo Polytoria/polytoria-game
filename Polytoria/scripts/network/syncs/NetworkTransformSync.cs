@@ -410,7 +410,7 @@ public partial class NetworkTransformSync : Instance
 	public partial class BatchTransformData
 	{
 		public string ObjID = null!;
-		public float[] Transform = null!;
+		public byte[] Transform = null!;
 		public bool Lerp = false;
 
 		[MemoryPackConstructor]

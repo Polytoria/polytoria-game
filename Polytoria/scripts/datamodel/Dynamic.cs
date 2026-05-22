@@ -589,7 +589,7 @@ public partial class Dynamic : Instance
 		if (OverrideNetworkTransform) return;
 		Vector3 scale = GetLocalTransform().Basis.Scale;
 		_netTransform = new Transform3D(
-			new Basis(transform.Rotation).Scaled(scale),
+			new Basis(transform.Rotation).ScaledLocal(scale),
 			transform.Position
 		);
 		_isDirty = true;

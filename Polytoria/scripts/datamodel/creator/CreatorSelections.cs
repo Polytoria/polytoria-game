@@ -150,7 +150,7 @@ public sealed partial class CreatorSelections : Instance
 
 		if (instance is UIField field)
 		{
-			Root.Container!.UIGizmos.RemoveBox(field);
+			Root.Container?.UIGizmos.RemoveBox(field);
 		}
 
 		Explorer.Deselect(instance);
