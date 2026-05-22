@@ -218,7 +218,6 @@ public partial class UIEmojiPicker : Control
 	private void OnEmojiSelected(string emojiName)
 	{
 		RecordEmojiUse(emojiName);
-		Visible = false;
 		EmojiPicked?.Invoke(emojiName);
 	}
 }
