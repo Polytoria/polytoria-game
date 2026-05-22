@@ -12,15 +12,25 @@ public partial class ViewportAxis : Node
 	[Export] public WorldContainerOverlay Overlay = null!;
 	[Export] private Node3D _pivot = null!;
 	[Export] private Node _container = null!;
-	
-	private Polytoria.Datamodel.Camera _worldCamera = null;
+
+	private Polytoria.Datamodel.Camera? _worldCamera = null;
 	private SubViewportContainer _rect = null!;
 	private Camera3D _axisCamera = null!;
 	private RayCast3D _raycast = null!;
 	private Area3D _cube = null!;
-	
-	private Label3D _highlighted = null;
-	
+	private Label3D? _highlighted = null;
+
+	private Vector3 _tweenStart, _tweenTarget;
+	private float _tweenProgress = 1f;
+	private const float _tweenDuration = .2f;
+
+	private readonly Dictionary<Key, (Vector3 noMod, Vector3 withMod)> KeyToRotation = new()
+	{
+		{ Key.Kp1, (new Vector3(0, 180, 0),  new Vector3(0, 0, 0)) },
+		{ Key.Kp3, (new Vector3(0, -90, 0),  new Vector3(0, 90, 0)) },
+		{ Key.Kp7, (new Vector3(-90, 0, 0),  new Vector3(90, 0, 0)) }
+	};
+
 	public override void _Ready()
 	{
 		_rect = GetNode<SubViewportContainer>("TextureRect");
@@ -33,43 +43,62 @@ public partial class ViewportAxis : Node
 
 	public override void _Process(double delta)
 	{
+		if (_tweenProgress < 1f)
+		{
+			_tweenProgress = Mathf.Min(_tweenProgress + (float)delta / _tweenDuration, 1f);
+			float t = Mathf.SmoothStep(0, 1, _tweenProgress);
+			_worldCamera?.Rotation = _tweenStart.Lerp(_tweenTarget, t);
+		}
+
 		_worldCamera = Overlay.World.CreatorContext.Freelook;
 		_pivot.GlobalRotation = _worldCamera.Camera3D.GlobalRotation;
 	}
 
-	public void HandleInput(InputEvent @event)
+	public bool HandleInput(InputEvent @event)
 	{
-		ProjectMouse();
-		if (!_raycast.IsColliding()) 
+		if (@event is InputEventMouse && (!ProjectMouse() || !_raycast.IsColliding()))
 		{
 			Unhighlight();
-			return;
+			return false;
 		}
-		
+
 		Vector3 normal = _raycast.GetCollisionNormal();
-		if (@event is InputEventMouseMotion _) HighlightLabel(normal);
-		else if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true } _)
+		switch (@event)
 		{
-			if (_worldCamera != null)
-			{
-				Vector3 up = Mathf.Abs(normal.Y) > 0.9f ? Vector3.Back : Vector3.Up;
-				Basis targetBasis = Basis.LookingAt(-normal, up);
-				_worldCamera.Rotation = targetBasis.GetEuler() * (180f / Mathf.Pi);
-			}
+			case InputEventMouseMotion:
+				HighlightLabel(normal);
+				break;
+			case InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true }:
+				if (_worldCamera != null)
+				{
+					Vector3 up = Mathf.Abs(normal.Y) > 0.9f ? Vector3.Back : Vector3.Up;
+					Basis targetBasis = Basis.LookingAt(-normal, up);
+					RotateWorldCamera(targetBasis.GetEuler() * (180f / Mathf.Pi));
+				}
+				return true;
+			case InputEventKey eventKey:
+				if (eventKey.Echo || !eventKey.Pressed) break;
+				if (!KeyToRotation.TryGetValue(eventKey.Keycode, out var rotations)) break;
+				RotateWorldCamera(eventKey.CtrlPressed ? rotations.withMod : rotations.noMod);
+				return true;
 		}
+		return false;
 	}
-	
-	private void ProjectMouse()
+
+	private bool ProjectMouse()
 	{
 		var mousePos = _rect.GetLocalMousePosition();
+		if (mousePos.X < 0 && mousePos.Y < 0) return false;
+
 		var rayOrigin = _axisCamera.ProjectRayOrigin(mousePos);
 		var rayNormal = _axisCamera.ProjectRayNormal(mousePos);
 		_raycast.Position = _axisCamera.ToLocal(rayOrigin);
 		_raycast.TargetPosition = _axisCamera.ToLocal(rayOrigin + rayNormal * 10f);
 		_raycast.ForceRaycastUpdate();
+		return true;
 	}
-	
-	private readonly Dictionary<Vector3I, string> labelSuffixes = new Dictionary<Vector3I, string>
+
+	private readonly Dictionary<Vector3I, string> labelSuffixes = new()
 	{
 		{ Vector3I.Left, "Right" },
 		{ Vector3I.Right, "Left" },
@@ -78,14 +107,14 @@ public partial class ViewportAxis : Node
 		{ Vector3I.Forward, "Front" },
 		{ Vector3I.Back, "Back" }
 	};
-	
+
 	private void Unhighlight()
 	{
 		if (_highlighted == null) return;
 		_highlighted.Modulate = Colors.Black;
 		_highlighted = null;
 	}
-	
+
 	private void HighlightLabel(Vector3 normal)
 	{
 		var normalI = new Vector3I((int)normal.X, (int)normal.Y, (int)normal.Z);
@@ -93,8 +122,33 @@ public partial class ViewportAxis : Node
 		var toHighlight = _cube.GetNode<Label3D>(labelPath);
 		if (_highlighted == toHighlight) return;
 
+		Color color = normalI switch
+		{
+			{ X: not 0 } => new Color(0xd60000ff),
+			{ Y: not 0 } => new Color(0x26d165ff),
+			_ => new Color(0x0048ffff)
+		};
+
 		Unhighlight();
 		_highlighted = toHighlight;
-		_highlighted.Modulate = new Color(0x2196f3ff);
+		_highlighted.Modulate = color;
+	}
+
+	private static float Shorten(float from, float to)
+	{
+		float diff = (to - from + 540f) % 360f - 180f;
+		return from + diff;
+	}
+
+	private void RotateWorldCamera(Vector3 rotation)
+	{
+		_tweenStart = _worldCamera!.Rotation;
+		_tweenTarget = new Vector3(
+			Shorten(_tweenStart.X, rotation.X),
+			Shorten(_tweenStart.Y, rotation.Y),
+			Shorten(_tweenStart.Z, rotation.Z)
+		);
+		if (_tweenStart == _tweenTarget) return;
+		_tweenProgress = 0f;
 	}
 }

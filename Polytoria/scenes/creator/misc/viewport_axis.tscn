@@ -52,7 +52,7 @@ _pivot = NodePath("TextureRect/SubViewport/Node3D")
 _container = NodePath("TextureRect/SubViewport")
 
 [node name="TextureRect" type="SubViewportContainer" parent="." unique_id=1622363265]
-modulate = Color(1, 1, 1, 0.9019608)
+modulate = Color(1, 1, 1, 0.8627451)
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
@@ -161,7 +161,7 @@ double_sided = false
 modulate = Color(0, 0, 0, 1)
 text = "L"
 font = ExtResource("2_lvvhg")
-font_size = 96
+font_size = 112
 outline_size = 0
 
 [node name="Label3DRight" type="Label3D" parent="TextureRect/SubViewport/Cube/MeshInstance3D" unique_id=2116042962]
@@ -170,7 +170,7 @@ double_sided = false
 modulate = Color(0, 0, 0, 1)
 text = "R"
 font = ExtResource("2_lvvhg")
-font_size = 96
+font_size = 112
 outline_size = 0
 
 [node name="Label3DTop" type="Label3D" parent="TextureRect/SubViewport/Cube/MeshInstance3D" unique_id=196398492]
@@ -179,7 +179,7 @@ double_sided = false
 modulate = Color(0, 0, 0, 1)
 text = "T"
 font = ExtResource("2_lvvhg")
-font_size = 96
+font_size = 112
 outline_size = 0
 
 [node name="Label3DBottom" type="Label3D" parent="TextureRect/SubViewport/Cube/MeshInstance3D" unique_id=1911737577]
@@ -188,7 +188,7 @@ double_sided = false
 modulate = Color(0, 0, 0, 1)
 text = "BT"
 font = ExtResource("2_lvvhg")
-font_size = 96
+font_size = 112
 outline_size = 0
 
 [node name="Label3DFront" type="Label3D" parent="TextureRect/SubViewport/Cube/MeshInstance3D" unique_id=1262443344]
@@ -197,7 +197,7 @@ double_sided = false
 modulate = Color(0, 0, 0, 1)
 text = "F"
 font = ExtResource("2_lvvhg")
-font_size = 96
+font_size = 112
 outline_size = 0
 
 [node name="Label3DBack" type="Label3D" parent="TextureRect/SubViewport/Cube/MeshInstance3D" unique_id=1609789718]
@@ -206,5 +206,5 @@ double_sided = false
 modulate = Color(0, 0, 0, 1)
 text = "B"
 font = ExtResource("2_lvvhg")
-font_size = 96
+font_size = 112
 outline_size = 0
