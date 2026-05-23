@@ -1038,6 +1038,7 @@ public partial class NPC : Physical
 		{
 			tool.Reparent(Root.Environment);
 			InternalDetachTool();
+			tool.InvokeDropped();
 		}
 	}
 

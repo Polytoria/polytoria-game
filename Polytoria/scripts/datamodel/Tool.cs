@@ -159,7 +159,6 @@ public sealed partial class Tool : RigidBody
 
 		if (HasAuthority)
 		{
-			_equipTimer.Start();
 			Touched.Connect(OnToolTouched);
 		}
 
@@ -345,5 +344,10 @@ public sealed partial class Tool : RigidBody
 	{
 		Holder = null;
 		Unequipped?.Invoke();
+	}
+
+	internal void InvokeDropped()
+	{
+		_equipTimer.Start();
 	}
 }
