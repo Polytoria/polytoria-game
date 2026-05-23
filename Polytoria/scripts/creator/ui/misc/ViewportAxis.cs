@@ -26,9 +26,9 @@ public partial class ViewportAxis : Node
 
 	private readonly Dictionary<Key, (Vector3 noMod, Vector3 withMod)> KeyToRotation = new()
 	{
-		{ Key.Kp1, (new Vector3(0, 180, 0),  new Vector3(0, 0, 0)) },
-		{ Key.Kp3, (new Vector3(0, -90, 0),  new Vector3(0, 90, 0)) },
-		{ Key.Kp7, (new Vector3(-90, 0, 0),  new Vector3(90, 0, 0)) }
+		{ Key.Kp1, (new Vector3(0, 0, 0),  new Vector3(0, 180, 0)) },
+		{ Key.Kp3, (new Vector3(0, 90, 0),  new Vector3(0, -90, 0)) },
+		{ Key.Kp7, (new Vector3(-90, 180, 0),  new Vector3(90, 0, 0)) }
 	};
 
 	public override void _Ready()
@@ -100,12 +100,12 @@ public partial class ViewportAxis : Node
 
 	private readonly Dictionary<Vector3I, string> labelSuffixes = new()
 	{
-		{ Vector3I.Left, "Right" },
-		{ Vector3I.Right, "Left" },
+		{ Vector3I.Left, "Left" },
+		{ Vector3I.Right, "Right" },
 		{ Vector3I.Up, "Top" },
 		{ Vector3I.Down, "Bottom" },
-		{ Vector3I.Forward, "Front" },
-		{ Vector3I.Back, "Back" }
+		{ Vector3I.Forward, "Back" },
+		{ Vector3I.Back, "Front" }
 	};
 
 	private void Unhighlight()

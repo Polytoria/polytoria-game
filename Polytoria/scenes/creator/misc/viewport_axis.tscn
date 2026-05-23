@@ -156,7 +156,7 @@ material_override = SubResource("StandardMaterial3D_8jdmp")
 mesh = SubResource("BoxMesh_p6s2d")
 
 [node name="Label3DLeft" type="Label3D" parent="TextureRect/SubViewport/Cube/MeshInstance3D" unique_id=410713094]
-transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 0.51, 0, -4.4585615e-08)
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -0.51, 0, 0)
 double_sided = false
 modulate = Color(0, 0, 0, 1)
 text = "L"
@@ -165,7 +165,7 @@ font_size = 112
 outline_size = 0
 
 [node name="Label3DRight" type="Label3D" parent="TextureRect/SubViewport/Cube/MeshInstance3D" unique_id=2116042962]
-transform = Transform3D(1.3113416e-07, 0, -1, 0, 1, 0, 1, 0, 1.3113416e-07, -0.51, 0, 4.4585615e-08)
+transform = Transform3D(-4.371138e-08, 0, 1, 0, 1, 0, -1, 0, -4.371138e-08, 0.51, 0, 0)
 double_sided = false
 modulate = Color(0, 0, 0, 1)
 text = "R"
@@ -192,7 +192,7 @@ font_size = 112
 outline_size = 0
 
 [node name="Label3DFront" type="Label3D" parent="TextureRect/SubViewport/Cube/MeshInstance3D" unique_id=1262443344]
-transform = Transform3D(-1, 7.301438e-30, -8.742278e-08, 0, 1, -8.351872e-23, 8.742278e-08, 8.351872e-23, -1, -4.4585615e-08, 0, -0.51)
+transform = Transform3D(1, -1.4602876e-29, 1.7484555e-07, 0, 1, -8.351872e-23, -1.7484555e-07, -8.351872e-23, 1, 8.917123e-08, 0, 0.51)
 double_sided = false
 modulate = Color(0, 0, 0, 1)
 text = "F"
@@ -201,7 +201,7 @@ font_size = 112
 outline_size = 0
 
 [node name="Label3DBack" type="Label3D" parent="TextureRect/SubViewport/Cube/MeshInstance3D" unique_id=1609789718]
-transform = Transform3D(1, 0, 1.7484555e-07, 0, 1, 0, -1.7484555e-07, 0, 1, 4.4585615e-08, 0, 0.51)
+transform = Transform3D(-1, 0, -2.6226832e-07, 0, 1, 0, 2.6226832e-07, 0, -1, -8.917123e-08, 0, -0.51)
 double_sided = false
 modulate = Color(0, 0, 0, 1)
 text = "B"
