@@ -134,6 +134,7 @@ public partial class InsertMenuPopup : PopupPanel
 			"RigidBody",
 			"BodyPosition",
 			"Grabbable",
+			"Weld",
 		},
 		[new() { Title = "Gizmos" }] = new()
 		{
