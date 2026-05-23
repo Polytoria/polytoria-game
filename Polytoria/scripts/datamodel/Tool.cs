@@ -141,7 +141,6 @@ public sealed partial class Tool : RigidBody
 			};
 			GDNode.AddChild(_toolCollision, @internal: Node.InternalMode.Back);
 			AddCollisionShape(_toolCollision);
-			_equipTimer.Start();
 		}
 		else
 		{
@@ -160,6 +159,7 @@ public sealed partial class Tool : RigidBody
 
 		if (HasAuthority)
 		{
+			_equipTimer.Start();
 			Touched.Connect(OnToolTouched);
 		}
 
