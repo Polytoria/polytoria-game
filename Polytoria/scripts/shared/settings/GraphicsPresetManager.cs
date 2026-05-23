@@ -129,7 +129,45 @@ public static class GraphicsPresetManager
 			return;
 		}
 
-		data.ApplyTo(settings);
+		_presetDepth++;
+		try
+		{
+			data.ApplyTo(settings);
+		}
+		finally
+		{
+			_presetDepth--;
+		}
+	}
+
+	public static void SelectPreset(ISettingsContext settings, GraphicsPreset preset)
+	{
+		if (preset == GraphicsPreset.Custom)
+		{
+			settings.Set(SharedSettingKeys.Graphics.Preset, preset);
+			return;
+		}
+
+		_presetDepth++;
+		try
+		{
+			settings.Set(SharedSettingKeys.Graphics.Preset, preset);
+		}
+		finally
+		{
+			_presetDepth--;
+		}
+
+		ApplyPreset(settings, preset);
+	}
+
+	public static void ApplyCurrentPreset(ISettingsContext settings)
+	{
+		GraphicsPreset preset = settings.Get<GraphicsPreset>(SharedSettingKeys.Graphics.Preset);
+		if (preset != GraphicsPreset.Custom)
+		{
+			ApplyPreset(settings, preset);
+		}
 	}
 
 	private static int _presetDepth;
@@ -139,25 +177,20 @@ public static class GraphicsPresetManager
 		if (!key.StartsWith(SharedSettingKeys.Graphics.Prefix))
 			return;
 
+		if (_presetDepth > 0)
+			return;
+
 		if (key == SharedSettingKeys.Graphics.Preset)
 		{
 			GraphicsPreset preset = (GraphicsPreset)normalizedValue;
 			if (preset == GraphicsPreset.Custom)
 				return;
 
-			_presetDepth++;
-			try
-			{
-				ApplyPreset(settings, preset);
-			}
-			finally
-			{
-				_presetDepth--;
-			}
+			ApplyPreset(settings, preset);
 			return;
 		}
 
-		if (_presetDepth > 0 || !IsPresetManagedKey(key))
+		if (!IsPresetManagedKey(key))
 			return;
 
 		GraphicsPreset currentPreset = settings.Get<GraphicsPreset>(SharedSettingKeys.Graphics.Preset);

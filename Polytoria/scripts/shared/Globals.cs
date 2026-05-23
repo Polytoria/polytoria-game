@@ -280,15 +280,17 @@ public sealed partial class Globals : Node
 #if CREATOR
 	public static IProperty LoadProperty(Type type)
 	{
-		string cacheToLoad = type.IsEnum ? "Enum" : type.Name;
-		if (type.IsAssignableTo(typeof(BaseAsset)))
-		{
+		string cacheToLoad;
+		if (type.IsEnum)
+			cacheToLoad = "Enum";
+		else if (type.IsAssignableTo(typeof(BaseAsset)))
 			cacheToLoad = "BaseAsset";
-		}
 		else if (type.IsAssignableTo(typeof(Instance)))
-		{
 			cacheToLoad = "Instance";
-		}
+		else if (type.IsArray)
+			cacheToLoad = type.GetElementType()!.Name + "Array";
+		else
+			cacheToLoad = type.Name;
 
 		PackedScene packedScene = ForceLoadResource(_propertiesCache, cacheToLoad, $"{PropertiesPath}{cacheToLoad}Property.tscn");
 		return packedScene.Instantiate<IProperty>();

@@ -669,7 +669,7 @@ public partial class LuaState : IDisposable
 
 	public int Error(string value, params object[] v)
 	{
-		string message = string.Format(value, v);
+		string message = v.Length > 0 ? string.Format(value, v) : value;
 		lock (_lock)
 			return NativeBindings.luaL_errorL(_state, message);
 	}

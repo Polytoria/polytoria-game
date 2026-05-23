@@ -21,6 +21,9 @@ public sealed partial class Camera : Dynamic
 	public const float DefaultZoomDistance = 10.0f;
 	public const float DefaultScrollSensitivity = 15.0f;
 
+	// override default +Z forward orientation as that would be incorrect for the camera
+	[ScriptProperty] new public Vector3 Forward => -GetGlobalTransform().Basis.Z.Normalized();
+
 	private CameraModeEnum _mode;
 	private float _fov;
 	private bool _clipThroughWalls;
@@ -64,6 +67,7 @@ public sealed partial class Camera : Dynamic
 	private InputHelper _inputHelper = null!;
 
 	internal Camera3D Camera3D = null!;
+	internal bool IsTurning => _turning;
 
 	[Editable, ScriptProperty, DefaultValue(CameraModeEnum.Follow)]
 	public CameraModeEnum Mode
@@ -602,26 +606,19 @@ public sealed partial class Camera : Dynamic
 
 	private void OnGameFocused()
 	{
-		if (IsFirstPerson || AlwaysLocked)
+		if (AlwaysLocked)
 		{
-			if (AlwaysLocked)
-			{
-				CtrlLocked = true;
-			}
-			else
-			{
-				StartTurning();
-			}
+			CtrlLocked = true;
+		}
+
+		if (IsFirstPerson || AlwaysLocked || CtrlLocked)
+		{
+			StartTurning();
 		}
 	}
 
 	private void OnGameUnfocused()
 	{
-		if (CtrlLocked)
-		{
-			CtrlLocked = false;
-			StopTurning();
-		}
 		if (_turning)
 		{
 			StopTurning();
@@ -821,12 +818,12 @@ public sealed partial class Camera : Dynamic
 
 	private void SnapForward()
 	{
-		Position += Forward * -_moveSpeed / 10;
+		Position += Forward * _moveSpeed / 10;
 	}
 
 	private void SnapBackward()
 	{
-		Position += Forward * _moveSpeed / 10;
+		Position += Forward * -_moveSpeed / 10;
 	}
 
 	public void ReceiveDragTouchInput(InputEventScreenDrag dragEvent)
@@ -935,7 +932,7 @@ public sealed partial class Camera : Dynamic
 
 
 #if CREATOR
-	public void MoveToSelected()
+	public async void MoveToSelected()
 	{
 		Instance[] targets = [.. Root.CreatorContext.Selections.SelectedInstances];
 
@@ -975,29 +972,42 @@ public sealed partial class Camera : Dynamic
 		float distance = radius / Mathf.Tan(fovRadians * 0.5f);
 
 		distance *= 1.2f;
-
 		distance = Mathf.Max(distance, radius + 2.0f);
-
-		Vector3 currentDir;
 
 		Vector3 currentPos = GDNode3D.GlobalPosition;
 		Vector3 toCamera = currentPos - center;
 
-		if (toCamera.Length() < 0.1f)
+		Vector3 currentDir =
+			toCamera.Length() < 0.1f
+				? new Vector3(1, 1, 1).Normalized()
+				: toCamera.Normalized();
+
+		Vector3 targetPosition = center + currentDir * distance;
+
+		Transform3D targetTransform =
+			new Transform3D(Basis.Identity, targetPosition)
+				.LookingAt(center, Vector3.Up);
+
+		Quaternion targetRotation =
+			targetTransform.Basis.GetRotationQuaternion();
+
+		for (int i = 0; i < 30; i++)
 		{
-			currentDir = new Vector3(1, 1, 1).Normalized();
+			GDNode3D.GlobalPosition =
+				GDNode3D.GlobalPosition.Lerp(targetPosition, 0.15f);
+
+			Quaternion currentRotation =
+				GDNode3D.GlobalBasis.GetRotationQuaternion();
+
+			GDNode3D.GlobalBasis = new Basis(
+				currentRotation.Slerp(targetRotation, 0.15f)
+			);
+
+			await GDNode3D.ToSignal(
+				GDNode3D.GetTree(),
+				SceneTree.SignalName.ProcessFrame
+			);
 		}
-		else
-		{
-			currentDir = toCamera.Normalized();
-		}
-
-		Vector3 newPosition = center + currentDir * distance;
-
-		GDNode3D.GlobalPosition = newPosition;
-		GDNode3D.LookAt(center, Vector3.Up);
-
-		GDNode3D.RotateObjectLocal(Vector3.Up, Mathf.Pi);
 	}
 
 	public Vector3 GetPlacementPosition(Instance[]? ignoreList = null)

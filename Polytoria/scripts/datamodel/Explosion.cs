@@ -20,6 +20,7 @@ public partial class Explosion : Dynamic
 	private float _force = 5000;
 	private bool _affectAnchored = false;
 	private float _damage = 100000;
+	private bool _affectWelds;
 
 	[Editable, ScriptProperty]
 	public float Radius
@@ -61,6 +62,17 @@ public partial class Explosion : Dynamic
 		set
 		{
 			_damage = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool AffectWelds
+	{
+		get => _affectWelds;
+		set
+		{
+			_affectWelds = value;
 			OnPropertyChanged();
 		}
 	}
@@ -154,6 +166,15 @@ public partial class Explosion : Dynamic
 				Vector3 force = direction * forceMagnitude / 100;
 
 				body.ApplyCentralImpulse(force);
+
+				if (_affectWelds)
+				{
+					foreach (Weld w in Weld.GetWeldsFor(e))
+					{
+						if (w.Enabled)
+							w.Break();
+					}
+				}
 			}
 			else if (item is Player plr)
 			{

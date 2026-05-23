@@ -414,19 +414,12 @@ public partial class Animator : Instance
 		Godot.Animation anim = AnimationTree.GetAnimation(animationName);
 		animationOneShot.FilterEnabled = true;
 
-		// Filter out one-frame keys
+		// Filter only nodes that have at least one track with more than 1 key
 		for (int i = 0; i < anim.GetTrackCount(); i++)
 		{
-			NodePath trackPath = anim.TrackGetPath(i);
-			int keyCount = anim.TrackGetKeyCount(i);
-
-			if (keyCount <= 1)
+			if (anim.TrackGetKeyCount(i) > 1)
 			{
-				animationOneShot.SetFilterPath(trackPath, false);
-			}
-			else
-			{
-				animationOneShot.SetFilterPath(trackPath, true);
+				animationOneShot.SetFilterPath(anim.TrackGetPath(i), true);
 			}
 		}
 

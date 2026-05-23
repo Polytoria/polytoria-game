@@ -10,7 +10,6 @@ namespace Polytoria.Datamodel;
 [Instantiable]
 public partial class UIView : UIField
 {
-	private StyleBoxFlat _styleBox = null!;
 	private Color _borderColor;
 	private Color _color;
 	private float _borderWidth;
@@ -24,7 +23,10 @@ public partial class UIView : UIField
 		set
 		{
 			_borderColor = value;
-			_styleBox.BorderColor = _borderColor;
+			if (StrokeControllerCount == 0)
+				_styleBox.BorderColor = _borderColor;
+			else
+				SavedBorderColor = _borderColor;
 			OnPropertyChanged();
 		}
 	}
@@ -49,13 +51,20 @@ public partial class UIView : UIField
 		{
 			_borderWidth = value;
 			if (_borderWidth > 0 && BorderColor.A == 0)
-			{
 				_borderWidth = 0;
+			int rounded = Mathf.RoundToInt(_borderWidth);
+			if (StrokeControllerCount == 0)
+			{
+				_styleBox.BorderWidthTop = rounded;
+				_styleBox.BorderWidthBottom = rounded;
+				_styleBox.BorderWidthLeft = rounded;
+				_styleBox.BorderWidthRight = rounded;
 			}
-			_styleBox.BorderWidthTop = (int)_borderWidth;
-			_styleBox.BorderWidthBottom = (int)_borderWidth;
-			_styleBox.BorderWidthLeft = (int)_borderWidth;
-			_styleBox.BorderWidthRight = (int)_borderWidth;
+			else
+			{
+				var bw = SavedBorderWidths;
+				bw[0] = bw[1] = bw[2] = bw[3] = rounded;
+			}
 			OnPropertyChanged();
 		}
 	}
@@ -67,23 +76,30 @@ public partial class UIView : UIField
 		set
 		{
 			_cornerRadius = value;
-			_styleBox.CornerRadiusTopLeft = (int)value;
-			_styleBox.CornerRadiusTopRight = (int)value;
-			_styleBox.CornerRadiusBottomLeft = (int)value;
-			_styleBox.CornerRadiusBottomRight = (int)value;
+			int rounded = Mathf.RoundToInt(value);
+			if (CornerControllerCount == 0)
+			{
+				_styleBox.CornerRadiusTopLeft = rounded;
+				_styleBox.CornerRadiusTopRight = rounded;
+				_styleBox.CornerRadiusBottomLeft = rounded;
+				_styleBox.CornerRadiusBottomRight = rounded;
+			}
+			else
+			{
+				var c = SavedCorners;
+				c[0] = c[1] = c[2] = c[3] = rounded;
+			}
 			OnPropertyChanged();
 		}
 	}
 
 	public override void Init()
 	{
-		_styleBox = new() { AntiAliasing = true, AntiAliasingSize = 1 };
-		NodeControl.AddThemeStyleboxOverride("panel", _styleBox);
+		base.Init();
 		BorderColor = new(0, 0, 0);
 		Color = new(1, 1, 1);
 		BorderWidth = 0;
 		CornerRadius = 0;
-		base.Init();
 	}
 
 }
