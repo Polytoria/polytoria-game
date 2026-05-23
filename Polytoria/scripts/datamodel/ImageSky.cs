@@ -5,6 +5,7 @@
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Datamodel.Resources;
+using Polytoria.Enums;
 using System;
 using Obsolete = Polytoria.Attributes.ObsoleteAttribute;
 
@@ -29,7 +30,7 @@ public sealed partial class ImageSky : Sky
 	private ImageAsset? _rightImage;
 	private ImageAsset? _frontImage;
 	private ImageAsset? _backImage;
-	private bool _nearestFiltering = false;
+	private TextureFilterEnum _textureFilter = TextureFilterEnum.Linear;
 
 	[Editable, ScriptProperty]
 	public ImageAsset? TopImage
@@ -212,12 +213,12 @@ public sealed partial class ImageSky : Sky
 	}
 
 	[Editable, ScriptProperty]
-	public bool UseNearestFiltering
+	public TextureFilterEnum TextureFilter
 	{
-		get => _nearestFiltering;
+		get => _textureFilter;
 		set
 		{
-			_nearestFiltering = value;
+			_textureFilter = value;
 			RebuildMaterial();
 			Root.Lighting.ApplySky(this);
 			OnPropertyChanged();
@@ -330,7 +331,8 @@ public sealed partial class ImageSky : Sky
 
 	private void RebuildMaterial()
 	{
-		_mat = new() { Shader = _nearestFiltering ? _nearestShader : _linearShader };
+		var shader = _textureFilter is TextureFilterEnum.Nearest || _textureFilter is TextureFilterEnum.NearestNoMipmaps ? _nearestShader : _linearShader;
+		_mat = new() { Shader = shader };
 		SkyMaterial = _mat;
 		ApplyTextures();
 	}
