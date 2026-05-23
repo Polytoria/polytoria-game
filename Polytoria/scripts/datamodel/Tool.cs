@@ -179,7 +179,7 @@ public sealed partial class Tool : RigidBody
 			_toolCollision = null;
 		}
 
-		if (Root.Network.IsServer)
+		if (HasAuthority)
 		{
 			Touched.Disconnect(OnToolTouched);
 		}
