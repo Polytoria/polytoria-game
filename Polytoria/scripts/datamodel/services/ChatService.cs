@@ -222,7 +222,7 @@ public sealed partial class ChatService : Instance
 		UnicastMessage(msg, plr);
 	}
 
-	private static readonly Regex _emojiRegex = new(@":([^:]+):", RegexOptions.Compiled);
+	private static readonly Regex _emojiRegex = new(@":([^:\s]+):", RegexOptions.Compiled);
 
 	public static string FormatEmojis(string msg, float scale = 1f)
 	{
