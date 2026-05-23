@@ -935,47 +935,44 @@ return module";
 		CreatorService.Interface.StatusBar?.SetStatus("Backing up world...");
 
 		string backupFolderPath = PolyFolderPath.PathJoin("backups");
-		if (!Directory.Exists(backupFolderPath))
-		{
-			Directory.CreateDirectory(backupFolderPath);
-		}
+		Directory.CreateDirectory(backupFolderPath);
+
+		List<DirectoryInfo> backupFolders = [.. Directory.GetDirectories(backupFolderPath)
+			.Select(path => new DirectoryInfo(path))
+			.OrderBy(dir => dir.Name)];
 
 		int maxCount = CreatorSettingsService.Instance.Get<int>(CreatorSettingKeys.Backup.MaxBackupCount);
 
-		// Delete oldest folder
-		List<DirectoryInfo> backupFolders = [.. Directory.GetDirectories(backupFolderPath)
-			.Select(path => new DirectoryInfo(path))
-			.OrderBy(dir => dir.CreationTime)];
+		string formattedTime = DateTime.Now.ToString("yyyy-MM-dd-HHmmss");
+		string snapshotFolder = backupFolderPath.PathJoin(formattedTime);
+		Directory.CreateDirectory(snapshotFolder);
+
+		try
+		{
+			await Task.WhenAll(OpenedWorlds.Select(async game =>
+			{
+				if (game.WorldFilePath == null)
+				{
+					PT.PrintWarn("Skipping game instance, no linked world file path");
+					return;
+				}
+
+				string writeTo = Path.Combine(snapshotFolder, game.WorldFilePath);
+				Directory.CreateDirectory(Path.GetDirectoryName(writeTo)!);
+
+				await Task.Run(() => PolyFormat.SaveWorldToFile(game, writeTo));
+			}));
+		}
+		catch
+		{
+			if (Directory.Exists(snapshotFolder))
+				Directory.Delete(snapshotFolder, true);
+			throw;
+		}
 
 		if (backupFolders.Count >= maxCount)
-		{
-			DirectoryInfo oldestFolder = backupFolders.First();
-			Directory.Delete(oldestFolder.FullName, true);
-		}
+			Directory.Delete(backupFolders.First().FullName, true);
 
-		DateTime time = DateTime.Now;
-		string formattedTime = time.ToString("yyyy-MM-dd-hhmmss");
-
-		string snapshotFolder = backupFolderPath.PathJoin(formattedTime);
-		if (!Directory.Exists(snapshotFolder))
-		{
-			Directory.CreateDirectory(snapshotFolder);
-		}
-
-		foreach (World game in OpenedWorlds)
-		{
-			if (game.WorldFilePath == null) { PT.PrintWarn("Skipping game instance, no linked world file path"); continue; }
-			string fpath = game.WorldFilePath;
-			string writeTo = snapshotFolder + "/" + fpath;
-			string baseDir = writeTo.GetBaseDir();
-
-			if (!Directory.Exists(baseDir))
-			{
-				Directory.CreateDirectory(baseDir);
-			}
-
-			PolyFormat.SaveWorldToFile(game, writeTo);
-		}
 		CreatorService.Interface.StatusBar?.SetStatus("World backed up!");
 	}
 
