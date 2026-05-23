@@ -101,6 +101,7 @@ public sealed partial class Tool : RigidBody
 	private readonly HashSet<Instance> _registeredInstances = [];
 	private bool _hasDynChild = false;
 	private CollisionShape3D? _toolCollision;
+	private Timer _equipTimer = null!;
 
 	private void OnToolImageLoaded(Resource? resource)
 	{
@@ -110,19 +111,27 @@ public sealed partial class Tool : RigidBody
 
 	private void OnToolTouched(Physical physical)
 	{
-		if (physical is NPC npc)
+		if (physical is NPC npc && _holder == null && Parent is not (Inventory or Player) && _equipTimer.IsStopped())
 		{
-			if (_holder == null && Parent is not Inventory && Parent is not Player)
-			{
-				npc.EquipTool(this);
-			}
+			npc.EquipTool(this);
 		}
+	}
+
+	public override void InitGDNode()
+	{
+		GDNode.AddChild(_equipTimer = new()
+		{
+			OneShot = true,
+			// rough estimate from 1.0
+			WaitTime = 1.5f,
+		}, @internal: Node.InternalMode.Back);
+		base.InitGDNode();
 	}
 
 	public override void EnterTree()
 	{
 		base.EnterTree();
-		if (Parent is not Inventory && Parent is not NPC)
+		if (Parent is not (Inventory or NPC))
 		{
 			CanCollide = true;
 			Anchored = false;
@@ -132,6 +141,7 @@ public sealed partial class Tool : RigidBody
 			};
 			GDNode.AddChild(_toolCollision, @internal: Node.InternalMode.Back);
 			AddCollisionShape(_toolCollision);
+			_equipTimer.Start();
 		}
 		else
 		{
