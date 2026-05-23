@@ -251,12 +251,12 @@ public sealed partial class PolytorianModel : CharacterModel
 		FaceImage = null;
 		_headMat.NextPass = _faceMat;
 
-		_shirtMats[0] = new() { Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor, RenderPriority = 1 };
-		_shirtMats[1] = new() { Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor, RenderPriority = 1 };
-		_shirtMats[2] = new() { Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor, RenderPriority = 1 };
+		_shirtMats[0] = new() { Transparency = BaseMaterial3D.TransparencyEnum.Alpha, RenderPriority = 1 };
+		_shirtMats[1] = new() { Transparency = BaseMaterial3D.TransparencyEnum.Alpha, RenderPriority = 1 };
+		_shirtMats[2] = new() { Transparency = BaseMaterial3D.TransparencyEnum.Alpha, RenderPriority = 1 };
 
-		_pantsMats[0] = new() { Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor, RenderPriority = 1 };
-		_pantsMats[1] = new() { Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor, RenderPriority = 1 };
+		_pantsMats[0] = new() { Transparency = BaseMaterial3D.TransparencyEnum.Alpha, RenderPriority = 1 };
+		_pantsMats[1] = new() { Transparency = BaseMaterial3D.TransparencyEnum.Alpha, RenderPriority = 1 };
 
 		_faceMat.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
 
@@ -454,7 +454,7 @@ public sealed partial class PolytorianModel : CharacterModel
 				StandardMaterial3D m = new()
 				{
 					AlbedoTexture = c.ClothTexture,
-					Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor,
+					Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
 					RenderPriority = 1
 				};
 				if (head == null) { head = m; tail = m; }
