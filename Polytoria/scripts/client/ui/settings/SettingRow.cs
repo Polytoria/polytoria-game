@@ -1,11 +1,13 @@
 using Godot;
 using Polytoria.Shared.Settings;
+using System.Linq;
 
 namespace Polytoria.Client.UI;
 
 public sealed partial class SettingRow : PanelContainer
 {
 	public SettingDef Definition = null!;
+	public ISettingsContext Context = null!;
 
 	public override void _Ready()
 	{
@@ -47,7 +49,16 @@ public sealed partial class SettingRow : PanelContainer
 		Control field = SettingFieldFactory.Create(Definition);
 		field.CustomMinimumSize = new Vector2(220, 0);
 		root.AddChild(field);
-
+		
+		if (Definition.Conditions != null)
+		{
+			Visible = Definition.Conditions.Any((cond) =>
+			{
+				object? value = Context.GetUntyped(cond.Target);
+				return cond.UntypedPredicate(value);
+			});
+		}
+		
 		base._Ready();
 	}
 }

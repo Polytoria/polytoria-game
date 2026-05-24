@@ -25,7 +25,8 @@ public sealed partial class SettingsSectionPage : VBoxContainer
 
 			SettingRow row = new()
 			{
-				Definition = def
+				Definition = def,
+				Context = ClientSettingsService.Instance
 			};
 
 			AddChild(row);
