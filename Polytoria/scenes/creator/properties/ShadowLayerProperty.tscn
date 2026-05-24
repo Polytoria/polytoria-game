@@ -1,0 +1,105 @@
+[gd_scene format=3 uid="uid://mffnhuw36yod"]
+
+[ext_resource type="Script" uid="uid://kuqmxe8rj11i" path="res://scripts/creator/properties/ShadowLayerProperty.cs" id="1_3ifju"]
+
+[node name="ShadowLayer" type="MarginContainer" unique_id=956224680]
+size_flags_horizontal = 3
+script = ExtResource("1_3ifju")
+
+[node name="VBox" type="VBoxContainer" parent="." unique_id=958789291]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="Row1" type="HBoxContainer" parent="VBox" unique_id=943158010]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="Color" type="Button" parent="VBox/Row1" unique_id=1679033642]
+custom_minimum_size = Vector2(32, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Preview" type="Panel" parent="VBox/Row1/Color" unique_id=309393357]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_top = 3.0
+offset_right = -3.0
+offset_bottom = -2.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="BlendMode" type="OptionButton" parent="VBox/Row1" unique_id=264696364]
+custom_minimum_size = Vector2(80, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+selected = 0
+item_count = 4
+popup/item_0/text = "Mix"
+popup/item_0/id = 0
+popup/item_1/text = "Add"
+popup/item_1/id = 1
+popup/item_2/text = "Subtract"
+popup/item_2/id = 2
+popup/item_3/text = "Multiply"
+popup/item_3/id = 3
+
+[node name="Row2" type="HBoxContainer" parent="VBox" unique_id=1234120449]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="OffsetX" type="SpinBox" parent="VBox/Row2" unique_id=910153730]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = -1000.0
+max_value = 1000.0
+allow_greater = true
+allow_lesser = true
+alignment = 1
+prefix = "X: "
+select_all_on_focus = true
+
+[node name="OffsetY" type="SpinBox" parent="VBox/Row2" unique_id=1960330500]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = -1000.0
+max_value = 1000.0
+allow_greater = true
+allow_lesser = true
+alignment = 1
+prefix = "Y: "
+select_all_on_focus = true
+
+[node name="Row3" type="HBoxContainer" parent="VBox" unique_id=896312788]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="Radius" type="SpinBox" parent="VBox/Row3" unique_id=527584489]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 200.0
+allow_greater = true
+alignment = 1
+prefix = "Blur: "
+select_all_on_focus = true
+
+[node name="Spread" type="SpinBox" parent="VBox/Row3" unique_id=133112258]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = -100.0
+allow_greater = true
+allow_lesser = true
+alignment = 1
+prefix = "Spread: "
+select_all_on_focus = true

@@ -11,8 +11,6 @@ namespace Polytoria.Client.UI.Playerlist;
 
 public partial class UILeaderboardUserItem : Button
 {
-	private const string BadgeImageDirPath = "res://assets/textures/client/ui/playerlist/badges/";
-
 	private readonly Dictionary<Stat, Label> _statToLabel = [];
 
 	[Export] private Label _usernameLabel = null!;
@@ -37,7 +35,7 @@ public partial class UILeaderboardUserItem : Button
 
 		TargetPlayer.StatChanged.Connect(OnStatChanged);
 
-		if (TargetPlayer.IsCreator) SetBadgeIcon("creator");
+		UpdateBadge();
 	}
 
 	private void OnStatChanged(Stat s, object? _)
@@ -48,6 +46,7 @@ public partial class UILeaderboardUserItem : Button
 	public override void _ExitTree()
 	{
 		TargetPlayer.UserInfoReady -= UpdateUserInfo;
+		TargetPlayer.StatChanged.Disconnect(OnStatChanged);
 		base._ExitTree();
 	}
 
@@ -55,7 +54,7 @@ public partial class UILeaderboardUserItem : Button
 	{
 		Label l = new()
 		{
-			CustomMinimumSize = new(100, 0),
+			CustomMinimumSize = new(70, 0),
 			HorizontalAlignment = HorizontalAlignment.Center,
 			TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis
 		};
@@ -66,7 +65,7 @@ public partial class UILeaderboardUserItem : Button
 
 	public void UpdateStat(Stat stat)
 	{
-		_statToLabel[stat].Text = " " + stat.GetDisplayValue(TargetPlayer);
+		_statToLabel[stat].Text = stat.GetDisplayValue(TargetPlayer);
 
 		Leaderboard.QueueSortList();
 	}
@@ -74,18 +73,14 @@ public partial class UILeaderboardUserItem : Button
 	private void UpdateUserInfo(APIUserInfo info)
 	{
 		TargetPlayer.UserInfoReady -= UpdateUserInfo;
-		string role = info.UserRoleClass;
-		if (TargetPlayer.IsCreator) role = "creator";
-		SetBadgeIcon(role);
+		UpdateBadge();
 	}
 
-	private void SetBadgeIcon(string role)
+	private void UpdateBadge()
 	{
-		string badgePath = BadgeImageDirPath.PathJoin(role + ".png");
-		if (ResourceLoader.Exists(badgePath))
-		{
+		string badgePath = Player.GetBadgeIconPath(TargetPlayer);
+		if (badgePath.Length > 0)
 			_badgeRect.Texture = GD.Load<Texture2D>(badgePath);
-		}
 	}
 
 	public override void _Pressed()

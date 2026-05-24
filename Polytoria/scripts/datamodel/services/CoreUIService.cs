@@ -104,6 +104,7 @@ public sealed partial class CoreUIService : Instance
 			CoreUI.Chat.Visible = UseChat;
 			CoreUI.ChatButton.Visible = UseChat;
 			CoreUI.HealthBar.Visible = UseHealthBar;
+			CoreUI.Leaderboard.Visible = UseLeaderboard;
 			CoreUI.Inventory.Visible = UseHotbar;
 			CoreUI.MenuButton.Visible = UseMenuButton;
 			CoreUI.EmoteWheel.UseEmoteWheel = UseEmoteWheel;

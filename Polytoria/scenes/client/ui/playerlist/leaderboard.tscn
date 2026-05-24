@@ -4,14 +4,38 @@
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_romx1"]
 
-[node name="Leaderboard" type="ScrollContainer" unique_id=461652606 node_paths=PackedStringArray("_layout")]
+[node name="Leaderboard" type="ScrollContainer" unique_id=461652606 node_paths=PackedStringArray("_layout", "_headerRow")]
 size_flags_horizontal = 3
 mouse_filter = 0
 theme_override_styles/panel = SubResource("StyleBoxEmpty_romx1")
 horizontal_scroll_mode = 0
 script = ExtResource("1_1o8yt")
 _layout = NodePath("Layout")
+_headerRow = NodePath("Layout/Header")
 
 [node name="Layout" type="VBoxContainer" parent="." unique_id=1803197793]
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="Header" type="HBoxContainer" parent="Layout" unique_id=997827530]
+modulate = Color(0.776, 0.8, 0.824, 0.85)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="LeadSpacer" type="Control" parent="Layout/Header" unique_id=616777600]
+custom_minimum_size = Vector2(4, 0)
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Layout/Header" unique_id=959817540]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 11
+text = "Playerlist"
+
+[node name="Spacer" type="Control" parent="Layout/Header" unique_id=736875038]
+layout_mode = 2
+
+[node name="Stats" type="HBoxContainer" parent="Layout/Header" unique_id=554878640]
+layout_mode = 2
+theme_override_constants/separation = 15

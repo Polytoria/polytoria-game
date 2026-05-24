@@ -572,6 +572,11 @@ public static partial class PolyFormat
 				val = DeserializePropValue(propVal, propType);
 			}
 
+			if (loadContext.ForceCordMigration)
+			{
+				MigrateAxis(propName, ref val);
+			}
+
 			try
 			{
 				property.SetValue(netObj, val);
@@ -999,6 +1004,9 @@ public static partial class PolyFormat
 
 	[JsonSerializable(typeof(ColorSeries))]
 	[JsonSerializable(typeof(NumberRange))]
+	[JsonSerializable(typeof(UIScale))]
+	[JsonSerializable(typeof(ShadowLayer))]
+	[JsonSerializable(typeof(ShadowLayer[]))]
 
 	[JsonSerializable(typeof(string[]))]
 	[JsonSerializable(typeof(byte[]))]

@@ -252,7 +252,11 @@ public sealed partial class CaptureService : Instance
 		});
 
 		CurrentPhotoImage = img;
+
+		CurrentPhoto?.Dispose();
 		CurrentPhoto = ImageTexture.CreateFromImage(img);
+
+		subview.QueueFree();
 
 		PostPhotoTaken();
 	}

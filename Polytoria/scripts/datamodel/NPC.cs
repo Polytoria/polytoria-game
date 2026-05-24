@@ -16,7 +16,6 @@ namespace Polytoria.Datamodel;
 [Instantiable]
 public partial class NPC : Physical
 {
-	public override float SyncInterval { get; protected set; } = 0.05f;
 	private const float CoyoteTime = 0.15f;
 	private const float NavigationDistance = 1f;
 	public const float BodyRotateLerp = 10f;
@@ -1039,6 +1038,7 @@ public partial class NPC : Physical
 		{
 			tool.Reparent(Root.Environment);
 			InternalDetachTool();
+			tool.InvokeDropped();
 		}
 	}
 

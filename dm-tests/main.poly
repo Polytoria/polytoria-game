@@ -1,5 +1,5 @@
 {
-  "Version": "2.0.3\u002Bdev",
+  "Version": "2.0.6\u002Bdev",
   "FileType": 0,
   "Objects": [
     {
@@ -362,7 +362,7 @@
                     ],
                     "LocalRotation": [
                       -0,
-                      -179.99998,
+                      0,
                       0
                     ],
                     "LocalSize": [
@@ -401,7 +401,7 @@
                     ],
                     "LocalRotation": [
                       -0,
-                      -179.99998,
+                      0,
                       0
                     ],
                     "LocalSize": [
@@ -440,7 +440,7 @@
                     ],
                     "LocalRotation": [
                       -0,
-                      -179.99998,
+                      0,
                       0
                     ],
                     "LocalSize": [
@@ -988,6 +988,7 @@
             "JumpPower": 36,
             "RespawnTime": 5,
             "ChatColor": "ffffffff",
+            "ChatColorsEnabled": true,
             "CanMove": true,
             "StaminaBurn": 1.2,
             "UseStamina": true,

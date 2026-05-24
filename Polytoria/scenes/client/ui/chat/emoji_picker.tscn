@@ -1,0 +1,82 @@
+[gd_scene format=3 uid="uid://yo4rf0hswo46"]
+
+[ext_resource type="Script" uid="uid://bsss05ek57ia0" path="res://scripts/client/ui/chat/UIEmojiPicker.cs" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pickerbg"]
+bg_color = Color(0.1, 0.1, 0.1, 0.96)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+corner_detail = 5
+
+[node name="EmojiPicker" type="Control" unique_id=2125028077 node_paths=PackedStringArray("_grid", "_row", "_gridScroll", "_rowScroll")]
+custom_minimum_size = Vector2(400, 200)
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_script")
+_grid = NodePath("Panel/GridScroll/Margin/Grid")
+_row = NodePath("Panel/RowScroll/RowMargin/Row")
+_gridScroll = NodePath("Panel/GridScroll")
+_rowScroll = NodePath("Panel/RowScroll")
+
+[node name="Panel" type="Panel" parent="." unique_id=320545976]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_pickerbg")
+
+[node name="GridScroll" type="ScrollContainer" parent="Panel" unique_id=98402611]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 3.0
+offset_top = 3.0
+offset_right = -3.0
+offset_bottom = -2.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="Panel/GridScroll" unique_id=435496710]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="Grid" type="GridContainer" parent="Panel/GridScroll/Margin" unique_id=289484570]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 3
+theme_override_constants/v_separation = 3
+columns = 7
+
+[node name="RowScroll" type="ScrollContainer" parent="Panel" unique_id=1325776591]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+follow_focus = true
+
+[node name="RowMargin" type="MarginContainer" parent="Panel/RowScroll" unique_id=580021678]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 2
+
+[node name="Row" type="HBoxContainer" parent="Panel/RowScroll/RowMargin" unique_id=1547062222]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 3

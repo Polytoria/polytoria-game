@@ -14,6 +14,18 @@ expand_margin_top = 2.0
 expand_margin_right = 2.0
 expand_margin_bottom = 2.0
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_handle"]
+bg_color = Color(1, 1, 1, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.7372549, 0.34509805, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ytpjd"]
 content_margin_left = 4.0
 content_margin_right = 4.0
@@ -23,66 +35,155 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
-[node name="Control" type="Panel" unique_id=1135600947 node_paths=PackedStringArray("_sizeIndLabel")]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pivot"]
+bg_color = Color(1, 1, 1, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.2, 0.2, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[node name="Control" type="Panel" unique_id=1135600947 node_paths=PackedStringArray("_sizeIndLabel", "_pivotIndicator", "_cornerTL", "_cornerTR", "_cornerBL", "_cornerBR", "_edgeTop", "_edgeBottom", "_edgeLeft", "_edgeRight")]
 process_priority = 1
-offset_right = 100.0
-offset_bottom = 100.0
+offset_left = 57.0
+offset_top = 62.0
+offset_right = 157.0
+offset_bottom = 162.0
 focus_mode = 2
 mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_2qiyr")
 script = ExtResource("1_ytpjd")
 _sizeIndLabel = NodePath("SizeIndicator/SizeLabel")
+_pivotIndicator = NodePath("PivotIndicator")
+_cornerTL = NodePath("CornerTL")
+_cornerTR = NodePath("CornerTR")
+_cornerBL = NodePath("CornerBL")
+_cornerBR = NodePath("CornerBR")
+_edgeTop = NodePath("EdgeTop")
+_edgeBottom = NodePath("EdgeBottom")
+_edgeLeft = NodePath("EdgeLeft")
+_edgeRight = NodePath("EdgeRight")
 
-[node name="L1" type="Panel" parent="." unique_id=1770564682]
-visible = false
+[node name="CornerTL" type="Panel" parent="." unique_id=1770564682]
+modulate = Color(1, 1, 1, 0.5)
 layout_mode = 0
-offset_left = -8.0
-offset_top = -8.0
-offset_right = 8.0
-offset_bottom = 8.0
+offset_left = -6.0
+offset_top = -6.0
+offset_right = 6.0
+offset_bottom = 6.0
 mouse_default_cursor_shape = 12
+theme_override_styles/panel = SubResource("StyleBoxFlat_handle")
 
-[node name="L2" type="Panel" parent="." unique_id=571195767]
-visible = false
+[node name="CornerTR" type="Panel" parent="." unique_id=571195767]
+modulate = Color(1, 1, 1, 0.5)
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -8.0
-offset_top = -8.0
-offset_right = 8.0
-offset_bottom = 8.0
+offset_left = -6.0
+offset_top = -6.0
+offset_right = 6.0
+offset_bottom = 6.0
 grow_horizontal = 0
 mouse_default_cursor_shape = 11
+theme_override_styles/panel = SubResource("StyleBoxFlat_handle")
 
-[node name="L3" type="Panel" parent="." unique_id=163178296]
-visible = false
+[node name="CornerBL" type="Panel" parent="." unique_id=163178296]
+modulate = Color(1, 1, 1, 0.5)
 layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
-offset_left = -8.0
-offset_top = -8.0
-offset_right = 8.0
-offset_bottom = 8.0
+offset_left = -6.0
+offset_top = -6.0
+offset_right = 6.0
+offset_bottom = 6.0
 grow_vertical = 0
 mouse_default_cursor_shape = 11
+theme_override_styles/panel = SubResource("StyleBoxFlat_handle")
 
-[node name="L4" type="Panel" parent="." unique_id=1250763191]
-visible = false
+[node name="CornerBR" type="Panel" parent="." unique_id=1250763191]
+modulate = Color(1, 1, 1, 0.5)
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -8.0
-offset_top = -8.0
-offset_right = 8.0
-offset_bottom = 8.0
+offset_left = -6.0
+offset_top = -6.0
+offset_right = 6.0
+offset_bottom = 6.0
 grow_horizontal = 0
 grow_vertical = 0
 mouse_default_cursor_shape = 12
+theme_override_styles/panel = SubResource("StyleBoxFlat_handle")
+
+[node name="EdgeTop" type="Panel" parent="." unique_id=1543298760]
+modulate = Color(1, 1, 1, 0.5)
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -6.0
+offset_top = -6.0
+offset_right = 6.0
+offset_bottom = 6.0
+grow_horizontal = 2
+mouse_default_cursor_shape = 13
+theme_override_styles/panel = SubResource("StyleBoxFlat_handle")
+
+[node name="EdgeBottom" type="Panel" parent="." unique_id=831956247]
+modulate = Color(1, 1, 1, 0.5)
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -6.0
+offset_top = -6.0
+offset_right = 6.0
+offset_bottom = 6.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_default_cursor_shape = 13
+theme_override_styles/panel = SubResource("StyleBoxFlat_handle")
+
+[node name="EdgeLeft" type="Panel" parent="." unique_id=1928374650]
+modulate = Color(1, 1, 1, 0.5)
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = -6.0
+offset_top = -6.0
+offset_right = 6.0
+offset_bottom = 6.0
+grow_vertical = 2
+mouse_default_cursor_shape = 11
+theme_override_styles/panel = SubResource("StyleBoxFlat_handle")
+
+[node name="EdgeRight" type="Panel" parent="." unique_id=345678912]
+modulate = Color(1, 1, 1, 0.5)
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -6.0
+offset_top = -6.0
+offset_right = 6.0
+offset_bottom = 6.0
+grow_horizontal = 0
+grow_vertical = 2
+mouse_default_cursor_shape = 11
+theme_override_styles/panel = SubResource("StyleBoxFlat_handle")
 
 [node name="SizeIndicator" type="PanelContainer" parent="." unique_id=1872477436]
 layout_mode = 1
@@ -97,6 +198,7 @@ offset_right = 27.0
 offset_bottom = 23.0
 grow_horizontal = 2
 grow_vertical = 0
+mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_ytpjd")
 
 [node name="SizeLabel" type="Label" parent="SizeIndicator" unique_id=439719428]
@@ -105,3 +207,12 @@ theme_override_colors/font_color = Color(0.28070277, 0.17797107, 0, 1)
 theme_override_font_sizes/font_size = 14
 text = "0x0"
 horizontal_alignment = 1
+
+[node name="PivotIndicator" type="Panel" parent="." unique_id=672348911]
+layout_mode = 0
+offset_left = -6.0
+offset_top = -6.0
+offset_right = 6.0
+offset_bottom = 6.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_pivot")

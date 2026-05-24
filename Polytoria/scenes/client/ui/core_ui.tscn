@@ -8,7 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://c226wtcviyejd" path="res://assets/textures/client/ui/menu_button/backpack.png" id="5_msdsf"]
 [ext_resource type="Script" uid="uid://c7vhlpnqh3xxg" path="res://scripts/client/ui/chat/UIChatButton.cs" id="5_px6m7"]
 [ext_resource type="PackedScene" uid="uid://dxpt467wotnp" path="res://scenes/client/ui/playerlist/playerlist.tscn" id="7_0yob1"]
-[ext_resource type="PackedScene" uid="uid://dqdto13cbeafi" path="res://scenes/client/ui/chat/chat.tscn" id="8_c3g11"]
+[ext_resource type="PackedScene" uid="uid://bn6xufxua8ege" path="res://scenes/client/ui/chat/chat.tscn" id="8_c3g11"]
 [ext_resource type="PackedScene" uid="uid://bc51557bqd1xs" path="res://scenes/client/ui/inventory/inventory.tscn" id="8_e84r2"]
 [ext_resource type="PackedScene" uid="uid://bnpim2sl5y2ok" path="res://scenes/client/ui/capture/capture.tscn" id="8_sivp6"]
 [ext_resource type="Script" uid="uid://17j8q3l5bq0d" path="res://scripts/client/ui/menu/UIMenuButton.cs" id="11_0yob1"]

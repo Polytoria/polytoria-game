@@ -21,6 +21,9 @@ public sealed partial class Camera : Dynamic
 	public const float DefaultZoomDistance = 10.0f;
 	public const float DefaultScrollSensitivity = 15.0f;
 
+	// override default +Z forward orientation as that would be incorrect for the camera
+	[ScriptProperty] new public Vector3 Forward => -GetGlobalTransform().Basis.Z.Normalized();
+
 	private CameraModeEnum _mode;
 	private float _fov;
 	private bool _clipThroughWalls;
@@ -41,6 +44,9 @@ public sealed partial class Camera : Dynamic
 	private bool _followLerp = false;
 	private bool _ctrlLocked = false;
 	private bool _alwaysLocked = false;
+
+	private float _near;
+	private float _far;
 
 	private float _moveSpeed = 8f;
 	private readonly float _rotateSpeed = 0.005f;
@@ -183,6 +189,28 @@ public sealed partial class Camera : Dynamic
 		{
 			_orthographicSize = value;
 			Camera3D.Size = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue(0.05f)]
+	public float Near
+	{
+		get => _near;
+		set
+		{
+			_near = Camera3D.Near = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue(4000f)]
+	public float Far
+	{
+		get => _far;
+		set
+		{
+			_far = Camera3D.Far = value;
 			OnPropertyChanged();
 		}
 	}

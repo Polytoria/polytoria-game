@@ -21,6 +21,9 @@ public sealed partial class Tool : RigidBody
 	private ImageAsset? _iconImage;
 	private NPC? _holder = null;
 
+	private double _dropEquipCooldown;
+	private Timer _equipTimer = null!;
+
 	[Editable, ScriptProperty]
 	public bool Droppable
 	{
@@ -60,6 +63,17 @@ public sealed partial class Tool : RigidBody
 					_iconImage.QueueLoadResource();
 				}
 			}
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue(1.5)]
+	public float DropEquipCooldown
+	{
+		get => (float)_dropEquipCooldown;
+		set
+		{
+			_equipTimer.WaitTime = _dropEquipCooldown = value;
 			OnPropertyChanged();
 		}
 	}
@@ -110,19 +124,22 @@ public sealed partial class Tool : RigidBody
 
 	private void OnToolTouched(Physical physical)
 	{
-		if (physical is NPC npc)
+		if (physical is NPC npc && _holder == null && Parent is not (Inventory or Player) && _equipTimer.IsStopped())
 		{
-			if (_holder == null && Parent is not Inventory && Parent is not Player)
-			{
-				npc.EquipTool(this);
-			}
+			npc.EquipTool(this);
 		}
+	}
+
+	public override void InitGDNode()
+	{
+		GDNode.AddChild(_equipTimer = new() { OneShot = true }, @internal: Node.InternalMode.Back);
+		base.InitGDNode();
 	}
 
 	public override void EnterTree()
 	{
 		base.EnterTree();
-		if (Parent is not Inventory && Parent is not NPC)
+		if (Parent is not (Inventory or NPC))
 		{
 			CanCollide = true;
 			Anchored = false;
@@ -169,7 +186,7 @@ public sealed partial class Tool : RigidBody
 			_toolCollision = null;
 		}
 
-		if (Root.Network.IsServer)
+		if (HasAuthority)
 		{
 			Touched.Disconnect(OnToolTouched);
 		}
@@ -335,5 +352,10 @@ public sealed partial class Tool : RigidBody
 	{
 		Holder = null;
 		Unequipped?.Invoke();
+	}
+
+	internal void InvokeDropped()
+	{
+		if (_dropEquipCooldown > 0.05) _equipTimer.Start(_dropEquipCooldown);
 	}
 }

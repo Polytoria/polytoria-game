@@ -15,10 +15,10 @@ public partial class UILeaderboard : Control
 	private const int LeaderboardMaxHeight = 300;
 	private const string ItemPath = "res://scenes/client/ui/playerlist/leaderboard_user_item.tscn";
 	private const string TeamItemPath = "res://scenes/client/ui/playerlist/leaderboard_team_item.tscn";
-	private PackedScene _itemPacked = null!;
 
 	[Export] private Control _container = null!;
 	[Export] private Control _layout = null!;
+	[Export] private HBoxContainer _headerRow = null!;
 	[Export] private UIUserCard _userCard = null!;
 	[Export] public UILeaderboardUserOptions UserOptions = null!;
 	public CoreUIRoot CoreUI = null!;
@@ -27,12 +27,10 @@ public partial class UILeaderboard : Control
 	private Teams Teams => CoreUI.Root.Teams;
 	private World World => CoreUI.Root;
 
-	public bool IsLeaderboardShown = true;
-
 	private readonly Dictionary<Player, UILeaderboardUserItem> _playerToItem = [];
 	private readonly Dictionary<Team, UILeaderboardTeamItem> _teamToItem = [];
+	private UILeaderboardTeamItem? _neutralTeamItem;
 	private Players _players = null!;
-	private int _shownPlrCount = 0;
 	private bool _queueResort = false;
 
 	public override void _Ready()
@@ -42,16 +40,18 @@ public partial class UILeaderboard : Control
 		_players.PlayerAdded.Connect(AddPlayer);
 		_players.PlayerRemoved.Connect(RemovePlayer);
 
-		Stats.StatAdded.Connect(StatChanged);
-		Stats.StatRemoved.Connect(StatChanged);
+		Stats.StatAdded.Connect(OnStatDefinitionChanged);
+		Stats.StatRemoved.Connect(OnStatDefinitionChanged);
 
 		Teams.TeamAdded.Connect(TeamChanged);
 		Teams.TeamRemoved.Connect(TeamChanged);
 
 		Teams.TeamUpdateDispatch += QueueSortList;
 
+		VisibilityChanged += () => LeaderboardUpdate();
+
+		CreateHeader();
 		Refresh();
-		LeaderboardUpdate();
 	}
 
 	public override void _ExitTree()
@@ -59,13 +59,22 @@ public partial class UILeaderboard : Control
 		_players.PlayerAdded.Disconnect(AddPlayer);
 		_players.PlayerRemoved.Disconnect(RemovePlayer);
 
-		Stats.StatAdded.Disconnect(StatChanged);
-		Stats.StatRemoved.Disconnect(StatChanged);
+		Stats.StatAdded.Disconnect(OnStatDefinitionChanged);
+		Stats.StatRemoved.Disconnect(OnStatDefinitionChanged);
 
 		Teams.TeamAdded.Disconnect(TeamChanged);
 		Teams.TeamRemoved.Disconnect(TeamChanged);
 
 		Teams.TeamUpdateDispatch -= QueueSortList;
+
+		foreach (var player in _playerToItem.Keys)
+		{
+			player.StatChanged.Disconnect(OnPlayerStatChanged);
+			player.TeamChanged.Disconnect(OnPlayerTeamChanged);
+		}
+
+		_neutralTeamItem?.QueueFree();
+		_neutralTeamItem = null;
 
 		base._ExitTree();
 	}
@@ -80,8 +89,9 @@ public partial class UILeaderboard : Control
 		base._Process(delta);
 	}
 
-	private void StatChanged(Stat _)
+	private void OnStatDefinitionChanged(Stat _)
 	{
+		CreateHeader();
 		Refresh();
 	}
 
@@ -92,6 +102,19 @@ public partial class UILeaderboard : Control
 
 	public void Refresh()
 	{
+		foreach (var player in _playerToItem.Keys)
+		{
+			player.StatChanged.Disconnect(OnPlayerStatChanged);
+			player.TeamChanged.Disconnect(OnPlayerTeamChanged);
+		}
+
+		var savedTeamCollapse = new Dictionary<Team, bool>();
+		foreach (var kvp in _teamToItem)
+		{
+			savedTeamCollapse[kvp.Key] = kvp.Value.IsCollapsed;
+		}
+		bool savedNeutralCollapse = _neutralTeamItem?.IsCollapsed ?? false;
+
 		foreach (var item in _playerToItem)
 		{
 			item.Value.QueueFree();
@@ -100,23 +123,49 @@ public partial class UILeaderboard : Control
 		{
 			item.Value.QueueFree();
 		}
+		_neutralTeamItem?.QueueFree();
 		_playerToItem.Clear();
 		_teamToItem.Clear();
+		_neutralTeamItem = null;
 
 		foreach (Player plr in _players.GetPlayers())
 		{
 			AddPlayer(plr);
 		}
+
+		if (_players.LocalPlayer != null && !_playerToItem.ContainsKey(_players.LocalPlayer))
+		{
+			AddPlayer(_players.LocalPlayer);
+		}
+
 		foreach (Team team in Teams.GetTeams())
 		{
 			AddTeam(team);
 		}
+
+		CreateNeutralTeam();
+
 		SortList();
+
+		foreach (var kvp in _teamToItem)
+		{
+			if (savedTeamCollapse.TryGetValue(kvp.Key, out bool collapsed) && collapsed)
+			{
+				kvp.Value.SetCollapsed(true);
+			}
+		}
+		if (savedNeutralCollapse && _neutralTeamItem != null)
+		{
+			_neutralTeamItem.SetCollapsed(true);
+		}
+
+		ApplyTeamVisibility();
+		LeaderboardUpdate();
 	}
 
 	private void AddPlayer(Player player)
 	{
-		if (player.IsLocal || _playerToItem.ContainsKey(player))
+		if (_playerToItem.ContainsKey(player))
 			return;
 
 		UILeaderboardUserItem card = Globals.CreateInstanceFromScene<UILeaderboardUserItem>(ItemPath);
@@ -126,12 +175,13 @@ public partial class UILeaderboard : Control
 		_layout.AddChild(card);
 
 		foreach (var st in Stats.GetStats())
-		{
 			card.AddStat(st);
-		}
 
+		player.StatChanged.Connect(OnPlayerStatChanged);
+		player.TeamChanged.Connect(OnPlayerTeamChanged);
 		_playerToItem[player] = card;
-		_shownPlrCount++;
+
+		ApplyTeamVisibility();
 		LeaderboardUpdate();
 	}
 
@@ -157,9 +207,33 @@ public partial class UILeaderboard : Control
 		if (!_playerToItem.TryGetValue(player, out UILeaderboardUserItem? card))
 			return;
 
+		player.StatChanged.Disconnect(OnPlayerStatChanged);
+		player.TeamChanged.Disconnect(OnPlayerTeamChanged);
 		card.QueueFree();
 		_playerToItem.Remove(player);
-		_shownPlrCount--;
+
+		CallDeferred(nameof(RefreshAfterRemove));
+	}
+
+	private void RefreshAfterRemove()
+	{
+		if (_neutralTeamItem != null && !_playerToItem.Keys.Any(p => p.Team == null))
+		{
+			_neutralTeamItem.QueueFree();
+			_neutralTeamItem = null;
+		}
+
+		foreach (var st in Stats.GetStats())
+		{
+			if (st is Stat stat)
+			{
+				foreach (var item in _teamToItem.Values)
+					item.UpdateStat(stat);
+				_neutralTeamItem?.UpdateStat(stat);
+			}
+		}
+
+		ApplyTeamVisibility();
 		LeaderboardUpdate();
 	}
 
@@ -169,7 +243,6 @@ public partial class UILeaderboard : Control
 
 		var allItems = new List<(int TeamIndex, double? Value, int ItemType, Node Item)>();
 
-		// Add team items
 		foreach (var kvp in _teamToItem)
 		{
 			var teamIndex = kvp.Key.Index;
@@ -177,7 +250,6 @@ public partial class UILeaderboard : Control
 			allItems.Add((teamIndex, value, 0, kvp.Value));
 		}
 
-		// Add player items
 		foreach (var kvp in _playerToItem)
 		{
 			var teamIndex = kvp.Key.Team?.Index ?? int.MaxValue;
@@ -185,7 +257,11 @@ public partial class UILeaderboard : Control
 			allItems.Add((teamIndex, value, 1, kvp.Value));
 		}
 
-		// Sort: by team index, then teams before players, then by stat value if exists
+		if (_neutralTeamItem != null)
+		{
+			allItems.Add((int.MaxValue, null, 0, _neutralTeamItem));
+		}
+
 		var sortedItems = allItems.OrderBy(x => x.TeamIndex).ThenBy(x => x.ItemType);
 
 		if (stat != null)
@@ -197,10 +273,9 @@ public partial class UILeaderboard : Control
 
 		var itemsList = sortedItems.ToList();
 
-		// Reorder the UI items
 		for (int i = 0; i < itemsList.Count; i++)
 		{
-			itemsList[i].Item.GetParent()?.MoveChild(itemsList[i].Item, i);
+			itemsList[i].Item.GetParent()?.MoveChild(itemsList[i].Item, i + 1);
 		}
 	}
 
@@ -209,16 +284,124 @@ public partial class UILeaderboard : Control
 		_queueResort = true;
 	}
 
+	private void ApplyTeamVisibility()
+	{
+		foreach (var kvp in _playerToItem)
+		{
+			bool visible = true;
+			if (kvp.Key.Team != null && _teamToItem.TryGetValue(kvp.Key.Team, out var teamItem))
+				visible = !teamItem.IsCollapsed;
+			else if (kvp.Key.Team == null && _neutralTeamItem != null)
+				visible = !_neutralTeamItem.IsCollapsed;
+			kvp.Value.Visible = visible;
+		}
+	}
+
+	public void OnTeamCollapseToggled(UILeaderboardTeamItem teamItem)
+	{
+		ApplyTeamVisibility();
+		LeaderboardUpdate();
+	}
+
+	private void CreateNeutralTeam()
+	{
+		if (Teams.GetTeams().Length == 0)
+			return;
+
+		Player[] neutralPlayers = _playerToItem.Keys.Where(p => p.Team == null).ToArray();
+		if (neutralPlayers.Length == 0)
+			return;
+
+		UILeaderboardTeamItem card = Globals.CreateInstanceFromScene<UILeaderboardTeamItem>(TeamItemPath);
+		card.Leaderboard = this;
+		card.SetNeutral("Neutral Team", new Color(0.56f, 0.61f, 0.66f));
+		_layout.AddChild(card);
+		_neutralTeamItem = card;
+		foreach (var st in Stats.GetStats())
+			card.AddStat(st);
+	}
+
+	internal Player[] GetNeutralPlayers()
+	{
+		return _playerToItem.Keys.Where(p => p.Team == null).ToArray();
+	}
+
+	internal double GetNeutralStatTotal(Stat stat)
+	{
+		double total = 0;
+		foreach (var kvp in _playerToItem)
+		{
+			if (kvp.Key.Team == null && stat.Get(kvp.Key) is double d)
+				total += d;
+		}
+		return total;
+	}
+
+	private void OnPlayerTeamChanged(Team? team)
+	{
+		if (!IsInsideTree())
+			return;
+
+		if (team == null && _neutralTeamItem == null)
+			CreateNeutralTeam();
+		else if (team != null && _neutralTeamItem != null && !_playerToItem.Keys.Any(p => p.Team == null))
+		{
+			_neutralTeamItem.QueueFree();
+			_neutralTeamItem = null;
+		}
+
+		foreach (var st in Stats.GetStats())
+		{
+			if (st is Stat stat)
+			{
+				foreach (var item in _teamToItem.Values)
+					item.UpdateStat(stat);
+				_neutralTeamItem?.UpdateStat(stat);
+			}
+		}
+
+		QueueSortList();
+		ApplyTeamVisibility();
+	}
+
+	private void OnPlayerStatChanged(Stat stat, object? _)
+	{
+		foreach (var item in _teamToItem.Values)
+			item.UpdateStat(stat);
+		_neutralTeamItem?.UpdateStat(stat);
+	}
+
+	private void CreateHeader()
+	{
+		var statsBox = _headerRow.FindChild("Stats") as HBoxContainer;
+		if (statsBox == null)
+			return;
+
+		while (statsBox.GetChildCount() > 0)
+		{
+			statsBox.GetChild(0).QueueFree();
+		}
+
+		foreach (var stat in Stats.GetStats())
+		{
+			Label headerLabel = new()
+			{
+				Text = stat.GetDisplayName(),
+				CustomMinimumSize = new(70, 0),
+				HorizontalAlignment = HorizontalAlignment.Center,
+				TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis
+			};
+			headerLabel.AddThemeFontSizeOverride("font_size", 13);
+			statsBox.AddChild(headerLabel);
+		}
+	}
+
 	private async void LeaderboardUpdate()
 	{
-		if (_shownPlrCount == 0)
-		{
-			_container.Visible = false;
-		}
-		else
-		{
-			_container.Visible = true;
-		}
+		_container.Visible = Visible && _playerToItem.Count > 0;
+
+		if (!Visible || _playerToItem.Count == 0)
+			return;
 
 		// Resize based on container, need to be resized on next frame
 		await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);

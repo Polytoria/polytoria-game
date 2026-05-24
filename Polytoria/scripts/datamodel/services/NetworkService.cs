@@ -652,6 +652,7 @@ public sealed partial class NetworkService : Instance
 		plr.UserID = userData.Id;
 		plr.Name = username;
 		plr.IsAdmin = userData.IsStaff;
+		plr.UserRoleClass = userData.UserRoleClass ?? "";
 
 		// Apply validation data
 		plr.IsCreator = validateRes.IsCreator;
@@ -664,6 +665,10 @@ public sealed partial class NetworkService : Instance
 		{
 			// Admin chat color
 			plr.ChatColor = Color.FromHtml("#DD5555");
+		}
+		else if (Root.PlayerDefaults.ChatColorsEnabled)
+		{
+			plr.ChatColor = Player.ChatColorFromUserID(userData.Id);
 		}
 		else
 		{
@@ -973,7 +978,7 @@ public sealed partial class NetworkService : Instance
 		[JsonInclude]
 		public string NetID = null!;
 		[JsonInclude]
-		public float[] Value = null!;
+		public byte[] Value = null!;
 	}
 
 	[MemoryPackable]
@@ -1010,6 +1015,8 @@ public sealed partial class NetworkService : Instance
 	[JsonSerializable(typeof(Vector3Dto))]
 	[JsonSerializable(typeof(ColorDto))]
 	[JsonSerializable(typeof(Transform3DDto))]
+	[JsonSerializable(typeof(UnitQuaternionDto))]
+	[JsonSerializable(typeof(TransformPayloadDto))]
 
 	[JsonSerializable(typeof(NetPropNetworkedObjectRef))]
 	[JsonSerializable(typeof(NetPropReplicateData))]

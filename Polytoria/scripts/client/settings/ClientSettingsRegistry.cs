@@ -16,7 +16,8 @@ public static class ClientSettingsRegistry
 		new() {Key = "graphics", Label = "Graphics", IconPath = "res://assets/textures/ui-icons/mountain.svg", SortOrder = 2},
 		new() {Key = "post_processing", Label = "Post Processing", IconPath = "res://assets/textures/ui-icons/rocket.svg", SortOrder = 3},
 		new() {Key = "overlay", Label = "Overlay", IconPath = "res://assets/textures/ui-icons/copy.svg", SortOrder = 4},
-		new() {Key = "advanced", Label = "Advanced", IconPath = "res://assets/textures/ui-icons/code.svg", SortOrder = 5}
+		new() {Key = "chat", Label = "Chat", IconPath = "res://assets/textures/ui-icons/messages.svg", SortOrder = 5},
+		new() {Key = "advanced", Label = "Advanced", IconPath = "res://assets/textures/ui-icons/code.svg", SortOrder = 6}
 	];
 
 	public static readonly IReadOnlyDictionary<string, SettingDef> Definitions = Build();
@@ -26,6 +27,57 @@ public static class ClientSettingsRegistry
 		var defs = new Dictionary<string, SettingDef>();
 
 		SharedSettingsRegistry.AddSharedTo(defs);
+
+		defs.Add(ClientSettingKeys.Chat.ChatColors,
+			new SettingDef<bool>
+			{
+				Key = ClientSettingKeys.Chat.ChatColors,
+				SectionKey = "chat",
+				Label = "Chat Colors",
+				Description = "Show colored usernames in chat.",
+				ValueKind = SettingValueKind.Bool,
+				ControlKind = SettingControlKind.Toggle,
+				DefaultValue = true
+			});
+
+		defs.Add(ClientSettingKeys.Chat.ChatFont,
+			new SettingDef<string>
+			{
+				Key = ClientSettingKeys.Chat.ChatFont,
+				SectionKey = "chat",
+				Label = "Chat Font",
+				Description = "Font used for chat messages.",
+				ValueKind = SettingValueKind.String,
+				ControlKind = SettingControlKind.Dropdown,
+				DefaultValue = "",
+				Options =
+				[
+					new() { Value = "", Label = "Default" },
+					new() { Value = "res://assets/fonts/built-in/SourceSans3-VariableFont_wght.ttf", Label = "Source Sans" },
+					new() { Value = "res://assets/fonts/built-in/RobotoMono-VariableFont_wght.ttf", Label = "Roboto Mono" },
+					new() { Value = "res://assets/fonts/built-in/Rubik-VariableFont_wght.ttf", Label = "Rubik" },
+					new() { Value = "res://assets/fonts/built-in/Poppins/Poppins-Regular.ttf", Label = "Poppins" },
+					new() { Value = "res://assets/fonts/built-in/ComicNeue/ComicNeue-Regular.ttf", Label = "Comic Neue" },
+					new() { Value = "res://assets/fonts/built-in/PressStart2P-Regular.ttf", Label = "Press Start 2P" },
+					new() { Value = "res://assets/fonts/built-in/Comic Sans MS.ttf", Label = "Comic Sans MS" },
+					new() { Value = "res://assets/fonts/built-in/Fredoka-VariableFont_wdth,wght.ttf", Label = "Fredoka" },
+				]
+			});
+
+		defs.Add(ClientSettingKeys.Chat.ChatFontSize,
+			new SettingDef<float>
+			{
+				Key = ClientSettingKeys.Chat.ChatFontSize,
+				SectionKey = "chat",
+				Label = "Chat Font Size",
+				Description = "Font size for chat messages. 0 uses the theme default.",
+				ValueKind = SettingValueKind.Float,
+				ControlKind = SettingControlKind.Slider,
+				DefaultValue = 0f,
+				MinValue = 0f,
+				MaxValue = 28f,
+				Step = 1f
+			});
 
 		defs.Add(ClientSettingKeys.General.CtrlLock,
 			new SettingDef<bool>
@@ -131,6 +183,26 @@ public static class ClientSettingsRegistry
 				ValueKind = SettingValueKind.Bool,
 				ControlKind = SettingControlKind.Toggle,
 				DefaultValue = true,
+			});
+
+		defs.Add(ClientSettingKeys.Advanced.AssetQueue,
+			new SettingDef<int>
+			{
+				Key = ClientSettingKeys.Advanced.AssetQueue,
+				SectionKey = "advanced",
+				Label = "Asset Queue",
+				Description = "Change how many assets can load at once. Higher = faster, with more potential lag.",
+				ValueKind = SettingValueKind.Int,
+				ControlKind = SettingControlKind.Dropdown,
+				RequiresRestart = true,
+				DefaultValue = 5,
+				Options =
+				[
+					new() { Value = 5, Label = "Default (5)" },
+					new() { Value = 15, Label = "Fast (15)" },
+					new() { Value = 30, Label = "Aggressive (30)" },
+					new() { Value = 60, Label = "SPEED (60)" },
+				]
 			});
 
 		SettingDef.ValidateAll(defs.Values);

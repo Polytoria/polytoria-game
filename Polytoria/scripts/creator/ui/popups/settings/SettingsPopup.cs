@@ -91,7 +91,7 @@ public sealed partial class SettingsPopup : PopupWindowBase
 		else
 		{
 			foreach (var ui in cachedUIs)
-				ui.Visible = true;
+				ui.Visible = ui.PropertyVisible;
 		}
 	}
 }

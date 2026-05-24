@@ -33,12 +33,14 @@
 [ext_resource type="PackedScene" uid="uid://bfh6n2s5op0nu" path="res://scenes/creator/docks/toolbox/toolbox.tscn" id="26_dfqoe"]
 [ext_resource type="Script" uid="uid://dsmyuj4u8d0kx" path="res://scripts/creator/ui/StatusBar.cs" id="26_xdd36"]
 [ext_resource type="PackedScene" uid="uid://c0dcwpeyvcmot" path="res://scenes/creator/docks/filebrowser/file_browser.tscn" id="27_4n5gq"]
+[ext_resource type="Texture2D" uid="uid://cma54623spmlg" path="res://assets/textures/ui-icons/search.svg" id="29_4fw2t"]
 [ext_resource type="PackedScene" uid="uid://ca8ul4i0eiuch" path="res://scenes/creator/splash/startup_splash.tscn" id="30_8cbqn"]
 [ext_resource type="Script" uid="uid://c5celm4bxr4vy" path="res://scripts/creator/ui/docks/bottombar/console/DebugConsole.cs" id="30_bc04q"]
 [ext_resource type="PackedScene" uid="uid://msq1k3h4a75p" path="res://scenes/creator/wizard/new_project/new_project.tscn" id="31_87ukk"]
 [ext_resource type="PackedScene" uid="uid://cvxoyotxeotax" path="res://scenes/creator/docks/explorer/explorer.tscn" id="32_4fw2t"]
 [ext_resource type="PackedScene" uid="uid://duq8icfg2fwo0" path="res://scenes/creator/docks/properties/properties.tscn" id="34_bc04q"]
 [ext_resource type="PackedScene" uid="uid://dauvdi8d2yqpy" path="res://scenes/creator/wizard/introduction_wizard.tscn" id="39_dfqoe"]
+[ext_resource type="PackedScene" uid="uid://b7voaj38vy8xd" path="res://scenes/creator/docks/bottombar/console_filters.tscn" id="40_console_filters"]
 
 [sub_resource type="FontVariation" id="FontVariation_khfyn"]
 variation_opentype = {
@@ -1067,7 +1069,6 @@ size_flags_horizontal = 3
 theme = ExtResource("16_1f7jh")
 theme_override_constants/icon_max_width = 16
 clip_tabs = false
-close_with_middle_mouse = false
 tab_close_display_policy = 2
 drag_to_rearrange_enabled = true
 
@@ -1115,11 +1116,12 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_ubkni")
 [node name="Tabs" type="TabContainer" parent="GUI/Splitter/Center/BottomTabs" unique_id=1589727556]
 layout_mode = 2
 size_flags_vertical = 3
+current_tab = 0
 tabs_position = 1
 deselect_enabled = true
 
-[node name="Console" type="MarginContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs" unique_id=259802220 node_paths=PackedStringArray("_richLabel", "_searchEdit", "_clearBtn")]
-visible = false
+[node name="Console" type="MarginContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs" unique_id=259802220 node_paths=PackedStringArray("_richLabel", "_searchEdit", "_clearBtn", "_filterBtn")]
+
 custom_minimum_size = Vector2(0, 220)
 layout_mode = 2
 theme_override_constants/margin_left = 8
@@ -1128,8 +1130,9 @@ theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 8
 script = ExtResource("30_bc04q")
 _richLabel = NodePath("VBoxContainer/RichTextLabel")
-_searchEdit = NodePath("VBoxContainer/HBoxContainer/LineEdit")
-_clearBtn = NodePath("VBoxContainer/HBoxContainer/Button")
+_searchEdit = NodePath("VBoxContainer/SearchBar/LineEdit")
+_clearBtn = NodePath("VBoxContainer/SearchBar/ClearBtn")
+_filterBtn = NodePath("VBoxContainer/SearchBar/FilterBtn")
 metadata/_tab_index = 0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console" unique_id=681967966]
@@ -1153,20 +1156,31 @@ scroll_following = true
 vertical_alignment = 2
 selection_enabled = true
 
-[node name="HBoxContainer" type="HBoxContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer" unique_id=1369015190]
+[node name="SearchBar" type="HBoxContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer" unique_id=1369015190]
 custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
+theme_override_constants/separation = 8
 
-[node name="LineEdit" type="LineEdit" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/HBoxContainer" unique_id=767147599]
+[node name="FilterBtn" type="Button" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/SearchBar" unique_id=1370024557]
+custom_minimum_size = Vector2(32, 0)
+layout_mode = 2
+tooltip_text = "Filter console output"
+icon = ExtResource("29_4fw2t")
+
+[node name="LineEdit" type="LineEdit" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/SearchBar" unique_id=767147599]
 layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "Search..."
 
-[node name="Button" type="Button" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/HBoxContainer" unique_id=276167707]
+[node name="ClearBtn" type="Button" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/SearchBar" unique_id=276167707]
 custom_minimum_size = Vector2(28, 0)
 layout_mode = 2
 icon = ExtResource("22_i1txp")
 expand_icon = true
+
+[node name="ConsoleFilters" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console" unique_id=1370024561 instance=ExtResource("40_console_filters")]
+size = Vector2i(270, 150)
+visible = false
 
 [node name="Right" type="PanelContainer" parent="GUI/Splitter" unique_id=528512110]
 custom_minimum_size = Vector2(320, 0)

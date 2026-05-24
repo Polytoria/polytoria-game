@@ -128,6 +128,20 @@ public sealed partial class Sound : Dynamic
 		set
 		{
 			_loop = value;
+
+			switch (_currentStream)
+			{
+				case AudioStreamMP3 aStream:
+					aStream.LoopOffset = 0;
+					aStream.Loop = value;
+					break;
+				case AudioStreamOggVorbis aStream:
+					aStream.LoopOffset = 0;
+					aStream.Loop = value;
+					break;
+					// unused in Polytoria
+					//case AudioStreamWav aStream:
+			}
 			OnPropertyChanged();
 		}
 	}
@@ -193,6 +207,7 @@ public sealed partial class Sound : Dynamic
 				: _audioPlayer3D != null ? (float)_audioPlayer3D.Stream.GetLength() : 0;
 
 	[ScriptProperty] public PTSignal Loaded { get; private set; } = new();
+	[ScriptProperty] public PTSignal Finished { get; private set; } = new();
 
 	[SyncVar]
 	public bool ServerIsPlaying
@@ -296,19 +311,13 @@ public sealed partial class Sound : Dynamic
 
 	private void OnPlayerFinished()
 	{
-		// Loop the audio
-		if (Loop)
+		// Event is not fired on looping sound
+		Playing = false;
+		if (HasAuthority)
 		{
-			Play();
+			ServerIsPlaying = false;
 		}
-		else
-		{
-			Playing = false;
-			if (HasAuthority)
-			{
-				ServerIsPlaying = false;
-			}
-		}
+		Finished.Invoke();
 	}
 
 	[ScriptMethod]
@@ -396,8 +405,6 @@ public sealed partial class Sound : Dynamic
 			{
 				ServerIsPlaying = true;
 			}
-			// Mute audio on server
-			if (Root.Network.IsServer) return;
 			_audioPlayer?.Play();
 			_audioPlayer3D?.Play();
 		}
@@ -409,6 +416,9 @@ public sealed partial class Sound : Dynamic
 
 	private void InternalPlayOneShot(float volume)
 	{
+		// can safely mute on the server since this method doesn't change any properties
+		if (Root.Network.IsServer) return;
+
 		if (_audioPlayer != null)
 		{
 			AudioStreamPlayer clone = (AudioStreamPlayer)_audioPlayer.Duplicate();
@@ -474,6 +484,7 @@ public sealed partial class Sound : Dynamic
 		_currentStream = (AudioStream)audio;
 		_audioPlayer?.Stream = (AudioStream)audio;
 		_audioPlayer3D?.Stream = (AudioStream)audio;
+		Loop = _loop; // reapply to new stream
 
 		Loaded.Invoke();
 
