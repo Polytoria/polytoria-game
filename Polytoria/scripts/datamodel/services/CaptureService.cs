@@ -256,8 +256,6 @@ public sealed partial class CaptureService : Instance
 		CurrentPhoto?.Dispose();
 		CurrentPhoto = ImageTexture.CreateFromImage(img);
 
-		subview.QueueFree();
-
 		PostPhotoTaken();
 	}
 
