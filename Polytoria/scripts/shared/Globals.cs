@@ -6,7 +6,6 @@ using Godot;
 #if CREATOR
 using Polytoria.Creator.Properties;
 using Polytoria.Datamodel.Creator;
-using System.IO;
 #endif
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Resources;
@@ -16,9 +15,10 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using Mesh = Godot.Mesh;
 using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using Mesh = Godot.Mesh;
 
 namespace Polytoria.Shared;
 
@@ -598,8 +598,17 @@ public sealed partial class Globals : Node
 
 	private static IntPtr DllImportResolver(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
 	{
+		bool isLuauLibrary = libraryName is "Luau.Compiler" or "Luau.VM";
+
+		if (isLuauLibrary && !IsInGDEditor)
+		{
+			// Use default resolver on Luau library in prod, these are loaded as static libraries
+			return IntPtr.Zero;
+		}
+
 		if (!IsInGDEditor)
 		{
+			// Use the default resolver if not in editor
 			return IntPtr.Zero;
 		}
 
@@ -626,7 +635,16 @@ public sealed partial class Globals : Node
 			return IntPtr.Zero;
 		}
 
-		return NativeLibrary.Load(dllPath, assembly, searchPath);
+		string finalPath = dllPath;
+
+		if (UseNodes && IsInGDEditor)
+		{
+			// Only resolve full path in Godot env
+			string basePath = ProjectSettings.GlobalizePath("res://");
+			finalPath = Path.GetFullPath(Path.Join(basePath, dllPath));
+		}
+
+		return NativeLibrary.Load(finalPath, assembly, searchPath);
 	}
 
 	internal static string ResolveCurrentPlatform()
@@ -672,6 +690,12 @@ public sealed partial class Globals : Node
 		if (!libraryPaths.TryGetValue(libraryName, out string? pathb))
 		{
 			return null;
+		}
+
+		// Add lib prefix
+		if (platform == "macos" || platform == "linux")
+		{
+			libraryName = "lib" + libraryName;
 		}
 
 		if (!IsInGDEditor)

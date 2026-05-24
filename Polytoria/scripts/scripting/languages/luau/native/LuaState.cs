@@ -713,29 +713,6 @@ public partial class LuaState : IDisposable
 		}
 	}
 
-	/// <summary>
-	/// Does the equivalent of t[p] = v, where t is the table at the given index, p is encoded as a light userdata, and v is the value at the top of the stack. 
-	/// </summary>
-	/// <param name="index"></param>
-	/// <param name="obj"></param>
-	public void RawSetPointer(int index, IntPtr obj)
-	{
-		lock (_lock)
-			NativeBindings.lua_rawsetp(_state, index, obj);
-	}
-
-	/// <summary>
-	/// Pushes onto the stack the value t[k], where t is the table at the given index and k is the pointer p represented as a light userdata. The access is raw; that is, it does not invoke the __index metamethod. 
-	/// </summary>
-	/// <param name="index"></param>
-	/// <param name="obj"></param>
-	/// <returns>Returns the type of the pushed value. </returns>
-	public LuaType RawGetPointer(int index, IntPtr obj)
-	{
-		lock (_lock)
-			return (LuaType)NativeBindings.lua_rawgetp(_state, index, obj);
-	}
-
 	public void SetThreadData(IntPtr data)
 	{
 		lock (_lock)
