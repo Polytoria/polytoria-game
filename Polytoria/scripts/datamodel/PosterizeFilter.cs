@@ -15,21 +15,43 @@ public partial class PosterizeFilter : BaseFilter
 		get => GD.Load<Shader>("res://resources/shaders/filters/posterize.gdshader");
 	}
 
-	private int _posterizeLevel;
+	private Vector3I _posterizeLevels = new(0, 0, 10);
 
-	[Editable, ScriptProperty, DefaultValue(10)]
-	public int PosterizeLevel
+	[Editable, ScriptProperty, DefaultValue(0)]
+	public int HueLevels
 	{
-		get => _posterizeLevel;
+		get => _posterizeLevels.X;
 		set
 		{
-			_posterizeLevel = value;
+			_posterizeLevels.X = value;
+			UpdateFilter();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue(0)]
+	public int SaturationLevels
+	{
+		get => _posterizeLevels.Y;
+		set
+		{
+			_posterizeLevels.Y = value;
+			UpdateFilter();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue(10)]
+	public int ValueLevels
+	{
+		get => _posterizeLevels.Z;
+		set
+		{
+			_posterizeLevels.Z = value;
 			UpdateFilter();
 		}
 	}
 
 	protected override void UpdateFilter()
 	{
-		_shaderMaterial.SetShaderParameter("levels", _posterizeLevel);
+		_shaderMaterial.SetShaderParameter("levels", _posterizeLevels);
 	}
 }
