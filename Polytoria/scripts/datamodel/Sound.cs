@@ -403,8 +403,7 @@ public sealed partial class Sound : Dynamic
 			{
 				ServerIsPlaying = true;
 			}
-			// Mute audio on server
-			if (Root.Network.IsServer) return;
+			// TODO: mute audio on server without breaking Playing
 			_audioPlayer?.Play();
 			_audioPlayer3D?.Play();
 		}
@@ -416,6 +415,9 @@ public sealed partial class Sound : Dynamic
 
 	private void InternalPlayOneShot(float volume)
 	{
+		// we can get away with this since Playing doesn't change here method
+		if (Root.Network.IsServer) return;
+
 		if (_audioPlayer != null)
 		{
 			AudioStreamPlayer clone = (AudioStreamPlayer)_audioPlayer.Duplicate();
