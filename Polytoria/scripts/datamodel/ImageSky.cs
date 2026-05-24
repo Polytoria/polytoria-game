@@ -5,6 +5,7 @@
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Datamodel.Resources;
+using Polytoria.Enums;
 using System;
 using Obsolete = Polytoria.Attributes.ObsoleteAttribute;
 
@@ -14,6 +15,9 @@ namespace Polytoria.Datamodel;
 public sealed partial class ImageSky : Sky
 {
 	private readonly Texture2D _empty = GD.Load<Texture2D>("res://assets/textures/empty.png");
+	private static readonly Shader _linearShader = GD.Load<Shader>("res://resources/shaders/imagesky_linear.gdshader");
+	private static readonly Shader _nearestShader = GD.Load<Shader>("res://resources/shaders/imagesky_nearest.gdshader");
+
 	private int _topId = 14168;
 	private int _bottomId = 14166;
 	private int _leftId = 14154;
@@ -26,6 +30,7 @@ public sealed partial class ImageSky : Sky
 	private ImageAsset? _rightImage;
 	private ImageAsset? _frontImage;
 	private ImageAsset? _backImage;
+	private TextureFilterEnum _textureFilter = TextureFilterEnum.Linear;
 
 	[Editable, ScriptProperty]
 	public ImageAsset? TopImage
@@ -207,6 +212,19 @@ public sealed partial class ImageSky : Sky
 		}
 	}
 
+	[Editable, ScriptProperty]
+	public TextureFilterEnum TextureFilter
+	{
+		get => _textureFilter;
+		set
+		{
+			_textureFilter = value;
+			RebuildMaterial();
+			Root.Lighting.ApplySky(this);
+			OnPropertyChanged();
+		}
+	}
+
 	[Editable, Obsolete("Use Image instead"), NoSync, ScriptLegacyProperty(nameof(TopId))]
 	public int TopId
 	{
@@ -311,14 +329,27 @@ public sealed partial class ImageSky : Sky
 
 	private ShaderMaterial _mat = null!;
 
+	private void RebuildMaterial()
+	{
+		var shader = _textureFilter is TextureFilterEnum.Nearest || _textureFilter is TextureFilterEnum.NearestNoMipmaps ? _nearestShader : _linearShader;
+		_mat = new() { Shader = shader };
+		SkyMaterial = _mat;
+		ApplyTextures();
+	}
+
+	private void ApplyTextures()
+	{
+		_mat.SetShaderParameter("top", (Texture2D?)(_topImage?.Resource) ?? _empty);
+		_mat.SetShaderParameter("bottom", (Texture2D?)(_bottomImage?.Resource) ?? _empty);
+		_mat.SetShaderParameter("left", (Texture2D?)(_leftImage?.Resource) ?? _empty);
+		_mat.SetShaderParameter("right", (Texture2D?)(_rightImage?.Resource) ?? _empty);
+		_mat.SetShaderParameter("front", (Texture2D?)(_frontImage?.Resource) ?? _empty);
+		_mat.SetShaderParameter("back", (Texture2D?)(_backImage?.Resource) ?? _empty);
+	}
+
 	public override void Init()
 	{
-		_mat = new()
-		{
-			Shader = GD.Load<Shader>("res://resources/shaders/imagesky.gdshader")
-		};
-		SkyMaterial = _mat;
-
+		RebuildMaterial();
 		base.Init();
 	}
 }

@@ -28,7 +28,7 @@ public partial class ViewHomePage : MobileViewBase
 		base._ExitTree();
 	}
 
-	private void OnAvatarLoaded()
+	private static void OnAvatarLoaded()
 	{
 		//((Node3D)_polytorian.GDNode).Visible = true;
 		//_polytorian.Animator.PlayOneShotAnimation("poly_welcome");
@@ -40,7 +40,7 @@ public partial class ViewHomePage : MobileViewBase
 		LoadView();
 	}
 
-	private void LoadView()
+	private static void LoadView()
 	{
 		//_usernameLabel.Text = PolyMobileAuthAPI.CurrentUserInfo.Username;
 		//_polytorian.LoadAppearance(PolyMobileAuthAPI.CurrentUserInfo.Id);

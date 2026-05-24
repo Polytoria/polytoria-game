@@ -18,10 +18,7 @@ public static class PolyAPI
 	public static void SetAuthToken(string userToken)
 	{
 		// Remove Authorization if exists
-		if (_client.DefaultRequestHeaders.ContainsKey("Authorization"))
-		{
-			_client.DefaultRequestHeaders.Remove("Authorization");
-		}
+		_client.DefaultRequestHeaders.Remove("Authorization");
 		_client.DefaultRequestHeaders.Add("Authorization", "Bearer " + userToken);
 	}
 

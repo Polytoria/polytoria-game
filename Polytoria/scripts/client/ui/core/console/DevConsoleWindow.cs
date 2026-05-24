@@ -76,7 +76,7 @@ public partial class DevConsoleWindow : Control
 				}
 			}
 		}
-		else if (@event is InputEventMouseMotion mouseMotion)
+		else if (@event is InputEventMouseMotion)
 		{
 			if (_isResizing)
 			{

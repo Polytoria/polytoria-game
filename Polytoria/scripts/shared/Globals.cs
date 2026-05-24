@@ -65,7 +65,7 @@ public sealed partial class Globals : Node
 	private static readonly Dictionary<string, (Mesh, Shape3D)> _shapesCache = [];
 	private static readonly Dictionary<string, Material> _skyboxesCache = [];
 
-	private static Dictionary<(Part.PartMaterialEnum, bool), Material> _materialCache = [];
+	private static readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materialCache = [];
 
 	private static bool _isExiting = false;
 
@@ -281,20 +281,20 @@ public sealed partial class Globals : Node
 #if CREATOR
 	public static IProperty LoadProperty(Type type, string? overridePropertyType = null)
 	{
-		string cacheToLoad = type.IsEnum ? "Enum" : type.Name;
-		if (overridePropertyType != null)
-		{
-			cacheToLoad = overridePropertyType;
-		}
+		string cacheToLoad;
 
-		if (type.IsAssignableTo(typeof(BaseAsset)))
-		{
+		if(overridePropertyType != null)
+			cacheToLoad = overridePropertyType;
+		else if (type.IsEnum)
+			cacheToLoad = "Enum";
+		else if (type.IsAssignableTo(typeof(BaseAsset)))
 			cacheToLoad = "BaseAsset";
-		}
 		else if (type.IsAssignableTo(typeof(Instance)))
-		{
 			cacheToLoad = "Instance";
-		}
+		else if (type.IsArray)
+			cacheToLoad = type.GetElementType()!.Name + "Array";
+		else
+			cacheToLoad = type.Name;
 
 		PackedScene packedScene = ForceLoadResource(_propertiesCache, cacheToLoad, $"{PropertiesPath}{cacheToLoad}Property.tscn");
 		return packedScene.Instantiate<IProperty>();

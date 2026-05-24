@@ -87,11 +87,10 @@ public partial class NetworkTransformSync : Instance
 		{
 			if (item is Dynamic dyn)
 			{
-				Transform3D transform3D = dyn.GetLocalTransform();
 				data.Add(new()
 				{
 					NetID = dyn.NetworkedObjectID,
-					Value = Transform3DDto.ToFloatArray(transform3D)
+					Value = TransformPayloadDto.ToArray(dyn.GetLocalTransform())
 				});
 			}
 		}
@@ -107,7 +106,7 @@ public partial class NetworkTransformSync : Instance
 		{
 			// There might be newer pending transforms
 			if (_pendingTransforms.ContainsKey(item.NetID)) { continue; }
-			RecvUpdateTransformHandler(item.NetID, Transform3DDto.FromFloatArray(item.Value), 1, true, false);
+			RecvUpdateTransformHandler(item.NetID, TransformPayloadDto.FromArray(item.Value), 1, true, false);
 		}
 
 		if (isFirstInit)
@@ -128,18 +127,18 @@ public partial class NetworkTransformSync : Instance
 		// Check if self has the network authority
 		if (!CheckDynAuthor(dyn, NetService.LocalPeerID)) return;
 
-		Transform3D current = dyn.GetLocalTransform();
+		TransformPayloadDto payload = TransformPayloadDto.FromGDTransform(dyn.GetLocalTransform());
 		string objID = dyn.NetworkedObjectID;
 
 		if (sendTo != 0)
 		{
 			if (isReliable)
 			{
-				RpcId(sendTo, nameof(NetRecvUpdateTransformReliable), objID, current, lerpTransform);
+				RpcId(sendTo, nameof(NetRecvUpdateTransformReliable), objID, payload, lerpTransform);
 			}
 			else
 			{
-				RpcId(sendTo, nameof(NetRecvUpdateTransform), objID, current, lerpTransform);
+				RpcId(sendTo, nameof(NetRecvUpdateTransform), objID, payload, lerpTransform);
 			}
 		}
 		else
@@ -148,29 +147,29 @@ public partial class NetworkTransformSync : Instance
 			{
 				if (_useNetworkLog) { PT.Print($"[Net] [Transform] {dyn.NetworkPath} Reliable update"); }
 
-				Rpc(nameof(NetRecvUpdateTransformReliable), objID, current, lerpTransform);
+				Rpc(nameof(NetRecvUpdateTransformReliable), objID, payload, lerpTransform);
 			}
 			else
 			{
-				Rpc(nameof(NetRecvUpdateTransform), objID, current, lerpTransform);
+				Rpc(nameof(NetRecvUpdateTransform), objID, payload, lerpTransform);
 			}
 		}
 	}
 
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.UnreliableOrdered)]
-	private void NetRecvUpdateTransform(string objID, Transform3D transform, bool lerpTransform)
+	private void NetRecvUpdateTransform(string objID, TransformPayloadDto transform, bool lerpTransform)
 	{
 		RecvUpdateTransformHandler(objID, transform, RemoteSenderId, false, lerpTransform);
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
-	private void NetRecvUpdateTransformReliable(string objID, Transform3D transform, bool lerpTransform)
+	private void NetRecvUpdateTransformReliable(string objID, TransformPayloadDto transform, bool lerpTransform)
 	{
 		RecvUpdateTransformHandler(objID, transform, RemoteSenderId, true, lerpTransform);
 	}
 
-	private void RecvUpdateTransformHandler(string objID, Transform3D transform, int fromPeer, bool isReliable, bool lerpTransform)
+	private void RecvUpdateTransformHandler(string objID, TransformPayloadDto transform, int fromPeer, bool isReliable, bool lerpTransform)
 	{
 		if (NetService.Root.GetNetObjectFromID(objID) is Dynamic dyn)
 		{
@@ -210,10 +209,10 @@ public partial class NetworkTransformSync : Instance
 		// Check authority
 		if (!CheckDynAuthor(dyn, NetService.LocalPeerID)) return;
 
-		Transform3D current = dyn.GetLocalTransform();
+		TransformPayloadDto payload = TransformPayloadDto.FromGDTransform(dyn.GetLocalTransform());
 		string objID = dyn.NetworkedObjectID;
 
-		RpcId(1, nameof(NetRecvTransformOnServer), objID, current, lerpTransform);
+		RpcId(1, nameof(NetRecvTransformOnServer), objID, payload, lerpTransform);
 	}
 
 	public void BroadcastTransformFromServer(Dynamic dyn, bool lerpTransform, int excludePeer = -1, bool reliable = true)
@@ -222,7 +221,7 @@ public partial class NetworkTransformSync : Instance
 		if (!dyn.IsNetworkReady) return;
 		string objID = dyn.NetworkedObjectID;
 
-		SetPendingBatch(objID, new(dyn, dyn.GetLocalTransform(), lerpTransform, excludePeer)
+		SetPendingBatch(objID, new(dyn, TransformPayloadDto.FromGDTransform(dyn.GetLocalTransform()), lerpTransform, excludePeer)
 		{
 			Reliable = reliable,
 			Forced = true
@@ -230,7 +229,7 @@ public partial class NetworkTransformSync : Instance
 	}
 
 	[NetRpc(AuthorityMode.Any, TransferMode = TransferMode.UnreliableOrdered, CallLocal = false)]
-	private void NetRecvTransformOnServer(string objID, Transform3D transform, bool lerpTransform)
+	private void NetRecvTransformOnServer(string objID, TransformPayloadDto transform, bool lerpTransform)
 	{
 		int fromPeer = RemoteSenderId;
 
@@ -251,10 +250,11 @@ public partial class NetworkTransformSync : Instance
 				SendUpdateTransform(dyn, true, fromPeer);
 				return;
 			}
-			Transform3D processed = dyn.TransformNetworkPass(fromPeer, transform);
+			TransformPayloadDto processed = dyn.TransformNetworkPass(fromPeer, transform);
 
 			// If is equal approx to last, return
-			if (processed.IsEqualApprox(dyn.GetLocalTransform())) return;
+			if (processed.IsEqualApprox(TransformPayloadDto.FromGDTransform(dyn.GetLocalTransform())))
+				return;
 
 			// Update on server
 			dyn.UpdateTransformFromNet(processed, false, lerpTransform);
@@ -345,7 +345,8 @@ public partial class NetworkTransformSync : Instance
 			return;
 
 		// Skip if transform is not changed enough to matter
-		if (!forced && existing.Transform.IsEqualApprox(entry.Transform))
+		// existing.Transform can be null here. Don't ask me why.
+		if (!forced && existing.Transform != null && existing.Transform.IsEqualApprox(entry.Transform))
 			return;
 
 		_pendingBatchUpdate[objID] = entry;
@@ -372,7 +373,7 @@ public partial class NetworkTransformSync : Instance
 		{
 			if (NetService.Root.GetNetObjectFromID(data.ObjID) is Dynamic dyn)
 			{
-				dyn.UpdateTransformFromNet(Transform3DDto.FromFloatArray(data.Transform), isReliable, data.Lerp);
+				dyn.UpdateTransformFromNet(TransformPayloadDto.FromArray(data.Transform), isReliable, data.Lerp);
 			}
 		}
 	}
@@ -388,10 +389,10 @@ public partial class NetworkTransformSync : Instance
 		return list;
 	}
 
-	private struct PendingBatchTransform(Dynamic dyn, Transform3D transform, bool lerpTransform, int excludePeer)
+	private struct PendingBatchTransform(Dynamic dyn, TransformPayloadDto transform, bool lerpTransform, int excludePeer)
 	{
 		public Dynamic Dyn = dyn;
-		public Transform3D Transform = transform;
+		public TransformPayloadDto Transform = transform;
 		public bool LerpTransform = lerpTransform;
 		public int ExcludePeer = excludePeer;
 		public bool Reliable = false;
@@ -400,7 +401,7 @@ public partial class NetworkTransformSync : Instance
 
 	private struct PendingTransform()
 	{
-		public Transform3D Transform;
+		public TransformPayloadDto Transform;
 		public int FromPeer;
 		public int ToPeer = -1;
 	}
@@ -409,16 +410,16 @@ public partial class NetworkTransformSync : Instance
 	public partial class BatchTransformData
 	{
 		public string ObjID = null!;
-		public float[] Transform = null!;
+		public byte[] Transform = null!;
 		public bool Lerp = false;
 
 		[MemoryPackConstructor]
 		public BatchTransformData() { }
 
-		public BatchTransformData(string objID, Transform3D transform, bool lerp)
+		public BatchTransformData(string objID, TransformPayloadDto transform, bool lerp)
 		{
 			ObjID = objID;
-			Transform = Transform3DDto.ToFloatArray(transform);
+			Transform = TransformPayloadDto.ToArray(transform);
 			Lerp = lerp;
 		}
 	}

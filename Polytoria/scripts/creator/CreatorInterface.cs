@@ -323,7 +323,7 @@ public partial class CreatorInterface : Control, IScriptObject
 			FileName = $"{target.Name}.ptmd",
 			DialogMode = DisplayServer.FileDialogMode.SaveFile,
 			Filters = ["*.ptmd;Polytoria Model"]
-		}, async (string[] paths) =>
+		}, async paths =>
 		{
 			if (paths.Length > 0)
 			{
@@ -570,7 +570,7 @@ public partial class CreatorInterface : Control, IScriptObject
 		PopupWindow(popup);
 	}
 
-	public void PopupManageAddons()
+	public static void PopupManageAddons()
 	{
 		OS.ShellShowInFileManager(ProjectSettings.GlobalizePath(AddonsManager.UserAddonFolder));
 	}

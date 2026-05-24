@@ -17,6 +17,8 @@ namespace Polytoria.Datamodel;
 public partial class UIField : Instance
 {
 	internal Control NodeControl = null!;
+	internal StyleBoxFlat _styleBox = new() { AntiAliasing = true, AntiAliasingSize = 2 };
+	private Panel? _bgPanel;
 	private Vector2 _positionOffset = new(0, 0);
 	private Vector2 _positionRelative = new(0.5f, 0.5f);
 	private Vector2 _sizeOffset = new(100, 100);
@@ -239,8 +241,155 @@ public partial class UIField : Instance
 		base.EnterTree();
 	}
 
+	internal ControllerState? _controllerState;
+
+	private const string CornerRadiusPropName = "CornerRadius";
+
+	internal void OnCornerControllerEnter()
+	{
+		_controllerState ??= new();
+		if (_controllerState.CornerCount++ == 0)
+		{
+			_controllerState.SavedCorners[0] = _styleBox.CornerRadiusTopLeft;
+			_controllerState.SavedCorners[1] = _styleBox.CornerRadiusTopRight;
+			_controllerState.SavedCorners[2] = _styleBox.CornerRadiusBottomLeft;
+			_controllerState.SavedCorners[3] = _styleBox.CornerRadiusBottomRight;
+		}
+	}
+
+	internal void OnCornerControllerExit()
+	{
+		if (_controllerState == null) return;
+		if (--_controllerState.CornerCount > 0) return;
+		_styleBox.CornerRadiusTopLeft = _controllerState.SavedCorners[0];
+		_styleBox.CornerRadiusTopRight = _controllerState.SavedCorners[1];
+		_styleBox.CornerRadiusBottomLeft = _controllerState.SavedCorners[2];
+		_styleBox.CornerRadiusBottomRight = _controllerState.SavedCorners[3];
+		SyncCornerPanel();
+		OnPropertyChanged(CornerRadiusPropName, syncToNet: false);
+	}
+
+	private const string BorderWidthPropName = "BorderWidth";
+	private const string BorderColorPropName = "BorderColor";
+
+	internal void OnStrokeControllerEnter()
+	{
+		_controllerState ??= new();
+		if (_controllerState.StrokeCount++ == 0)
+		{
+			_controllerState.SavedBorderWidths[0] = _styleBox.BorderWidthTop;
+			_controllerState.SavedBorderWidths[1] = _styleBox.BorderWidthBottom;
+			_controllerState.SavedBorderWidths[2] = _styleBox.BorderWidthLeft;
+			_controllerState.SavedBorderWidths[3] = _styleBox.BorderWidthRight;
+			_controllerState.SavedBorderColor = _styleBox.BorderColor;
+		}
+	}
+
+	internal void OnStrokeControllerExit()
+	{
+		if (_controllerState == null) return;
+		if (--_controllerState.StrokeCount > 0) return;
+		_styleBox.BorderWidthTop = _controllerState.SavedBorderWidths[0];
+		_styleBox.BorderWidthBottom = _controllerState.SavedBorderWidths[1];
+		_styleBox.BorderWidthLeft = _controllerState.SavedBorderWidths[2];
+		_styleBox.BorderWidthRight = _controllerState.SavedBorderWidths[3];
+		_styleBox.BorderColor = _controllerState.SavedBorderColor;
+		OnPropertyChanged(BorderWidthPropName, syncToNet: false);
+		OnPropertyChanged(BorderColorPropName, syncToNet: false);
+	}
+
+	internal int CornerControllerCount => _controllerState?.CornerCount ?? 0;
+	internal int StrokeControllerCount => _controllerState?.StrokeCount ?? 0;
+
+	internal int[] SavedCorners
+	{
+		get { _controllerState ??= new(); return _controllerState.SavedCorners; }
+	}
+
+	internal int[] SavedBorderWidths
+	{
+		get { _controllerState ??= new(); return _controllerState.SavedBorderWidths; }
+	}
+
+	internal Color SavedBorderColor
+	{
+		get => _controllerState?.SavedBorderColor ?? default;
+		set { _controllerState ??= new(); _controllerState.SavedBorderColor = value; }
+	}
+
+	internal void InternalSetRotation(float degrees)
+	{
+		_rotation = degrees;
+		NodeControl.Rotation = Mathf.DegToRad(degrees);
+	}
+
+	internal (float TopLeft, float TopRight, float BottomLeft, float BottomRight) InternalGetCorners()
+		=> (_styleBox.CornerRadiusTopLeft, _styleBox.CornerRadiusTopRight,
+			_styleBox.CornerRadiusBottomLeft, _styleBox.CornerRadiusBottomRight);
+
+	internal void InternalSetAllCorners(float tl, float tr, float bl, float br)
+	{
+		_styleBox.CornerRadiusTopLeft = Mathf.RoundToInt(tl);
+		_styleBox.CornerRadiusTopRight = Mathf.RoundToInt(tr);
+		_styleBox.CornerRadiusBottomLeft = Mathf.RoundToInt(bl);
+		_styleBox.CornerRadiusBottomRight = Mathf.RoundToInt(br);
+		SyncCornerPanel();
+		OnPropertyChanged(CornerRadiusPropName, syncToNet: false);
+	}
+
+	internal void InternalSetStroke(int width, Color color)
+	{
+		_styleBox.BorderWidthTop = width;
+		_styleBox.BorderWidthBottom = width;
+		_styleBox.BorderWidthLeft = width;
+		_styleBox.BorderWidthRight = width;
+		_styleBox.BorderColor = color;
+		OnPropertyChanged(BorderWidthPropName, syncToNet: false);
+		OnPropertyChanged(BorderColorPropName, syncToNet: false);
+	}
+
+	internal static Panel CreateOverlayPanel()
+	{
+		return new Panel
+		{
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			ShowBehindParent = true,
+			AnchorLeft = 0,
+			AnchorRight = 1,
+			AnchorTop = 0,
+			AnchorBottom = 1,
+		};
+	}
+
+	private void SyncCornerPanel()
+	{
+		if (NodeControl == null) return;
+		if (NodeControl is Panel or TextureRect) return;
+
+		bool hasCorners = _styleBox.CornerRadiusTopLeft > 0
+			|| _styleBox.CornerRadiusTopRight > 0
+			|| _styleBox.CornerRadiusBottomLeft > 0
+			|| _styleBox.CornerRadiusBottomRight > 0;
+
+		if (hasCorners && _bgPanel == null)
+		{
+			_bgPanel = CreateOverlayPanel();
+			_bgPanel.AddThemeStyleboxOverride("panel", _styleBox);
+			NodeControl.AddChild(_bgPanel);
+			NodeControl.MoveChild(_bgPanel, 0);
+		}
+		else if (!hasCorners && _bgPanel != null)
+		{
+			_bgPanel.QueueFree();
+			_bgPanel = null;
+		}
+	}
+
 	public override void Init()
 	{
+		if (NodeControl is Panel)
+			NodeControl.AddThemeStyleboxOverride("panel", _styleBox);
+
 		NodeControl.MouseEntered += OnMouseEntered;
 		NodeControl.MouseExited += OnMouseExited;
 		NodeControl.GuiInput += GuiInput;
@@ -256,6 +405,8 @@ public partial class UIField : Instance
 
 	public override void PreDelete()
 	{
+		_bgPanel?.QueueFree();
+		_bgPanel = null;
 		NodeControl.MouseEntered -= OnMouseEntered;
 		NodeControl.MouseExited -= OnMouseExited;
 		NodeControl.GuiInput -= GuiInput;
@@ -278,7 +429,7 @@ public partial class UIField : Instance
 		{
 			_queuedRecomputeTransform = false;
 			RecomputeTransform();
-			//SetProcess(false);
+			SetProcess(false);
 		}
 		base.Process(delta);
 	}
@@ -293,7 +444,14 @@ public partial class UIField : Instance
 #if CREATOR
 				if (!IsParentedToCreatorGUI)
 				{
-					Root.CreatorContext?.Selections.SelectOnly(this);
+					if (!IsMouseOverChildUIField())
+					{
+						if (Root.CreatorContext?.Selections.HasSelected(this) != true)
+						{
+							Root.CreatorContext?.Selections.SelectOnly(this);
+						}
+						NodeControl.AcceptEvent();
+					}
 				}
 #endif
 			}
@@ -304,9 +462,25 @@ public partial class UIField : Instance
 		}
 	}
 
+	private bool IsMouseOverChildUIField()
+	{
+		if (NodeControl == null) return false;
+		Vector2 mousePos = NodeControl.GetGlobalMousePosition();
+		foreach (Instance child in GetChildren())
+		{
+			if (child is UIField { IsHidden: false } uiChild)
+			{
+				if (uiChild.NodeControl.GetGlobalRect().HasPoint(mousePos))
+					return true;
+			}
+		}
+		return false;
+	}
+
 	internal void QueueRecomputeTransform()
 	{
 		_queuedRecomputeTransform = true;
+		SetProcess(true);
 	}
 
 	private void OnMouseEntered()
@@ -429,5 +603,14 @@ public partial class UIField : Instance
 		Disabled,
 		ClipOnly,
 		ClipAndDraw
+	}
+
+	internal sealed class ControllerState
+	{
+		public int CornerCount;
+		public int StrokeCount;
+		public int[] SavedCorners = new int[4];
+		public int[] SavedBorderWidths = new int[4];
+		public Color SavedBorderColor;
 	}
 }

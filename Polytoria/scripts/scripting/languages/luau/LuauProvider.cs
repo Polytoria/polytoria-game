@@ -242,7 +242,9 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		foreach (var t in types)
 		{
 			if (!t.IsDefined(typeof(InstantiableAttribute), false)) continue;
+#pragma warning disable IL2072 // Datamodel types has the reflections
 			PushCSClass(state, t);
+#pragma warning restore IL2072 // Target parameter argument does not satisfy 'DynamicallyAccessedMembersAttribute' in call to target method. The return value of the source method does not have matching annotations.
 			state.SetGlobal(t.Name);
 		}
 
@@ -586,7 +588,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 	}
 
-	public static void RegisterProxy(Type target, Type proxy)
+	public static void RegisterProxy(Type target, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type proxy)
 	{
 		_gdToProxy[target] = proxy.GetMethod(nameof(IScriptGDObject.FromGDClass), BindingFlags.Public | BindingFlags.Static);
 	}

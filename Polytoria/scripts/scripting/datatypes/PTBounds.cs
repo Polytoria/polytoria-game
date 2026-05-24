@@ -56,13 +56,13 @@ public class PTBounds : IScriptGDObject
 		return $"<Bounds:({v.Start}, {v.End}, {v.Size}>";
 	}
 
-	[ScriptMethod(ConvertParamsToGD = false)] public static Vector3 ClosestPoint(PTBounds bounds, PTVector3 point) => bounds.aabb.GetSupport(point.vector);
-	[ScriptMethod(ConvertParamsToGD = false)] public static bool Contains(PTBounds bounds, PTVector3 point) => bounds.aabb.HasPoint(point.vector);
-	[ScriptMethod(ConvertParamsToGD = false)] public static PTBounds Encapsulate(PTBounds bounds, PTVector3 point) => FromGDClass(bounds.aabb.Expand(point.vector));
-	[ScriptMethod(ConvertParamsToGD = false)] public static PTBounds Expand(PTBounds bounds, float amount) => FromGDClass(bounds.aabb.Grow(amount));
-	[ScriptMethod(ConvertParamsToGD = false)] public static bool Intersects(PTBounds bounds, PTBounds other) => bounds.aabb.Intersects(other.aabb);
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static Vector3 ClosestPoint(PTBounds bounds, PTVector3 point) => bounds.aabb.GetSupport(point.vector);
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static bool Contains(PTBounds bounds, PTVector3 point) => bounds.aabb.HasPoint(point.vector);
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTBounds Encapsulate(PTBounds bounds, PTVector3 point) => FromGDClass(bounds.aabb.Expand(point.vector));
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTBounds Expand(PTBounds bounds, float amount) => FromGDClass(bounds.aabb.Grow(amount));
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static bool Intersects(PTBounds bounds, PTBounds other) => bounds.aabb.Intersects(other.aabb);
 
-	[ScriptMethod(ConvertParamsToGD = false)]
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)]
 	public static PTBounds SetMinMax(PTBounds bounds, PTVector3 min, PTVector3 max)
 	{
 		Aabb aabb = bounds.aabb;
@@ -71,14 +71,14 @@ public class PTBounds : IScriptGDObject
 		return FromGDClass(aabb);
 	}
 
-	[ScriptMethod(ConvertParamsToGD = false)]
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)]
 	public static float Distance(PTBounds bounds, PTVector3 point)
 	{
 		Vector3 closest = bounds.aabb.GetCenter().Clamp(bounds.aabb.Position, bounds.aabb.End);
 		return point.vector.DistanceSquaredTo(closest);
 	}
 
-	[ScriptMethod(ConvertParamsToGD = false)]
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)]
 	public static float SqrDistance(PTBounds bounds, PTVector3 point)
 	{
 		Vector3 closest = Vector3.Zero;

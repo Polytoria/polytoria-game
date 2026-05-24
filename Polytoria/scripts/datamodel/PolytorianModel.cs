@@ -251,12 +251,12 @@ public sealed partial class PolytorianModel : CharacterModel
 		FaceImage = null;
 		_headMat.NextPass = _faceMat;
 
-		_shirtMats[0] = new() { Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor, RenderPriority = 1 };
-		_shirtMats[1] = new() { Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor, RenderPriority = 1 };
-		_shirtMats[2] = new() { Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor, RenderPriority = 1 };
+		_shirtMats[0] = new() { Transparency = BaseMaterial3D.TransparencyEnum.Alpha, RenderPriority = 1 };
+		_shirtMats[1] = new() { Transparency = BaseMaterial3D.TransparencyEnum.Alpha, RenderPriority = 1 };
+		_shirtMats[2] = new() { Transparency = BaseMaterial3D.TransparencyEnum.Alpha, RenderPriority = 1 };
 
-		_pantsMats[0] = new() { Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor, RenderPriority = 1 };
-		_pantsMats[1] = new() { Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor, RenderPriority = 1 };
+		_pantsMats[0] = new() { Transparency = BaseMaterial3D.TransparencyEnum.Alpha, RenderPriority = 1 };
+		_pantsMats[1] = new() { Transparency = BaseMaterial3D.TransparencyEnum.Alpha, RenderPriority = 1 };
 
 		_faceMat.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
 
@@ -385,9 +385,15 @@ public sealed partial class PolytorianModel : CharacterModel
 		Animator.ImportAnimationRaw("emote_dance", "Dance");
 		Animator.ImportAnimationRaw("emote_helicopter", "Helicopter");
 		Animator.ImportAnimationRaw("emote_sit", "Sit");
+		Animator.ImportAnimationRaw("emote_dance2", "Dance2");
 
 		Animator.ImportOneShotAnimationRaw("emote_wave", "Wave");
 		Animator.ImportOneShotAnimationRaw("emote_point", "Point");
+		Animator.ImportOneShotAnimationRaw("emote_disagree", "Disagree");
+		Animator.ImportOneShotAnimationRaw("emote_agree", "Agree");
+		Animator.ImportOneShotAnimationRaw("emote_scream", "Scream");
+		Animator.ImportOneShotAnimationRaw("emote_disappointed", "Disappointed");
+
 		/*
 		Animator.ImportOneShotAnimationRaw("poly_welcome", "polytorian_2/welcome");
 		Animator.ImportOneShotAnimationRaw("avataredit_pose1", "polytorian_2/pose1");
@@ -454,7 +460,7 @@ public sealed partial class PolytorianModel : CharacterModel
 				StandardMaterial3D m = new()
 				{
 					AlbedoTexture = c.ClothTexture,
-					Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor,
+					Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
 					RenderPriority = 1
 				};
 				if (head == null) { head = m; tail = m; }

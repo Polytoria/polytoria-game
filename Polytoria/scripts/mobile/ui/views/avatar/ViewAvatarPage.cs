@@ -20,7 +20,7 @@ public partial class ViewAvatarPage : MobileViewBase
 		StrikeAPose();
 	}
 
-	private void StrikeAPose()
+	private static void StrikeAPose()
 	{
 		//_polytorian.Animator.PlayOneShotAnimation("avataredit_pose" + Mathf.Round(GD.RandRange(1, 3)));
 	}

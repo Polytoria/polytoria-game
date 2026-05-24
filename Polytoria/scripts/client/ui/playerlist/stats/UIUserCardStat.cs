@@ -18,13 +18,13 @@ public partial class UIUserCardStat : Node
 	public override void _Ready()
 	{
 		_nameLabel.Text = TargetStat.GetDisplayName();
-		_valueLabel.Text = TargetStat.GetDisplayValue(Root.TargetPlayer);
-		Root.TargetPlayer.StatChanged.Connect(OnPlayerStatChanged);
+		_valueLabel.Text = TargetStat.GetDisplayValue(UIUserCard.TargetPlayer);
+		UIUserCard.TargetPlayer.StatChanged.Connect(OnPlayerStatChanged);
 	}
 
 	private void OnPlayerStatChanged(Stat k, object? _)
 	{
 		if (k != TargetStat) return;
-		_valueLabel.Text = TargetStat.GetDisplayValue(Root.TargetPlayer);
+		_valueLabel.Text = TargetStat.GetDisplayValue(UIUserCard.TargetPlayer);
 	}
 }

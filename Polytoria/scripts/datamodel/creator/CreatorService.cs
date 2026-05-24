@@ -317,7 +317,7 @@ public sealed partial class CreatorService : Node, IScriptObject
 		CurrentGame?.CreatorContext.History.Undo();
 	}
 
-	public void OpenScript(Script script)
+	public static void OpenScript(Script script)
 	{
 		if (CurrentSession == null) return;
 		if (script.LinkedScript != null)

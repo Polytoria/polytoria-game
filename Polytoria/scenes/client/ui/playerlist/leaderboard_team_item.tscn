@@ -4,22 +4,22 @@
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nqflu"]
 bg_color = Color(1, 1, 1, 0.49803922)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
 
 [node name="UserItem" type="Panel" unique_id=1863328555 node_paths=PackedStringArray("_teamNameLabel", "_statsBox")]
 self_modulate = Color(1, 0, 1, 1)
-custom_minimum_size = Vector2(0, 24)
+custom_minimum_size = Vector2(0, 20)
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 24.0
+offset_bottom = 20.0
 grow_horizontal = 2
 mouse_default_cursor_shape = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_nqflu")
 script = ExtResource("1_nqflu")
-_teamNameLabel = NodePath("Item/PlayerInfo/TeamName")
+_teamNameLabel = NodePath("Item/PlayerInfo/TeamNameRow/TeamName")
 _statsBox = NodePath("Item/Stats")
 
 [node name="Item" type="HBoxContainer" parent="." unique_id=237553760]
@@ -27,8 +27,6 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 4.0
-offset_right = -4.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
@@ -38,20 +36,25 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="TeamIcon" type="TextureRect" parent="Item/PlayerInfo" unique_id=1331594007]
-custom_minimum_size = Vector2(18, 0)
 layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="TeamName" type="Label" parent="Item/PlayerInfo" unique_id=693001233]
+[node name="TeamNameRow" type="HBoxContainer" parent="Item/PlayerInfo" unique_id=1758392014]
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="TeamName" type="Label" parent="Item/PlayerInfo/TeamNameRow" unique_id=693001233]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 13
 text = "Team"
+text_overrun_behavior = 5
 
 [node name="Spacer" type="Control" parent="Item" unique_id=366019082]
-custom_minimum_size = Vector2(24, 0)
+custom_minimum_size = Vector2(8, 0)
 layout_mode = 2
 
 [node name="Stats" type="HBoxContainer" parent="Item" unique_id=672045027]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 15

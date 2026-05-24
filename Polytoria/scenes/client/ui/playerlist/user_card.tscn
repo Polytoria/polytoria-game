@@ -15,8 +15,8 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[node name="UserCard" type="PanelContainer" unique_id=2105612235 node_paths=PackedStringArray("_usernameLabel", "_statsContainer", "_pfpIconRect")]
-self_modulate = Color(0, 0, 0, 1)
+[node name="UserCard" type="PanelContainer" unique_id=2105612235 node_paths=PackedStringArray("_usernameLabel", "_statsContainer", "_pfpIconRect", "_badgeRect")]
+self_modulate = Color(0.08, 0.08, 0.08, 1)
 custom_minimum_size = Vector2(0, 48)
 theme = ExtResource("1_w62j6")
 theme_override_styles/panel = SubResource("StyleBoxFlat_w62j6")
@@ -24,6 +24,7 @@ script = ExtResource("1_py1qn")
 _usernameLabel = NodePath("Layout/Username")
 _statsContainer = NodePath("Layout/Stats")
 _pfpIconRect = NodePath("Layout/ARC/Clip/Icon")
+_badgeRect = NodePath("Layout/Badge")
 
 [node name="Layout" type="HBoxContainer" parent="." unique_id=458831048]
 layout_mode = 2
@@ -53,15 +54,25 @@ stretch_mode = 6
 custom_minimum_size = Vector2(8, 0)
 layout_mode = 2
 
+[node name="Badge" type="TextureRect" parent="Layout" unique_id=856622248]
+custom_minimum_size = Vector2(16, 0)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Spacer3" type="Control" parent="Layout" unique_id=1829698442]
+custom_minimum_size = Vector2(4, 0)
+layout_mode = 2
+
 [node name="Username" type="Label" parent="Layout" unique_id=627039506]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Username"
 
 [node name="Spacer2" type="Control" parent="Layout" unique_id=1845676044]
-custom_minimum_size = Vector2(24, 0)
+custom_minimum_size = Vector2(15, 0)
 layout_mode = 2
 
 [node name="Stats" type="HBoxContainer" parent="Layout" unique_id=1254174512]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 15

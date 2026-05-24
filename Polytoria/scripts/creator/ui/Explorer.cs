@@ -431,7 +431,7 @@ public sealed partial class Explorer : TabContainer
 
 		Instance instance = _itemToInstance[item];
 
-		if (selected && !Input.IsKeyPressed(Key.Ctrl))
+		if (selected && !Input.IsKeyPressed(Key.Ctrl) && !Input.IsKeyPressed(Key.Shift))
 		{
 			CurrentRoot?.CreatorContext.Selections.DeselectAll();
 		}

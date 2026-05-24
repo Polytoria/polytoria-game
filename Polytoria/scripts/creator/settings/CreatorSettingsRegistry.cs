@@ -124,6 +124,12 @@ public static class CreatorSettingsRegistry
 				[
 					new() { Value = IndentationModeEnum.Tabs, Label = "Tabs" },
 					new() { Value = IndentationModeEnum.Spaces, Label = "Spaces" },
+				],
+				Conditions = [
+					new SettingCondition<PreferredEditorEnum>() {
+						Target = CreatorSettingKeys.CodeEditor.PreferredEditor,
+						Predicate = x => x == PreferredEditorEnum.BuiltIn
+					}
 				]
 			});
 
@@ -139,7 +145,13 @@ public static class CreatorSettingsRegistry
 				DefaultValue = 2,
 				MinValue = 1,
 				MaxValue = 8,
-				Step = 1
+				Step = 1,
+				Conditions = [
+					new SettingCondition<PreferredEditorEnum>() {
+						Target = CreatorSettingKeys.CodeEditor.PreferredEditor,
+						Predicate = x => x == PreferredEditorEnum.BuiltIn
+					}
+				]
 			});
 
 		// Popups

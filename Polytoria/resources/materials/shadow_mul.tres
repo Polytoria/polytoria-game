@@ -1,0 +1,13 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://bgdcio51v2olq"]
+
+[sub_resource type="Shader" id="Shader_elk26"]
+code = "shader_type canvas_item;
+render_mode blend_mul;
+
+void fragment() {
+	COLOR.rgb = mix(vec3(1.0), COLOR.rgb, COLOR.a);
+}
+"
+
+[resource]
+shader = SubResource("Shader_elk26")

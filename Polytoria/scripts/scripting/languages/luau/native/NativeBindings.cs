@@ -60,8 +60,9 @@ internal partial class NativeBindings
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
 	internal static partial IntPtr luaL_newstate();
 
-	[DllImport(LuaLibraryName, CallingConvention = CallingConvention.Cdecl)]
-	internal static extern void lua_setsafeenv(IntPtr L, int index, int value);
+	[LibraryImport(LuaLibraryName)]
+	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+	internal static partial void lua_setsafeenv(IntPtr L, int index, int value);
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]

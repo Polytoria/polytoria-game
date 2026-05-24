@@ -20,8 +20,7 @@ public sealed partial class GraphicsSettingsApplier : Node
 
 	public override void _Ready()
 	{
-		if (Settings != null)
-			Settings.Changed += OnChanged;
+		Settings?.Changed += OnChanged;
 
 		ApplyPostProcessing();
 		ApplyViewportSettings();
@@ -37,8 +36,7 @@ public sealed partial class GraphicsSettingsApplier : Node
 
 	public override void _ExitTree()
 	{
-		if (Settings != null)
-			Settings.Changed -= OnChanged;
+		Settings?.Changed -= OnChanged;
 		base._ExitTree();
 	}
 

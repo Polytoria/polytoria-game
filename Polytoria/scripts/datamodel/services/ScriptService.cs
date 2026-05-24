@@ -121,7 +121,7 @@ public sealed partial class ScriptService : Instance
 		script.Bytecode = provider.CompileSource(script.Source);
 	}
 
-	public void Close(Script script)
+	public static void Close(Script script)
 	{
 		PT.Print("Closing script: ", script.LuaPath);
 
@@ -194,7 +194,9 @@ public sealed partial class ScriptService : Instance
 	}
 
 
+#pragma warning disable IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
 	internal static PropertyInfo? GetScriptPropertyOfName(
+#pragma warning restore IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
 		[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type type,
 		string name,
 		bool compat = false)
@@ -240,7 +242,9 @@ public sealed partial class ScriptService : Instance
 		action.LangProvider?.FreePTCallback(action);
 	}
 
+#pragma warning disable IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
 	internal static MethodInfo? ResolveMethod(
+#pragma warning restore IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
 		bool compatibility,
 		string key,
 		[DynamicallyAccessedMembers(DynamicallyAccessedTypes)] Type type)
@@ -258,25 +262,22 @@ public sealed partial class ScriptService : Instance
 		if (compatibility)
 		{
 			// Find legacy method first
+
 			method = methods.FirstOrDefault(p =>
 				p.IsDefined(typeof(ScriptLegacyMethodAttribute)) &&
 				string.Equals(
 					p.GetCustomAttribute<ScriptLegacyMethodAttribute>()?.MethodName,
 					key,
-					StringComparison.CurrentCultureIgnoreCase));
+					StringComparison.CurrentCultureIgnoreCase)) ??
 
-			// If not found, fallback to ScriptMethodAttribute
-
-			if (method == null)
-			{
-				method = methods.FirstOrDefault(p =>
+				// If not found, fallback to ScriptMethodAttribute
+				methods.FirstOrDefault(p =>
 					p.IsDefined(typeof(ScriptMethodAttribute)) &&
 					(p.Name.Equals(key, StringComparison.CurrentCultureIgnoreCase) ||
 					 string.Equals(
 						 p.GetCustomAttribute<ScriptMethodAttribute>()?.MethodName,
 						 key,
 						 StringComparison.CurrentCultureIgnoreCase)));
-			}
 		}
 		else
 		{
@@ -293,7 +294,9 @@ public sealed partial class ScriptService : Instance
 		return method;
 	}
 
+#pragma warning disable IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
 	internal static (MethodInfo Method, ScriptMetamethodAttribute Attribute)[] GetMetamethods(
+#pragma warning restore IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
 			[DynamicallyAccessedMembers(DynamicallyAccessedTypes)] Type type)
 	{
 		// Try to get from cache first
@@ -545,10 +548,12 @@ public sealed partial class ScriptService : Instance
 		// Null is returned if the attribute isn't present for the method. 
 		AsyncStateMachineAttribute? attrib = (AsyncStateMachineAttribute?)method.GetCustomAttribute(attType);
 
-		return (attrib != null);
+		return attrib != null;
 	}
 
+#pragma warning disable IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
 	internal static MethodsCacheData ResolveMethods([DynamicallyAccessedMembers(DynamicallyAccessedTypes)] Type type, string key, bool compatibility)
+#pragma warning restore IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
 	{
 		CacheKey cacheKey = new() { Type = type, Key = key, IsCompatibility = compatibility };
 
@@ -585,11 +590,15 @@ public sealed partial class ScriptService : Instance
 		bool getParamsAsFunction = methodInfos.Any(m =>
 			m.GetCustomAttributes<ScriptMethodAttribute>().Any(attr => attr.GetParamsAsFunction == true));
 
+		bool semiStatic = methodInfos.Any(m =>
+			m.GetCustomAttributes<ScriptMethodAttribute>().Any(attr => attr.SemiStatic == true));
+
 		MethodsCacheData cacheData = new()
 		{
 			Methods = [.. methodInfos],
 			ConvertParamsToGD = convertParamsToGD,
 			GetParamsAsFunction = getParamsAsFunction,
+			SemiStatic = semiStatic,
 		};
 
 		_methodsCache[cacheKey] = cacheData;
@@ -703,6 +712,7 @@ public sealed partial class ScriptService : Instance
 		public MethodInfo[] Methods;
 		public bool ConvertParamsToGD;
 		public bool GetParamsAsFunction;
+		public bool SemiStatic;
 	}
 
 	private struct CacheKey : IEquatable<CacheKey>

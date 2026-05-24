@@ -23,6 +23,7 @@ public sealed partial class WorldContainer : SubViewportContainer
 	public WorldContainerOverlay Overlay = null!;
 	public UIGizmos UIGizmos = null!;
 	internal event Action<InputEvent>? GodotInputEvent;
+	private ViewportAxis _overlayAxis = null!;
 
 	public WorldContainer(World game)
 	{
@@ -45,6 +46,7 @@ public sealed partial class WorldContainer : SubViewportContainer
 		Overlay = Globals.CreateInstanceFromScene<WorldContainerOverlay>(ContainerOverlayPath);
 		Overlay.World = game;
 		Overlay.Container = this;
+		_overlayAxis = Overlay.GetNode<ViewportAxis>("ViewportAxis");
 		_subViewport.AddChild(Overlay);
 	}
 
@@ -71,6 +73,10 @@ public sealed partial class WorldContainer : SubViewportContainer
 		{
 			GrabFocus();
 		}
+
+		var handledByAxis = _overlayAxis.HandleInput(@event);
+		if (handledByAxis) return;
+
 		_subViewport.PushInput(@event);
 		GodotInputEvent?.Invoke(@event);
 	}

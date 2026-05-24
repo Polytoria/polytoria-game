@@ -204,6 +204,11 @@ public partial class TextEditorRoot : Node
 			CodeEditor.AcceptEvent();
 			_finder.Open(CodeEditor.GetSelectedText());
 		}
+		else if (@event.IsActionPressed("textedit_toggle_comment"))
+		{
+			CodeEditor.AcceptEvent();
+			ToggleComment();
+		}
 		else if (@event.IsActionPressed("ui_cancel"))
 		{
 			CodeEditor.AcceptEvent();
@@ -362,6 +367,50 @@ public partial class TextEditorRoot : Node
 			}
 		}
 
-		return lineText.Substring(startPos, column - startPos);
+		return lineText[startPos..column];
+	}
+
+	public IEnumerable<int> GetSelectedLines()
+	{
+		for (int caretIdx = 0; caretIdx < CodeEditor.GetCaretCount(); caretIdx++)
+		{
+			for (int lineIdx = CodeEditor.GetSelectionFromLine(caretIdx); lineIdx <= CodeEditor.GetSelectionToLine(caretIdx); lineIdx++)
+			{
+				yield return lineIdx;
+			}
+		}
+	}
+
+	private bool IsSelectionCommented()
+	{
+		foreach (int lineIdx in GetSelectedLines())
+		{
+			string lineText = CodeEditor.GetLine(lineIdx);
+			if (!lineText.StartsWith("--"))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public void ToggleComment()
+	{
+		if (IsSelectionCommented())
+		{
+			foreach (int lineIdx in GetSelectedLines())
+			{
+				string lineText = CodeEditor.GetLine(lineIdx);
+				CodeEditor.SetLine(lineIdx, lineText[2..]);
+			}
+		}
+		else
+		{
+			foreach (int lineIdx in GetSelectedLines())
+			{
+				string lineText = CodeEditor.GetLine(lineIdx);
+				CodeEditor.SetLine(lineIdx, "--" + lineText);
+			}
+		}
 	}
 }

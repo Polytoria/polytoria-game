@@ -13,6 +13,13 @@ public static class ClientSettingKeys
 		public const string CameraSensitivity = "general.camera_sensitivity";
 	}
 
+	public static class Chat
+	{
+		public const string ChatColors = "chat.chat_colors";
+		public const string ChatFont = "chat.chat_font";
+		public const string ChatFontSize = "chat.chat_font_size";
+	}
+
 	public static class Display
 	{
 		public const string UiScale = "display.ui_scale";
@@ -27,5 +34,6 @@ public static class ClientSettingKeys
 	public static class Advanced
 	{
 		public const string ShowAdvancedSettings = "advanced.show_advanced_settings";
+		public const string AssetQueue = "advanced.asset_queue";
 	}
 }

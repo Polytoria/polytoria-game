@@ -199,7 +199,7 @@ public partial class ScaleGizmo : Node, IGizmo
 			}
 			else
 			{
-				UpdateAxis(rayOrigin, rayNormal, cameraNormal);
+				UpdateAxis(rayOrigin, rayNormal);
 			}
 		}
 		base._Input(@event);
@@ -242,7 +242,7 @@ public partial class ScaleGizmo : Node, IGizmo
 		}
 	}
 
-	private void UpdateAxis(Vector3 rayOrigin, Vector3 rayNormal, Vector3 cameraNormal)
+	private void UpdateAxis(Vector3 rayOrigin, Vector3 rayNormal)
 	{
 		Transform3D pivot = Gizmos.GetCenterPivot([.. Targets]);
 		_gizmoScale = pivot.Origin.DistanceTo(GDCamera.GlobalPosition) * 0.12f;
