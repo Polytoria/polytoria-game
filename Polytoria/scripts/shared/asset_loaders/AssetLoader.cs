@@ -72,7 +72,7 @@ public partial class AssetLoader : Node
 			int MaxConcurrentRequests = ClientSettingsService.Instance.Get<int>(ClientSettingKeys.Advanced.AssetQueue);
 			_loadSlots = new(MaxConcurrentRequests);
 		}
-		
+
 		await _loadSlots.WaitAsync();
 		try
 		{
