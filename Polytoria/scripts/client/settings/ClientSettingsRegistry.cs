@@ -199,10 +199,7 @@ public static class ClientSettingsRegistry
 				Options =
 				[
 					new() { Value = 5, Label = "Default (5)" },
-					new() { Value = 8, Label = "Medium (8)" },
-					new() { Value = 12, Label = "High (12)" },
-					new() { Value = 17, Label = "Fast (17)" },
-					new() { Value = 20, Label = "Faster (22)" },
+					new() { Value = 15, Label = "Fast (15)" },
 					new() { Value = 30, Label = "Aggressive (30)" },
 					new() { Value = 60, Label = "SPEED (60)" },
 				]
