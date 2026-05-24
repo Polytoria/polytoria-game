@@ -5,6 +5,7 @@
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Datamodel.Data;
+using Polytoria.Enums;
 
 namespace Polytoria.Datamodel;
 
@@ -14,6 +15,8 @@ public partial class UIShadow : Instance
 	private ShadowLayer[] _layers = [new ShadowLayer()];
 	private ShadowPanel[] _panels = [];
 	private UIField? _parentView;
+
+	private static readonly ShaderMaterial _multiplyMaterial = GD.Load<ShaderMaterial>("res://resources/materials/shadow_mul.tres");
 
 	private sealed class ShadowPanel
 	{
@@ -115,17 +118,21 @@ public partial class UIShadow : Instance
 			StyleBoxFlat sb = new() { AntiAliasing = true, AntiAliasingSize = 2 };
 			panel.AddThemeStyleboxOverride("panel", sb);
 
-			if (_layers[i].BlendMode != ShadowBlendMode.Normal)
+			BlendModeEnum blendMode = _layers[i].BlendMode;
+			switch (blendMode)
 			{
-				panel.Material = new CanvasItemMaterial
-				{
-					BlendMode = _layers[i].BlendMode switch
+				case BlendModeEnum.Mix:
+					break;
+				case BlendModeEnum.Multiply:
+					// special case because Mul doesn't account for alpha
+					panel.Material = _multiplyMaterial;
+					break;
+				default:
+					panel.Material = new CanvasItemMaterial
 					{
-						ShadowBlendMode.Add => CanvasItemMaterial.BlendModeEnum.Add,
-						ShadowBlendMode.Subtract => CanvasItemMaterial.BlendModeEnum.Sub,
-						_ => CanvasItemMaterial.BlendModeEnum.Mix,
-					}
-				};
+						BlendMode = (CanvasItemMaterial.BlendModeEnum)blendMode
+					};
+					break;
 			}
 
 			_parentView.NodeControl.AddChild(panel);

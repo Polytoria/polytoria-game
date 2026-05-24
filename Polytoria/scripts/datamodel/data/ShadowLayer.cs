@@ -6,17 +6,10 @@ using Godot;
 using MemoryPack;
 using Polytoria.Attributes;
 using Polytoria.Datamodel.Interfaces;
+using Polytoria.Enums;
 using Polytoria.Scripting;
 
 namespace Polytoria.Datamodel.Data;
-
-[ScriptEnum]
-public enum ShadowBlendMode
-{
-	Normal,
-	Add,
-	Subtract,
-}
 
 [MemoryPackable]
 public partial struct ShadowLayer : IScriptObject, IData
@@ -48,7 +41,7 @@ public partial struct ShadowLayer : IScriptObject, IData
 	}
 
 	[ScriptProperty]
-	public ShadowBlendMode BlendMode { get; set; }
+	public BlendModeEnum BlendMode { get; set; }
 
 	public ShadowLayer()
 	{
@@ -56,7 +49,7 @@ public partial struct ShadowLayer : IScriptObject, IData
 		Offset = new Vector2(0, 4);
 		_radius = 8f;
 		Spread = 0f;
-		BlendMode = ShadowBlendMode.Normal;
+		BlendMode = BlendModeEnum.Mix;
 	}
 
 	object IData.Clone() => new ShadowLayer
