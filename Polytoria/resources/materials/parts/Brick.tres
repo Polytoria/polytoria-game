@@ -20,4 +20,4 @@ shader_parameter/emissive_strength = 0.0
 shader_parameter/metallic_specular = 0.2000000095
 shader_parameter/roughness = 0.850000040375
 shader_parameter/metallic = 0.0
-shader_parameter/studs_per_tile = 2.0
+shader_parameter/studs_per_tile = 5.0
