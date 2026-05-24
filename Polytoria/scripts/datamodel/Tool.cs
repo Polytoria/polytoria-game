@@ -21,6 +21,9 @@ public sealed partial class Tool : RigidBody
 	private ImageAsset? _iconImage;
 	private NPC? _holder = null;
 
+	private double _dropEquipCooldown;
+	private Timer _equipTimer = null!;
+
 	[Editable, ScriptProperty]
 	public bool Droppable
 	{
@@ -64,6 +67,17 @@ public sealed partial class Tool : RigidBody
 		}
 	}
 
+	[Editable, ScriptProperty, DefaultValue(1.5)]
+	public float DropEquipCooldown
+	{
+		get => (float)_dropEquipCooldown;
+		set
+		{
+			_equipTimer.WaitTime = _dropEquipCooldown = value;
+			OnPropertyChanged();
+		}
+	}
+
 	[SyncVar, ScriptProperty]
 	public NPC? Holder
 	{
@@ -101,7 +115,6 @@ public sealed partial class Tool : RigidBody
 	private readonly HashSet<Instance> _registeredInstances = [];
 	private bool _hasDynChild = false;
 	private CollisionShape3D? _toolCollision;
-	private Timer _equipTimer = null!;
 
 	private void OnToolImageLoaded(Resource? resource)
 	{
@@ -119,12 +132,7 @@ public sealed partial class Tool : RigidBody
 
 	public override void InitGDNode()
 	{
-		GDNode.AddChild(_equipTimer = new()
-		{
-			OneShot = true,
-			// rough estimate from 1.0
-			WaitTime = 1.5f,
-		}, @internal: Node.InternalMode.Back);
+		GDNode.AddChild(_equipTimer = new() { OneShot = true }, @internal: Node.InternalMode.Back);
 		base.InitGDNode();
 	}
 
@@ -348,6 +356,6 @@ public sealed partial class Tool : RigidBody
 
 	internal void InvokeDropped()
 	{
-		_equipTimer.Start();
+		if (_dropEquipCooldown > 0.05) _equipTimer.Start(_dropEquipCooldown);
 	}
 }
