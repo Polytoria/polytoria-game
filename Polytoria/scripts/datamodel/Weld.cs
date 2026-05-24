@@ -74,6 +74,7 @@ public partial class Weld : Instance
 			RequestRebuild();
 		}
 	}
+
 	[SyncVar]
 	public Transform3D C1
 	{
