@@ -11,7 +11,7 @@ using Polytoria.Scripting;
 namespace Polytoria.Datamodel.Data;
 
 [ScriptEnum]
-public enum ShadowBlendMode
+public enum ShadowBlendModeEnum
 {
 	Normal,
 	Add,
@@ -48,7 +48,7 @@ public partial struct ShadowLayer : IScriptObject, IData
 	}
 
 	[ScriptProperty]
-	public ShadowBlendMode BlendMode { get; set; }
+	public ShadowBlendModeEnum BlendMode { get; set; }
 
 	public ShadowLayer()
 	{
@@ -56,7 +56,7 @@ public partial struct ShadowLayer : IScriptObject, IData
 		Offset = new Vector2(0, 4);
 		_radius = 8f;
 		Spread = 0f;
-		BlendMode = ShadowBlendMode.Normal;
+		BlendMode = ShadowBlendModeEnum.Normal;
 	}
 
 	object IData.Clone() => new ShadowLayer

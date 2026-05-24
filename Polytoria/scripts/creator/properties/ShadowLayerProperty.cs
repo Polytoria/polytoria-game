@@ -126,7 +126,7 @@ public sealed partial class ShadowLayerProperty : MarginContainer, IProperty<Sha
 
 		_blendMode.ItemSelected += idx =>
 		{
-			_value.BlendMode = (ShadowBlendMode)(int)idx;
+			_value.BlendMode = (ShadowBlendModeEnum)(int)idx;
 			EmitChanged();
 		};
 	}

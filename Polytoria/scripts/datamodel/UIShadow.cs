@@ -115,14 +115,14 @@ public partial class UIShadow : Instance
 			StyleBoxFlat sb = new() { AntiAliasing = true, AntiAliasingSize = 2 };
 			panel.AddThemeStyleboxOverride("panel", sb);
 
-			if (_layers[i].BlendMode != ShadowBlendMode.Normal)
+			if (_layers[i].BlendMode != ShadowBlendModeEnum.Normal)
 			{
 				panel.Material = new CanvasItemMaterial
 				{
 					BlendMode = _layers[i].BlendMode switch
 					{
-						ShadowBlendMode.Add => CanvasItemMaterial.BlendModeEnum.Add,
-						ShadowBlendMode.Subtract => CanvasItemMaterial.BlendModeEnum.Sub,
+						ShadowBlendModeEnum.Add => CanvasItemMaterial.BlendModeEnum.Add,
+						ShadowBlendModeEnum.Subtract => CanvasItemMaterial.BlendModeEnum.Sub,
 						_ => CanvasItemMaterial.BlendModeEnum.Mix,
 					}
 				};
