@@ -45,6 +45,9 @@ public sealed partial class Camera : Dynamic
 	private bool _ctrlLocked = false;
 	private bool _alwaysLocked = false;
 
+	private float _near;
+	private float _far;
+
 	private float _moveSpeed = 8f;
 	private readonly float _rotateSpeed = 0.005f;
 	private Dynamic? _target = null!;
@@ -186,6 +189,28 @@ public sealed partial class Camera : Dynamic
 		{
 			_orthographicSize = value;
 			Camera3D.Size = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue(0.05f)]
+	public float Near
+	{
+		get => _near;
+		set
+		{
+			_near = Camera3D.Near = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue(4000f)]
+	public float Far
+	{
+		get => _far;
+		set
+		{
+			_far = Camera3D.Far = value;
 			OnPropertyChanged();
 		}
 	}
