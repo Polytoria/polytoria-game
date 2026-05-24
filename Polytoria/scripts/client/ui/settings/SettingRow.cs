@@ -49,7 +49,7 @@ public sealed partial class SettingRow : PanelContainer
 		Control field = SettingFieldFactory.Create(Definition);
 		field.CustomMinimumSize = new Vector2(220, 0);
 		root.AddChild(field);
-		
+
 		if (Definition.Conditions != null)
 		{
 			Visible = Definition.Conditions.Any((cond) =>
@@ -58,7 +58,25 @@ public sealed partial class SettingRow : PanelContainer
 				return cond.UntypedPredicate(value);
 			});
 		}
-		
+
+		Context.Changed += OnExternalChanged;
+
 		base._Ready();
+	}
+
+	private void OnExternalChanged(SettingChangedEvent e)
+	{
+		if (Definition.Conditions != null)
+		{
+			var match = Definition.Conditions.Where(c => c.Target == e.Key);
+			if (match.Any())
+				Visible = match.Any(c => c.UntypedPredicate(e.NewValue));
+		}
+	}
+
+	public override void _ExitTree()
+	{
+		Context?.Changed -= OnExternalChanged;
+		base._ExitTree();
 	}
 }
