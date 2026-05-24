@@ -10,14 +10,16 @@ namespace Polytoria.Datamodel;
 [Instantiable]
 public partial class BlurFilter : BaseFilter
 {
-	protected override Shader _filterShader {
+	protected override Shader _filterShader
+	{
 		get => GD.Load<Shader>("res://resources/shaders/filters/blur.gdshader");
 	}
 
 	private float _blurStrength;
 
 	[Editable, ScriptProperty, DefaultValue(0.05)]
-	public float BlurStrength {
+	public float BlurStrength
+	{
 		get => _blurStrength;
 		set
 		{

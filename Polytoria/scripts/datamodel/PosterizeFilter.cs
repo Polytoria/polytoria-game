@@ -10,14 +10,16 @@ namespace Polytoria.Datamodel;
 [Instantiable]
 public partial class PosterizeFilter : BaseFilter
 {
-	protected override Shader _filterShader {
+	protected override Shader _filterShader
+	{
 		get => GD.Load<Shader>("res://resources/shaders/filters/posterize.gdshader");
 	}
 
 	private int _posterizeLevel;
 
 	[Editable, ScriptProperty, DefaultValue(10)]
-	public int PosterizeLevel {
+	public int PosterizeLevel
+	{
 		get => _posterizeLevel;
 		set
 		{

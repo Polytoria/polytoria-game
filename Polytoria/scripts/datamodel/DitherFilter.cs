@@ -10,7 +10,8 @@ namespace Polytoria.Datamodel;
 [Instantiable]
 public partial class DitherFilter : PixelFilter
 {
-	protected override Shader _filterShader {
+	protected override Shader _filterShader
+	{
 		get => GD.Load<Shader>("res://resources/shaders/filters/dither.gdshader");
 	}
 
@@ -18,7 +19,8 @@ public partial class DitherFilter : PixelFilter
 	private int _brightnessLevels;
 
 	[Editable, ScriptProperty, DefaultValue(2)]
-	public int BayerResolution {
+	public int BayerResolution
+	{
 		get => _bayerResolution;
 		set
 		{
@@ -28,7 +30,8 @@ public partial class DitherFilter : PixelFilter
 	}
 
 	[Editable, ScriptProperty, DefaultValue(8)]
-	public int BrightnessLevels {
+	public int BrightnessLevels
+	{
 		get => _brightnessLevels;
 		set
 		{

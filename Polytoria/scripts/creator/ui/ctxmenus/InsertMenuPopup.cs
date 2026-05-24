@@ -93,7 +93,13 @@ public partial class InsertMenuPopup : PopupPanel
 		*/
 		[new() { Title = "Lighting Effects", RecommendOn = [typeof(Lighting)] }] = new()
 		{
+			"BlurFilter",
+			"ChromaticFilter",
 			"ColorAdjustModifier",
+			"DitherFilter",
+			"HueShiftFilter",
+			"PixelFilter",
+			"PosterizeFilter",
 		},
 		[new() { Title = "UI", RecommendOn = [typeof(UIField), typeof(GUI), typeof(GUI3D), typeof(PlayerGUI)] }] = new()
 		{

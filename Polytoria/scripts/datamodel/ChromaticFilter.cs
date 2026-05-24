@@ -10,7 +10,8 @@ namespace Polytoria.Datamodel;
 [Instantiable]
 public partial class ChromaticFilter : BaseFilter
 {
-	protected override Shader _filterShader {
+	protected override Shader _filterShader
+	{
 		get => GD.Load<Shader>("res://resources/shaders/filters/chromatic.gdshader");
 	}
 
@@ -18,7 +19,8 @@ public partial class ChromaticFilter : BaseFilter
 	private float _spread;
 
 	[Editable, ScriptProperty, DefaultValue(3)]
-	public int Levels {
+	public int Levels
+	{
 		get => _levels;
 		set
 		{
@@ -28,7 +30,8 @@ public partial class ChromaticFilter : BaseFilter
 	}
 
 	[Editable, ScriptProperty, DefaultValue(0.01)]
-	public float Spread {
+	public float Spread
+	{
 		get => _spread;
 		set
 		{

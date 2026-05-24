@@ -10,14 +10,16 @@ namespace Polytoria.Datamodel;
 [Instantiable]
 public partial class PixelFilter : BaseFilter
 {
-	protected override Shader _filterShader {
+	protected override Shader _filterShader
+	{
 		get => GD.Load<Shader>("res://resources/shaders/filters/pixelate.gdshader");
 	}
 
 	private int _pixelSize;
 
 	[Editable, ScriptProperty, DefaultValue(3)]
-	public int PixelSize {
+	public int PixelSize
+	{
 		get => _pixelSize;
 		set
 		{

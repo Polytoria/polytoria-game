@@ -13,7 +13,8 @@ public partial class BaseFilter : Instance
 {
 	private ColorRect _filterRect = null!;
 	protected ShaderMaterial _shaderMaterial = new();
-	protected virtual Shader _filterShader {
+	protected virtual Shader _filterShader
+	{
 		get => null!;
 	}
 
@@ -37,7 +38,7 @@ public partial class BaseFilter : Instance
 		SetVisibility();
 		base.PostReparent();
 	}
-	
+
 	public override void PreDelete()
 	{
 		_shaderMaterial.Dispose();
@@ -50,5 +51,5 @@ public partial class BaseFilter : Instance
 		_filterRect.Visible = Parent != null && Parent is not Temporary;
 	}
 
-	protected virtual void UpdateFilter() {}
+	protected virtual void UpdateFilter() { }
 }
