@@ -283,7 +283,7 @@ public sealed partial class Globals : Node
 	{
 		string cacheToLoad;
 
-		if(overridePropertyType != null)
+		if (overridePropertyType != null)
 			cacheToLoad = overridePropertyType;
 		else if (type.IsEnum)
 			cacheToLoad = "Enum";
