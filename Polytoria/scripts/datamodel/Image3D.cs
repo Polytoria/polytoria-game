@@ -230,7 +230,7 @@ public sealed partial class Image3D : Dynamic
 			_transparencyType = tex.GetImage().DetectAlpha() switch
 			{
 				Godot.Image.AlphaMode.Blend => BaseMaterial3D.TransparencyEnum.Alpha,
-				Godot.Image.AlphaMode.Bit => BaseMaterial3D.TransparencyEnum.AlphaScissor,
+				Godot.Image.AlphaMode.Bit => BaseMaterial3D.TransparencyEnum.Alpha,
 				_ => BaseMaterial3D.TransparencyEnum.Disabled,
 			};
 			UpdateMaterialTransparency();
