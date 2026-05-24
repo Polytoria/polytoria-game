@@ -18,6 +18,19 @@ public partial class BaseFilter : Instance
 		get => null!;
 	}
 
+	private bool _isEnabled;
+
+	[Editable, ScriptProperty, DefaultValue(true)]
+	public bool IsEnabled
+	{
+		get => _isEnabled;
+		set
+		{
+			_isEnabled = value;
+			UpdateVisibility();
+		}
+	}
+
 	public override Node CreateGDNode()
 	{
 		return Globals.LoadNetworkedObjectScene("BaseFilter")!;
@@ -28,14 +41,14 @@ public partial class BaseFilter : Instance
 		_filterRect = GDNode.GetNode<ColorRect>("FilterRect");
 		_filterRect.Material = _shaderMaterial;
 		_shaderMaterial.Shader = _filterShader;
-		SetVisibility();
+		UpdateVisibility();
 		UpdateFilter();
 		base.Init();
 	}
 
 	public override void PostReparent()
 	{
-		SetVisibility();
+		UpdateVisibility();
 		base.PostReparent();
 	}
 
@@ -45,10 +58,9 @@ public partial class BaseFilter : Instance
 		base.PreDelete();
 	}
 
-	private void SetVisibility()
+	private void UpdateVisibility()
 	{
-		// Only display the effect if it's within the world.
-		_filterRect.Visible = Parent != null && Parent is not Temporary;
+		_filterRect.Visible = !IsHidden && _isEnabled;
 	}
 
 	protected virtual void UpdateFilter() { }
