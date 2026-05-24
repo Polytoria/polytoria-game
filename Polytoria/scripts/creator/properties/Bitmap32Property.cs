@@ -10,7 +10,7 @@ using System.Reflection.Metadata;
 
 namespace Polytoria.Creator.Properties;
 
-public sealed partial class Bitmap32Property : GridContainer, IProperty<uint>
+public sealed partial class Bitmap32Property : FoldableContainer, IProperty<uint>
 {
 	private readonly StyleBoxFlat _onStyle = new()
 	{
@@ -51,10 +51,12 @@ public sealed partial class Bitmap32Property : GridContainer, IProperty<uint>
 		Value = (uint)value;
 	}
 
+	private GridContainer _buttonGrid = null!;
+
 	public void Refresh()
 	{
 		int i = 1;
-		foreach (Node n in GetChildren())
+		foreach (Node n in _buttonGrid.GetChildren())
 		{
 			if (n is Button btn)
 			{
@@ -71,10 +73,12 @@ public sealed partial class Bitmap32Property : GridContainer, IProperty<uint>
 
 	public override void _Ready()
 	{
+		_buttonGrid = GetNode<GridContainer>("Buttons");
+		Folded = true;
 		Refresh();
 
 		int i = 1;
-		foreach (Node n in GetChildren())
+		foreach (Node n in _buttonGrid.GetChildren())
 		{
 			if (n is Button btn)
 			{
