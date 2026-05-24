@@ -6,6 +6,7 @@ using Godot;
 using Polytoria.Attributes;
 using Polytoria.Creator;
 using Polytoria.Creator.Debugger;
+using Polytoria.Creator.Input;
 using Polytoria.Creator.Settings;
 using Polytoria.Creator.Managers;
 using Polytoria.Creator.UI;
@@ -62,6 +63,7 @@ public sealed partial class CreatorService : Node, IScriptObject
 			Service = this
 		};
 		AddChild(Interface);
+		CreatorKeybinds.Init();
 
 		string polyFolder = Path.Join(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments), PolytoriaFolderName);
 		if (!Directory.Exists(polyFolder))

@@ -4,6 +4,7 @@
 
 using Godot;
 using Polytoria.Attributes;
+using Polytoria.Creator.Input;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Creator;
 using Polytoria.Shared;
@@ -431,7 +432,7 @@ public sealed partial class Explorer : TabContainer
 
 		Instance instance = _itemToInstance[item];
 
-		if (selected && !Input.IsKeyPressed(Key.Ctrl) && !Input.IsKeyPressed(Key.Shift))
+		if (selected && !CreatorKeybinds.IsPressed("creator.modifier_ctrl") && !CreatorKeybinds.IsPressed("creator.modifier_shift"))
 		{
 			CurrentRoot?.CreatorContext.Selections.DeselectAll();
 		}

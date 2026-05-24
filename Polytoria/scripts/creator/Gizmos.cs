@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+using Polytoria.Creator.Input;
 using Polytoria.Creator.Spatial;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Creator;
@@ -112,8 +113,8 @@ public sealed partial class Gizmos : Node
 	private void OnResizeDragged(ResizeGizmo.ResizeGizmoAxis currentAxis, Vector3 rawMotion)
 	{
 		float moveSnap = CreatorService.Interface.MoveSnapping;
-		bool isAltPressed = Input.IsActionPressed("gizmo_scale_uniform");
-		bool isShiftPressed = Input.IsKeyPressed(Key.Shift);
+		bool isAltPressed = Godot.Input.IsActionPressed("gizmo_scale_uniform");
+		bool isShiftPressed = CreatorKeybinds.IsPressed("creator.modifier_shift");
 
 		float scaleFactor = isAltPressed ? 2.0f : 1.0f;
 
@@ -197,7 +198,7 @@ public sealed partial class Gizmos : Node
 	{
 		Vector3 scaleFactors;
 		float snapValue = CreatorService.Interface.MoveSnapping / 10.0f;
-		if (Input.IsActionPressed("gizmo_scale_uniform"))
+		if (Godot.Input.IsActionPressed("gizmo_scale_uniform"))
 		{
 			float maxChange = vector.X;
 			if (Mathf.Abs(vector.Y) > Mathf.Abs(maxChange)) maxChange = vector.Y;
@@ -465,7 +466,7 @@ public sealed partial class Gizmos : Node
 
 		if (hoveringOn != null)
 		{
-			selectInstance = Input.IsKeyPressed(Key.Alt) ? hoveringOn : GetModelRoot(hoveringOn) ?? hoveringOn;
+			selectInstance = CreatorKeybinds.IsPressed("creator.modifier_alt") ? hoveringOn : GetModelRoot(hoveringOn) ?? hoveringOn;
 		}
 
 		if (selectInstance is Dynamic sdyn && !sdyn.Locked)
@@ -513,7 +514,7 @@ public sealed partial class Gizmos : Node
 				DragSelected.Clear();
 				return;
 			}
-			bool isMultiSelect = Input.IsActionPressed("gizmo_multi_select");
+			bool isMultiSelect = Godot.Input.IsActionPressed("gizmo_multi_select");
 
 			if (hoveringOn != null)
 			{

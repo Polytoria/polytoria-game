@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+using Polytoria.Creator.Input;
 using System.Collections.Generic;
 
 namespace Polytoria.Creator.UI;
@@ -79,7 +80,7 @@ public partial class ViewportAxis : Node
 			case InputEventKey eventKey:
 				if (eventKey.Echo || !eventKey.Pressed) break;
 				if (!KeyToRotation.TryGetValue(eventKey.Keycode, out var rotations)) break;
-				RotateWorldCamera(eventKey.CtrlPressed ? rotations.withMod : rotations.noMod);
+				RotateWorldCamera(CreatorKeybinds.IsPressed("creator.modifier_ctrl") ? rotations.withMod : rotations.noMod);
 				return true;
 		}
 		return false;

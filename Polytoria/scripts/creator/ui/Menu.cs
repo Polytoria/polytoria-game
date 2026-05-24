@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+using Polytoria.Creator.Input;
 using Polytoria.Creator.UI.Splashes;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Creator;
@@ -26,6 +27,7 @@ public sealed partial class Menu : PanelContainer
 		public string Text = "Unknown";
 		public string? Icon;
 		public Shortcut? KeyShortcut;
+		public string? KeybindId;
 		public Action? Pressed;
 		public bool RequireGameOpen = false;
 		public int Id = 0;
@@ -82,6 +84,7 @@ public sealed partial class Menu : PanelContainer
 
 	public override void _Ready()
 	{
+		CreatorKeybinds.Changed += OnKeybindsChanged;
 		_menus.Add(
 			new()
 			{
@@ -90,34 +93,24 @@ public sealed partial class Menu : PanelContainer
 			[
 				new MenuButtonItem() {
 					Text = "New",
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { CtrlPressed = true, Keycode = Key.N }
-						]
-					},
+					KeybindId = "file.new",
 					Pressed = CreatorInterface.CreateNewWorld
 				},
 				new MenuButtonItem() {
 					Text = "Open",
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { CtrlPressed = true, Keycode = Key.O }
-						]
-					},
+					KeybindId = "file.open",
 					Pressed = CreatorService.Interface.PromptOpenWorld
+				},
+				new MenuButtonItem() {
+					Text = "Keybinds",
+					KeybindId = "file.keybinds",
+					Pressed = CreatorService.Interface.OpenKeybinds
 				},
 				new MenuSeperatorItem(),
 				new MenuButtonItem() {
 					Text = "Save",
 					RequireGameOpen = true,
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { CtrlPressed = true, Keycode = Key.S }
-						]
-					},
+					KeybindId = "file.save",
 					Pressed = () => {
 						CreatorService.SaveCurrentFile();
 					}
@@ -125,18 +118,14 @@ public sealed partial class Menu : PanelContainer
 				new MenuButtonItem() {
 					Text = "Save As...",
 					RequireGameOpen = true,
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { CtrlPressed = true, ShiftPressed = true, Keycode = Key.S }
-						]
-					},
+					KeybindId = "file.save_as",
 					Pressed = CreatorService.SaveCurrentFileAs
 				},
 				new MenuSeperatorItem(),
 				new MenuButtonItem() {
 					Text = "Publish",
 					RequireGameOpen = true,
+					KeybindId = "file.publish",
 					Pressed = async () => {
 						if (World.Current != null)
 						{
@@ -146,6 +135,7 @@ public sealed partial class Menu : PanelContainer
 				},
 				new MenuButtonItem() {
 					Text = "Exit",
+					KeybindId = "file.exit",
 					Pressed = () => {
 						Globals.Singleton.Quit();
 					}
@@ -162,58 +152,32 @@ public sealed partial class Menu : PanelContainer
 			[
 				new MenuButtonItem() {
 					Text = "Undo",
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { CtrlPressed = true, Keycode = Key.Z }
-						]
-					},
+					KeybindId = "edit.undo",
 					Pressed = CreatorService.Undo
 				},
 				new MenuButtonItem() {
 					Text = "Redo",
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { CtrlPressed = true, ShiftPressed = true, Keycode = Key.Z }
-						]
-					},
+					KeybindId = "edit.redo",
 					Pressed = CreatorService.Redo
 				},
 				new MenuSeperatorItem(),
 				new MenuButtonItem() {
 					Text = "Delete",
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { Keycode = Key.Delete },
-							new InputEventKey() { Keycode = Key.Backspace }
-						]
-					},
+					KeybindId = "edit.delete",
 					Pressed = () => {
 						World.Current?.CreatorContext.Selections.DeleteSelected();
 					}
 				},
 				new MenuButtonItem() {
 					Text = "Duplicate",
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { CtrlPressed = true, Keycode = Key.D }
-						]
-					},
+					KeybindId = "edit.duplicate",
 					Pressed = () => {
 						World.Current?.CreatorContext.Selections.DuplicateSelected();
 					}
 				},
 				new MenuButtonItem() {
 					Text = "Toggle Locked",
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { CtrlPressed = true, Keycode = Key.L }
-						]
-					},
+					KeybindId = "edit.toggle_locked",
 					Pressed = () => {
 						World.Current?.CreatorContext.Selections.ToggleLockSelected();
 					}
@@ -221,12 +185,7 @@ public sealed partial class Menu : PanelContainer
 				new MenuSeperatorItem(),
 				new MenuButtonItem() {
 					Text = "Select All",
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { CtrlPressed = true, Keycode = Key.A }
-						]
-					},
+					KeybindId = "edit.select_all",
 					Pressed = () => {
 						if (World.Current == null) return;
 						World.Current.CreatorContext.Selections.SelectChild(World.Current.Environment);
@@ -235,6 +194,7 @@ public sealed partial class Menu : PanelContainer
 				new MenuSeperatorItem(),
 				new MenuButtonItem() {
 					Text = "Input Manager",
+					KeybindId = "edit.input_manager",
 					Pressed = CreatorService.Interface.OpenInputManager
 				},
 			]
@@ -249,13 +209,7 @@ public sealed partial class Menu : PanelContainer
 			[
 				new MenuButtonItem() {
 					Text = "New Instance",
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { ShiftPressed = true, Keycode = Key.Space },
-							new InputEventKey() { CtrlPressed = true, Keycode = Key.I },
-						]
-					},
+					KeybindId = "insert.new_instance",
 					Pressed = () => {
 						CreatorService.Interface.OpenInsertMenu();
 					}
@@ -272,48 +226,28 @@ public sealed partial class Menu : PanelContainer
 			[
 				new MenuButtonItem() {
 					Text = "Group",
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { CtrlPressed = true, Keycode = Key.G }
-						]
-					},
+					KeybindId = "model.group",
 					Pressed = () => {
 						World.Current?.CreatorContext.Selections.GroupSelected();
 					}
 				},
 				new MenuButtonItem() {
 					Text = "Ungroup",
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { CtrlPressed = true, Keycode = Key.U }
-						]
-					},
+					KeybindId = "model.ungroup",
 					Pressed = () => {
 						World.Current?.CreatorContext.Selections.UngroupSelected();
 					}
 				},
 				new MenuButtonItem() {
 					Text = "Group Folder",
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { CtrlPressed = true, AltPressed = true, Keycode = Key.G }
-						]
-					},
+					KeybindId = "model.group_folder",
 					Pressed = () => {
 						World.Current?.CreatorContext.Selections.GroupSelected(Datamodel.Creator.CreatorHistory.GroupAsEnum.Folder);
 					}
 				},
 				new MenuButtonItem() {
 					Text = "Group RigidBody",
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { CtrlPressed = true, ShiftPressed = true, Keycode = Key.G }
-						]
-					},
+					KeybindId = "model.group_rigidbody",
 					Pressed = () => {
 						World.Current?.CreatorContext.Selections.GroupSelected(Datamodel.Creator.CreatorHistory.GroupAsEnum.RigidBody);
 					}
@@ -344,12 +278,7 @@ public sealed partial class Menu : PanelContainer
 					Text = "Play Test",
 					Icon = "play",
 					RequireGameOpen = true,
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { Keycode = Key.F5 }
-						]
-					},
+					KeybindId = "tools.play_test",
 					Pressed = () => {
 						CreatorService.Singleton.StartLocalTest();
 					}
@@ -358,12 +287,7 @@ public sealed partial class Menu : PanelContainer
 					Text = "Play Test Here",
 					Icon = "camera",
 					RequireGameOpen = true,
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { CtrlPressed = true, Keycode = Key.F5 }
-						]
-					},
+					KeybindId = "tools.play_test_here",
 					Pressed = () => {
 						CreatorService.Singleton.StartLocalTest(true);
 					}
@@ -371,6 +295,7 @@ public sealed partial class Menu : PanelContainer
 				new MenuSeperatorItem(),
 				new MenuButtonItem() {
 					Text = "Manage Addons",
+					KeybindId = "tools.manage_addons",
 					Pressed = CreatorInterface.PopupManageAddons
 				},
 				new MenuAddonSlotItem() {
@@ -381,6 +306,7 @@ public sealed partial class Menu : PanelContainer
 				new MenuButtonItem() {
 					Text = "Migrate Coordinates",
 					RequireGameOpen = true,
+					KeybindId = "tools.migrate_coordinates",
 					Pressed = () => {
 						CreatorService.MigrateCoordinates(World.Current!);
 					}
@@ -389,6 +315,7 @@ public sealed partial class Menu : PanelContainer
 				new MenuButtonItem() {
 					Text = "Settings",
 					Icon = "settings",
+					KeybindId = "tools.settings",
 					Pressed = () => {
 						CreatorService.Interface.OpenSettings();
 					}
@@ -404,12 +331,7 @@ public sealed partial class Menu : PanelContainer
 			[
 				new MenuButtonItem() {
 					Text = "Toggle Fullscreen",
-					KeyShortcut = new()
-					{
-						Events = [
-							new InputEventKey() { Keycode = Key.F11 }
-						]
-					},
+					KeybindId = "view.toggle_fullscreen",
 					Pressed = () => {
 						CreatorInterface.ToggleFullscreen();
 					}
@@ -426,12 +348,14 @@ public sealed partial class Menu : PanelContainer
 				new MenuButtonItem() {
 					Text = "Copy System Info",
 					Icon = "copy",
+					KeybindId = "help.copy_system_info",
 					Pressed = () => {
 						DisplayServer.ClipboardSet($"System Name: {OS.GetName() + " " + OS.GetVersionAlias()}\nCPU: {OS.GetProcessorName()} cores: {OS.GetProcessorCount()}\nVideo Adapter: {OS.GetVideoAdapterDriverInfo().Join(", ")}");
 					}
 				},
 				new MenuButtonItem() {
 					Text = "Open Documentation",
+					KeybindId = "help.open_documentation",
 					Pressed = () => {
 						OS.ShellOpen("https://v2docs.polytoria.com/");
 					}
@@ -439,6 +363,7 @@ public sealed partial class Menu : PanelContainer
 				new MenuSeperatorItem(),
 				new MenuButtonItem() {
 					Text = "Report a Bug",
+					KeybindId = "help.report_bug",
 					Pressed = () => {
 						OS.ShellOpen("https://polytoria.com/forum/category/2");
 					}
@@ -456,10 +381,12 @@ public sealed partial class Menu : PanelContainer
 				new MenuButtonItem() {
 					Text = "Pack Current Project",
 					RequireGameOpen = true,
+					KeybindId = "dev.pack_current_project",
 					Pressed = CreatorService.PackCurrentProject
 				},
 				new MenuButtonItem() {
 					Text = "Link Device",
+					KeybindId = "dev.link_device",
 					Pressed = () => {
 						CreatorService.Interface.OpenLinkDevicePrompt();
 					}
@@ -523,19 +450,7 @@ public sealed partial class Menu : PanelContainer
 						menu.SetItemIcon(index, Globals.LoadUIIcon(btnI.Icon));
 					}
 
-					if (btnI.KeyShortcut != null)
-					{
-						// Setup Ctrl Auto remap for mac
-						foreach (var ev in btnI.KeyShortcut.Events)
-						{
-							var ek = ev.As<InputEventKey>();
-							if (ek.CtrlPressed)
-							{
-								ek.CommandOrControlAutoremap = true;
-							}
-						}
-						menu.SetItemShortcut(index, btnI.KeyShortcut);
-					}
+					ApplyShortcut(menu, btnI);
 					addedCount++;
 				}
 				else if (item is MenuSeperatorItem st)
@@ -555,6 +470,13 @@ public sealed partial class Menu : PanelContainer
 		}
 
 		SwitchTo(null);
+		RefreshKeybindShortcuts();
+	}
+
+	public override void _ExitTree()
+	{
+		CreatorKeybinds.Changed -= OnKeybindsChanged;
+		base._ExitTree();
 	}
 
 	public void UpdateAddonMenu(AddonObject obj)
@@ -660,6 +582,50 @@ public sealed partial class Menu : PanelContainer
 
 		// Switch addon menus to the new root
 		SwitchAddonRoot(game);
+	}
+
+	private void OnKeybindsChanged()
+	{
+		RefreshKeybindShortcuts();
+	}
+
+	public void RefreshKeybindShortcuts()
+	{
+		foreach ((MenuButtonMenus mbtn, MenuItem[] items) in _menus)
+		{
+			if (mbtn.Popup == null)
+				continue;
+
+			foreach (MenuItem item in items)
+			{
+				if (item is not MenuButtonItem btnI)
+					continue;
+
+				ApplyShortcut(mbtn.Popup, btnI);
+			}
+		}
+	}
+
+	private static void ApplyShortcut(PopupMenu menu, MenuButtonItem item)
+	{
+		Shortcut? shortcut = ResolveShortcut(item);
+		if (shortcut == null)
+		{
+			menu.SetItemShortcut(item.Index, new Shortcut());
+			return;
+		}
+
+		menu.SetItemShortcut(item.Index, shortcut);
+	}
+
+	private static Shortcut? ResolveShortcut(MenuButtonItem item)
+	{
+		if (item.KeybindId != null)
+		{
+			return CreatorKeybinds.GetShortcut(item.KeybindId);
+		}
+
+		return item.KeyShortcut;
 	}
 
 	private void SwitchAddonRoot(World? newRoot)

@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+using Polytoria.Creator.Input;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Creator;
 using Polytoria.Shared;
@@ -105,7 +106,7 @@ public partial class UIGizmoBox : Control
 		if (_dragState == DragState.None)
 			return;
 
-		if (!Input.IsMouseButtonPressed(MouseButton.Left))
+		if (!Godot.Input.IsMouseButtonPressed(MouseButton.Left))
 		{
 			EndDrag();
 			return;
@@ -151,7 +152,7 @@ public partial class UIGizmoBox : Control
 		return expanded.HasPoint(localPos);
 	}
 
-	private Vector2 GetLocalMousePosition() => GetLocalMousePosition(GetGlobalMousePosition());
+	private Vector2 GetLocalMousePositionSelf() => GetLocalMousePosition(GetGlobalMousePosition());
 
 	private Vector2 GetLocalMousePosition(Vector2 globalMouse)
 	{
@@ -164,7 +165,7 @@ public partial class UIGizmoBox : Control
 
 	private Vector2 SnapPosition(Vector2 proposedAbsPos)
 	{
-		if (Input.IsKeyPressed(Key.Shift))
+		if (CreatorKeybinds.IsPressed("creator.modifier_shift"))
 		{
 			Gizmos?.HideGuidelines();
 			return proposedAbsPos;
@@ -234,7 +235,7 @@ public partial class UIGizmoBox : Control
 		if (guideX.HasValue) _activeGuides.Add(guideX.Value);
 		if (guideY.HasValue) _activeGuides.Add(guideY.Value);
 
-		if (!Input.IsKeyPressed(Key.Alt))
+		if (!CreatorKeybinds.IsPressed("creator.modifier_alt"))
 			Gizmos?.ShowGuidelines([.. _activeGuides]);
 		else
 			Gizmos?.HideGuidelines();
@@ -324,7 +325,7 @@ public partial class UIGizmoBox : Control
 		if (@event is not InputEventMouseButton btn || btn.ButtonIndex != MouseButton.Left || !btn.Pressed)
 			return;
 
-		Vector2 localPos = GetLocalMousePosition();
+		Vector2 localPos = GetLocalMousePositionSelf();
 		if (!DetectHandle(localPos).HasValue)
 		{
 			if (!TrySelectDeepestChild())
@@ -437,8 +438,8 @@ public partial class UIGizmoBox : Control
 		if (Target?.NodeControl == null) { EndDrag(); return; }
 		Vector2 totalDelta = _totalResizeDelta;
 
-		bool centerScale = Input.IsKeyPressed(Key.Ctrl) && Input.IsKeyPressed(Key.Shift);
-		bool uniform = Input.IsKeyPressed(Key.Shift) && !Input.IsKeyPressed(Key.Ctrl);
+		bool centerScale = CreatorKeybinds.IsPressed("creator.modifier_ctrl") && CreatorKeybinds.IsPressed("creator.modifier_shift");
+		bool uniform = CreatorKeybinds.IsPressed("creator.modifier_shift") && !CreatorKeybinds.IsPressed("creator.modifier_ctrl");
 
 		if (centerScale)
 		{
@@ -543,7 +544,7 @@ public partial class UIGizmoBox : Control
 	{
 		if (Target?.NodeControl == null) return;
 
-		if (!Input.IsKeyPressed(Key.Alt))
+		if (!CreatorKeybinds.IsPressed("creator.modifier_alt"))
 		{
 			if (_showingMeasures)
 			{

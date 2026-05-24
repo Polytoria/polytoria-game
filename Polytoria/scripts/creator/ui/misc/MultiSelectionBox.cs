@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+using Polytoria.Creator.Input;
 using Polytoria.Creator.UI;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Creator;
@@ -53,7 +54,7 @@ public partial class MultiSelectionBox : Control
 
 		Overlay.World.CreatorContext.Selections.DeselectAll();
 
-		bool altPressed = Input.IsKeyPressed(Key.Alt);
+		bool altPressed = CreatorKeybinds.IsPressed("creator.modifier_alt");
 
 		foreach (Instance item in allObjects)
 		{

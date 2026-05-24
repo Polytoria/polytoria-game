@@ -5,6 +5,7 @@
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Creator.Managers;
+using Polytoria.Creator.Input;
 using Polytoria.Creator.Settings;
 using Polytoria.Creator.UI;
 using Polytoria.Creator.UI.Popups;
@@ -87,7 +88,7 @@ public partial class CreatorInterface : Control, IScriptObject
 
 	[ScriptProperty] public float UserRotateSnapping { get; internal set; } = 45;
 
-	public static bool TempDisableSnap => Input.IsKeyPressed(Key.Alt);
+	public static bool TempDisableSnap => CreatorKeybinds.IsPressed("creator.modifier_alt");
 
 	public CreatorService Service = null!;
 	public Instance? PendingCreateScriptAt;
@@ -535,6 +536,12 @@ public partial class CreatorInterface : Control, IScriptObject
 	public void OpenInputManager()
 	{
 		InputManagerPopup popup = Globals.CreateInstanceFromScene<InputManagerPopup>(InputManagerPopupPath);
+		PopupWindow(popup);
+	}
+
+	public void OpenKeybinds()
+	{
+		KeybindsPopup popup = new();
 		PopupWindow(popup);
 	}
 
