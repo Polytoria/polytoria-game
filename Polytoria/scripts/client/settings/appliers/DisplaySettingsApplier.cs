@@ -32,6 +32,9 @@ public sealed partial class DisplaySettingsApplier : Node
 			case SharedSettingKeys.Display.VSync:
 				ApplyVsync();
 				break;
+			case SharedSettingKeys.Display.FpsPreset:
+				ApplyFpsCap();
+				break;
 			case SharedSettingKeys.Display.FpsCap:
 				ApplyFpsCap();
 				break;
@@ -68,7 +71,8 @@ public sealed partial class DisplaySettingsApplier : Node
 
 	private void ApplyFpsCap()
 	{
-		Engine.MaxFps = ClientSettingsService.Instance.Get<int>(SharedSettingKeys.Display.FpsCap);
+		var fpsPreset = ClientSettingsService.Instance.Get<FpsPreset>(SharedSettingKeys.Display.FpsPreset);
+		Engine.MaxFps = fpsPreset != FpsPreset.Custom ? (int)fpsPreset : ClientSettingsService.Instance.Get<int>(SharedSettingKeys.Display.FpsCap);
 	}
 
 	private void ApplyUiScale()

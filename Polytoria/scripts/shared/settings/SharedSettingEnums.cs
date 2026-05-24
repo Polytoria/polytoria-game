@@ -4,6 +4,15 @@
 
 namespace Polytoria.Shared.Settings;
 
+public enum FpsPreset
+{
+	Custom = 9999,
+	Limitless = 0,
+	Reduced = 30,
+	Standard = 60,
+	Extended = 120
+}
+
 public enum GraphicsPreset
 {
 	Low,

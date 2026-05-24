@@ -48,19 +48,46 @@ public static class SharedSettingsRegistry
 				}
 			},
 			{
+				SharedSettingKeys.Display.FpsPreset,
+				new SettingDef<FpsPreset>
+				{
+					Key = SharedSettingKeys.Display.FpsPreset,
+					SectionKey = "display",
+					Label = "FPS Preset",
+					Description = "Fps preset.",
+					ValueKind = SettingValueKind.Enum,
+					ControlKind = SettingControlKind.Dropdown,
+					DefaultValue = FpsPreset.Custom,
+					Options =
+					[
+						new() { Value = FpsPreset.Custom, Label = "Custom" },
+						new() { Value = FpsPreset.Reduced, Label = "Reduced (30)" },
+						new() { Value = FpsPreset.Standard, Label = "Standard (60)" },
+						new() { Value = FpsPreset.Extended, Label = "Extended (120)" },
+						new() { Value = FpsPreset.Limitless, Label = "Limitless" },
+					]
+				}
+			},
+			{
 				SharedSettingKeys.Display.FpsCap,
 				new SettingDef<int>
 				{
 					Key = SharedSettingKeys.Display.FpsCap,
 					SectionKey = "display",
 					Label = "FPS Cap",
-					Description = "Limit the maximum number of frames per second.",
+					Description = "Set the maximum number of frames per second.\nIf V-Sync is enabled, it won't surpass the refresh rate.",
 					ValueKind = SettingValueKind.Int,
 					ControlKind = SettingControlKind.Slider,
 					DefaultValue = 0,
 					MinValue = 0,
 					MaxValue = 300,
-					Step = 6
+					Step = 6,
+					Conditions = [
+						new SettingCondition<FpsPreset>() {
+							Target = SharedSettingKeys.Display.FpsPreset,
+							Predicate = x => x == FpsPreset.Custom
+						}
+					]
 				}
 			},
 			{

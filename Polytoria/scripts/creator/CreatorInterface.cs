@@ -140,6 +140,9 @@ public partial class CreatorInterface : Control, IScriptObject
 			case SharedSettingKeys.Display.VSync:
 				ApplyVSync();
 				break;
+			case SharedSettingKeys.Display.FpsPreset:
+				ApplyFpsCap();
+				break;
 			case SharedSettingKeys.Display.FpsCap:
 				ApplyFpsCap();
 				break;
@@ -185,7 +188,8 @@ public partial class CreatorInterface : Control, IScriptObject
 
 	private static void ApplyFpsCap()
 	{
-		Engine.MaxFps = CreatorSettingsService.Instance.Get<int>(SharedSettingKeys.Display.FpsCap);
+		var fpsPreset = CreatorSettingsService.Instance.Get<FpsPreset>(SharedSettingKeys.Display.FpsPreset);
+		Engine.MaxFps = fpsPreset != FpsPreset.Custom ? (int)fpsPreset : CreatorSettingsService.Instance.Get<int>(SharedSettingKeys.Display.FpsCap);
 	}
 
 	public static void CreateNewWorld()
