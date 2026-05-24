@@ -5,30 +5,29 @@
 using System.Collections.Generic;
 using Godot;
 using Polytoria.Attributes;
+using Polytoria.Utils;
 
 namespace Polytoria.Datamodel;
 
 [Instantiable]
 public partial class Weld : Instance
 {
-	static readonly Dictionary<Instance, List<Weld>> _connections = new();
-	static readonly Dictionary<Instance, System.Action> _handlers = new();
+	private static readonly Dictionary<Instance, List<Weld>> _connections = [];
+	private static readonly Dictionary<Instance, System.Action> _handlers = [];
 
-	Instance? _part0;
-	Instance? _part1;
-	Transform3D _c0 = Transform3D.Identity;
-	Transform3D _c1 = Transform3D.Identity;
-	bool _enabled = true;
-	bool _needsRebuild;
-	Generic6DofJoint3D? _joint;
+	private Instance? _part0;
+	private Instance? _part1;
+	private Transform3D _c0 = Transform3D.Identity;
+	private Transform3D _c1 = Transform3D.Identity;
+	private bool _enabled = true;
+	private bool _needsRebuild;
+	private Generic6DofJoint3D? _joint;
 
 	public static IEnumerable<Weld> GetWeldsFor(Instance part)
 	{
-		if (part == null || part.IsDeleted)
-			return System.Array.Empty<Weld>();
-		if (_connections.TryGetValue(part, out List<Weld>? list))
-			return list.ToArray();
-		return System.Array.Empty<Weld>();
+		if (part != null && !part.IsDeleted && _connections.TryGetValue(part, out List<Weld>? list))
+			return [.. list];
+		return [];
 	}
 
 	[Editable, ScriptProperty]
@@ -63,7 +62,7 @@ public partial class Weld : Instance
 		}
 	}
 
-	[SyncVar, ScriptProperty]
+	[SyncVar]
 	public Transform3D C0
 	{
 		get => _c0;
@@ -75,8 +74,7 @@ public partial class Weld : Instance
 			RequestRebuild();
 		}
 	}
-
-	[SyncVar, ScriptProperty]
+	[SyncVar]
 	public Transform3D C1
 	{
 		get => _c1;
@@ -86,6 +84,72 @@ public partial class Weld : Instance
 			_c1 = value;
 			OnPropertyChanged();
 			RequestRebuild();
+		}
+	}
+
+	[Editable, ScriptProperty, NoSync]
+	public Vector3 Position0
+	{
+		get => _c0.Origin;
+		set
+		{
+			C0 = new(_c0.Basis, value);
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, NoSync]
+	public Vector3 Rotation0
+	{
+		get => _c0.Basis.GetEuler().RadToDeg();
+		set
+		{
+			C0 = new(Basis.FromEuler(value.DegToRad()), _c0.Origin);
+			OnPropertyChanged();
+		}
+	}
+
+	[ScriptProperty, NoSync]
+	public Quaternion Quaternion0
+	{
+		get => _c0.Basis.GetRotationQuaternion();
+		set
+		{
+			C0 = new(new(value), _c0.Origin);
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, NoSync]
+	public Vector3 Position1
+	{
+		get => _c1.Origin;
+		set
+		{
+			C1 = new(_c1.Basis, value);
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, NoSync]
+	public Vector3 Rotation1
+	{
+		get => _c1.Basis.GetEuler().RadToDeg();
+		set
+		{
+			C1 = new(Basis.FromEuler(value.DegToRad()), _c1.Origin);
+			OnPropertyChanged();
+		}
+	}
+
+	[ScriptProperty, NoSync]
+	public Quaternion Quaternion1
+	{
+		get => _c1.Basis.GetRotationQuaternion();
+		set
+		{
+			C1 = new(new(value), _c1.Origin);
+			OnPropertyChanged();
 		}
 	}
 
@@ -141,14 +205,14 @@ public partial class Weld : Instance
 	}
 
 
-	void Register(Instance? part)
+	private void Register(Instance? part)
 	{
 		if (part == null || part.IsDeleted) return;
 		if (!_connections.TryGetValue(part, out List<Weld>? list))
 		{
-			list = new List<Weld>();
+			list = [];
 			_connections[part] = list;
-			System.Action handler = () => OnPartDeleted(part);
+			void handler() => OnPartDeleted(part);
 			part.Deleted += handler;
 			_handlers[part] = handler;
 		}
@@ -156,7 +220,7 @@ public partial class Weld : Instance
 			list.Add(this);
 	}
 
-	void Unregister(Instance? part)
+	private void Unregister(Instance? part)
 	{
 		if (part == null) return;
 		if (_connections.TryGetValue(part, out List<Weld>? list))
@@ -174,7 +238,7 @@ public partial class Weld : Instance
 		}
 	}
 
-	static void OnPartDeleted(Instance part)
+	private static void OnPartDeleted(Instance part)
 	{
 		if (_handlers.TryGetValue(part, out var handler))
 		{
@@ -210,7 +274,7 @@ public partial class Weld : Instance
 		}
 	}
 
-	void RequestRebuild()
+	private void RequestRebuild()
 	{
 		if (GDNode.IsInsideTree())
 		{
@@ -222,7 +286,7 @@ public partial class Weld : Instance
 		}
 	}
 
-	void RebuildJoint()
+	private void RebuildJoint()
 	{
 		_needsRebuild = false;
 		DestroyJoint();
@@ -269,16 +333,15 @@ public partial class Weld : Instance
 		LockAngularAxis("angular_limit_z");
 	}
 
-	void TryAutoComputeC0(Transform3D part0Transform, Transform3D part1Transform)
+	private void TryAutoComputeC0(Transform3D part0Transform, Transform3D part1Transform)
 	{
 		if (_c0 == Transform3D.Identity && _c1 == Transform3D.Identity)
 		{
-			_c0 = part0Transform.AffineInverse() * part1Transform;
-			OnPropertyChanged("C0");
+			C0 = part0Transform.AffineInverse() * part1Transform;
 		}
 	}
 
-	void LockLinearAxis(string axis)
+	private void LockLinearAxis(string axis)
 	{
 		if (_joint == null) return;
 		_joint.Set($"{axis}/enabled", true);
@@ -286,7 +349,7 @@ public partial class Weld : Instance
 		_joint.Set($"{axis}/upper_distance", 0f);
 	}
 
-	void LockAngularAxis(string axis)
+	private void LockAngularAxis(string axis)
 	{
 		if (_joint == null) return;
 		_joint.Set($"{axis}/enabled", true);
@@ -294,11 +357,11 @@ public partial class Weld : Instance
 		_joint.Set($"{axis}/upper_angle", 0f);
 	}
 
-	void DestroyJoint()
+	private void DestroyJoint()
 	{
 		if (_joint != null)
 		{
-			if (Node.IsInstanceValid(_joint))
+			if (GodotObject.IsInstanceValid(_joint))
 			{
 				_joint.QueueFree();
 			}
