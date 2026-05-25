@@ -35,7 +35,7 @@ public partial class UIImage : UIField
     uniform vec4 modulate_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
 
     void fragment() {
-        vec2 uv = (UV * texture_scale) - texture_offset;
+        vec2 uv = (UV * texture_scale) + texture_offset;
         COLOR = texture(TEXTURE, uv) * modulate_color;
     }
     """;
