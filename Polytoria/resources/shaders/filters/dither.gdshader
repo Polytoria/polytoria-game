@@ -1,5 +1,16 @@
 shader_type canvas_item;
 
+const mat3 YIQ_CONVERT = mat3(
+	vec3(0.299,  0.596,  0.211),
+	vec3(0.587, -0.274, -0.523),
+	vec3(0.114, -0.322,  0.312)
+);
+const mat3 RGB_CONVERT = mat3(
+	vec3(1.0,    1.0,    1.0),
+	vec3(0.956, -0.272, -1.106),
+	vec3(0.621, -0.647,  1.703)
+);
+
 uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_nearest;
 uniform int pixel_size: hint_range(0, 64) = 0;
 uniform int bayer_resolution: hint_range(1, 8) = 2;
@@ -12,7 +23,7 @@ const mat2 BAYER_MATRIX_1D = mat2(
 
 float get_bayer_value(int x, int y, int resolution) {
 	if (resolution <= 1) {
-		return BAYER_MATRIX_1D[y % 2][x % 2];
+		return BAYER_MATRIX_1D[y % 2][x % 2] / 4.0;
 	}
 
 	float res_float = float(resolution);
@@ -31,26 +42,38 @@ float get_bayer_value(int x, int y, int resolution) {
 	return value / (matrix_size - 1.0);
 }
 
+vec3 rgb_to_yiq(vec3 color)
+{
+	return YIQ_CONVERT * color;
+}
+
+vec3 yiq_to_rgb(vec3 color)
+{
+	return RGB_CONVERT * color;
+}
+
 void fragment() {
 	vec2 pixel_uv = SCREEN_UV;
+	ivec2 pixel_idx = ivec2(pixel_uv / SCREEN_PIXEL_SIZE.xy);
 	if (pixel_size > 0) {
 		vec2 exact_pixel_size = SCREEN_PIXEL_SIZE.xy * float(pixel_size);
+		pixel_idx = ivec2(pixel_uv / exact_pixel_size);
 		pixel_uv = round(pixel_uv / exact_pixel_size) * exact_pixel_size;
 	}
 
 	vec4 color = texture(screen_texture, pixel_uv);
-	float greyscale = max(color.r, max(color.g, color.b));
-	ivec2 dither_position = ivec2(pixel_uv / SCREEN_PIXEL_SIZE.xy);
 
-	int bayer_row_size = int(pow(2, float(bayer_resolution))) / 2;
-	float bayer_value = get_bayer_value(dither_position.x % 4, dither_position.y % 4, bayer_resolution);
+	if (bayer_resolution > 0) {
+		vec3 yiq_color = rgb_to_yiq(color.rgb);
+		float bayer_value = get_bayer_value(pixel_idx.x, pixel_idx.y, bayer_resolution);
 
-	float f_brightness_levels = float(brightness_levels);
-	float lower_level = floor(greyscale * f_brightness_levels) / f_brightness_levels;
-	float upper_level = ceil(greyscale * f_brightness_levels) / f_brightness_levels;
+		float f_brightness_levels = float(brightness_levels);
+		float lower_level = floor(yiq_color.x * f_brightness_levels) / f_brightness_levels;
+		float upper_level = ceil(yiq_color.x * f_brightness_levels) / f_brightness_levels;
 
-	float level = greyscale >= bayer_value ? lower_level : upper_level;
-	float adjustment = level / greyscale;
+		yiq_color.x = yiq_color.x >= bayer_value ? upper_level : lower_level;
+		color.rgb = yiq_to_rgb(yiq_color);
+	}
 
-	COLOR = vec4(color.rgb * adjustment, color.a);
+	COLOR = color;
 }
