@@ -10,7 +10,10 @@ public enum FpsPreset
 	Limitless = 0,
 	Reduced = 30,
 	Standard = 60,
-	Extended = 120
+	Extended = 90,
+	Smooth = 120,
+	Slick = 144,
+	Fluid = 240
 }
 
 public enum GraphicsPreset
