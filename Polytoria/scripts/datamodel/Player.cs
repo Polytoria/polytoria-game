@@ -435,8 +435,8 @@ public sealed partial class Player : NPC
 	public override void InitGDNode()
 	{
 		base.InitGDNode();
-		CharBody3D.CollisionLayer = 2;
-		CharBody3D.CollisionMask = 3;
+		CollisionLayers = 2;
+		CollisionMask = 3;
 	}
 
 	public override void Init()
@@ -523,11 +523,11 @@ public sealed partial class Player : NPC
 	{
 		if (Root.Players.PlayerCollisionEnabled)
 		{
-			CharBody3D.SetCollisionMaskValue(2, true);
+			SetCollisionMask(2, true);
 		}
 		else
 		{
-			CharBody3D.SetCollisionMaskValue(2, false);
+			SetCollisionMask(2, false);
 		}
 	}
 

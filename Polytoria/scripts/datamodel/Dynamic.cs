@@ -697,17 +697,21 @@ public partial class Dynamic : Instance
 		{
 			if (this is Physical p && p.CanCollide)
 			{
-				_boundArea3D.CollisionLayer = (1 << 3);
+				p.SetCollisionLayer(3, true);
 			}
 			else
 			{
 				_boundArea3D.CollisionLayer = (1 << 2);
 			}
-			_boundArea3D.CollisionLayer = (1 << 2);
 		}
 		else
 		{
-			_boundArea3D.CollisionLayer = 0;
+			if(this is Physical p)
+			{
+				p.SetCollisionLayer(3, false);
+			} else {
+				_boundArea3D.CollisionLayer = 0;
+			}
 		}
 	}
 

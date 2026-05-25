@@ -510,7 +510,7 @@ public sealed partial class Camera : Dynamic
 				query.HitFromInside = false;
 
 				// Fliter only clipping layers
-				query.CollisionMask = 1 << 5;
+				query.CollisionMask = Entity.CameraClipCollisionLayerMask;
 
 				Dictionary? result = spaceState.IntersectRay(query);
 

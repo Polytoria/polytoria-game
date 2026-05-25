@@ -166,6 +166,23 @@ public partial class Physical : Dynamic
 		}
 	}
 
+	protected virtual uint GetAppliedCollisionLayers()
+	{
+		return _collisionLayers;
+	}
+
+	protected void ApplyCollisionObjectLayers()
+	{
+		CollisionObject3D? collisionObject3D = GetCollisionObject();
+		if (collisionObject3D == null)
+		{
+			return;
+		}
+
+		collisionObject3D.CollisionLayer = GetAppliedCollisionLayers();
+		collisionObject3D.CollisionMask = _collisionMask;
+	}
+
 	internal void UpdateFreeze()
 	{
 		bool finalVal = _anchored;
@@ -211,18 +228,13 @@ public partial class Physical : Dynamic
 	internal void UpdateCollision()
 	{
 		if (IsDeleted) return;
+
+		ApplyCollisionObjectLayers();
+
 		if (OverrideCanCollide)
 		{
 			SetCollisionDisabled(!OverrideCanCollideTo);
 			return;
-		}
-
-		CollisionObject3D? collisionObject3D = GetCollisionObject();
-
-		if (collisionObject3D != null)
-		{
-			collisionObject3D.CollisionLayer = _collisionLayers;
-			collisionObject3D.CollisionMask = _collisionMask;
 		}
 
 		// Set each collision
@@ -1136,7 +1148,7 @@ public partial class Physical : Dynamic
 			Scale = new(1.01f, 1.01f, 1.01f)
 		};
 
-		PhysicalArea.SetCollisionMaskValue(2, true);
+		SetCollisionMask(2, true);
 
 		PhysicalArea.AreaEntered += AreaEntered;
 		PhysicalArea.AreaExited += AreaExited;
