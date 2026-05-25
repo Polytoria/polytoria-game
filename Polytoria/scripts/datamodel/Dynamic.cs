@@ -706,10 +706,12 @@ public partial class Dynamic : Instance
 		}
 		else
 		{
-			if(this is Physical p)
+			if (this is Physical p)
 			{
 				p.SetCollisionLayer(3, false);
-			} else {
+			}
+			else
+			{
 				_boundArea3D.CollisionLayer = 0;
 			}
 		}
