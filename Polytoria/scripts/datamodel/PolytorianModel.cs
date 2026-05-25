@@ -453,6 +453,7 @@ public sealed partial class PolytorianModel : CharacterModel
 		{
 			StandardMaterial3D? head = null;
 			StandardMaterial3D? tail = null;
+			int renderPrio = 100;
 			foreach (var c in GetChildrenOfClass<Clothing>())
 			{
 				// Skip unloaded ones
@@ -461,10 +462,12 @@ public sealed partial class PolytorianModel : CharacterModel
 				{
 					AlbedoTexture = c.ClothTexture,
 					Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-					RenderPriority = 1
+					RenderPriority = renderPrio
 				};
 				if (head == null) { head = m; tail = m; }
 				else { tail!.NextPass = m; tail = m; }
+
+				renderPrio--;
 			}
 			return head;
 		}
