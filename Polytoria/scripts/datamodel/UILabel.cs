@@ -273,7 +273,7 @@ public partial class UILabel : UIView
 			int mid = (lo + hi) / 2;
 			int scaled = (int)(mid * FontScaleConversion);
 			Vector2 textBounds;
-			if (_textWrapped) 
+			if (_textWrapped)
 			{
 				textBounds = font.GetMultilineStringSize(
 					text: _text,
