@@ -116,7 +116,7 @@ public sealed partial class HttpService : Instance
 	{
 		addedTarget = null;
 
-		if(resHeaders.TryGetValues("X-PT-Trusted-World-Id", out IEnumerable<string>? worldIds))
+		if (resHeaders.TryGetValues("X-PT-Trusted-World-Id", out IEnumerable<string>? worldIds))
 		{
 			worldIds = worldIds.Where(id => int.TryParse(id, out int parsedId) && parsedId == Root.WorldID);
 
@@ -142,7 +142,8 @@ public sealed partial class HttpService : Instance
 				{
 					_trustedTargets.Add((TrustedTarget)addedTarget);
 					return true;
-				} else
+				}
+				else
 				{
 					return false;
 				}
@@ -235,9 +236,9 @@ public sealed partial class HttpService : Instance
 			headers[key] = string.Join(",", val);
 		}
 
-		if(TryAddTrustedTarget(data, res.Headers, out TrustedTarget? addedTarget) && addedTarget != null)
+		if (TryAddTrustedTarget(data, res.Headers, out TrustedTarget? addedTarget) && addedTarget != null)
 		{
-			if(IsTrusted(data))
+			if (IsTrusted(data))
 			{
 				// readjust ratelimits afterwards
 				_requestsThisMinute--;
@@ -255,7 +256,7 @@ public sealed partial class HttpService : Instance
 			Headers = headers,
 			responseMsg = res,
 			// check again whether trusted even when a TrustedTarget was added, because the addedTargets scope might not include the request URL
-			Trusted = trusted || (addedTarget != null && IsTrusted(data)) 
+			Trusted = trusted || (addedTarget != null && IsTrusted(data))
 		};
 
 		return resData;
