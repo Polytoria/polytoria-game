@@ -619,7 +619,7 @@ public static partial class PolyFormat
 		IEnumerable<PropertyInfo> creatorProperties = obj.GetEditableProperties();
 
 		IEnumerable<PropertyInfo> saveIncludes = objType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
-			.Where(p => p.GetCustomAttribute<SaveIncludeAttribute>() != null);
+			.Where(p => p.GetCustomAttributeCached<SaveIncludeAttribute>() != null);
 
 		HashSet<string> existingNames = [.. creatorProperties.Select(p => p.Name)];
 		creatorProperties = creatorProperties.Concat(
@@ -628,14 +628,14 @@ public static partial class PolyFormat
 
 		foreach (PropertyInfo prop in creatorProperties)
 		{
-			if (prop.IsDefined(typeof(Attributes.ObsoleteAttribute))) continue;
-			if (prop.IsDefined(typeof(SaveIgnoreAttribute))) continue;
+			if (prop.IsDefinedCached(typeof(Attributes.ObsoleteAttribute))) continue;
+			if (prop.IsDefinedCached(typeof(SaveIgnoreAttribute))) continue;
 			if (prop.CanRead)
 			{
 				object? val = prop.GetValue(obj);
 				if (val == null) continue;
 
-				DefaultValueAttribute? df = prop.GetCustomAttribute<DefaultValueAttribute>();
+				DefaultValueAttribute? df = prop.GetCustomAttributeCached<DefaultValueAttribute>();
 				if (df != null)
 				{
 					try
@@ -718,7 +718,7 @@ public static partial class PolyFormat
 				foreach (Instance child in instance.GetChildren())
 				{
 					Type ct = child.GetType();
-					if (ct.GetCustomAttribute<SaveIgnoreAttribute>() != null) continue;
+					if (ct.GetCustomAttributeCached<SaveIgnoreAttribute>() != null) continue;
 					if (child.ModelRoot != null && instance.EditableChildren)
 					{
 						// Save editable children
