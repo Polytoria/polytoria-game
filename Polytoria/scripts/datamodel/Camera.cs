@@ -21,6 +21,7 @@ public sealed partial class Camera : Dynamic
 	public const float DefaultZoomDistance = 10.0f;
 	public const float DefaultScrollSensitivity = 15.0f;
 	private const float TrackpadPinchZoomSensitivity = 0.75f;
+	private const float TrackpadPanSensitivity = 10.0f;
 
 	// override default +Z forward orientation as that would be incorrect for the camera
 	[ScriptProperty] new public Vector3 Forward => -GetGlobalTransform().Basis.Z.Normalized();
@@ -718,6 +719,10 @@ public sealed partial class Camera : Dynamic
 		{
 			ZoomByMagnifyGesture(magnifyGesture);
 		}
+		else if (@event is InputEventPanGesture panGesture)
+		{
+			RotateByPanGesture(panGesture);
+		}
 
 		if (Mode == CameraModeEnum.Scripted) return;
 
@@ -748,9 +753,7 @@ public sealed partial class Camera : Dynamic
 			if (Root.Input.IsTouchscreen) return;
 			if (_turning)
 			{
-				_targetRotation += new Vector3(mouseEvent.Relative.Y / -5 * VerticalSpeed * 0.02f, mouseEvent.Relative.X / -5 * HorizontalSpeed * 0.02f, 0) * Sensitivity;
-
-				LimitRotation();
+				RotateCamera(mouseEvent.Relative);
 			}
 		}
 
@@ -867,6 +870,25 @@ public sealed partial class Camera : Dynamic
 
 		_targetZoom -= ScrollSensitivity * TrackpadPinchZoomSensitivity * zoomDelta;
 		LimitZoomDistance();
+	}
+
+	private void RotateByPanGesture(InputEventPanGesture panGesture)
+	{
+		if (Mode != CameraModeEnum.Follow) return;
+		if (Root.Input.IsTouchscreen) return;
+
+		RotateCamera(-panGesture.Delta * TrackpadPanSensitivity);
+	}
+
+	private void RotateCamera(Vector2 delta)
+	{
+		_targetRotation += new Vector3(
+			delta.Y / -5 * VerticalSpeed * 0.02f,
+			delta.X / -5 * HorizontalSpeed * 0.02f,
+			0
+		) * Sensitivity;
+
+		LimitRotation();
 	}
 
 	public void ReceiveDragTouchInput(InputEventScreenDrag dragEvent)
