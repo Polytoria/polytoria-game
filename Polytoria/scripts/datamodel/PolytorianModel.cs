@@ -38,7 +38,7 @@ public sealed partial class PolytorianModel : CharacterModel
 
 	private const float BlendSpeed = 5f;
 	private const float LookBlendSpeed = 15f;
-	private const string DefaultBodyColor = "#FFFFFF";
+	private static readonly Color _defaultBodyColor = Colors.White;
 
 	private const int ClothingWidth = 1024;
 	private const int ClothingHeight = 1024;
@@ -690,12 +690,12 @@ public sealed partial class PolytorianModel : CharacterModel
 	[ScriptMethod]
 	public void ClearAppearance()
 	{
-		HeadColor = Color.FromString(DefaultBodyColor, new Color());
-		TorsoColor = Color.FromString(DefaultBodyColor, new Color());
-		LeftArmColor = Color.FromString(DefaultBodyColor, new Color());
-		RightArmColor = Color.FromString(DefaultBodyColor, new Color());
-		LeftLegColor = Color.FromString(DefaultBodyColor, new Color());
-		RightLegColor = Color.FromString(DefaultBodyColor, new Color());
+		HeadColor = _defaultBodyColor;
+		TorsoColor = _defaultBodyColor;
+		LeftArmColor = _defaultBodyColor;
+		RightArmColor = _defaultBodyColor;
+		LeftLegColor = _defaultBodyColor;
+		RightLegColor = _defaultBodyColor;
 		FaceImage = null;
 		_faceOverrided = false;
 		_bodyOverrided = false;
@@ -733,12 +733,12 @@ public sealed partial class PolytorianModel : CharacterModel
 		}
 
 		// Apply body color
-		HeadColor = Color.FromString(avatarData.Colors.Head, new Color());
-		TorsoColor = Color.FromString(avatarData.Colors.Torso, new Color());
-		LeftArmColor = Color.FromString(avatarData.Colors.LeftArm, new Color());
-		RightArmColor = Color.FromString(avatarData.Colors.RightArm, new Color());
-		LeftLegColor = Color.FromString(avatarData.Colors.LeftLeg, new Color());
-		RightLegColor = Color.FromString(avatarData.Colors.RightLeg, new Color());
+		HeadColor = Color.FromString(avatarData.Colors.Head, _defaultBodyColor);
+		TorsoColor = Color.FromString(avatarData.Colors.Torso, _defaultBodyColor);
+		LeftArmColor = Color.FromString(avatarData.Colors.LeftArm, _defaultBodyColor);
+		RightArmColor = Color.FromString(avatarData.Colors.RightArm, _defaultBodyColor);
+		LeftLegColor = Color.FromString(avatarData.Colors.LeftLeg, _defaultBodyColor);
+		RightLegColor = Color.FromString(avatarData.Colors.RightLeg, _defaultBodyColor);
 
 		bool hasTool = false;
 
