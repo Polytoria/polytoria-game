@@ -424,7 +424,7 @@ public sealed partial class PolytorianModel : CharacterModel
 	{
 		// TODO: combine the face into the composite texture
 		// currently the head gets a unique material since the face isn't baked into the texture
-		
+
 		ImageTexture composite = null!;
 		Clothing[] clothings = GetChildrenOfClass<Clothing>();
 		if (clothings.Length != 0)
