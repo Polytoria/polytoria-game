@@ -20,6 +20,7 @@ public sealed partial class Camera : Dynamic
 	public const float ClipSafeMargin = 2.0f;
 	public const float DefaultZoomDistance = 10.0f;
 	public const float DefaultScrollSensitivity = 15.0f;
+	private const float TrackpadPinchZoomSensitivity = 0.75f;
 
 	// override default +Z forward orientation as that would be incorrect for the camera
 	[ScriptProperty] new public Vector3 Forward => -GetGlobalTransform().Basis.Z.Normalized();
@@ -713,6 +714,10 @@ public sealed partial class Camera : Dynamic
 				}
 			}
 		}
+		else if (@event is InputEventMagnifyGesture magnifyGesture)
+		{
+			ZoomByMagnifyGesture(magnifyGesture);
+		}
 
 		if (Mode == CameraModeEnum.Scripted) return;
 
@@ -849,6 +854,19 @@ public sealed partial class Camera : Dynamic
 	private void SnapBackward()
 	{
 		Position += Forward * -_moveSpeed / 10;
+	}
+
+	private void ZoomByMagnifyGesture(InputEventMagnifyGesture magnifyGesture)
+	{
+		float zoomDelta = Mathf.Clamp(magnifyGesture.Factor - 1f, -1f, 1f);
+
+		if (Mathf.IsZeroApprox(zoomDelta))
+		{
+			return;
+		}
+
+		_targetZoom -= ScrollSensitivity * TrackpadPinchZoomSensitivity * zoomDelta;
+		LimitZoomDistance();
 	}
 
 	public void ReceiveDragTouchInput(InputEventScreenDrag dragEvent)
