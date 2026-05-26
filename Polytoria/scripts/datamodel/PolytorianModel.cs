@@ -423,13 +423,15 @@ public sealed partial class PolytorianModel : CharacterModel
 	private void UpdateClothMaterials()
 	{
 		// TODO: combine the face into the composite texture
-		// currently the head gets a unique material since the face isn't baked into the texture
+		// currently the head gets a unique material since its face isn't baked into the texture
 
 		ImageTexture composite = null!;
 		Clothing[] clothings = GetChildrenOfClass<Clothing>();
 		if (clothings.Length != 0)
 		{
 			Image result = Image.CreateEmpty(ClothingWidth, ClothingHeight, false, Image.Format.Rgba8);
+			// the loop draws from back to front, like a painter
+			// clothing is ordered from front to back
 			clothings.Reverse();
 			foreach (Clothing clothing in clothings)
 			{
