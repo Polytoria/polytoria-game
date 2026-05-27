@@ -20,13 +20,24 @@ public partial class UIViewLicensesRow : PanelContainer
 		base._Ready();
 	}
 
+	public override void _ExitTree()
+	{
+		if (_licenseWindow != null)
+		{
+			_licenseWindow.QueueFree();
+			_licenseWindow = null;
+		}
+		base._ExitTree();
+	}
+
 	private void OnViewLicensesPressed()
 	{
 		if (_licenseWindow == null)
 		{
 			_licenseWindow = GD.Load<PackedScene>(WindowScenePath).Instantiate<Window>();
-			_licenseWindow.CloseRequested += () => { _licenseWindow.QueueFree(); _licenseWindow = null; };
+			_licenseWindow.Visible = false;
 			_licenseWindow.ForceNative = true;
+			_licenseWindow.CloseRequested += () => { _licenseWindow.QueueFree(); _licenseWindow = null; };
 			GetTree().Root.AddChild(_licenseWindow);
 		}
 		_licenseWindow.PopupCentered();
