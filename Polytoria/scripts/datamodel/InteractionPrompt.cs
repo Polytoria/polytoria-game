@@ -293,11 +293,13 @@ public sealed partial class InteractionPrompt : Physical
 		_titleNode = _prompt.GetNode<RichTextLabel>("SV/Control/Pivot/Text/Layout/Title");
 		_subtitleNode = _prompt.GetNode<RichTextLabel>("SV/Control/Pivot/Text/Layout/Subtitle");
 		base.Init();
+		_prompt.Scale = new Vector3(_scale, _scale, _scale);
 		SetProcess(true); // played around with this alot, process seems to work better in general I've found
 	}
 
 	public override void Process(double delta)
 	{
+		_prompt.Scale = new Vector3(_scale, _scale, _scale);
 		if (Root.SessionType != World.SessionTypeEnum.Client) { return; }
 		if (!Root.IsLoaded) return;
 		var distance = Root.Players.LocalPlayer?.GetGlobalPosition().DistanceTo(GetGlobalPosition());
