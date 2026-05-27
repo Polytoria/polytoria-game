@@ -12,7 +12,13 @@ namespace Polytoria.Shared.Misc;
 /// </summary>
 public partial class InputHelper : Node
 {
+	public event Action<InputEvent>? GodotInputEvent;
 	public event Action<InputEvent>? GodotUnhandledInputEvent;
+
+	public override void _Input(InputEvent @event)
+	{
+		GodotInputEvent?.Invoke(@event);
+	}
 
 	public override void _UnhandledInput(InputEvent @event)
 	{
