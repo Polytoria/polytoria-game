@@ -27,7 +27,7 @@ public sealed partial class SettingsPopup : PopupWindowBase
 		[.. CreatorSettingsRegistry.Sections.OrderBy(s => s.SortOrder)];
 
 	private readonly Dictionary<TreeItem, string> _itemToSectionKey = [];
-	private readonly Dictionary<string, List<SettingsPropertyUI>> _sectionUIs = [];
+	private readonly Dictionary<string, List<Control>> _sectionUIs = [];
 	private string _activeSection = string.Empty;
 
 	public override void _Ready()
@@ -86,12 +86,29 @@ public sealed partial class SettingsPopup : PopupWindowBase
 				_layout.AddChild(ui);
 			}
 
+			if (sectionKey == "advanced")
+			{
+				HSeparator separator = new();
+				_layout.AddChild(separator);
+				cachedUIs.Add(separator);
+
+				UIViewLicensesRow licensesRow = GD.Load<PackedScene>("res://scenes/shared/settings/licenses_row.tscn").Instantiate<UIViewLicensesRow>();
+				licensesRow.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+				_layout.AddChild(licensesRow);
+				cachedUIs.Add(licensesRow);
+			}
+
 			_sectionUIs[sectionKey] = cachedUIs;
 		}
 		else
 		{
-			foreach (var ui in cachedUIs)
-				ui.Visible = ui.PropertyVisible;
+			foreach (Control child in cachedUIs)
+			{
+				if (child is SettingsPropertyUI spui)
+					spui.Visible = spui.PropertyVisible;
+				else
+					child.Visible = true;
+			}
 		}
 	}
 }

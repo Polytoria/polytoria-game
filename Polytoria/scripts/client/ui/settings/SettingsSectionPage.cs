@@ -1,5 +1,6 @@
 using Godot;
 using Polytoria.Client.Settings;
+using Polytoria.Shared.Settings;
 using System.Linq;
 
 namespace Polytoria.Client.UI;
@@ -30,6 +31,12 @@ public sealed partial class SettingsSectionPage : VBoxContainer
 			};
 
 			AddChild(row);
+		}
+
+		if (SectionKey == "advanced")
+		{
+			AddChild(new HSeparator());
+			AddChild(GD.Load<PackedScene>("res://scenes/shared/settings/licenses_row.tscn").Instantiate<UIViewLicensesRow>());
 		}
 
 		base._Ready();
