@@ -71,8 +71,7 @@ public sealed partial class DisplaySettingsApplier : Node
 
 	private void ApplyFpsCap()
 	{
-		var fpsPreset = ClientSettingsService.Instance.Get<FpsPreset>(SharedSettingKeys.Display.FpsPreset);
-		Engine.MaxFps = fpsPreset != FpsPreset.Custom ? (int)fpsPreset : ClientSettingsService.Instance.Get<int>(SharedSettingKeys.Display.FpsCap);
+		Engine.MaxFps = ResolveFpsCap(ClientSettingsService.Instance);
 	}
 
 	private void ApplyUiScale()
@@ -83,5 +82,23 @@ public sealed partial class DisplaySettingsApplier : Node
 		float osScale = DisplayServer.ScreenGetScale(screenId);
 		finalScale = scale * osScale;
 		GetTree().Root.ContentScaleFactor = finalScale;
+	}
+
+	private static int ResolveFpsCap(ISettingsContext settings)
+	{
+		var preset = settings.Get<FpsPreset>(SharedSettingKeys.Display.FpsPreset);
+
+		return preset switch
+		{
+			FpsPreset.Custom => settings.Get<int>(SharedSettingKeys.Display.FpsCap),
+			FpsPreset.Limitless => 0,
+			FpsPreset.Reduced => 30,
+			FpsPreset.Standard => 60,
+			FpsPreset.Extended => 90,
+			FpsPreset.Smooth => 120,
+			FpsPreset.Slick => 144,
+			FpsPreset.Fluid => 240,
+			_ => 0
+		};
 	}
 }
