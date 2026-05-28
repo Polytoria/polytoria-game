@@ -57,6 +57,7 @@ public sealed partial class ScriptService : Instance
 		{ "InputButton", typeof(InputButton) },
 		{ "ColorSeries", typeof(ColorSeries) },
 		{ "NumberRange", typeof(NumberRange) },
+		{ "ShadowLayer", typeof(ShadowLayer) },
 	};
 
 	// Dictionary of all enum exposed to scripting (populated by source generator)
@@ -703,6 +704,13 @@ public sealed partial class ScriptService : Instance
 			return list.Cast<CreatorAddons.AddonPermissionEnum>().ToArray();
 		}
 #endif
+		else if (elementType == typeof(ShadowLayer))
+		{
+			ShadowLayer[] arr = new ShadowLayer[list.Count];
+			for (int i = 0; i < list.Count; i++)
+				arr[i] = (ShadowLayer)list[i];
+			return arr;
+		}
 
 		throw new NotSupportedException($"INTERNAL BUG: ConvertListToArray: Array element type {elementType} is not supported in AOT");
 	}
