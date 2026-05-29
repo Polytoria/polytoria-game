@@ -57,6 +57,7 @@ public sealed partial class ScriptService : Instance
 		{ "InputButton", typeof(InputButton) },
 		{ "ColorSeries", typeof(ColorSeries) },
 		{ "NumberRange", typeof(NumberRange) },
+		{ "UIScale", typeof(UIScale) },
 		{ "ShadowLayer", typeof(ShadowLayer) },
 	};
 
