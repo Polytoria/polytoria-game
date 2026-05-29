@@ -846,7 +846,7 @@ public partial class NPC : Physical
 	[ScriptMethod]
 	public virtual void Jump()
 	{
-		bool canJump = CharBody3D.IsOnFloor() || (!_coyoteUsed && _timeSinceGrounded <= CoyoteTime);
+		bool canJump = (CharBody3D.IsOnFloor() || (!_coyoteUsed && _timeSinceGrounded <= CoyoteTime)) && JumpPower > 0;
 		bool playJumpSound = false;
 		if (canJump)
 		{
