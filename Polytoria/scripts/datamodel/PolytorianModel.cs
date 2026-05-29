@@ -42,8 +42,8 @@ public sealed partial class PolytorianModel : CharacterModel
 
 	private const int ClothingWidth = 1024;
 	private const int ClothingHeight = 1024;
+	private const Image.Format ClothingFormat = Image.Format.Rgba8;
 	private static readonly Rect2I _clothingRect = new(0, 0, ClothingWidth, ClothingHeight);
-	private static readonly Image.Format _clothingFormat = Image.Format.Rgba8;
 
 	private int _loadAppearanceCount = 0;
 
@@ -430,7 +430,7 @@ public sealed partial class PolytorianModel : CharacterModel
 		Clothing[] clothings = GetChildrenOfClass<Clothing>();
 		if (clothings.Length != 0)
 		{
-			Image result = Image.CreateEmpty(ClothingWidth, ClothingHeight, false, _clothingFormat);
+			Image result = Image.CreateEmpty(ClothingWidth, ClothingHeight, false, ClothingFormat);
 			// the loop draws from back to front, like a painter
 			// clothing is ordered from front to back
 			clothings.Reverse();
@@ -443,7 +443,7 @@ public sealed partial class PolytorianModel : CharacterModel
 					Image image = texture.GetImage();
 					// just in case the clothing isn't the correct format or size
 					// Godot will skip these if the format or size already match
-					image.Convert(_clothingFormat);
+					image.Convert(ClothingFormat);
 					image.Resize(ClothingWidth, ClothingHeight);
 					result.BlendRect(image, _clothingRect, Vector2I.Zero);
 				}
