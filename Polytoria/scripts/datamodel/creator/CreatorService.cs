@@ -503,7 +503,12 @@ public sealed partial class CreatorService : Node, IScriptObject
 		CreatorSession session = game.LinkedSession;
 
 		// Check if current session is already open
-		if (SessionToLocalTestID.ContainsKey(session)) return;
+		if (SessionToLocalTestID.ContainsKey(session))
+		{
+			StopLocalTest();
+			CleanupLocalTest();
+			LocalTestStopped.Invoke();
+		}
 
 		// Save current project
 		SaveCurrentFile();

@@ -338,9 +338,9 @@ public sealed partial class Player : NPC
 
 	public static string GetBadgeIconPath(Player player)
 	{
-		string badgeName = !string.IsNullOrEmpty(player.UserRoleClass) ? player.UserRoleClass
+		string badgeName = player.IsCreator ? "creator"
+			: !string.IsNullOrEmpty(player.UserRoleClass) ? player.UserRoleClass
 			: player.IsAdmin ? "admin"
-			: player.IsCreator ? "creator"
 			: "";
 
 		if (string.IsNullOrEmpty(badgeName))
