@@ -201,6 +201,7 @@ public sealed partial class ClientEntry : Node3D
 		settings.Init();
 
 		AssetLoader.Singleton.MaxConcurrentRequests = ClientSettingsService.Instance.Get<int>(SharedSettingKeys.Advanced.AssetQueue);
+		Image3D.ForceBlendAlpha = ClientSettingsService.Instance.Get<bool>(SharedSettingKeys.Advanced.ForceBlendAlpha);
 
 		settings.AddChild(new DisplaySettingsApplier { Name = "DisplaySettingsApplier" }, true, InternalMode.Front);
 		settings.AddChild(new AudioSettingsApplier { Name = "AudioSettingsApplier" }, true, InternalMode.Front);

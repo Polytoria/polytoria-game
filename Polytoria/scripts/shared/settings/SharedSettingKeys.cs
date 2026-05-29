@@ -42,5 +42,6 @@ public static class SharedSettingKeys
 	public static class Advanced
 	{
 		public const string AssetQueue = "advanced.asset_queue";
+		public const string ForceBlendAlpha = "advanced.force_blend_alpha";
 	}
 }

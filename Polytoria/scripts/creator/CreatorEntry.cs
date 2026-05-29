@@ -7,6 +7,7 @@ using Polytoria.Client.Settings.Appliers;
 using Polytoria.Creator.Managers;
 using Polytoria.Creator.Settings;
 using Polytoria.Creator.Utils;
+using Polytoria.Datamodel;
 using Polytoria.Datamodel.Creator;
 using Polytoria.Shared;
 using Polytoria.Shared.AssetLoaders;
@@ -40,6 +41,7 @@ public partial class CreatorEntry : Node
 		creatorSettingsService.AddChild(new GraphicsSettingsApplier { Name = GraphicsSettingsApplier.NodeName, Settings = creatorSettingsService }, true, InternalMode.Front);
 
 		GetViewport().GuiEmbedSubwindows = true;
+		Image3D.ForceBlendAlpha = creatorSettingsService.Get<bool>(SharedSettingKeys.Advanced.ForceBlendAlpha);
 
 		// Open project
 		cmdargs.TryGetValue("proj", out string? creatorFilePath);

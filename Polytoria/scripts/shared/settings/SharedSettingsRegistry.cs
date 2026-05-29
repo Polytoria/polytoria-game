@@ -359,6 +359,20 @@ public static class SharedSettingsRegistry
 					]
 				}
 			},
+			{
+				SharedSettingKeys.Advanced.ForceBlendAlpha,
+				new SettingDef<bool>
+				{
+					Key = SharedSettingKeys.Advanced.ForceBlendAlpha,
+					SectionKey = "advanced",
+					Label = "Force Blend Alpha",
+					Description = "Forces Image3Ds to have the \"Alpha\" blend mode instead of \"AlphaScissor\" which might fix some crashes on worse GPUs.",
+					ValueKind = SettingValueKind.Bool,
+					RequiresRestart = true,
+					DefaultValue = false,
+					ControlKind = SettingControlKind.Toggle,
+				}
+			},
 		};
 
 		SettingDef.ValidateAll(defs.Values);

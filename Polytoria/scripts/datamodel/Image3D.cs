@@ -31,6 +31,7 @@ public sealed partial class Image3D : Dynamic
 	private bool _faceCamera;
 	private bool _doubleSided;
 	private TextureFilterEnum _textureFilter;
+	public static bool ForceBlendAlpha = false;
 
 	[Editable, ScriptProperty]
 	public ImageAsset? Image
@@ -243,7 +244,7 @@ public sealed partial class Image3D : Dynamic
 			_transparencyType = tex.GetImage().DetectAlpha() switch
 			{
 				Godot.Image.AlphaMode.Blend => BaseMaterial3D.TransparencyEnum.Alpha,
-				Godot.Image.AlphaMode.Bit => BaseMaterial3D.TransparencyEnum.Alpha,
+				Godot.Image.AlphaMode.Bit => ForceBlendAlpha ? BaseMaterial3D.TransparencyEnum.Alpha : BaseMaterial3D.TransparencyEnum.AlphaScissor,
 				_ => BaseMaterial3D.TransparencyEnum.Disabled,
 			};
 			UpdateMaterialTransparency();
