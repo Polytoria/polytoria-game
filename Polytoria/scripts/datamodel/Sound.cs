@@ -214,6 +214,8 @@ public sealed partial class Sound : Dynamic
 			};
 
 			_audioPlayer3D.AttenuationModel = _attenuationMode;
+			_audioPlayer3D.AttenuationFilterCutoffHz = _attenuationMode == AudioStreamPlayer3D.AttenuationModelEnum.Disabled ? 20500 : 5000;
+
 			OnPropertyChanged();
 		}
 	}
@@ -292,7 +294,8 @@ public sealed partial class Sound : Dynamic
 			_audioPlayer3D = new AudioStreamPlayer3D
 			{
 				Stream = _currentStream,
-				AttenuationModel = _attenuationMode
+				AttenuationModel = _attenuationMode,
+				AttenuationFilterCutoffHz = _attenuationMode == AudioStreamPlayer3D.AttenuationModelEnum.Disabled ? 20500 : 5000
 			};
 			GDNode.AddChild(_audioPlayer3D, @internal: Node.InternalMode.Back);
 			_audioPlayer3D.Finished += OnPlayerFinished;
