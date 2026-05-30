@@ -50,6 +50,7 @@ public sealed partial class ScriptService : Instance
 		{ "Vector2", typeof(PTVector2) },
 		{ "Quaternion", typeof(PTQuaternion) },
 		{ "Color", typeof(PTColor) },
+		{ "Bounds", typeof(PTBounds) },
 		{ "NetMessage", typeof(NetMessage) },
 		{ "HttpRequestData", typeof(HttpRequestData) },
 		{ "HttpResponseData", typeof(HttpResponseData) },
