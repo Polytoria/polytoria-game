@@ -60,6 +60,7 @@ public sealed partial class Environment : Instance
 
 	private float _partDestroyHeight;
 	private bool _autoGenerateNavMesh;
+	private bool _usesRaycastLayer;	
 	private Lighting.SkyboxEnum _skybox = Lighting.SkyboxEnum.Day1;
 	private bool _fogEnabled = false;
 	private Color _fogColor = new(1, 1, 1);
@@ -114,6 +115,18 @@ public sealed partial class Environment : Instance
 			OnPropertyChanged();
 		}
 	}
+
+	[Editable, ScriptProperty, DefaultValue(true)]
+	public bool UsesRaycastLayer
+	{
+		get => _usesRaycastLayer;
+		set
+		{
+			_usesRaycastLayer = value;
+			OnPropertyChanged();
+		}
+	}
+
 
 	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with Lighting.Skybox")]
 	public Lighting.SkyboxEnum Skybox
@@ -260,7 +273,7 @@ public sealed partial class Environment : Instance
 	}
 
 	[ScriptMethod]
-	public RayResult? Raycast(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null)
+	public RayResult? Raycast(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null, uint? collisionMask = null)
 	{
 		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
 
@@ -269,7 +282,8 @@ public sealed partial class Environment : Instance
 			From = origin,
 			To = origin + direction.Normalized() * maxDistance,
 			CollideWithAreas = true,
-			CollideWithBodies = true
+			CollideWithBodies = true,
+			CollisionMask = collisionMask
 		};
 
 		if (ignoreList != null)

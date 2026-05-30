@@ -5,6 +5,7 @@
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Datamodel.Data;
+using Polytoria.Enums;
 using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
@@ -41,7 +42,7 @@ public partial class Physical : Dynamic
 	private const float TouchedGapCheck = 20f;
 	private bool _anchored = true;
 	private bool _canCollide = true;
-	private uint _collisionLayers = 1, _collisionMask = 1;
+	private uint _collisionLayers = (uint)PhysicsLayerEnum.Default | (uint)PhysicsLayerEnum.RaycastCollision, _collisionMask = (uint)PhysicsLayerEnum.Default;
 	private Vector3 _velocity = Vector3.Zero;
 	private Vector3 _angularVelocity = Vector3.Zero;
 
@@ -483,6 +484,12 @@ public partial class Physical : Dynamic
 		base.Ready();
 	}
 
+	public virtual void SetInitCollision() 
+	{
+		CollisionLayers = Root.Environment.UsesRaycastLayer ? (uint)PhysicsLayerEnum.Default | (uint)PhysicsLayerEnum.RaycastCollision 
+															: (uint)PhysicsLayerEnum.Default;
+	}
+
 	private CollisionObject3D? GetCollisionObject()
 	{
 		return GDNode as CollisionObject3D;
@@ -545,6 +552,7 @@ public partial class Physical : Dynamic
 	private void OnRootReady()
 	{
 		UpdateFreeze();
+		SetInitCollision();
 	}
 
 	internal void EnableCanTouch()

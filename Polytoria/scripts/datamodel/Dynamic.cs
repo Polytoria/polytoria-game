@@ -9,6 +9,7 @@ using Polytoria.Creator.UI;
 using Polytoria.Creator.Spatial;
 using Polytoria.Datamodel.Interfaces;
 #endif
+using Polytoria.Enums;
 using Polytoria.Utils;
 using Polytoria.Utils.DTOs;
 using System;
@@ -718,8 +719,8 @@ public partial class Dynamic : Instance
 		if (_boundArea3D == null) return;
 		_boundArea3D.CollisionLayer =
 			to && this is not IGroup and not Camera and not Physical
-				? 1 << 2
-				: 0u;
+				? (uint)PhysicsLayerEnum.CreatorBounds
+				: (uint)PhysicsLayerEnum.None;
 	}
 
 	internal void PropagateUpdateCreatorBounds()

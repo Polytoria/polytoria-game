@@ -8,6 +8,7 @@ using Polytoria.Client.UI.Chat;
 #if CREATOR
 #endif
 using Polytoria.Datamodel.Services;
+using Polytoria.Enums;
 using Polytoria.Schemas.API;
 using Polytoria.Scripting;
 using Polytoria.Networking;
@@ -479,12 +480,20 @@ public sealed partial class Player : NPC
 		"disappointed",
 	];
 
-	public override void InitGDNode()
+	/*public override void InitGDNode()
 	{
 		base.InitGDNode();
-		CollisionLayers = 2;
-		CollisionMask = 3;
+		CollisionLayers = (uint)PhysicsLayerEnum.Player;
+		CollisionMask = (uint)(PhysicsLayerEnum.Default | PhysicsLayerEnum.Player);
+	}*/
+
+	public override void SetInitCollision() 
+	{
+		CollisionLayers = Root.Environment.UsesRaycastLayer ? (uint)PhysicsLayerEnum.Default | (uint)PhysicsLayerEnum.Player | (uint)PhysicsLayerEnum.RaycastCollision 
+															: (uint)PhysicsLayerEnum.Default;
+		CollisionMask = (uint)(PhysicsLayerEnum.Default | PhysicsLayerEnum.Player);
 	}
+
 
 	public override void Init()
 	{
@@ -570,11 +579,11 @@ public sealed partial class Player : NPC
 	{
 		if (Root.Players.PlayerCollisionEnabled)
 		{
-			SetCollisionMask(2, true);
+			SetCollisionMask((int)PhysicsLayerEnum.Player, true);
 		}
 		else
 		{
-			SetCollisionMask(2, false);
+			SetCollisionMask((int)PhysicsLayerEnum.Player, false);
 		}
 	}
 
@@ -838,6 +847,9 @@ public sealed partial class Player : NPC
 
 	private async void OnPlayerDied()
 	{
+		CollisionLayers = Root.Environment.UsesRaycastLayer ? CollisionLayers & ~(uint)PhysicsLayerEnum.RaycastCollision 
+															: CollisionLayers;
+
 		if (IsLocal)
 		{
 			UnequipTool();

@@ -436,6 +436,12 @@ pointing/android/enable_pan_and_scale_gestures=true
 [layer_names]
 
 3d_render/layer_6="Character"
+3d_render/layer_7="Gizmo"
+3d_physics/layer_1="Default"
+3d_physics/layer_2="Player"
+3d_physics/layer_3="CreatorBounds"
+3d_physics/layer_4="CreatorBoundsCanCollide"
+3d_physics/layer_5="RaycastCollision"
 
 [physics]
 
