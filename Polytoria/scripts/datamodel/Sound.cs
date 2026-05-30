@@ -7,6 +7,8 @@ using Polytoria.Attributes;
 using Polytoria.Datamodel.Resources;
 using Polytoria.Networking;
 using Polytoria.Scripting;
+using Polytoria.Enums;
+
 
 #if CREATOR
 using Polytoria.Creator.Spatial;
@@ -182,6 +184,40 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
+	private AudioStreamPlayer3D.AttenuationModelEnum _attenuationMode = AudioStreamPlayer3D.AttenuationModelEnum.InverseDistance;
+
+	[Editable, ScriptProperty]
+	public SoundAttenuationModeEnum AttenuationMode
+	{
+		get
+		{
+			return _attenuationMode switch
+			{
+				AudioStreamPlayer3D.AttenuationModelEnum.InverseDistance => SoundAttenuationModeEnum.Linear,
+				AudioStreamPlayer3D.AttenuationModelEnum.InverseSquareDistance => SoundAttenuationModeEnum.Squared,
+				AudioStreamPlayer3D.AttenuationModelEnum.Logarithmic => SoundAttenuationModeEnum.Logarithmic,
+				AudioStreamPlayer3D.AttenuationModelEnum.Disabled => SoundAttenuationModeEnum.Disabled,
+				_ => SoundAttenuationModeEnum.Disabled
+			};
+		}
+		set
+		{
+			if (_audioPlayer3D == null) return;
+
+			_attenuationMode = value switch
+			{
+				SoundAttenuationModeEnum.Linear => AudioStreamPlayer3D.AttenuationModelEnum.InverseDistance,
+				SoundAttenuationModeEnum.Squared => AudioStreamPlayer3D.AttenuationModelEnum.InverseSquareDistance,
+				SoundAttenuationModeEnum.Logarithmic => AudioStreamPlayer3D.AttenuationModelEnum.Logarithmic,
+				SoundAttenuationModeEnum.Disabled => AudioStreamPlayer3D.AttenuationModelEnum.Disabled,
+				_ => _audioPlayer3D.AttenuationModel
+			};
+
+			_audioPlayer3D.AttenuationModel = _attenuationMode;
+			OnPropertyChanged();
+		}
+	}
+
 	[ScriptProperty]
 	public float Time
 	{
@@ -255,7 +291,8 @@ public sealed partial class Sound : Dynamic
 		{
 			_audioPlayer3D = new AudioStreamPlayer3D
 			{
-				Stream = _currentStream
+				Stream = _currentStream,
+				AttenuationModel = _attenuationMode
 			};
 			GDNode.AddChild(_audioPlayer3D, @internal: Node.InternalMode.Back);
 			// check issue https://github.com/godotengine/godot/issues/23485
