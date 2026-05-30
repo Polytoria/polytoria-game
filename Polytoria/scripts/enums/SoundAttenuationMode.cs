@@ -5,8 +5,8 @@ namespace Polytoria.Enums;
 [ScriptEnum]
 public enum SoundAttenuationModeEnum
 {
+	Disabled,
 	Linear,
 	Squared,
-	Logarithmic,
-	Disabled
+	Logarithmic
 }

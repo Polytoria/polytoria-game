@@ -184,7 +184,7 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
-	private AudioStreamPlayer3D.AttenuationModelEnum _attenuationMode = AudioStreamPlayer3D.AttenuationModelEnum.InverseDistance;
+	private AudioStreamPlayer3D.AttenuationModelEnum _attenuationMode = AudioStreamPlayer3D.AttenuationModelEnum.Disabled;
 
 	[Editable, ScriptProperty]
 	public SoundAttenuationModeEnum AttenuationMode
@@ -295,8 +295,6 @@ public sealed partial class Sound : Dynamic
 				AttenuationModel = _attenuationMode
 			};
 			GDNode.AddChild(_audioPlayer3D, @internal: Node.InternalMode.Back);
-			// check issue https://github.com/godotengine/godot/issues/23485
-			_audioPlayer3D.AttenuationFilterCutoffHz = 20500;
 			_audioPlayer3D.Finished += OnPlayerFinished;
 		}
 		UpdateAudioPlayer();
