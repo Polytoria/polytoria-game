@@ -338,9 +338,10 @@ public sealed partial class Player : NPC
 
 	public static string GetBadgeIconPath(Player player)
 	{
-		string badgeName = player.IsAdmin ? "admin"
-			: player.IsCreator ? "creator"
-			: player.UserRoleClass;
+		string badgeName = player.IsCreator ? "creator"
+			: !string.IsNullOrEmpty(player.UserRoleClass) ? player.UserRoleClass
+			: player.IsAdmin ? "admin"
+			: "";
 
 		if (string.IsNullOrEmpty(badgeName))
 			return "";
@@ -398,8 +399,11 @@ public sealed partial class Player : NPC
 	[
 		"wave",
 		"dance",
+		"dance2",
 		"helicopter",
 		"sit",
+		"agree",
+		"disagree",
 	];
 
 	// List of all emotes
@@ -410,6 +414,11 @@ public sealed partial class Player : NPC
 		"helicopter",
 		"sit",
 		"point",
+		"agree",
+		"disagree",
+		"scream",
+		"dance2",
+		"disappointed",
 	];
 
 	// Oneshot emotes
@@ -417,13 +426,17 @@ public sealed partial class Player : NPC
 	[
 		"wave",
 		"point",
+		"disagree",
+		"agree",
+		"scream",
+		"disappointed",
 	];
 
 	public override void InitGDNode()
 	{
 		base.InitGDNode();
-		CharBody3D.CollisionLayer = 2;
-		CharBody3D.CollisionMask = 3;
+		CollisionLayers = 2;
+		CollisionMask = 3;
 	}
 
 	public override void Init()
@@ -510,11 +523,11 @@ public sealed partial class Player : NPC
 	{
 		if (Root.Players.PlayerCollisionEnabled)
 		{
-			CharBody3D.SetCollisionMaskValue(2, true);
+			SetCollisionMask(2, true);
 		}
 		else
 		{
-			CharBody3D.SetCollisionMaskValue(2, false);
+			SetCollisionMask(2, false);
 		}
 	}
 
@@ -599,7 +612,7 @@ public sealed partial class Player : NPC
 	internal void AddStaminaTick(double delta)
 	{
 		if (!UseStamina) { return; }
-		Stamina += (float)(delta / StaminaRegen);
+		Stamina += (float)(delta * StaminaRegen);
 		if (Stamina > MaxStamina)
 		{
 			Stamina = MaxStamina;
@@ -609,7 +622,7 @@ public sealed partial class Player : NPC
 	internal void RemoveStaminaTick(double delta)
 	{
 		if (!UseStamina) { return; }
-		Stamina -= (float)(delta / StaminaBurn);
+		Stamina -= (float)(delta * StaminaBurn);
 		if (Stamina < 0)
 		{
 			Stamina = 0;

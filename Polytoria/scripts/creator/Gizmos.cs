@@ -700,14 +700,16 @@ public sealed partial class Gizmos : Node
 		{
 			if (item is Physical p)
 			{
-				excludeArray.Add(p.GetRid());
+				foreach (Rid rid in p.GetRids())
+					excludeArray.Add(rid);
 			}
 			// Add Descendants
 			foreach (Instance n in item.GetDescendants())
 			{
 				if (n is Physical p2)
 				{
-					excludeArray.Add(p2.GetRid());
+					foreach (Rid rid in p2.GetRids())
+						excludeArray.Add(rid);
 				}
 				if (n is Dynamic d)
 				{

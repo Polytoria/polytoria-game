@@ -20,11 +20,17 @@ public partial class UIUserCardStat : Node
 		_nameLabel.Text = TargetStat.GetDisplayName();
 		_valueLabel.Text = TargetStat.GetDisplayValue(UIUserCard.TargetPlayer);
 		UIUserCard.TargetPlayer.StatChanged.Connect(OnPlayerStatChanged);
+
+		TargetStat.PropertyChanged.Connect(() =>
+		{
+			_nameLabel.Text = TargetStat.GetDisplayName();
+		});
 	}
 
 	private void OnPlayerStatChanged(Stat k, object? _)
 	{
 		if (k != TargetStat) return;
+		_nameLabel.Text = TargetStat.GetDisplayName();
 		_valueLabel.Text = TargetStat.GetDisplayValue(UIUserCard.TargetPlayer);
 	}
 }

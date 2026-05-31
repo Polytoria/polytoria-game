@@ -1,0 +1,85 @@
+[gd_scene format=3 uid="uid://b8idijqb8aw3a"]
+
+[ext_resource type="Script" uid="uid://deg0ht5fobrth" path="res://scripts/creator/properties/Vector3Property.cs" id="1_djbn4"]
+
+[sub_resource type="Theme" id="Theme_tpni3"]
+HBoxContainer/constants/separation = 0
+LineEdit/constants/minimum_character_width = 0
+SpinBox/constants/field_and_buttons_separation = 0
+
+[sub_resource type="Theme" id="Theme_awot5"]
+LineEdit/colors/font_color = Color(0.862745, 0.0784314, 0.235294, 1)
+
+[sub_resource type="Theme" id="Theme_l07jw"]
+LineEdit/colors/font_color = Color(0.196078, 0.803922, 0.196078, 1)
+
+[sub_resource type="Theme" id="Theme_emhcw"]
+LineEdit/colors/font_color = Color(0.117647, 0.564706, 1, 1)
+
+[sub_resource type="Theme" id="Theme_djbn4"]
+LineEdit/colors/font_color = Color(0.8745098, 0.8745098, 0.8745098, 1)
+
+[node name="Quaternion" type="HBoxContainer" unique_id=1103767608]
+custom_minimum_size = Vector2(0, 24)
+size_flags_horizontal = 3
+theme = SubResource("Theme_tpni3")
+theme_override_constants/separation = 4
+script = ExtResource("1_djbn4")
+
+[node name="X" type="SpinBox" parent="." unique_id=1180398221]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_neighbor_right = NodePath("../Y")
+focus_next = NodePath("../Y")
+theme = SubResource("Theme_awot5")
+step = 0.001
+allow_greater = true
+allow_lesser = true
+alignment = 1
+custom_arrow_step = 1.0
+select_all_on_focus = true
+
+[node name="Y" type="SpinBox" parent="." unique_id=1943671816]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_neighbor_left = NodePath("../X")
+focus_neighbor_right = NodePath("../Z")
+focus_next = NodePath("../Z")
+focus_previous = NodePath("../X")
+theme = SubResource("Theme_l07jw")
+step = 0.001
+allow_greater = true
+allow_lesser = true
+alignment = 1
+custom_arrow_step = 1.0
+select_all_on_focus = true
+
+[node name="Z" type="SpinBox" parent="." unique_id=532580102]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_neighbor_left = NodePath("../Y")
+focus_previous = NodePath("../Y")
+theme = SubResource("Theme_emhcw")
+step = 0.001
+allow_greater = true
+allow_lesser = true
+alignment = 1
+custom_arrow_step = 1.0
+select_all_on_focus = true
+
+[node name="W" type="SpinBox" parent="." unique_id=1915988919]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_neighbor_left = NodePath("../Y")
+focus_previous = NodePath("../Y")
+theme = SubResource("Theme_djbn4")
+step = 0.001
+allow_greater = true
+allow_lesser = true
+alignment = 1
+custom_arrow_step = 1.0
+select_all_on_focus = true

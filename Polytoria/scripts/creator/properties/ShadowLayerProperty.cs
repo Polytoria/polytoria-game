@@ -4,6 +4,7 @@
 
 using Godot;
 using Polytoria.Datamodel.Data;
+using Polytoria.Enums;
 using System;
 using ColorPicker = Polytoria.Creator.UI.ColorPicker;
 
@@ -126,7 +127,7 @@ public sealed partial class ShadowLayerProperty : MarginContainer, IProperty<Sha
 
 		_blendMode.ItemSelected += idx =>
 		{
-			_value.BlendMode = (ShadowBlendMode)(int)idx;
+			_value.BlendMode = (BlendModeEnum)idx;
 			EmitChanged();
 		};
 	}

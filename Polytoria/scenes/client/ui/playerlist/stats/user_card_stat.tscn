@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://dc5nusmrfifq3" path="res://scripts/client/ui/playerlist/stats/UIUserCardStat.cs" id="1_bnw6h"]
 
 [node name="MarginContainer" type="MarginContainer" unique_id=1037765990 node_paths=PackedStringArray("_nameLabel", "_valueLabel")]
-custom_minimum_size = Vector2(100, 0)
+custom_minimum_size = Vector2(56, 0)
 offset_right = 80.0
 offset_bottom = 39.0
 script = ExtResource("1_bnw6h")
@@ -11,7 +11,7 @@ _nameLabel = NodePath("Layout/StatName")
 _valueLabel = NodePath("Layout/StatValue")
 
 [node name="Layout" type="VBoxContainer" parent="." unique_id=89817709]
-custom_minimum_size = Vector2(80, 0)
+custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
 theme_override_constants/separation = 0
 alignment = 1
@@ -19,13 +19,14 @@ alignment = 1
 [node name="StatName" type="Label" parent="Layout" unique_id=159601761]
 modulate = Color(1, 1, 1, 0.49803922)
 layout_mode = 2
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 10
 text = "KOs"
 horizontal_alignment = 1
 text_overrun_behavior = 3
 
 [node name="StatValue" type="Label" parent="Layout" unique_id=1758493848]
 layout_mode = 2
+theme_override_font_sizes/font_size = 12
 text = "25"
 horizontal_alignment = 1
 text_overrun_behavior = 3

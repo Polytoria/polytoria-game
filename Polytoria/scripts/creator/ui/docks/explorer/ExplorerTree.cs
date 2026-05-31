@@ -53,7 +53,7 @@ public partial class ExplorerTree : Tree
 	{
 		if (@event is InputEventMouseButton mouseEvent)
 		{
-			if (mouseEvent.ButtonIndex == MouseButton.Right && mouseEvent.Pressed)
+			if (mouseEvent is { ButtonIndex: MouseButton.Right, Pressed: true })
 			{
 				TreeItem clickedItem = GetItemAtPosition(mouseEvent.Position);
 				if (clickedItem != null)
@@ -80,7 +80,8 @@ public partial class ExplorerTree : Tree
 		}
 		else if (@event.IsActionPressed("rename"))
 		{
-			EditSelected();
+			AcceptEvent();
+			EditSelected(true);
 		}
 		base._GuiInput(@event);
 	}
@@ -138,62 +139,59 @@ public partial class ExplorerTree : Tree
 
 		List<TreeItem> draggedItems = [];
 
-		if (dragData is InstanceDragData instanceDrag)
+		switch (dragData)
 		{
-			foreach (Instance item in instanceDrag.Instances)
-			{
-				draggedItems.Add(InstanceToItem[item]);
-			}
-		}
-		else if (dragData is FileDragData fileDrag)
-		{
-			if (fileDrag.Files.Length == 1)
-			{
-				string file = fileDrag.Files[0];
-				string fileExt = file.GetExtension();
-
-				if (Globals.ScriptFileExtensions.Contains(fileExt))
+			case InstanceDragData instanceDrag:
 				{
-					bool createAsChild = true;
-					string n = CreatorService.GetScriptNameFromPath(file);
-					ScriptTypeEnum st = CreatorService.GetScriptTypeFromPath(file);
-
-					if (createAsChild)
+					foreach (Instance item in instanceDrag.Instances)
 					{
-						Script s;
-
-						if (st == ScriptTypeEnum.Server)
-						{
-							s = Root.New<ServerScript>();
-						}
-						else if (st == ScriptTypeEnum.Client)
-						{
-							s = Root.New<ClientScript>();
-						}
-						else
-						{
-							s = Root.New<ModuleScript>();
-						}
-
-						s.LinkedScript = Root.Assets.GetFileLinkByPath(file);
-						s.Name = n.ToPascalCase();
-
-						s.Parent = target;
-						Root.CreatorContext.Selections.DeselectAll();
-						Root.CreatorContext.Selections.Select(s);
+						draggedItems.Add(InstanceToItem[item]);
 					}
-				}
-				else if (fileExt == Globals.ModelFileExtension)
-				{
-					_ = Root.LinkedSession.InsertModel(file, target);
-				}
 
-				Root.PlayerGUI.GrabFocus();
-			}
-		}
-		else
-		{
-			return;
+					break;
+				}
+			case FileDragData fileDrag:
+				{
+					if (fileDrag.Files.Length == 1)
+					{
+						string file = fileDrag.Files[0];
+						string fileExt = file.GetExtension();
+
+						if (Globals.ScriptFileExtensions.Contains(fileExt))
+						{
+							bool createAsChild = true;
+							string n = CreatorService.GetScriptNameFromPath(file);
+							ScriptTypeEnum st = CreatorService.GetScriptTypeFromPath(file);
+
+							if (createAsChild)
+							{
+								Script s = st switch
+								{
+									ScriptTypeEnum.Server => Root.New<ServerScript>(),
+									ScriptTypeEnum.Client => Root.New<ClientScript>(),
+									_ => Root.New<ModuleScript>()
+								};
+
+								s.LinkedScript = Root.Assets.GetFileLinkByPath(file);
+								s.Name = n.ToPascalCase();
+
+								s.Parent = target;
+								Root.CreatorContext.Selections.DeselectAll();
+								Root.CreatorContext.Selections.Select(s);
+							}
+						}
+						else if (fileExt == Globals.ModelFileExtension)
+						{
+							_ = Root.LinkedSession.InsertModel(file, target);
+						}
+
+						Root.PlayerGUI.GrabFocus();
+					}
+
+					break;
+				}
+			default:
+				return;
 		}
 
 		Instance? parentTo = null;
@@ -238,38 +236,36 @@ public partial class ExplorerTree : Tree
 
 		foreach (Instance draggedInstance in sortedDraggedInstances)
 		{
-			if (parentTo != null)
+			if (parentTo == null) continue;
+			if (draggedInstance.IsAncestorOf(parentTo) || draggedInstance == parentTo)
+				continue;
+
+			try
 			{
-				if (draggedInstance.IsAncestorOf(parentTo) || draggedInstance == parentTo)
-					continue;
+				Instance? oldParent = draggedInstance.Parent;
+				int oldIndex = draggedInstance.Index;
+				originalState.Add((draggedInstance, oldParent, oldIndex));
 
-				try
+				// Calculate adjustment if moving within same parent
+				int adjustedIndex = insertIndex;
+				if (draggedInstance.Parent == parentTo && draggedInstance.Index < insertIndex)
 				{
-					Instance? oldParent = draggedInstance.Parent;
-					int oldIndex = draggedInstance.Index;
-					originalState.Add((draggedInstance, oldParent, oldIndex));
-
-					// Calculate adjustment if moving within same parent
-					int adjustedIndex = insertIndex;
-					if (draggedInstance.Parent == parentTo && draggedInstance.Index < insertIndex)
-					{
-						// Item is being removed from before the target position
-						adjustedIndex--;
-					}
-
-					finalState.Add((draggedInstance, parentTo, adjustedIndex));
+					// Item is being removed from before the target position
+					adjustedIndex--;
 				}
-				catch (Exception ex)
-				{
-					PT.PrintErr(ex);
-					CreatorService.Interface.PopupAlert(ex.Message);
-					return;
-				}
+
+				finalState.Add((draggedInstance, parentTo, adjustedIndex));
+			}
+			catch (Exception ex)
+			{
+				PT.PrintErr(ex);
+				CreatorService.Interface.PopupAlert(ex.Message);
+				return;
 			}
 		}
 
 		// Add history action
-		if (originalState.Count > 0)
+		if (originalState.Count <= 0) return;
 		{
 			history.NewAction($"Move {originalState.Count} instance(s)");
 
@@ -278,15 +274,13 @@ public partial class ExplorerTree : Tree
 				Root.CreatorContext.Selections.DeselectAll();
 				foreach (var (instance, newParent, newIndex) in finalState)
 				{
-					if (newParent != null)
+					if (newParent == null) continue;
+					if (instance.Parent != newParent)
 					{
-						if (instance.Parent != newParent)
-						{
-							instance.Parent = newParent;
-						}
-						newParent.MoveChild(instance, newIndex);
-						Root.CreatorContext.Selections.Select(instance);
+						instance.Parent = newParent;
 					}
+					newParent.MoveChild(instance, newIndex);
+					Root.CreatorContext.Selections.Select(instance);
 				}
 			}));
 
@@ -297,12 +291,10 @@ public partial class ExplorerTree : Tree
 				for (int i = originalState.Count - 1; i >= 0; i--)
 				{
 					var (instance, oldParent, oldIndex) = originalState[i];
-					if (oldParent != null)
-					{
-						instance.Parent = oldParent;
-						oldParent.MoveChild(instance, oldIndex);
-						Root.CreatorContext.Selections.Select(instance);
-					}
+					if (oldParent == null) continue;
+					instance.Parent = oldParent;
+					oldParent.MoveChild(instance, oldIndex);
+					Root.CreatorContext.Selections.Select(instance);
 				}
 			}));
 

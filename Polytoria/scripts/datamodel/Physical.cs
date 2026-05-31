@@ -4,9 +4,11 @@
 
 using Godot;
 using Polytoria.Attributes;
+using Polytoria.Datamodel.Data;
 using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
+using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,6 +41,7 @@ public partial class Physical : Dynamic
 	private const float TouchedGapCheck = 20f;
 	private bool _anchored = true;
 	private bool _canCollide = true;
+	private uint _collisionLayers = 1, _collisionMask = 1;
 	private Vector3 _velocity = Vector3.Zero;
 	private Vector3 _angularVelocity = Vector3.Zero;
 
@@ -125,6 +128,61 @@ public partial class Physical : Dynamic
 		}
 	}
 
+	[Editable(CustomPropertyControl = "Bitmap32"), ScriptProperty]
+	public virtual uint CollisionLayers
+	{
+		get => _collisionLayers;
+		set
+		{
+			if (_collisionLayers == value)
+			{
+				return;
+			}
+
+			_collisionLayers = value;
+
+			UpdateCollision();
+
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable(CustomPropertyControl = "Bitmap32"), ScriptProperty]
+	public virtual uint CollisionMask
+	{
+		get => _collisionMask;
+		set
+		{
+			if (_collisionMask == value)
+			{
+				return;
+			}
+
+			_collisionMask = value;
+
+			UpdateCollision();
+
+			OnPropertyChanged();
+		}
+	}
+
+	protected virtual uint GetAppliedCollisionLayers()
+	{
+		return _collisionLayers;
+	}
+
+	protected void ApplyCollisionObjectLayers()
+	{
+		CollisionObject3D? collisionObject3D = GetCollisionObject();
+		if (collisionObject3D == null)
+		{
+			return;
+		}
+
+		collisionObject3D.CollisionLayer = GetAppliedCollisionLayers();
+		collisionObject3D.CollisionMask = _collisionMask;
+	}
+
 	internal void UpdateFreeze()
 	{
 		bool finalVal = _anchored;
@@ -170,6 +228,9 @@ public partial class Physical : Dynamic
 	internal void UpdateCollision()
 	{
 		if (IsDeleted) return;
+
+		ApplyCollisionObjectLayers();
+
 		if (OverrideCanCollide)
 		{
 			SetCollisionDisabled(!OverrideCanCollideTo);
@@ -1087,7 +1148,7 @@ public partial class Physical : Dynamic
 			Scale = new(1.01f, 1.01f, 1.01f)
 		};
 
-		PhysicalArea.SetCollisionMaskValue(2, true);
+		SetCollisionMask(2, true);
 
 		PhysicalArea.AreaEntered += AreaEntered;
 		PhysicalArea.AreaExited += AreaExited;
@@ -1102,6 +1163,30 @@ public partial class Physical : Dynamic
 		{
 			CreateAreaShape(item);
 		}
+	}
+
+	[ScriptMethod]
+	public void SetCollisionLayer(int layer, bool value)
+	{
+		CollisionLayers = BitmapUtils.Set(CollisionLayers, layer, value);
+	}
+
+	[ScriptMethod]
+	public void SetCollisionMask(int layer, bool value)
+	{
+		CollisionMask = BitmapUtils.Set(CollisionMask, layer, value);
+	}
+
+	[ScriptMethod]
+	public bool GetCollisionLayer(int layer)
+	{
+		return BitmapUtils.Get(CollisionLayers, layer);
+	}
+
+	[ScriptMethod]
+	public bool GetCollisionMask(int layer)
+	{
+		return BitmapUtils.Get(CollisionMask, layer);
 	}
 
 	[ScriptMethod]

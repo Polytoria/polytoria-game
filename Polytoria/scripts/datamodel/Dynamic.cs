@@ -233,7 +233,8 @@ public partial class Dynamic : Instance
 		}
 	}
 
-	[ScriptProperty] public Vector3 Forward => -GetGlobalTransform().Basis.Z.Normalized();
+	// correct for godot would be -Z, but due to issues described in issue #369, we are using +Z except for the camera
+	[ScriptProperty] public Vector3 Forward => GetGlobalTransform().Basis.Z.Normalized();
 	[ScriptProperty] public Vector3 Right => GetGlobalTransform().Basis.X.Normalized();
 	[ScriptProperty] public Vector3 Up => GetGlobalTransform().Basis.Y.Normalized();
 
@@ -418,7 +419,16 @@ public partial class Dynamic : Instance
 			throw new InvalidOperationException("LookAt Target is invalid");
 		}
 
-		GDNode3D.LookAt(pos, up);
+		Vector3 lookTarget = pos;
+
+		// Godot's LookAt points at -Z, Polytoria uses +Z as forward
+		if (this is not Camera)
+		{
+			Vector3 origin = GDNode3D.GlobalPosition;
+			lookTarget = origin - (pos - origin);
+		}
+
+		GDNode3D.LookAt(lookTarget, up);
 
 		UpdateNetTransformReliable();
 	}
@@ -682,23 +692,10 @@ public partial class Dynamic : Instance
 	private void SetCreatorBoundActive(bool to)
 	{
 		if (_boundArea3D == null) return;
-		// Ignore model/physical model and camera
-		if (to && this is not IGroup and not Camera && this is not Physical)
-		{
-			if (this is Physical p && p.CanCollide)
-			{
-				_boundArea3D.CollisionLayer = (1 << 3);
-			}
-			else
-			{
-				_boundArea3D.CollisionLayer = (1 << 2);
-			}
-			_boundArea3D.CollisionLayer = (1 << 2);
-		}
-		else
-		{
-			_boundArea3D.CollisionLayer = 0;
-		}
+		_boundArea3D.CollisionLayer =
+			to && this is not IGroup and not Camera and not Physical
+				? 1 << 2
+				: 0u;
 	}
 
 	internal void PropagateUpdateCreatorBounds()

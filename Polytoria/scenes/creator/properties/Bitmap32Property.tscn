@@ -1,0 +1,205 @@
+[gd_scene format=3 uid="uid://djaplmcqf30hb"]
+
+[ext_resource type="Script" uid="uid://bap7hmix7py3v" path="res://scripts/creator/properties/Bitmap32Property.cs" id="1_tif4l"]
+
+[node name="Bitmap32Property" type="FoldableContainer" unique_id=469484354]
+title = "Bitmap32"
+title_text_overrun_behavior = 1
+script = ExtResource("1_tif4l")
+
+[node name="Buttons" type="GridContainer" parent="." unique_id=1497079579]
+layout_mode = 2
+columns = 8
+
+[node name="Button1" type="Button" parent="Buttons" unique_id=2002383134]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "1"
+
+[node name="Button2" type="Button" parent="Buttons" unique_id=699232536]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "2"
+
+[node name="Button3" type="Button" parent="Buttons" unique_id=591273501]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "3"
+
+[node name="Button4" type="Button" parent="Buttons" unique_id=2018420750]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "4"
+
+[node name="Button5" type="Button" parent="Buttons" unique_id=1790731753]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "5"
+
+[node name="Button6" type="Button" parent="Buttons" unique_id=1443463486]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "6"
+
+[node name="Button7" type="Button" parent="Buttons" unique_id=1165447760]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "7"
+
+[node name="Button8" type="Button" parent="Buttons" unique_id=305514214]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "8"
+
+[node name="Button9" type="Button" parent="Buttons" unique_id=1522773217]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "9"
+
+[node name="Button10" type="Button" parent="Buttons" unique_id=678225990]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "10"
+
+[node name="Button11" type="Button" parent="Buttons" unique_id=28642211]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "11"
+
+[node name="Button12" type="Button" parent="Buttons" unique_id=811297273]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "12"
+
+[node name="Button13" type="Button" parent="Buttons" unique_id=1053231140]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "13"
+
+[node name="Button14" type="Button" parent="Buttons" unique_id=393518078]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "14"
+
+[node name="Button15" type="Button" parent="Buttons" unique_id=1932339851]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "15"
+
+[node name="Button16" type="Button" parent="Buttons" unique_id=1739197605]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "16"
+
+[node name="Button17" type="Button" parent="Buttons" unique_id=803759637]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "17
+"
+
+[node name="Button18" type="Button" parent="Buttons" unique_id=1608678534]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "18"
+
+[node name="Button19" type="Button" parent="Buttons" unique_id=944655020]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "19"
+
+[node name="Button20" type="Button" parent="Buttons" unique_id=1522497286]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "20"
+
+[node name="Button21" type="Button" parent="Buttons" unique_id=1765788096]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "21"
+
+[node name="Button22" type="Button" parent="Buttons" unique_id=353171517]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "22"
+
+[node name="Button23" type="Button" parent="Buttons" unique_id=1893144623]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "23"
+
+[node name="Button24" type="Button" parent="Buttons" unique_id=806072536]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "24"
+
+[node name="Button25" type="Button" parent="Buttons" unique_id=168437212]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "25"
+
+[node name="Button26" type="Button" parent="Buttons" unique_id=1935471718]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "26"
+
+[node name="Button27" type="Button" parent="Buttons" unique_id=368845146]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "27"
+
+[node name="Button28" type="Button" parent="Buttons" unique_id=1937807555]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "28"
+
+[node name="Button29" type="Button" parent="Buttons" unique_id=1945992167]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "29"
+
+[node name="Button30" type="Button" parent="Buttons" unique_id=1041816305]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "30"
+
+[node name="Button31" type="Button" parent="Buttons" unique_id=2026773996]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "31"
+
+[node name="Button32" type="Button" parent="Buttons" unique_id=538695506]
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "32"

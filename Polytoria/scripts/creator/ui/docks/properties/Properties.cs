@@ -250,7 +250,9 @@ public sealed partial class Properties : TabContainer
 			Property = property
 		};
 
-		IProperty input = Globals.LoadProperty(property.PropertyType);
+		var editableAttr = property.GetCustomAttribute<EditableAttribute>();
+
+		IProperty input = Globals.LoadProperty(property.PropertyType, editableAttr?.CustomPropertyControl);
 		Control c = (Control)input;
 		c.SizeFlagsStretchRatio = 0.6f;
 

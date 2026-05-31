@@ -274,7 +274,12 @@ public partial class DatamodelBridge : Node3D
 			batch.Parts[index] = lastPart;
 
 			_handles[lastPart] = new PartHandle { Key = handle.Key, Index = index };
-			batch.MultiMesh.SetInstanceTransform(index, lastPart.GetGlobalTransform());
+
+			// prevents a bunch of error spam. idk why these nodes often arent in the tree but this kept spamming errors
+			if (lastPart.GDNode3D.IsInsideTree())
+			{
+				batch.MultiMesh.SetInstanceTransform(index, lastPart.GetGlobalTransform());
+			}
 			batch.MultiMesh.SetInstanceColor(index, lastPart.Color.SrgbToLinear());
 		}
 
@@ -356,6 +361,7 @@ public partial class DatamodelBridge : Node3D
 		{
 			if (!IsInstanceValid(part.GDNode3D) || !part.GDNode3D.IsInsideTree()) return false;
 			if (part.IsDeleted) return false;
+			if (part.IsDescendantOfClass<Camera>()) return false;
 			return true;
 		}
 		return false;

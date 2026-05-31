@@ -29,6 +29,7 @@ public sealed partial class Image3D : Dynamic
 	private bool _castShadows;
 	private bool _shaded;
 	private bool _faceCamera;
+	private bool _doubleSided;
 	private TextureFilterEnum _textureFilter;
 
 	[Editable, ScriptProperty]
@@ -161,6 +162,18 @@ public sealed partial class Image3D : Dynamic
 		}
 	}
 
+	[Editable, ScriptProperty, DefaultValue(false)]
+	public bool DoubleSided
+	{
+		get => _doubleSided;
+		set
+		{
+			_doubleSided = value;
+			_material.CullMode = value ? BaseMaterial3D.CullModeEnum.Disabled : BaseMaterial3D.CullModeEnum.Back;
+			OnPropertyChanged();
+		}
+	}
+
 	[Editable, ScriptProperty, DefaultValue(TextureFilterEnum.Linear)]
 	public TextureFilterEnum TextureFilter
 	{
@@ -230,7 +243,7 @@ public sealed partial class Image3D : Dynamic
 			_transparencyType = tex.GetImage().DetectAlpha() switch
 			{
 				Godot.Image.AlphaMode.Blend => BaseMaterial3D.TransparencyEnum.Alpha,
-				Godot.Image.AlphaMode.Bit => BaseMaterial3D.TransparencyEnum.AlphaScissor,
+				Godot.Image.AlphaMode.Bit => BaseMaterial3D.TransparencyEnum.Alpha,
 				_ => BaseMaterial3D.TransparencyEnum.Disabled,
 			};
 			UpdateMaterialTransparency();

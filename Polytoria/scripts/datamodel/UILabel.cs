@@ -257,6 +257,7 @@ public partial class UILabel : UIView
 
 			_label.AutowrapMode = _richLabel.AutowrapMode = _textWrapped ? TextServer.AutowrapMode.WordSmart : TextServer.AutowrapMode.Off;
 
+			if (_autoSize) UpdateAutosize();
 			OnPropertyChanged();
 		}
 	}
@@ -271,7 +272,18 @@ public partial class UILabel : UIView
 		{
 			int mid = (lo + hi) / 2;
 			int scaled = (int)(mid * FontScaleConversion);
-			Vector2 textBounds = font.GetStringSize(_text, _label.HorizontalAlignment, -1, scaled);
+			Vector2 textBounds;
+			if (_textWrapped)
+			{
+				textBounds = font.GetMultilineStringSize(
+					text: _text,
+					alignment: _label.HorizontalAlignment,
+					width: bounds.X,
+					fontSize: scaled
+				);
+			}
+			else textBounds = font.GetStringSize(_text, _label.HorizontalAlignment, -1, scaled);
+
 			if (textBounds.X <= bounds.X && textBounds.Y <= bounds.Y)
 			{
 				result = mid;
@@ -319,6 +331,7 @@ public partial class UILabel : UIView
 		_label.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 
 		_label.ClipContents = false;
+		_label.AddThemeConstantOverride("line_spacing", 0);
 
 		Text = "Text";
 		TextColor = new(0, 0, 0);

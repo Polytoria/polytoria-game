@@ -9,8 +9,9 @@ using Polytoria.Creator.Settings;
 using Polytoria.Creator.Utils;
 using Polytoria.Datamodel.Creator;
 using Polytoria.Shared;
+using Polytoria.Shared.AssetLoaders;
+using Polytoria.Shared.Settings;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 namespace Polytoria.Creator;
@@ -33,6 +34,8 @@ public partial class CreatorEntry : Node
 		};
 		AddChild(creatorSettingsService, true, InternalMode.Front);
 		creatorSettingsService.Init();
+
+		AssetLoader.Singleton.MaxConcurrentRequests = creatorSettingsService.Get<int>(SharedSettingKeys.Advanced.AssetQueue);
 
 		creatorSettingsService.AddChild(new GraphicsSettingsApplier { Name = GraphicsSettingsApplier.NodeName, Settings = creatorSettingsService }, true, InternalMode.Front);
 

@@ -23,6 +23,20 @@ public class SettingOption<T> : ISettingOption
 	public object? UntypedValue => Value;
 }
 
+public interface ISettingCondition
+{
+	string Target { get; }
+	Func<object?, bool> UntypedPredicate { get; }
+}
+
+public class SettingCondition<T> : ISettingCondition
+{
+	private Func<object?, bool>? _cachedUntypedPredicate;
+	public Func<object?, bool> UntypedPredicate => _cachedUntypedPredicate ??= o => Predicate((T)o!);
+	public required string Target { get; init; }
+	public required Func<T, bool> Predicate { get; init; }
+}
+
 public abstract class SettingDef
 {
 	public required string Key { get; init; }
@@ -35,6 +49,7 @@ public abstract class SettingDef
 
 	public bool RequiresRestart { get; init; }
 	public bool IsAdvanced { get; init; }
+	public IReadOnlyList<ISettingCondition>? Conditions { get; init; }
 
 	public abstract object UntypedDefault { get; }
 	public abstract Type ValueType { get; }

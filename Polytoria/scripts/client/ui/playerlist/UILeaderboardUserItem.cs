@@ -46,6 +46,7 @@ public partial class UILeaderboardUserItem : Button
 	public override void _ExitTree()
 	{
 		TargetPlayer.UserInfoReady -= UpdateUserInfo;
+		TargetPlayer.StatChanged.Disconnect(OnStatChanged);
 		base._ExitTree();
 	}
 
@@ -53,7 +54,7 @@ public partial class UILeaderboardUserItem : Button
 	{
 		Label l = new()
 		{
-			CustomMinimumSize = new(100, 0),
+			CustomMinimumSize = new(70, 0),
 			HorizontalAlignment = HorizontalAlignment.Center,
 			TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis
 		};
@@ -64,7 +65,7 @@ public partial class UILeaderboardUserItem : Button
 
 	public void UpdateStat(Stat stat)
 	{
-		_statToLabel[stat].Text = " " + stat.GetDisplayValue(TargetPlayer);
+		_statToLabel[stat].Text = stat.GetDisplayValue(TargetPlayer);
 
 		Leaderboard.QueueSortList();
 	}

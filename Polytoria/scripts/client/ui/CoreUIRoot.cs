@@ -24,6 +24,7 @@ public partial class CoreUIRoot : CanvasLayer
 		Singleton = this;
 	}
 
+	[ExportSubgroup("UI Elements")]
 	[Export] public UIGameMenu GameMenu = null!;
 	[Export] public UIMenuButton MenuButton = null!;
 	[Export] public UIUserCard UserCard = null!;
@@ -36,7 +37,11 @@ public partial class CoreUIRoot : CanvasLayer
 	[Export] public UINotification NotificationCenter = null!;
 	[Export] public UICapturePreview CapturePreview = null!;
 	[Export] public UIPurchasePrompt PurchasePrompt = null!;
+	[Export] public TextureRect CtrlLockCursor = null!;
 	[Export] public DevConsoleWindow DevWindow = null!;
+
+	[ExportSubgroup("Filepaths")]
+	[Export] public string CtrlLockCursorsFilepath = null!;
 
 	/// <summary>
 	/// Determine if CoreUI has active popup, this overrides Input.IsGameFocused
@@ -66,7 +71,70 @@ public partial class CoreUIRoot : CanvasLayer
 		}
 #endif
 
+		Service.CtrlLockCursorChanged.Connect(OnCtrlLockCursorChanged);
+
 		base._EnterTree();
+		OnCtrlLockCursorChanged();
+	}
+
+	public override void _ExitTree()
+	{
+		Service.CtrlLockCursorChanged.Disconnect(OnCtrlLockCursorChanged);
+		base._ExitTree();
+	}
+
+	public override void _Process(double delta)
+	{
+		SyncCtrlLockCursor();
+		base._Process(delta);
+	}
+
+	private void SyncCtrlLockCursor()
+	{
+		if (CtrlLockCursor != null)
+		{
+			CtrlLockCursor.Visible = Root?.Environment?.CurrentCamera?.CtrlLocked == true;
+		}
+	}
+
+	private void OnCtrlLockCursorChanged()
+	{
+		string filename = "";
+		switch (Service.CtrlLockCursor)
+		{
+			case CoreUIService.CtrlLockCursorEnum.StereotypicalDot:
+				filename = "stereotypical-dot.svg";
+				break;
+			case CoreUIService.CtrlLockCursorEnum.Stereotypical:
+				filename = "stereotypical.svg";
+				break;
+			case CoreUIService.CtrlLockCursorEnum.Tactical:
+				filename = "tactical.svg";
+				break;
+			case CoreUIService.CtrlLockCursorEnum.TacticalDot:
+				filename = "tactical-dot.svg";
+				break;
+			case CoreUIService.CtrlLockCursorEnum.Dot:
+				filename = "dot.svg";
+				break;
+			case CoreUIService.CtrlLockCursorEnum.Plus:
+				filename = "plus.svg";
+				break;
+			case CoreUIService.CtrlLockCursorEnum.X:
+				filename = "plus.svg";
+				break;
+			case CoreUIService.CtrlLockCursorEnum.Chevron:
+				filename = "chevron.svg";
+				break;
+		}
+
+		if (Service.CtrlLockCursor == CoreUIService.CtrlLockCursorEnum.None)
+		{
+			CtrlLockCursor.Texture = null;
+			return;
+		}
+		var dpiTexture = GD.Load<DpiTexture>(CtrlLockCursorsFilepath + "/" + filename);
+		CtrlLockCursor.Texture = dpiTexture;
 	}
 
 	public override void _UnhandledInput(InputEvent @event)

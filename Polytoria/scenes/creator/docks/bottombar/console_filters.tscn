@@ -1,0 +1,99 @@
+[gd_scene load_steps=3 format=3 uid="uid://b7vn9j38vy8xd"]
+
+[ext_resource type="Script" uid="uid://dw0gk8ey3i3f1" path="res://scripts/creator/ui/docks/bottombar/console/ConsoleFilters.cs" id="1_ab8cd"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_popup"]
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 12.0
+content_margin_bottom = 10.0
+bg_color = Color(0.121569, 0.121569, 0.121569, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.2, 0.2, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="ConsoleFilters" type="PopupPanel" node_paths=PackedStringArray("_infoCheckBox", "_warningCheckBox", "_errorCheckBox", "_noneCheckBox", "_clientCheckBox", "_serverCheckBox", "_addonCheckBox")]
+auto_translate_mode = 1
+initial_position = 1
+size = Vector2i(270, 150)
+visible = true
+theme_override_styles/panel = SubResource("StyleBoxFlat_popup")
+script = ExtResource("1_ab8cd")
+_infoCheckBox = NodePath("MainHBox/TypeColumn/InfoCheckBox")
+_warningCheckBox = NodePath("MainHBox/TypeColumn/WarningCheckBox")
+_errorCheckBox = NodePath("MainHBox/TypeColumn/ErrorCheckBox")
+_noneCheckBox = NodePath("MainHBox/SourceColumn/NoneCheckBox")
+_clientCheckBox = NodePath("MainHBox/SourceColumn/ClientCheckBox")
+_serverCheckBox = NodePath("MainHBox/SourceColumn/ServerCheckBox")
+_addonCheckBox = NodePath("MainHBox/SourceColumn/AddonCheckBox")
+
+[node name="MainHBox" type="HBoxContainer" parent="."]
+offset_left = 12.0
+offset_top = 10.0
+offset_right = 258.0
+offset_bottom = 140.0
+theme_override_constants/separation = 15
+
+[node name="TypeColumn" type="VBoxContainer" parent="MainHBox"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Label" type="Label" parent="MainHBox/TypeColumn"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.588235, 0.588235, 0.588235, 1)
+theme_override_font_sizes/font_size = 11
+text = "LOG LEVEL"
+
+[node name="InfoCheckBox" type="CheckBox" parent="MainHBox/TypeColumn"]
+layout_mode = 2
+button_pressed = true
+text = "Information"
+
+[node name="WarningCheckBox" type="CheckBox" parent="MainHBox/TypeColumn"]
+layout_mode = 2
+button_pressed = true
+text = "Warnings"
+
+[node name="ErrorCheckBox" type="CheckBox" parent="MainHBox/TypeColumn"]
+layout_mode = 2
+button_pressed = true
+text = "Errors"
+
+[node name="VSeparator" type="VSeparator" parent="MainHBox"]
+layout_mode = 2
+
+[node name="SourceColumn" type="VBoxContainer" parent="MainHBox"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Label" type="Label" parent="MainHBox/SourceColumn"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.588235, 0.588235, 0.588235, 1)
+theme_override_font_sizes/font_size = 11
+text = "SOURCE"
+
+[node name="NoneCheckBox" type="CheckBox" parent="MainHBox/SourceColumn"]
+layout_mode = 2
+button_pressed = true
+text = "System"
+
+[node name="ClientCheckBox" type="CheckBox" parent="MainHBox/SourceColumn"]
+layout_mode = 2
+button_pressed = true
+text = "Client"
+
+[node name="ServerCheckBox" type="CheckBox" parent="MainHBox/SourceColumn"]
+layout_mode = 2
+button_pressed = true
+text = "Server"
+
+[node name="AddonCheckBox" type="CheckBox" parent="MainHBox/SourceColumn"]
+layout_mode = 2
+button_pressed = true
+text = "Addons"
