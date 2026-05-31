@@ -1,6 +1,5 @@
 shader_type canvas_item;
 
-uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_nearest;
 uniform ivec3 levels = ivec3(0, 0, 10);
 
 vec3 rgb_to_hsv(vec3 rgb) {
@@ -53,7 +52,7 @@ float posterize(float value, float f_levels) {
 }
 
 void fragment() {
-	vec4 color = texture(screen_texture, SCREEN_UV);
+	vec4 color = texture(TEXTURE, UV);
 	vec3 hsv_color = rgb_to_hsv(color.rgb);
 
 	if (levels.x > 0) {

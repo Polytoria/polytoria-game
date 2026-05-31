@@ -10,7 +10,7 @@ namespace Polytoria.Datamodel;
 [Instantiable]
 public partial class HueShiftFilter : BaseFilter
 {
-	protected override Shader _filterShader
+	internal override Shader _filterShader
 	{
 		get => GD.Load<Shader>("res://resources/shaders/filters/hueshift.gdshader");
 	}

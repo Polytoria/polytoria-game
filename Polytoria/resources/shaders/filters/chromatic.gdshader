@@ -1,6 +1,5 @@
 shader_type canvas_item;
 
-uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_nearest;
 uniform int levels = 3;
 uniform float spread = 0.01;
 
@@ -12,14 +11,13 @@ vec3 chromatic_slice(float t) {
 void fragment() {
 	COLOR.rgb = vec3(0);
 	vec3 sum = vec3(0);
-	vec2 offset = (SCREEN_UV - vec2(0.5)) * vec2(1, -1);
+	vec2 offset = (UV - vec2(0.5)) * vec2(1, -1);
 	for (int i = 0; i < levels; i++) {
 		float t = 2.0 * float(i) / float(levels - 1);
-		vec3 slice = vec3(1.0 - t, 1.0 - abs(t - 1.0), t - 1.0);
-		slice = max(slice, 0.0);
+		vec3 slice = chromatic_slice(t);
 		sum += slice;
 		vec2 slice_offset = (t - 1.0) * spread * offset;
-		COLOR.rgb += slice * texture(screen_texture, SCREEN_UV + slice_offset).rgb;
+		COLOR.rgb += slice * texture(TEXTURE, UV + slice_offset).rgb;
 	}
 	COLOR.rgb /= sum;
 }

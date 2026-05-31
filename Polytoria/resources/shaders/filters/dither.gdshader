@@ -11,7 +11,6 @@ const mat3 RGB_CONVERT = mat3(
 	vec3(0.621, -0.647,  1.703)
 );
 
-uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_nearest;
 uniform int pixel_size: hint_range(0, 64) = 0;
 uniform int bayer_resolution: hint_range(1, 8) = 2;
 uniform int brightness_levels: hint_range(1, 16) = 4;
@@ -53,7 +52,7 @@ vec3 yiq_to_rgb(vec3 color)
 }
 
 void fragment() {
-	vec2 pixel_uv = SCREEN_UV;
+	vec2 pixel_uv = UV;
 	ivec2 pixel_idx = ivec2(pixel_uv / SCREEN_PIXEL_SIZE.xy);
 	if (pixel_size > 0) {
 		vec2 exact_pixel_size = SCREEN_PIXEL_SIZE.xy * float(pixel_size);
@@ -61,7 +60,7 @@ void fragment() {
 		pixel_uv = round(pixel_uv / exact_pixel_size) * exact_pixel_size;
 	}
 
-	vec4 color = texture(screen_texture, pixel_uv);
+	vec4 color = texture(TEXTURE, pixel_uv);
 
 	if (bayer_resolution > 0) {
 		vec3 yiq_color = rgb_to_yiq(color.rgb);

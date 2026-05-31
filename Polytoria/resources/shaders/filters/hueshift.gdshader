@@ -1,6 +1,5 @@
 shader_type canvas_item;
 
-uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_nearest;
 uniform float shift = 0.0;
 
 const mat3 YIQ_CONVERT = mat3(
@@ -25,7 +24,7 @@ vec3 yiq_to_rgb(vec3 color)
 }
 
 void fragment() {
-	vec4 color = texture(screen_texture, SCREEN_UV);
+	vec4 color = texture(TEXTURE, UV);
 	vec3 yiq = rgb_to_yiq(color.rgb);
 	mat2 rotation_matrix = mat2(
 		vec2(cos(shift), -sin(shift)),

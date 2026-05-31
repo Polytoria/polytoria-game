@@ -10,7 +10,7 @@ namespace Polytoria.Datamodel;
 [Instantiable]
 public partial class DitherFilter : PixelFilter
 {
-	protected override Shader _filterShader
+	internal override Shader _filterShader
 	{
 		get => GD.Load<Shader>("res://resources/shaders/filters/dither.gdshader");
 	}
