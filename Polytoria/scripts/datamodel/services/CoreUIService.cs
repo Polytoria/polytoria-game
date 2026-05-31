@@ -37,7 +37,8 @@ public sealed partial class CoreUIService : Instance
 	public CtrlLockCursorEnum CtrlLockCursor
 	{
 		get => _ctrlLockCursor;
-		set {
+		set
+		{
 			_ctrlLockCursor = value;
 			RefreshCoreUIsVisibility();
 			OnPropertyChanged();
