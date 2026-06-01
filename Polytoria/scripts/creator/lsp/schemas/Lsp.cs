@@ -38,11 +38,6 @@ public class LspInitializeParams
 	[JsonPropertyName("capabilities")]
 	public LspClientCapabilities? Capabilities { get; set; }
 
-	[JsonPropertyName("processId")]
-	public int? ProcessId { get; set; }
-
-	[JsonPropertyName("trace")]
-	public string? Trace { get; set; }
 }
 
 public class LspClientCapabilities
