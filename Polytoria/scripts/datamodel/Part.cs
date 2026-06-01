@@ -294,7 +294,12 @@ public partial class Part : Entity
 		Bevel = 6,
 		Concave = 7,
 		Truss = 8,
-		Frame = 9
+		Frame = 9,
+		BevelCorner = 10,
+		ConcaveCorner = 11,
+		BevelWedge = 12,
+		WedgeCorner = 13,
+		ConcaveWedge = 14,
 	}
 
 	[Attributes.Obsolete("This should not be used, it's here only for compatibility with legacy scripts.")]
