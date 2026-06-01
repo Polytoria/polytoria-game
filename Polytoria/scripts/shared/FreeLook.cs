@@ -42,7 +42,7 @@ public sealed partial class FreeLook : Camera3D
 			if (!Root.CreatorContext.IsViewportFocused) { return; }
 		}
 #endif
-		if (Input.IsKeyPressed(Key.Ctrl)) return;
+		if (Input.IsKeyPressed(Key.Ctrl) || Input.IsKeyPressed(Key.Meta)) return;
 		Vector2 horizontalInput = Input.GetVector("leftward", "rightward", "forward", "backward");
 		float verticalInput = Input.GetAxis("downward", "upward");
 

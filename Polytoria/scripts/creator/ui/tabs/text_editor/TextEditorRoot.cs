@@ -43,6 +43,8 @@ public partial class TextEditorRoot : Node
 	private string _oldText = "";
 	private CodeHighlighter _highlighter = null!;
 	private LuaCompletionService? _completion = null!;
+	private LuaFormatService? _format = null!;
+
 
 	private Godot.Timer _autoCompleteTimer = null!;
 	private CancellationTokenSource? _diagCts;
@@ -52,6 +54,8 @@ public partial class TextEditorRoot : Node
 		_finder.Root = this;
 		base._EnterTree();
 	}
+
+	private const int FormatMenuId = 10010;
 
 	public override async void _ExitTree()
 	{
@@ -73,10 +77,16 @@ public partial class TextEditorRoot : Node
 		_completion = Container.TargetSession.LuaCompletion;
 		_completion?.PublishDiagnostics += OnPublishDiagnostics;
 
+		_format = Container.TargetSession.LuaFormat;
+
 		CodeEditor.Text = File.ReadAllText(Container.TargetFilePathAbsolute);
 		CodeEditor.ClearUndoHistory();
 		CodeEditor.TextChanged += OnCodeEditTextChanged;
 		InitSyntaxHighlighter();
+
+		// testing for now:
+		CodeEditor.GetMenu().AddItem("Format Script", id: FormatMenuId);
+		CodeEditor.GetMenu().IdPressed += OnContextMenuIdPressed;
 
 		CreatorSettingsService.Instance.Changed += OnCreatorSettingChanged;
 		ApplyIndentSettings();
@@ -105,6 +115,22 @@ public partial class TextEditorRoot : Node
 		}
 
 		UpdateStatusBar();
+	}
+
+	private async void OnContextMenuIdPressed(long id)
+	{
+		switch (id)
+		{
+			case FormatMenuId:
+				{
+					if (_format != null)
+					{
+						CodeEditor.Text = await _format.FormatScriptAsync(Container.TargetFilePathAbsolute, CodeEditor.Text);
+						OnCodeEditTextChanged();
+					}
+					break;
+				}
+		}
 	}
 
 	private void OnCreatorSettingChanged(SettingChangedEvent e)

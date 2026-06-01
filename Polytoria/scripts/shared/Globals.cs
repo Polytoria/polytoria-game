@@ -616,7 +616,7 @@ public sealed partial class Globals : Node
 			return IntPtr.Zero;
 		}
 
-		if (!OS.HasFeature("x86_64"))
+		if (!OS.HasFeature("x86_64") && !(OS.HasFeature("macos") && OS.HasFeature("arm64")))
 		{
 			if (IsInGDEditor)
 			{

@@ -39,7 +39,7 @@ public class LspClient : IDisposable
 	{
 		LspInitializeParams initParams = new()
 		{
-			RootUri = PathToUri(workspacePath),
+			RootUri = LspHelper.PathToUri(workspacePath),
 			Capabilities = new()
 			{
 				TextDocument = new()
@@ -82,7 +82,7 @@ public class LspClient : IDisposable
 
 	public Task DidOpenAsync(string path, string languageId, string text)
 	{
-		string p = PathToUri(path);
+		string p = LspHelper.PathToUri(path);
 		LspPathToFull[p] = path;
 		FullToLspPath[path] = p;
 		return SendNotificationAsync("textDocument/didOpen", new LspDidOpenParams
@@ -102,7 +102,7 @@ public class LspClient : IDisposable
 		if (FullToLspPath.Remove(path, out string? p)) LspPathToFull.Remove(p);
 		return SendNotificationAsync("textDocument/didClose", new LspDidCloseParams
 		{
-			TextDocument = new() { Uri = PathToUri(path) }
+			TextDocument = new() { Uri = LspHelper.PathToUri(path) }
 		});
 	}
 
@@ -112,7 +112,7 @@ public class LspClient : IDisposable
 		{
 			TextDocument = new()
 			{
-				Uri = PathToUri(path),
+				Uri = LspHelper.PathToUri(path),
 				Version = version
 			},
 			ContentChanges = [new() { Text = text }]
@@ -123,7 +123,7 @@ public class LspClient : IDisposable
 	{
 		JsonElement rawResult = await SendRequestAsync<JsonElement>("textDocument/completion", new LspCompletionParams
 		{
-			TextDocument = new() { Uri = PathToUri(path) },
+			TextDocument = new() { Uri = LspHelper.PathToUri(path) },
 			Position = new() { Line = line, Character = character },
 			Context = new() { TriggerKind = 1 }
 		}, cancellationToken);
@@ -341,11 +341,6 @@ public class LspClient : IDisposable
 		{
 			PT.PrintErr($"Error handling server request '{method}': {ex.Message}");
 		}
-	}
-
-	private static string PathToUri(string path)
-	{
-		return new Uri(Path.GetFullPath(path)).AbsoluteUri;
 	}
 
 	public void Dispose()
