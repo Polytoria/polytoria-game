@@ -901,22 +901,26 @@ public sealed partial class World : Instance
 			environment.CurrentCamera = CreatorContext.Freelook;
 #endif
 
-		RenderCanvas = new() { Layer = -1 };
-		SubViewport initialView = new()
+		if (World3D != null)
 		{
-			TransparentBg = false,
-			RenderTargetUpdateMode = SubViewport.UpdateMode.Always,
-		};
-		Rid initialViewRid = initialView.GetViewportRid();
-		RenderingServer.ViewportSetScenario(initialViewRid, World3D.Scenario);
-		RenderingServer.ViewportAttachCamera(initialViewRid, environment.CurrentCamera.Camera3D.GetCameraRid());
+			RenderCanvas = new() { Layer = 0 };
+			SubViewport initialView = new()
+			{
+				TransparentBg = false,
+				RenderTargetUpdateMode = SubViewport.UpdateMode.Always,
+			};
+			Rid initialViewRid = initialView.GetViewportRid();
+			Rid cameraRid = environment.CurrentCamera.Camera3D.GetCameraRid();
+			RenderingServer.ViewportSetScenario(initialViewRid, World3D.Scenario);
+			RenderingServer.ViewportAttachCamera(initialViewRid, environment.CurrentCamera.Camera3D.GetCameraRid());
 
-		RootView = new(initialView);
-		RootView.MouseFilter = Control.MouseFilterEnum.Ignore;
-		RootView.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-		RootView.AddChild(initialView);
-		RenderCanvas.AddChild(RootView);
-		GDNode.AddChild(RenderCanvas);
+			RootView = new(initialView);
+			RootView.MouseFilter = Control.MouseFilterEnum.Ignore;
+			RootView.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+			RootView.AddChild(initialView);
+			RenderCanvas.AddChild(RootView);
+			GDNode.AddChild(RenderCanvas);
+		}
 
 		return this;
 	}
