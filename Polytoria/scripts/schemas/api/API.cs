@@ -310,7 +310,7 @@ public struct APIGuildInfo
 
 	[JsonPropertyName("banner")]
 	public string Banner { get; set; }
-	
+
 	[JsonPropertyName("color")]
 	public string Color { get; set; }
 
