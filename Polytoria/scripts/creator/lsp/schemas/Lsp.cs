@@ -75,7 +75,7 @@ public class LspCompletionItemCapability
 {
 	[JsonPropertyName("snippetSupport")]
 	public bool SnippetSupport { get; set; }
-	
+
 	[JsonPropertyName("labelDetailsSupport")]
 	public bool? LabelDetailsSupport { get; set; }
 }
