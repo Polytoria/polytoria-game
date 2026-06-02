@@ -61,10 +61,6 @@ window/vsync/vsync_mode=0
 project/assembly_name="Polytoria"
 project/solution_directory="../"
 
-[editor]
-
-run/main_run_args="--creator"
-
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/DeeplinkPlugin/plugin.cfg", "res://addons/PolytoriaExportPlugin/plugin.cfg")
