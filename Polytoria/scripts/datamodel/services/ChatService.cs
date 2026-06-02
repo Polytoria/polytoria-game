@@ -165,8 +165,9 @@ public sealed partial class ChatService : Instance
 
 		if (player != null)
 		{
-			NewChatMessage.Invoke(player, msgContent);
-			player.InvokeChatted(msgContent);
+			string formatted = FormatEmojis(msgContent);
+			NewChatMessage.Invoke(player, formatted);
+			player.InvokeChatted(formatted);
 		}
 		else
 		{
@@ -183,27 +184,29 @@ public sealed partial class ChatService : Instance
 	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Reliable, TransferChannel = 2)]
 	private void NetRecvBroadcastMessage(string msgContent)
 	{
-		MessageReceived.Invoke(msgContent);
+		MessageReceived.Invoke(FormatEmojis(msgContent));
 	}
 
 	[ScriptMethod]
 	public void BroadcastMessage(string msg)
 	{
-		MessageReceived.Invoke(msg);
+		string formatted = FormatEmojis(msg);
+		MessageReceived.Invoke(formatted);
 		if (HasAuthority)
-			Rpc(nameof(NetRecvBroadcastMessage), msg);
+			Rpc(nameof(NetRecvBroadcastMessage), formatted);
 	}
 
 	[ScriptMethod]
 	public void UnicastMessage(string msg, Player plr)
 	{
+		string formatted = FormatEmojis(msg);
 		if (plr == Root.Players.LocalPlayer)
 		{
-			MessageReceived.Invoke(msg);
+			MessageReceived.Invoke(formatted);
 		}
 		else
 		{
-			RpcId(plr.PeerID, nameof(NetRecvBroadcastMessage), msg);
+			RpcId(plr.PeerID, nameof(NetRecvBroadcastMessage), formatted);
 		}
 	}
 
@@ -219,7 +222,7 @@ public sealed partial class ChatService : Instance
 		UnicastMessage(msg, plr);
 	}
 
-	private static readonly Regex _emojiRegex = new(@":([^:]+):", RegexOptions.Compiled);
+	private static readonly Regex _emojiRegex = new(@":([^:\s]+):", RegexOptions.Compiled);
 
 	public static string FormatEmojis(string msg, float scale = 1f)
 	{

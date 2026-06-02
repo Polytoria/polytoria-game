@@ -7,6 +7,8 @@ using Polytoria.Attributes;
 using Polytoria.Datamodel.Resources;
 using Polytoria.Networking;
 using Polytoria.Scripting;
+using Polytoria.Enums;
+
 
 #if CREATOR
 using Polytoria.Creator.Spatial;
@@ -92,7 +94,7 @@ public sealed partial class Sound : Dynamic
 		get => _volume;
 		set
 		{
-			_volume = Mathf.Clamp(value, 0, 1);
+			_volume = Mathf.Clamp(value, 0, 2);
 			UpdateVolume();
 			OnPropertyChanged();
 		}
@@ -182,6 +184,42 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
+	private AudioStreamPlayer3D.AttenuationModelEnum _attenuationMode = AudioStreamPlayer3D.AttenuationModelEnum.Disabled;
+
+	[Editable, ScriptProperty]
+	public SoundAttenuationModeEnum AttenuationMode
+	{
+		get
+		{
+			return _attenuationMode switch
+			{
+				AudioStreamPlayer3D.AttenuationModelEnum.InverseDistance => SoundAttenuationModeEnum.Linear,
+				AudioStreamPlayer3D.AttenuationModelEnum.InverseSquareDistance => SoundAttenuationModeEnum.Squared,
+				AudioStreamPlayer3D.AttenuationModelEnum.Logarithmic => SoundAttenuationModeEnum.Logarithmic,
+				AudioStreamPlayer3D.AttenuationModelEnum.Disabled => SoundAttenuationModeEnum.Disabled,
+				_ => SoundAttenuationModeEnum.Disabled
+			};
+		}
+		set
+		{
+			if (_audioPlayer3D == null) return;
+
+			_attenuationMode = value switch
+			{
+				SoundAttenuationModeEnum.Linear => AudioStreamPlayer3D.AttenuationModelEnum.InverseDistance,
+				SoundAttenuationModeEnum.Squared => AudioStreamPlayer3D.AttenuationModelEnum.InverseSquareDistance,
+				SoundAttenuationModeEnum.Logarithmic => AudioStreamPlayer3D.AttenuationModelEnum.Logarithmic,
+				SoundAttenuationModeEnum.Disabled => AudioStreamPlayer3D.AttenuationModelEnum.Disabled,
+				_ => _audioPlayer3D.AttenuationModel
+			};
+
+			_audioPlayer3D.AttenuationModel = _attenuationMode;
+			_audioPlayer3D.AttenuationFilterCutoffHz = _attenuationMode == AudioStreamPlayer3D.AttenuationModelEnum.Disabled ? 20500 : 5000;
+
+			OnPropertyChanged();
+		}
+	}
+
 	[ScriptProperty]
 	public float Time
 	{
@@ -207,6 +245,7 @@ public sealed partial class Sound : Dynamic
 				: _audioPlayer3D != null ? (float)_audioPlayer3D.Stream.GetLength() : 0;
 
 	[ScriptProperty] public PTSignal Loaded { get; private set; } = new();
+	[ScriptProperty] public PTSignal Finished { get; private set; } = new();
 
 	[SyncVar]
 	public bool ServerIsPlaying
@@ -254,11 +293,11 @@ public sealed partial class Sound : Dynamic
 		{
 			_audioPlayer3D = new AudioStreamPlayer3D
 			{
-				Stream = _currentStream
+				Stream = _currentStream,
+				AttenuationModel = _attenuationMode,
+				AttenuationFilterCutoffHz = _attenuationMode == AudioStreamPlayer3D.AttenuationModelEnum.Disabled ? 20500 : 5000
 			};
 			GDNode.AddChild(_audioPlayer3D, @internal: Node.InternalMode.Back);
-			// check issue https://github.com/godotengine/godot/issues/23485
-			_audioPlayer3D.AttenuationFilterCutoffHz = 20500;
 			_audioPlayer3D.Finished += OnPlayerFinished;
 		}
 		UpdateAudioPlayer();
@@ -316,6 +355,7 @@ public sealed partial class Sound : Dynamic
 		{
 			ServerIsPlaying = false;
 		}
+		Finished.Invoke();
 	}
 
 	[ScriptMethod]
@@ -403,8 +443,6 @@ public sealed partial class Sound : Dynamic
 			{
 				ServerIsPlaying = true;
 			}
-			// Mute audio on server
-			if (Root.Network.IsServer) return;
 			_audioPlayer?.Play();
 			_audioPlayer3D?.Play();
 		}
@@ -416,6 +454,9 @@ public sealed partial class Sound : Dynamic
 
 	private void InternalPlayOneShot(float volume)
 	{
+		// can safely mute on the server since this method doesn't change any properties
+		if (Root.Network.IsServer) return;
+
 		if (_audioPlayer != null)
 		{
 			AudioStreamPlayer clone = (AudioStreamPlayer)_audioPlayer.Duplicate();

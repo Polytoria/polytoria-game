@@ -22,6 +22,7 @@ using Polytoria.Shared;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Polytoria.Shared.AssetLoaders;
 
 namespace Polytoria.Client;
 
@@ -198,6 +199,8 @@ public sealed partial class ClientEntry : Node3D
 
 		// Use init flow in case it can be stopped by Rendering device switcher
 		settings.Init();
+
+		AssetLoader.Singleton.MaxConcurrentRequests = ClientSettingsService.Instance.Get<int>(SharedSettingKeys.Advanced.AssetQueue);
 
 		settings.AddChild(new DisplaySettingsApplier { Name = "DisplaySettingsApplier" }, true, InternalMode.Front);
 		settings.AddChild(new AudioSettingsApplier { Name = "AudioSettingsApplier" }, true, InternalMode.Front);

@@ -1,11 +1,13 @@
 using Godot;
 using Polytoria.Shared.Settings;
+using System.Linq;
 
 namespace Polytoria.Client.UI;
 
 public sealed partial class SettingRow : PanelContainer
 {
 	public SettingDef Definition = null!;
+	public ISettingsContext Context = null!;
 
 	public override void _Ready()
 	{
@@ -48,6 +50,33 @@ public sealed partial class SettingRow : PanelContainer
 		field.CustomMinimumSize = new Vector2(220, 0);
 		root.AddChild(field);
 
+		if (Definition.Conditions != null)
+		{
+			Visible = Definition.Conditions.Any((cond) =>
+			{
+				object? value = Context.GetUntyped(cond.Target);
+				return cond.UntypedPredicate(value);
+			});
+		}
+
+		Context.Changed += OnExternalChanged;
+
 		base._Ready();
+	}
+
+	private void OnExternalChanged(SettingChangedEvent e)
+	{
+		if (Definition.Conditions != null)
+		{
+			var match = Definition.Conditions.Where(c => c.Target == e.Key);
+			if (match.Any())
+				Visible = match.Any(c => c.UntypedPredicate(e.NewValue));
+		}
+	}
+
+	public override void _ExitTree()
+	{
+		Context?.Changed -= OnExternalChanged;
+		base._ExitTree();
 	}
 }

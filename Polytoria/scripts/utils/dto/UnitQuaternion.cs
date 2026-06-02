@@ -75,7 +75,7 @@ public partial class UnitQuaternionDto
 			}
 		}
 		result[largestComponent] = (float)Math.Sqrt(1 - sumSquares);
-		return result;
+		return result.Normalized();
 	}
 }
 

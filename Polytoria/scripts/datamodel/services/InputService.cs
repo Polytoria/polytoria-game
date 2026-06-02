@@ -68,7 +68,7 @@ public sealed partial class InputService : Instance
 			RecomputeMouseMode();
 		}
 	}
-
+	[ScriptProperty] public Vector2 MouseDelta { get; private set; } = Vector2.Zero;
 	[ScriptProperty] public Vector2 MousePosition => OverrideMousePos ? OverrideMousePosTo : GDNode.GetViewport().GetMousePosition();
 	[ScriptLegacyProperty("MousePosition")] public Vector3 LegacyMousePosition => new(MousePosition.X, ScreenHeight - MousePosition.Y, 0);
 	[ScriptProperty] public int ScreenWidth => (int)GDNode.GetViewport().GetVisibleRect().Size.X;
@@ -76,6 +76,8 @@ public sealed partial class InputService : Instance
 
 	internal bool OverrideMousePos { get; set; }
 	internal Vector2 OverrideMousePosTo { get; set; }
+
+	[ScriptProperty] public PTSignal<Vector2> MouseMoved { get; private set; } = new();
 
 	[ScriptProperty] public PTSignal GameFocused { get; private set; } = new();
 	[ScriptProperty] public PTSignal GameUnfocused { get; private set; } = new();
@@ -223,6 +225,7 @@ public sealed partial class InputService : Instance
 	private readonly Dictionary<MouseButton, bool> _mouseBtnDown = [];
 	private readonly Dictionary<MouseButton, bool> _mouseFrameBtnDown = [];
 	private float _mouseScrollDelta = 0;
+	private Vector2 _lastMouseDelta = Vector2.Zero;
 
 	public override void Init()
 	{
@@ -372,6 +375,7 @@ public sealed partial class InputService : Instance
 			RecomputeMouseMode();
 		}
 		ProcessInputs();
+		RecomputeMouseAxis();
 		base.Process(delta);
 	}
 
@@ -380,6 +384,7 @@ public sealed partial class InputService : Instance
 		_legacyFrameKeydowns.Clear();
 		_mouseFrameBtnDown.Clear();
 		_mouseScrollDelta = 0;
+		MouseDelta = Vector2.Zero;
 	}
 
 	private void RecomputeMouseMode()
@@ -419,12 +424,40 @@ public sealed partial class InputService : Instance
 		return focusOwner == null;
 	}
 
+	private void RecomputeMouseAxis()
+	{
+		float oldYVal = _lastMouseDelta.Y;
+		float oldXVal = _lastMouseDelta.X;
+		float axisYVal = MouseDelta.Y;
+		float axisXVal = MouseDelta.X;
+
+		if (oldXVal != axisXVal && Enum.TryParse("MouseAxisX", false, out KeyCodeEnum axisEnumX))
+		{
+			_keyWeight[axisEnumX] = axisXVal;
+			AxisValueChanged.Invoke(axisEnumX, axisXVal);
+			_lastMouseDelta.X = axisXVal;
+		}
+
+		if (oldYVal != axisYVal && Enum.TryParse("MouseAxisY", false, out KeyCodeEnum axisEnumY))
+		{
+			_keyWeight[axisEnumY] = axisYVal;
+			AxisValueChanged.Invoke(axisEnumY, axisYVal);
+			_lastMouseDelta.Y = axisYVal;
+		}
+	}
+
 	public void OnInput(Godot.InputEvent @event)
 	{
 		if (@event.IsEcho()) return;
 		if (IsGameFocused)
 		{
 			GodotInputEvent?.Invoke(@event);
+		}
+
+		if (@event is InputEventMouseMotion mouseMotion)
+		{
+			MouseDelta = mouseMotion.Relative;
+			MouseMoved.Invoke(mouseMotion.Relative);
 		}
 
 		KeyCodeEnum? btnEnumPre = InputEventToKeyCode(@event);

@@ -13,12 +13,12 @@ namespace Polytoria.Creator.UI;
 
 public partial class DebugConsole : Control
 {
-	public const string ErrorColorHex = "#F95D5D";
-	public const string WarningColorHex = "#FFBC58";
-	public const string ServerColorHex = "#0097FF";
-	public const string ClientColorHex = "#F95D5D";
-	public const string AddonColorHex = "#4FE883";
-	public const string NoneColorHex = "#575757";
+	private const string ErrorColorHex = "#F95D5D";
+	private const string WarningColorHex = "#FFBC58";
+	private const string ServerColorHex = "#0097FF";
+	private const string ClientColorHex = "#F95D5D";
+	private const string AddonColorHex = "#4FE883";
+	private const string NoneColorHex = "#575757";
 
 	private const int MaxLogLength = 16384;
 
@@ -31,12 +31,22 @@ public partial class DebugConsole : Control
 	[Export] private RichTextLabel _richLabel = null!;
 	[Export] private LineEdit _searchEdit = null!;
 	[Export] private Button _clearBtn = null!;
+	[Export] private Button _filterBtn = null!;
+
+	private ConsoleFilters? _consoleFilters;
 
 	public static DebugConsole Singleton { get; private set; } = null!;
 
-	public List<LogData> Logs = [];
-	public HashSet<LogData> ShownLogs = [];
-	public string SearchQuery = "";
+	private readonly List<LogData> _logs = [];              // All Logs
+	private readonly HashSet<LogData> _shownLogs = [];      // Filtered/Searched Logs
+	private string SearchQuery = "";
+
+	// Type Filter
+	private readonly HashSet<LogTypeEnum> _typeFilters = [LogTypeEnum.Info, LogTypeEnum.Error, LogTypeEnum.Warning];
+
+	// Source Filter
+	private readonly HashSet<LogFromEnum> _sourceFilters = [LogFromEnum.None, LogFromEnum.Client, LogFromEnum.Server, LogFromEnum.Addon];
+
 
 	// How many logs from the unfiltered list have been rendered
 	private int _lastRenderedIndex = 0;
@@ -44,7 +54,7 @@ public partial class DebugConsole : Control
 	private bool _hasPendingAppend = false;
 	private int _currentFontSize = 14;
 
-	private bool IsFiltering => !string.IsNullOrEmpty(SearchQuery);
+	private bool IsSearching => !string.IsNullOrEmpty(SearchQuery);
 
 	public DebugConsole()
 	{
@@ -57,8 +67,41 @@ public partial class DebugConsole : Control
 		_clearBtn.Pressed += Clear;
 		_searchEdit.TextChanged += _ => OnSearch();
 		_richLabel.Text = "";
+
+		// ConsoleFilters is a direct child of this Console node
+		_consoleFilters = GetNode<ConsoleFilters>("ConsoleFilters");
+		if (_consoleFilters != null)
+		{
+			_filterBtn.Pressed += OnFilterButtonPressed;
+		}
+		else
+		{
+			GD.PrintErr("DebugConsole: Could not find ConsoleFilters node!");
+		}
+
 		int size = _richLabel.GetThemeFontSize("normal_font_size", "Label");
 		_currentFontSize = size > 0 ? size : 16;
+
+	}
+
+	private void OnFilterButtonPressed()
+	{
+		if (_consoleFilters == null) return;
+
+		if (_consoleFilters.Visible)
+		{
+			_consoleFilters.Hide();
+			return;
+		}
+
+		_consoleFilters.Show();
+
+		Vector2 pos = _filterBtn.GlobalPosition;
+
+		_consoleFilters.Position = new Vector2I(
+			(int)pos.X,
+			(int)(pos.Y - _consoleFilters.Size.Y - 8)
+		);
 	}
 
 	public override void _Process(double delta)
@@ -79,22 +122,21 @@ public partial class DebugConsole : Control
 
 	public override void _Input(InputEvent @event)
 	{
-		if (@event is InputEventMouseButton mb && mb.Pressed)
-		{
-			if (!GetGlobalRect().HasPoint(mb.GlobalPosition)) return;
+		if (@event is not InputEventMouseButton { Pressed: true } mb) return;
+		if (!GetGlobalRect().HasPoint(mb.GlobalPosition)) return;
 
-			if (mb.CtrlPressed && mb.ButtonIndex == MouseButton.WheelUp)
-			{
+		switch (mb)
+		{
+			case { CtrlPressed: true, ButtonIndex: MouseButton.WheelUp }:
 				_currentFontSize = Mathf.Clamp(_currentFontSize + FontSizeStep, MinFontSize, MaxFontSize);
 				_richLabel.AddThemeFontSizeOverride("normal_font_size", _currentFontSize);
 				GetViewport().SetInputAsHandled();
-			}
-			else if (mb.CtrlPressed && mb.ButtonIndex == MouseButton.WheelDown)
-			{
+				break;
+			case { CtrlPressed: true, ButtonIndex: MouseButton.WheelDown }:
 				_currentFontSize = Mathf.Clamp(_currentFontSize - FontSizeStep, MinFontSize, MaxFontSize);
 				_richLabel.AddThemeFontSizeOverride("normal_font_size", _currentFontSize);
 				GetViewport().SetInputAsHandled();
-			}
+				break;
 		}
 	}
 
@@ -107,52 +149,104 @@ public partial class DebugConsole : Control
 
 	public void Clear()
 	{
-		Logs.Clear();
-		ShownLogs.Clear();
+		_logs.Clear();
+		_shownLogs.Clear();
 		_lastRenderedIndex = 0;
 		_needsFullRebuild = false;
 		_hasPendingAppend = false;
 		_richLabel.Text = "";
 	}
 
+	private void Filter()
+	{
+		ForceFullRebuild();
+	}
+
+	// Toggle a log type filter. If all types are disabled, nothing will be filtered.
+	public void ToggleTypeFilter(LogTypeEnum type, bool enabled)
+	{
+		if (enabled)
+			_typeFilters.Add(type);
+		else
+			_typeFilters.Remove(type);
+
+		ForceFullRebuild();
+	}
+
+	public bool IsTypeFilterEnabled(LogTypeEnum type)
+	{
+		return _typeFilters.Contains(type);
+	}
+
+	// Toggle a log source filter. If all sources are disabled, nothing will be filtered.
+	public void ToggleSourceFilter(LogFromEnum source, bool enabled)
+	{
+		if (enabled)
+			_sourceFilters.Add(source);
+		else
+			_sourceFilters.Remove(source);
+
+		ForceFullRebuild();
+	}
+
+	public bool IsSourceFilterEnabled(LogFromEnum source)
+	{
+		return _sourceFilters.Contains(source);
+	}
+
+	public IEnumerable<LogTypeEnum> GetActiveTypeFilters()
+	{
+		return _typeFilters;
+	}
+
+	public IEnumerable<LogFromEnum> GetActiveSourceFilters()
+	{
+		return _sourceFilters;
+	}
+
 	public void NewLog(LogData data)
 	{
 		data.LoggedAt = DateTime.Now;
-		if (ShownLogs.Contains(data)) return;
 
-		ShownLogs.Add(data);
+
+
 
 		// Binary search insertion to maintain sorted order
-		int index = Logs.BinarySearch(data, Comparer<LogData>.Create((a, b) => a.LoggedAt.CompareTo(b.LoggedAt)));
+		var index = _logs.BinarySearch(data, Comparer<LogData>.Create((a, b) => a.LoggedAt.CompareTo(b.LoggedAt)));
 		if (index < 0) index = ~index;
-		Logs.Insert(index, data);
+		_logs.Insert(index, data);
 
 		// Trim old logs if exceeding limit
-		if (Logs.Count > MaxLogLength)
+		if (_logs.Count > MaxLogLength)
 		{
-			int removeCount = Logs.Count - MaxLogLength;
-			for (int i = 0; i < removeCount; i++)
-			{
-				ShownLogs.Remove(Logs[0]);
-				Logs.RemoveAt(0);
-			}
+			_logs.RemoveAt(0);
+
+
+
+
+
 
 			ForceFullRebuild();
 			return;
 		}
 
-		// Out-of-order insertion or active search filter, must full rebuild
-		if (index < Logs.Count - 1 || IsFiltering)
+		// Check for active Filter
+		if (IsSearching || _typeFilters.Count < 3 || _sourceFilters.Count < 4)
 		{
 			ForceFullRebuild();
-			return;
+
 		}
 
-		// Fast path: new log at the end, no filter active
-		if (IsVisibleInTree())
-			AppendSingleLog(data);
+
+
+
 		else
-			_hasPendingAppend = true;
+		{
+			if (IsVisibleInTree())
+				AppendSingleLog(data);
+			else
+				_hasPendingAppend = true;
+		}
 	}
 
 	private void OnVisibilityChanged()
@@ -173,8 +267,8 @@ public partial class DebugConsole : Control
 
 	private void AppendPendingLogs()
 	{
-		for (int i = _lastRenderedIndex; i < Logs.Count; i++)
-			AppendSingleLog(Logs[i]);
+		for (var i = _lastRenderedIndex; i < _logs.Count; i++)
+			AppendSingleLog(_logs[i]);
 
 		_hasPendingAppend = false;
 	}
@@ -191,22 +285,38 @@ public partial class DebugConsole : Control
 	{
 		_textBuilder.Clear();
 
-		IEnumerable<LogData> logsToShow = IsFiltering
-			? Logs.Where(l => l.Content.Find(SearchQuery, caseSensitive: false) != -1)
-			: Logs;
+		IEnumerable<LogData> logsToShow = _logs.Where(l =>
+		{
+			if (!_typeFilters.Contains(l.LogType))
+				return false;
 
-		foreach (LogData item in logsToShow)
+			if (!_sourceFilters.Contains(l.LogFrom))
+				return false;
+
+			if (!IsSearching)
+			{
+				return true;
+			}
+
+			return (l.Content.Find(SearchQuery, caseSensitive: false) != -1);
+
+		});
+
+		foreach (var item in logsToShow)
 			BuildLogLine(_textBuilder, item);
 
 		_richLabel.Text = _textBuilder.ToString();
-		_lastRenderedIndex = Logs.Count;
+
+		_richLabel.ScrollToLine(_richLabel.GetLineCount());
+
+		_lastRenderedIndex = _logs.Count;
 		_needsFullRebuild = false;
 		_hasPendingAppend = false;
 	}
 
 	private static void BuildLogLine(StringBuilder sb, LogData item)
 	{
-		string dotColor = item.LogFrom switch
+		var dotColor = item.LogFrom switch
 		{
 			LogFromEnum.None => NoneColorHex,
 			LogFromEnum.Client => ClientColorHex,
@@ -219,10 +329,18 @@ public partial class DebugConsole : Control
 			.Append(dotColor)
 			.Append("]•[/color] ");
 
-		if (item.LogType == LogTypeEnum.Warning)
-			sb.Append("[color=").Append(WarningColorHex).Append(']');
-		else if (item.LogType == LogTypeEnum.Error)
-			sb.Append("[color=").Append(ErrorColorHex).Append(']');
+		switch (item.LogType)
+		{
+			case LogTypeEnum.Info:
+				// No color for info logs
+				break;
+			case LogTypeEnum.Warning:
+				sb.Append("[color=").Append(WarningColorHex).Append(']');
+				break;
+			case LogTypeEnum.Error:
+				sb.Append("[color=").Append(ErrorColorHex).Append(']');
+				break;
+		}
 
 		sb.Append('[')
 			.Append(item.LoggedAt.ToLongTimeString())

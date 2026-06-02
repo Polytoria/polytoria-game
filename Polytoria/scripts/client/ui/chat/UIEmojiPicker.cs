@@ -204,21 +204,30 @@ public partial class UIEmojiPicker : Control
 
 	public static void InsertEmojiAtCursor(LineEdit field, string emojiName)
 	{
+		if (string.IsNullOrEmpty(emojiName)) return;
+
 		int cursorPos = field.CaretColumn;
 		string text = field.Text;
 
+		int lastSpace = text.LastIndexOf(' ', cursorPos - 1);
+		int searchFrom = lastSpace >= 0 ? lastSpace : 0;
 		int colonIdx = text.LastIndexOf(':', cursorPos - 1);
-		int splitPoint = colonIdx >= 0 && colonIdx != cursorPos - 1 ? colonIdx : cursorPos;
+		int splitPoint = colonIdx >= searchFrom ? colonIdx : cursorPos;
+
 		string before = text[..splitPoint];
 		string after = text[cursorPos..];
-		field.Text = before + $":{emojiName}:" + after;
-		field.CaretColumn = splitPoint + emojiName.Length + 2;
+		string insertion = $":{emojiName}:";
+
+		if (after.Length == 0 || after[0] != ' ')
+			insertion += ' ';
+
+		field.Text = before + insertion + after;
+		field.CaretColumn = splitPoint + insertion.Length;
 	}
 
 	private void OnEmojiSelected(string emojiName)
 	{
 		RecordEmojiUse(emojiName);
-		Visible = false;
 		EmojiPicked?.Invoke(emojiName);
 	}
 }

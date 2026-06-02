@@ -54,6 +54,7 @@ public partial class InsertMenuPopup : PopupPanel
 		},
 		[new() { Title = "Scripting", RecommendOn = [typeof(ScriptService), typeof(Folder)] }] = new()
 		{
+			"InteractionPrompt",
 			"NetworkEvent",
 			"BindableEvent",
 		},
@@ -62,9 +63,11 @@ public partial class InsertMenuPopup : PopupPanel
 			"BoolValue",
 			"IntValue",
 			"NumberValue",
+			"RangeValue",
 			"StringValue",
 			"Vector2Value",
 			"Vector3Value",
+			"QuaternionValue",
 			"ColorValue",
 			"InstanceValue"
 		},
@@ -111,6 +114,9 @@ public partial class InsertMenuPopup : PopupPanel
 			"UIGridLayout",
 			"UIScrollView",
 			"UIViewport",
+			"UICorner",
+			"UIStroke",
+			"UIShadow",
 		},
 		[new() { Title = "Teams", RecommendOn = [typeof(Teams)] }] = new()
 		{
@@ -131,6 +137,7 @@ public partial class InsertMenuPopup : PopupPanel
 			"RigidBody",
 			"BodyPosition",
 			"Grabbable",
+			"Weld",
 		},
 		[new() { Title = "Gizmos" }] = new()
 		{

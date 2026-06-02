@@ -1,0 +1,37 @@
+[gd_scene format=3 uid="uid://uiscprop0001"]
+
+[ext_resource type="Script" uid="uid://c34m6rhox2toj" path="res://scripts/creator/properties/UIScaleProperty.cs" id="1_3d4nx"]
+
+[sub_resource type="Theme" id="Theme_fias0"]
+HBoxContainer/constants/separation = 0
+LineEdit/constants/minimum_character_width = 0
+
+[node name="UIScale" type="HBoxContainer" unique_id=1381934989]
+custom_minimum_size = Vector2(0, 24)
+size_flags_horizontal = 3
+theme = SubResource("Theme_fias0")
+theme_override_constants/separation = 4
+script = ExtResource("1_3d4nx")
+
+[node name="Offset" type="SpinBox" parent="." unique_id=1609270490]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_neighbor_right = NodePath("../Scale")
+focus_next = NodePath("../Scale")
+max_value = 2000.0
+alignment = 1
+suffix = " px"
+custom_arrow_step = 1.0
+select_all_on_focus = true
+
+[node name="Scale" type="SpinBox" parent="." unique_id=356473902]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_neighbor_left = NodePath("../Offset")
+focus_previous = NodePath("../Offset")
+alignment = 1
+suffix = " %"
+custom_arrow_step = 1.0
+select_all_on_focus = true

@@ -4,7 +4,6 @@
 
 using Godot;
 using Polytoria.Datamodel;
-using Polytoria.Datamodel.Services;
 
 namespace Polytoria.Client.UI.Chat;
 
@@ -30,7 +29,6 @@ public partial class UIChatLabel : RichTextLabel
 	public bool ChatColorsEnabled = true;
 	public string FontPath = "";
 	public int FontSize;
-	private float EmojiScale => FontSize > 0 ? Mathf.Max(1f, FontSize / 16f) : 1f;
 
 	public bool IsPending
 	{
@@ -76,14 +74,14 @@ public partial class UIChatLabel : RichTextLabel
 		string text;
 		if (AuthorName == "")
 		{
-			text = $"{ChatService.FormatEmojis(Content, EmojiScale)}";
+			text = Content;
 		}
 		else
 		{
 			string nameText = ChatColorsEnabled
 				? $"[color={NameColor.ToHtml(false)}]{AuthorName}[/color]"
 				: AuthorName;
-			text = $"{badgeBBCode}{(badgeBBCode.Length > 0 ? " " : "")}{nameText}: {ChatService.FormatEmojis(Content, EmojiScale)}";
+			text = $"{badgeBBCode}{(badgeBBCode.Length > 0 ? " " : "")}{nameText}: {Content}";
 		}
 
 		if (!string.IsNullOrEmpty(FontPath))

@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://dxe5uwtcyc3yt"]
+
+[ext_resource type="Script" uid="uid://t1bqocaudx1i" path="res://scripts/creator/properties/components/number_series/NumberSeriesPoint.cs" id="1_e5m7w"]
+[ext_resource type="Texture2D" uid="uid://bstnds573cu1e" path="res://assets/textures/ui-icons/trash.svg" id="2_u64oo"]
+
+[node name="Point" type="HBoxContainer" unique_id=85642515 node_paths=PackedStringArray("_percentageBox", "_valueBox", "_deleteButton")]
+script = ExtResource("1_e5m7w")
+_percentageBox = NodePath("Percentage")
+_valueBox = NodePath("Value")
+_deleteButton = NodePath("Delete")
+
+[node name="Percentage" type="SpinBox" parent="." unique_id=1607301429]
+layout_mode = 2
+theme_override_constants/buttons_width = 0
+rounded = true
+suffix = "%"
+select_all_on_focus = true
+
+[node name="Value" type="SpinBox" parent="." unique_id=575965398]
+layout_mode = 2
+step = 0.1
+allow_greater = true
+allow_lesser = true
+alignment = 1
+
+[node name="Delete" type="Button" parent="." unique_id=1205203732]
+custom_minimum_size = Vector2(24, 0)
+layout_mode = 2
+icon = ExtResource("2_u64oo")
+flat = true
+icon_alignment = 1
+expand_icon = true

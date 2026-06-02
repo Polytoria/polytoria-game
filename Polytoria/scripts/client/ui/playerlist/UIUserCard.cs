@@ -6,6 +6,7 @@ using Godot;
 using Polytoria.Client.UI.Playerlist.Stats;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Resources;
+using Polytoria.Schemas.API;
 using Polytoria.Shared;
 using System.Collections.Generic;
 
@@ -20,6 +21,7 @@ public partial class UIUserCard : Control
 	[Export] private Label _usernameLabel = null!;
 	[Export] private Control _statsContainer = null!;
 	[Export] private TextureRect _pfpIconRect = null!;
+	[Export] private TextureRect _badgeRect = null!;
 	private readonly PTImageAsset _plrIconAsset = new();
 	private static World Root => CoreUIRoot.Singleton.Root;
 	internal static Player TargetPlayer => Root.Players.LocalPlayer;
@@ -36,8 +38,14 @@ public partial class UIUserCard : Control
 		Root.Stats.StatAdded.Connect(AddStat);
 		Root.Stats.StatRemoved.Connect(RemoveStat);
 
-		TargetPlayer.TeamChanged.Connect(OnTeamChanged);
-		OnTeamChanged(TargetPlayer.Team);
+		if (TargetPlayer.UserInfo.HasValue)
+		{
+			LoadBadge();
+		}
+		else
+		{
+			TargetPlayer.UserInfoReady += OnUserInfoReady;
+		}
 
 		foreach (var item in Root.Stats.GetChildren())
 		{
@@ -53,21 +61,9 @@ public partial class UIUserCard : Control
 		_plrIconAsset.ResourceLoaded -= OnIconLoaded;
 		Root.Stats.StatAdded.Disconnect(AddStat);
 		Root.Stats.StatRemoved.Disconnect(RemoveStat);
-		TargetPlayer.TeamChanged.Disconnect(OnTeamChanged);
+		TargetPlayer.UserInfoReady -= OnUserInfoReady;
 
 		base._ExitTree();
-	}
-
-	private void OnTeamChanged(Team? to)
-	{
-		if (to != null)
-		{
-			SelfModulate = to.Color.Darkened(0.4f);
-		}
-		else
-		{
-			SelfModulate = new(0, 0, 0);
-		}
 	}
 
 	private void AddStat(Stat stat)
@@ -102,6 +98,19 @@ public partial class UIUserCard : Control
 	private void OnIconLoaded(Resource resource)
 	{
 		_pfpIconRect.Texture = (Texture2D)resource;
+	}
+
+	private void OnUserInfoReady(APIUserInfo _)
+	{
+		TargetPlayer.UserInfoReady -= OnUserInfoReady;
+		LoadBadge();
+	}
+
+	private void LoadBadge()
+	{
+		string badgePath = Player.GetBadgeIconPath(TargetPlayer);
+		if (badgePath.Length > 0)
+			_badgeRect.Texture = GD.Load<Texture2D>(badgePath);
 	}
 
 	private async void RefreshBox()

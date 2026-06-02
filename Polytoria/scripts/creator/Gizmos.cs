@@ -32,6 +32,7 @@ public sealed partial class Gizmos : Node
 	private SelectionBox _hoverBox = null!;
 
 	public bool HoveringGizmos { get; set; }
+	public bool HoveringUIGizmo { get; set; }
 	public bool IsDraggingDynamic => _isDraggingDyn;
 
 	public static Color[] AxisColors { get; private set; } =
@@ -341,22 +342,16 @@ public sealed partial class Gizmos : Node
 
 	public override void _Process(double delta)
 	{
-		bool sv = true;
+		bool selectionValid = Selected.Count > 0;
 
-		if (Selected.Count == 0) sv = false;
+		Move.Visible = CreatorService.Interface.ToolMode == ToolModeEnum.Move && selectionValid;
+		Rotate.Visible = CreatorService.Interface.ToolMode == ToolModeEnum.Rotate && selectionValid;
 
-		Move.Visible = CreatorService.Interface.ToolMode == ToolModeEnum.Move && sv;
-		Rotate.Visible = CreatorService.Interface.ToolMode == ToolModeEnum.Rotate && sv;
-
-		if (CreatorService.Interface.ToolMode == ToolModeEnum.Scale && sv)
+		if (CreatorService.Interface.ToolMode == ToolModeEnum.Scale && selectionValid)
 		{
-			bool sr = false;
-			if (Selected.Count == 1 && Selected[0] is Part)
-			{
-				sr = true;
-			}
-			Resize.Visible = sr;
-			Scale.Visible = !sr;
+			bool singlePartSelected = Selected.Count == 1 && Selected[0] is Part;
+			Resize.Visible = singlePartSelected;
+			Scale.Visible = !singlePartSelected;
 		}
 		else
 		{
@@ -499,7 +494,7 @@ public sealed partial class Gizmos : Node
 
 		if (@event is InputEventMouseButton button)
 		{
-			if (HoveringGizmos) { return; }
+			if (HoveringGizmos || HoveringUIGizmo) { return; }
 			if (button.ButtonIndex != MouseButton.Left) { return; }
 			if (button.Pressed)
 			{
@@ -705,14 +700,16 @@ public sealed partial class Gizmos : Node
 		{
 			if (item is Physical p)
 			{
-				excludeArray.Add(p.GetRid());
+				foreach (Rid rid in p.GetRids())
+					excludeArray.Add(rid);
 			}
 			// Add Descendants
 			foreach (Instance n in item.GetDescendants())
 			{
 				if (n is Physical p2)
 				{
-					excludeArray.Add(p2.GetRid());
+					foreach (Rid rid in p2.GetRids())
+						excludeArray.Add(rid);
 				}
 				if (n is Dynamic d)
 				{
@@ -776,6 +773,7 @@ public sealed partial class Gizmos : Node
 				count++;
 			}
 		}
+		if (count == 0) return Transform3D.Identity;
 		center /= count;
 
 		return new Transform3D(Basis.Identity, center);
