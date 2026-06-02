@@ -962,7 +962,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		lua.PushValue(1);
 		lua.XMove(newThread, 1);
 
-		lua.PushCFunction(AuxCoroutineWrap, n:1);
+		lua.PushCFunction(AuxCoroutineWrap, n: 1);
 
 		return 1;
 	}
