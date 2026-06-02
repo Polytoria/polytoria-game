@@ -19,6 +19,9 @@ public class LuaFormatService(CreatorSession session)
 	private readonly string _workspacePath = session.ProjectFolderPath;
 	private Process _styLuaProcess = null!;
 
+	private readonly SemaphoreSlim _lifecycleLock = new(1, 1);
+	private bool _isRestarting = false;
+
 	private StyLuaClient _client = null!;
 
 	public async Task InitAsync()
@@ -56,9 +59,55 @@ public class LuaFormatService(CreatorSession session)
 
 	public async Task<string> FormatScriptAsync(string scriptPath, string scriptText)
 	{
-		// instead of making use of hard disk script text, we use Text from CodeEdit incase if script has not been saved yet
-		return await _client.FormatScript(scriptPath, "luau", scriptText);
+		await _lifecycleLock.WaitAsync();
+		try
+		{
+			if (_client == null)
+			{
+				PT.PrintErr("StyLua client is not available. Returning original text.");
+				return scriptText;
+			}
+
+			// instead of making use of hard disk script text, we use Text from CodeEdit incase if script has not been saved yet
+			return await _client.FormatScript(scriptPath, "luau", scriptText);
+		}
+		catch (Exception ex)
+		{
+			PT.PrintErr($"Formatting failed: {ex.Message}");
+			return scriptText;
+		}
+		finally
+		{
+			_lifecycleLock.Release();
+		}
+
 	}
+
+	public async void RestartAsync()
+    {
+        if (_isRestarting) return;
+
+        await _lifecycleLock.WaitAsync();
+        try
+        {
+            _isRestarting = true;
+            PT.Print("Restarting StyLua..");
+            
+            Shutdown();
+            await InitAsync();
+            
+            PT.Print("Restarted StyLua successfully");
+        }
+        catch (Exception ex)
+        {
+            PT.PrintErr($"An error occurred while trying to restart stylua: {ex.Message}");
+        }
+        finally
+        {
+            _isRestarting = false;
+            _lifecycleLock.Release();
+        }
+    }
 
 	public void Shutdown()
 	{

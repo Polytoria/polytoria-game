@@ -38,6 +38,14 @@ public class LspInitializeParams
 	[JsonPropertyName("capabilities")]
 	public LspClientCapabilities? Capabilities { get; set; }
 
+	[JsonPropertyName("initializationOptions")]
+	public LspInitializationOptions? InitializationOptions { get; set; }
+}
+
+public class LspInitializationOptions
+{
+	[JsonPropertyName("respect_editor_formatting_options")]
+	public bool? RespectEditorFormattingOptions { get; set; } // Used by StyLua
 }
 
 public class LspClientCapabilities
@@ -419,6 +427,7 @@ public sealed class EmptyParams
 [JsonSerializable(typeof(EmptyParams))]
 [JsonSerializable(typeof(LspInitializeParams))]
 [JsonSerializable(typeof(LspInitializeResult))]
+[JsonSerializable(typeof(LspInitializationOptions))]
 [JsonSerializable(typeof(LspDidOpenParams))]
 [JsonSerializable(typeof(LspDidChangeParams))]
 [JsonSerializable(typeof(LspDidCloseParams))]

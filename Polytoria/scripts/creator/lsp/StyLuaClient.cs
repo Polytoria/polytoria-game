@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Polytoria.Creator.LSP.Schemas;
+using Polytoria.Creator.Settings;
 using Polytoria.Shared;
 using System;
 using System.Collections.Generic;
@@ -18,6 +19,8 @@ public class StyLuaClient(Stream input, Stream output) : LspClientBase(input, ou
 {
 	public async Task InitializeAsync(string workspacePath)
 	{
+
+		bool respectEditorFormattingOptions = CreatorSettingsService.Instance.Get<bool>(CreatorSettingKeys.CodeEditor.RespectEditorFormattingOptions);
 		LspInitializeParams initParams = new()
 		{
 			RootUri = LspHelper.PathToUri(workspacePath),
@@ -34,6 +37,11 @@ public class StyLuaClient(Stream input, Stream output) : LspClientBase(input, ou
 					}
 				}
 			},
+
+			InitializationOptions = new()
+			{
+				RespectEditorFormattingOptions = respectEditorFormattingOptions
+			}
 
 		};
 
@@ -103,6 +111,9 @@ public class StyLuaClient(Stream input, Stream output) : LspClientBase(input, ou
 				}
 			});
 
+			bool preferSpaces = CreatorSettingsService.Instance.Get<IndentationModeEnum>(CreatorSettingKeys.CodeEditor.IndentationMode) == IndentationModeEnum.Spaces;
+			int tabSize = CreatorSettingsService.Instance.Get<int>(CreatorSettingKeys.CodeEditor.IndentationSize);
+
 			// TODO: Allow these format options to be changed with editor settings
 			JsonElement rawResult = await SendRequestAsync<JsonElement>("textDocument/formatting", new LspDocumentFormattingParams()
 			{
@@ -113,8 +124,8 @@ public class StyLuaClient(Stream input, Stream output) : LspClientBase(input, ou
 
 				Options = new()
 				{
-					TabSize = 4,
-					InsertSpaces = false
+					TabSize = tabSize,
+					InsertSpaces = preferSpaces
 				}
 			});
 
