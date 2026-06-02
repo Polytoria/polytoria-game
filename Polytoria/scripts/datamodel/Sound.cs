@@ -21,6 +21,7 @@ public sealed partial class Sound : Dynamic
 {
 	public const float SoundDistanceMultipler = 1.25f;
 	private const float MinPitch = 0.001f;
+	private const float MaxVolume = 2;
 	private AudioAsset? _asset;
 	private AudioStreamPlayer? _audioPlayer;
 	private AudioStreamPlayer3D? _audioPlayer3D;
@@ -94,7 +95,7 @@ public sealed partial class Sound : Dynamic
 		get => _volume;
 		set
 		{
-			_volume = Mathf.Clamp(value, 0, 2);
+			_volume = Mathf.Clamp(value, 0, MaxVolume);
 			UpdateVolume();
 			OnPropertyChanged();
 		}
@@ -403,9 +404,9 @@ public sealed partial class Sound : Dynamic
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
 	private void NetPlayOneshot(float volume)
 	{
-		if (volume > 1)
+		if (volume > MaxVolume)
 		{
-			volume = 1;
+			volume = MaxVolume;
 		}
 
 		InternalPlayOneShot(volume);
