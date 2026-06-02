@@ -34,6 +34,7 @@ public sealed partial class Sound : Dynamic
 	private float _volume = 1;
 	private float _time = 0;
 	private bool _loop = false;
+	private float _loopStart = 0;
 	private bool _playInWorld = false;
 	private bool _paused = false;
 	private float _pitch = 1f;
@@ -135,12 +136,33 @@ public sealed partial class Sound : Dynamic
 			switch (_currentStream)
 			{
 				case AudioStreamMP3 aStream:
-					aStream.LoopOffset = 0;
 					aStream.Loop = value;
 					break;
 				case AudioStreamOggVorbis aStream:
-					aStream.LoopOffset = 0;
 					aStream.Loop = value;
+					break;
+					// unused in Polytoria
+					//case AudioStreamWav aStream:
+			}
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float LoopStart
+	{
+		get => _loopStart;
+		set
+		{
+			_loopStart = value;
+
+			switch (_currentStream)
+			{
+				case AudioStreamMP3 aStream:
+					aStream.LoopOffset = value;
+					break;
+				case AudioStreamOggVorbis aStream:
+					aStream.LoopOffset = value;
 					break;
 					// unused in Polytoria
 					//case AudioStreamWav aStream:
@@ -521,7 +543,9 @@ public sealed partial class Sound : Dynamic
 		_currentStream = (AudioStream)audio;
 		_audioPlayer?.Stream = (AudioStream)audio;
 		_audioPlayer3D?.Stream = (AudioStream)audio;
-		Loop = _loop; // reapply to new stream
+		// reapply to new stream
+		LoopStart = _loopStart;
+		Loop = _loop;
 
 		Loaded.Invoke();
 
