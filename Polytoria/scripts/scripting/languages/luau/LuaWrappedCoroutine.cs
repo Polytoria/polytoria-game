@@ -3,7 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using System;
-using System.Threading.Tasks;
 
 namespace Polytoria.Scripting.Luau;
 
@@ -25,13 +24,25 @@ public class LuaWrappedCoroutine : LuaObject
 
 		state.XMove(thread, nargs);
 
-		_ = HandleWrapCallAsync(state, thread, nargs);
-		return 0;
-	}
+		Exception? caughtException;
+		try
+		{
+			LuauProvider.ResumeThread(thread, state, nargs, true).Wait();
 
-	private async Task HandleWrapCallAsync(LuaState state, LuaState thread, int nargs)
-	{
-		await LuauProvider.ResumeThread(thread, state, nargs);
+			int nresults = thread.GetTop();
+			if (nresults > 0)
+			{
+				thread.XMove(state, nresults);
+			}
+			return nresults;
+		}
+		catch (Exception ex)
+		{
+			caughtException = ex;
+		}
+
 		state.Unref(ThreadRef);
+		state.Error(caughtException.InnerException?.Message ?? caughtException.Message);
+		return 0;
 	}
 }

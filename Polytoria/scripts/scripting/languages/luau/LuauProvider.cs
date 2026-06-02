@@ -923,14 +923,25 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			return lua.Error("coroutine.resume requires a thread");
 		}
 
-		async void run()
+		LuaState thread = lua.ToThread(1);
+		try
 		{
-			await ResumeThread(lua.ToThread(1), lua, lua.GetTop() - 1);
+			ResumeThread(thread, lua, lua.GetTop() - 1, true).Wait();
+
+			int nresults = thread.GetTop();
+			lua.PushBoolean(true);
+			if (nresults > 0)
+			{
+				thread.XMove(lua, nresults);
+			}
+			return 1 + nresults;
 		}
-
-		run();
-
-		return 0;
+		catch (Exception ex)
+		{
+			lua.PushBoolean(false);
+			lua.PushString(ex.InnerException?.Message ?? ex.Message);
+			return 2;
+		}
 	}
 
 	public static int LuaCoroutineWrap(IntPtr L)
