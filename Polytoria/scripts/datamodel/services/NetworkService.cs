@@ -654,6 +654,14 @@ public sealed partial class NetworkService : Instance
 		plr.IsAdmin = userData.IsStaff;
 		plr.UserRoleClass = userData.UserRoleClass ?? "";
 
+		if(Root.WorldInfo.HasValue)
+		{
+			if(Root.WorldInfo.Value.Creator.Type == "guild")
+			{
+				APIGuildInfo guildInfo = await PolyAPI.GetGuildFromID(Root.WorldInfo.Value.Creator.Id);
+				validateRes.IsCreator = guildInfo.Creator.Id == userData.Id ? true : false;
+			}
+		}
 		// Apply validation data
 		plr.IsCreator = validateRes.IsCreator;
 		plr.IsAgeRestricted = validateRes.IsAgeRestricted;
