@@ -154,6 +154,12 @@ public sealed partial class Sound : Dynamic
 		get => _loopStart;
 		set
 		{
+			// unclamped value is reapplied and clamped when Sound is loaded
+			if (_currentStream != null)
+			{
+				value = (float)Mathf.Clamp(value, 0, _currentStream.GetLength());
+			}
+
 			_loopStart = value;
 
 			switch (_currentStream)
