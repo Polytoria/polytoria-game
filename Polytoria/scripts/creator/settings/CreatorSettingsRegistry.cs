@@ -154,7 +154,7 @@ public static class CreatorSettingsRegistry
 					}
 				]
 			});
-		
+
 		defs.Add(CreatorSettingKeys.CodeEditor.RespectEditorFormattingOptions,
 			new SettingDef<bool>
 			{

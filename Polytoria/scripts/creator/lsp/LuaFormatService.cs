@@ -84,30 +84,30 @@ public class LuaFormatService(CreatorSession session)
 	}
 
 	public async void RestartAsync()
-    {
-        if (_isRestarting) return;
+	{
+		if (_isRestarting) return;
 
-        await _lifecycleLock.WaitAsync();
-        try
-        {
-            _isRestarting = true;
-            PT.Print("Restarting StyLua..");
-            
-            Shutdown();
-            await InitAsync();
-            
-            PT.Print("Restarted StyLua successfully");
-        }
-        catch (Exception ex)
-        {
-            PT.PrintErr($"An error occurred while trying to restart stylua: {ex.Message}");
-        }
-        finally
-        {
-            _isRestarting = false;
-            _lifecycleLock.Release();
-        }
-    }
+		await _lifecycleLock.WaitAsync();
+		try
+		{
+			_isRestarting = true;
+			PT.Print("Restarting StyLua..");
+
+			Shutdown();
+			await InitAsync();
+
+			PT.Print("Restarted StyLua successfully");
+		}
+		catch (Exception ex)
+		{
+			PT.PrintErr($"An error occurred while trying to restart stylua: {ex.Message}");
+		}
+		finally
+		{
+			_isRestarting = false;
+			_lifecycleLock.Release();
+		}
+	}
 
 	public void Shutdown()
 	{
