@@ -562,9 +562,21 @@ public partial class NPC : Physical
 		_nametag.Position = NametagOffset + _fixedNametagOffset;
 	}
 
-	public override void Process(double delta)
+	public override void PhysicsProcess(double delta)
 	{
-		base.Process(delta);
+		if (CharBody3D != null)
+		{
+			bool isOnFloor = CharBody3D.IsOnFloor();
+
+			if (isOnFloor)
+			{
+				_timeSinceGrounded = 0f;
+			}
+			else
+			{
+				_timeSinceGrounded += (float)delta;
+			}
+		}
 
 		if (Root == null) return;
 		if (Anchored || IsHidden) return;
@@ -601,7 +613,7 @@ public partial class NPC : Physical
 
 		if (Root.Network.LocalPeerID != NetworkAuthority && ExistInNetwork) return;
 
-		bool isOnFloor = CharBody3D.IsOnFloor();
+		bool isOnFloor2 = CharBody3D.IsOnFloor();
 		bool isOnCeiling = CharBody3D.IsOnCeiling();
 		bool playerNPCOverride = this is Player p && !p.CanMove;
 
@@ -642,7 +654,7 @@ public partial class NPC : Physical
 			CharacterVelocity = new(0, CharacterVelocity.Y, 0);
 		}
 
-		if (!isOnFloor)
+		if (!isOnFloor2)
 		{
 			finalState = CharacterModel.CharacterModelStateEnum.Jumping;
 		}
@@ -654,11 +666,11 @@ public partial class NPC : Physical
 		}
 
 		// Apply gravity
-		if (!isOnFloor)
+		if (!isOnFloor2)
 		{
 			CharacterVelocity.Y += Root.Environment.Gravity.Y * (float)delta;
 		}
-		else if (isOnFloor && CharacterVelocity.Y < 0)
+		else if (isOnFloor2 && CharacterVelocity.Y < 0)
 		{
 			// Cancel downward velocity when on floor
 			CharacterVelocity.Y = 0;
@@ -677,32 +689,15 @@ public partial class NPC : Physical
 			CharBody3D.MoveAndSlide();
 		}
 
-		if (isOnFloor != _lastOnFloorState)
+		if (isOnFloor2 != _lastOnFloorState)
 		{
-			_lastOnFloorState = isOnFloor;
+			_lastOnFloorState = isOnFloor2;
 
 			// On floor change
-			if (isOnFloor)
+			if (isOnFloor2)
 			{
 				_coyoteUsed = false;
 				Landed.Invoke();
-			}
-		}
-	}
-
-	public override void PhysicsProcess(double delta)
-	{
-		if (CharBody3D != null)
-		{
-			bool isOnFloor = CharBody3D.IsOnFloor();
-
-			if (isOnFloor)
-			{
-				_timeSinceGrounded = 0f;
-			}
-			else
-			{
-				_timeSinceGrounded += (float)delta;
 			}
 		}
 		base.PhysicsProcess(delta);
