@@ -240,9 +240,7 @@ public sealed partial class Sound : Dynamic
 	[ScriptProperty] public bool Loading { get; private set; } = false;
 
 	[ScriptProperty]
-	public float Length => _audioPlayer != null
-				? (float)_audioPlayer.Stream.GetLength()
-				: _audioPlayer3D != null ? (float)_audioPlayer3D.Stream.GetLength() : 0;
+	public float Length => (_currentStream != null ? (float)_currentStream.GetLength() : 0);
 
 	[ScriptProperty] public PTSignal Loaded { get; private set; } = new();
 	[ScriptProperty] public PTSignal Finished { get; private set; } = new();
