@@ -1991,7 +1991,7 @@ public partial class NetworkedObject : IScriptObject
 	}
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Eq)]
-	public static bool MetamethodEquals(object? a, object? b) => (a is NetworkedObject netobj) && netobj == b;
+	public static bool MetamethodEquals(object? a, object? b) => (a is NetworkedObject netobj) && netobj.Equals(b);
 
 	internal IEnumerable<PropertyInfo> GetEditableProperties()
 	{
