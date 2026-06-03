@@ -1991,7 +1991,7 @@ public partial class NetworkedObject : IScriptObject
 	}
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Eq)]
-	public static bool MetamethodEquals(object? a, object? b) => (a is NetworkedObject netobj) && netobj.Equals(b);
+	public static bool MetamethodEquals(object? a, object? b) => a is NetworkedObject netobj && netobj.Equals(b);
 
 	internal IEnumerable<PropertyInfo> GetEditableProperties()
 	{
@@ -2026,7 +2026,10 @@ public partial class NetworkedObject : IScriptObject
 #pragma warning restore IL2070 // 'this' argument does not satisfy 'DynamicallyAccessedMembersAttribute' in call to target method. The parameter of method does not have matching annotations.
 	}
 
-	public override bool Equals(object? obj) => (obj is NetworkedObject netobj) && ((ExistInNetwork && netobj.ExistInNetwork) ? NetworkedObjectID == netobj.NetworkedObjectID : ObjectID == netobj.ObjectID);
+	public override bool Equals(object? obj) =>
+		obj is NetworkedObject netobj &&
+		ExistInNetwork == netobj.ExistInNetwork &&
+		(ExistInNetwork ? NetworkedObjectID == netobj.NetworkedObjectID : ObjectID == netobj.ObjectID);
 
 	public override int GetHashCode()
 	{
