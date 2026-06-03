@@ -1241,23 +1241,23 @@ public partial class NetworkedObject : IScriptObject
 
 		NetworkedObject? existingObj = null;
 
-		if (existingObj == null)
+
+		if (this is Instance i3)
 		{
-			if (this is Instance i)
-			{
-				existingObj = i.FindChild(objName);
-			}
-			else
-			{
-				existingObj = FindNonInstanceChild(objName);
-			}
+			existingObj = i3.FindChild(objName);
 		}
+		else
+		{
+			existingObj = FindNonInstanceChild(objName);
+		}
+
 
 		if (existingObj != null)
 		{
 			NetworkedObject netObj = existingObj;
 
-			if (data.Sequence < netObj.AppliedSequence) return; // Decline sequence
+			// Decline any packet with a sequence number older or equal to the latest applied.
+			if (data.Sequence <= netObj.AppliedSequence) return;
 
 			netObj.Root = Root;
 			netObj.ExistInNetwork = true;
