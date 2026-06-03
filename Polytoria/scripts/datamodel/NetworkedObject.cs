@@ -75,7 +75,7 @@ public partial class NetworkedObject : IScriptObject
 			{
 				selfpreI.RemoveNameFromParent();
 				selfpreI.RemoveLegacyNameFromParent();
-				preI.Children.RemoveAt(selfpreI.Index);
+				preI.Children.Remove(selfpreI);
 				preI.ChildRemoved.Invoke(selfpreI);
 			}
 
