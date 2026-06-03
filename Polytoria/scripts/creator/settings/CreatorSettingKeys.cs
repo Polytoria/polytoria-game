@@ -28,7 +28,7 @@ public static class CreatorSettingKeys
 		public const string IndentationMode = "code_editor.indentation_mode";
 		public const string IndentationSize = "code_editor.indentation_size";
 
-		public const string RespectEditorFormattingOptions = "code_editor.formatter.respect_editor_formatting_options";
+		public const string UseEditorFormattingOptions = "code_editor.formatter.use_editor_formatting_options";
 	}
 
 	public static class Popups

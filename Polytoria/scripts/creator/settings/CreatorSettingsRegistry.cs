@@ -155,16 +155,16 @@ public static class CreatorSettingsRegistry
 				]
 			});
 
-		defs.Add(CreatorSettingKeys.CodeEditor.RespectEditorFormattingOptions,
+		defs.Add(CreatorSettingKeys.CodeEditor.UseEditorFormattingOptions,
 			new SettingDef<bool>
 			{
-				Key = CreatorSettingKeys.CodeEditor.RespectEditorFormattingOptions,
+				Key = CreatorSettingKeys.CodeEditor.UseEditorFormattingOptions,
 				SectionKey = "code_editor",
-				Label = "Respect Editor Formatting Options",
+				Label = "Use Editor Formatting Options",
 				Description = "When enabled, the editor will override StyLua's indent_type and indent_width with the editor's active indentation settings. Disable this if you want StyLua to strictly use the indentation rules defined inside your stylua.toml file.",
 				ValueKind = SettingValueKind.Bool,
 				ControlKind = SettingControlKind.Toggle,
-				DefaultValue = true,
+				DefaultValue = false,
 				Conditions = [
 					new SettingCondition<PreferredEditorEnum>() {
 						Target = CreatorSettingKeys.CodeEditor.PreferredEditor,

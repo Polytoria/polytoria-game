@@ -17,10 +17,10 @@ namespace Polytoria.Creator.LSP;
 
 public class StyLuaClient(Stream input, Stream output) : LspClientBase(input, output)
 {
-	public async Task InitializeAsync(string workspacePath)
+	public async Task InitializeAsync(string workspacePath, bool configFilePresent)
 	{
 
-		bool respectEditorFormattingOptions = CreatorSettingsService.Instance.Get<bool>(CreatorSettingKeys.CodeEditor.RespectEditorFormattingOptions);
+		bool useEditorFormattingOptions = CreatorSettingsService.Instance.Get<bool>(CreatorSettingKeys.CodeEditor.UseEditorFormattingOptions);
 		LspInitializeParams initParams = new()
 		{
 			RootUri = LspHelper.PathToUri(workspacePath),
@@ -40,7 +40,7 @@ public class StyLuaClient(Stream input, Stream output) : LspClientBase(input, ou
 
 			InitializationOptions = new()
 			{
-				RespectEditorFormattingOptions = respectEditorFormattingOptions
+				RespectEditorFormattingOptions = useEditorFormattingOptions || !configFilePresent
 			}
 
 		};

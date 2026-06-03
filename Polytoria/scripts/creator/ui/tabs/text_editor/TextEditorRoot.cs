@@ -140,7 +140,7 @@ public partial class TextEditorRoot : Node
 			ApplyIndentSettings();
 		}
 
-		if (e.Key == CreatorSettingKeys.CodeEditor.RespectEditorFormattingOptions)
+		if (e.Key == CreatorSettingKeys.CodeEditor.UseEditorFormattingOptions)
 		{
 			if (_format == null) return;
 			_format.RestartAsync(); // we need to restart as stylua receives this option only during initialization

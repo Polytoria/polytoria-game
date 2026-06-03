@@ -22,10 +22,14 @@ public class LuaFormatService(CreatorSession session)
 	private readonly SemaphoreSlim _lifecycleLock = new(1, 1);
 	private bool _isRestarting = false;
 
+	private const string FormatterConfigFile = "stylua.toml";
+
 	private StyLuaClient _client = null!;
 
 	public async Task InitAsync()
 	{
+		bool configFilePresent = File.Exists(Path.Join(_workspacePath, FormatterConfigFile));
+
 		ProcessStartInfo processStartInfo = new()
 		{
 			FileName = NativeBinHelper.ResolveStyLuaBinPath(),
@@ -52,7 +56,7 @@ public class LuaFormatService(CreatorSession session)
 		PT.Print("StyLuaLS Started");
 
 		_client = new(_styLuaProcess.StandardOutput.BaseStream, _styLuaProcess.StandardInput.BaseStream);
-		await _client.InitializeAsync(_workspacePath);
+		await _client.InitializeAsync(_workspacePath, configFilePresent);
 
 		PT.Print("StyLua Language server initialized at ", _workspacePath);
 	}
