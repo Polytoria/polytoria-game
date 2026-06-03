@@ -290,16 +290,16 @@ public partial class Part : Entity
 		Cylinder = 2,
 		Cone = 3,
 		Wedge = 4,
-		Corner = 5,
-		Bevel = 6,
-		Concave = 7,
-		Truss = 8,
-		Frame = 9,
-		BevelCorner = 10,
-		ConcaveCorner = 11,
-		BevelWedge = 12,
-		WedgeCorner = 13,
-		ConcaveWedge = 14,
+		Bevel = 5,
+		Concave = 6,
+		Truss = 7,
+		Frame = 8,
+		Octant = 9,
+		WedgeCorner = 10,
+		BevelledCorner = 11,
+		ConcaveCorner = 12,
+		TriangleCorner = 13,
+		TriangleConcaveCorner = 14
 	}
 
 	[Attributes.Obsolete("This should not be used, it's here only for compatibility with legacy scripts.")]

@@ -1,7 +1,7 @@
 [gd_resource type="ArrayMesh" format=4 uid="uid://cxtuvx3oxljv2"]
 
 [resource]
-resource_name = "ConcaveCorner"
+resource_name = "ConcavedCorner"
 _surfaces = [{
 "aabb": AABB(-0.5, -0.5, -0.5, 1, 1, 1),
 "attribute_data": PackedByteArray("lN6sFMWUzBPU6swTldJIFxTHkhtNvHUheLLRKMqpfzFuolQ7i5wbRkGYnFGllZtdxZTbaeSTm13FlMwTxZTbaUiRnFH+jBtGG4dUO8B/fzERd9EoPG11IXZikxv0VkgX9UqsFLY+zBN2AGiphVZ3/3YAd/+FVmipdgBoqYVWIJ2FVmiptgwgnbUY2ZCFVtmQNiSShIVWkoT9Lkp4hVZKeNE4A2yFVgNsgEG8X4VWvF+FVnRT3Eh0U4VWLUe+Ti1HhVbmOglT5jqFVp4upVWeLoVWVyKFVmipVaAgnZSsaKmFViCdVZTZkIVW2ZDUiJKEhVaShA1+SniFVkp4OXQDbIVWA2yKa7xfhVa8Xy9kdFOFVnRTTF4tR4VWLUcCWuY6hVbmOmVXni6FVp4uhVZXIg=="),

@@ -1,7 +1,7 @@
 [gd_resource type="ArrayMesh" format=4 uid="uid://b2bdf8t6p3ukx"]
 
 [resource]
-resource_name = "BevelCorner"
+resource_name = "BevelledCorner"
 _surfaces = [{
 "aabb": AABB(-0.5, -0.5, -0.49999997, 1, 1, 0.99999994),
 "attribute_data": PackedByteArray("tlV4/nqqs6l6qnj+tlWzqbZVqSS2VcEwpknBMNQ92jy2Vdo8fzLySLZV8kjiJwpVtlUKVTMeImG2VSJhphU6bbZVOm1mDlJ5tlVSeZoIa4W2VWuFYASDkbZVg5HOAZudtlWbnfEAs6m2VbOptlWpJMZhwTC2VcEwtlXaPJht2jy2VfJI7HjySLZVClWKgwpVtlUiYTmNImG2VTptxpU6bbZVUnkFnVJ5tlVrhdGia4W2VYORC6eDkbZVm52dqZudtlWzqXqqs6k//7Opeqp4/nqqs6li/sO1lvfqzND7lcFcwgj7i7ab/U7YA/Gxzc72iuo24crxh9f94cPpeqqzqWL+o50//7OpeqrvVFzCXliKtsxVlvd8htD70ZGK6jByyvHfe07YZGKxzZhc/eGjaQ=="),
