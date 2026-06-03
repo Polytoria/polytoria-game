@@ -1,0 +1,101 @@
+[gd_scene format=3 uid="uid://dccewf7osrg82"]
+
+[ext_resource type="Texture2D" uid="uid://4ifji13knxu3" path="res://assets/textures/ui-icons/cube.svg" id="1_umky5"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wvvfc"]
+bg_color = Color(0.14901961, 0.14901961, 0.14901961, 1)
+border_width_bottom = 2
+border_color = Color(0, 0, 0, 0.3137255)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+expand_margin_left = 8.0
+expand_margin_top = 8.0
+expand_margin_right = 8.0
+expand_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2lk4x"]
+bg_color = Color(0.08627451, 0.08627451, 0.08627451, 1)
+expand_margin_top = 2.0
+
+[node name="Control" type="Control" unique_id=512968994]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Container" type="Panel" parent="." unique_id=770064460]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -400.0
+offset_top = -300.0
+offset_right = 400.0
+offset_bottom = 300.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_wvvfc")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Container" unique_id=555243102]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LineEdit" type="LineEdit" parent="Container/VBoxContainer" unique_id=737451191]
+layout_mode = 2
+placeholder_text = "Search nodes..."
+
+[node name="HSeparator" type="HSeparator" parent="Container/VBoxContainer" unique_id=999981243]
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxFlat_2lk4x")
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Container/VBoxContainer" unique_id=1594996242]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Container/VBoxContainer/ScrollContainer" unique_id=263831607]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Button" type="Button" parent="Container/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=1708436210]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Container/VBoxContainer/ScrollContainer/VBoxContainer/Button" unique_id=1486663942]
+layout_mode = 0
+offset_left = 4.0
+offset_top = 16.0
+offset_right = 796.0
+offset_bottom = 58.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TextureRect" type="TextureRect" parent="Container/VBoxContainer/ScrollContainer/VBoxContainer/Button/HBoxContainer" unique_id=831656995]
+custom_minimum_size = Vector2(42, 42)
+layout_mode = 2
+texture = ExtResource("1_umky5")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Container/VBoxContainer/ScrollContainer/VBoxContainer/Button/HBoxContainer" unique_id=1605721015]
+layout_mode = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Name" type="Label" parent="Container/VBoxContainer/ScrollContainer/VBoxContainer/Button/HBoxContainer/VBoxContainer" unique_id=356327166]
+layout_mode = 2
+text = "super cool node :3"
+
+[node name="Location" type="Label" parent="Container/VBoxContainer/ScrollContainer/VBoxContainer/Button/HBoxContainer/VBoxContainer" unique_id=514337325]
+modulate = Color(0.4326237, 0.43262374, 0.4326237, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "location.that.makes.your.head.explode"
