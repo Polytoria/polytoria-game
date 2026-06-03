@@ -17,18 +17,32 @@ namespace Polytoria.Creator.LSP;
 public class LuaFormatService(CreatorSession session)
 {
 	private readonly string _workspacePath = session.ProjectFolderPath;
-	private Process _styLuaProcess = null!;
+	private Process? _styLuaProcess = null;
 
 	private readonly SemaphoreSlim _lifecycleLock = new(1, 1);
-	private bool _isRestarting = false;
 
 	private const string FormatterConfigFile = "stylua.toml";
+	private CancellationTokenSource? _restartDebounceCts;
 
-	private StyLuaClient _client = null!;
+	private StyLuaClient? _client;
+
+	private FileSystemWatcher? _fileSystemWatcher;
 
 	public async Task InitAsync()
 	{
-		bool configFilePresent = File.Exists(Path.Join(_workspacePath, FormatterConfigFile));
+		string configFilePath = Path.Join(_workspacePath, FormatterConfigFile);
+		bool configFilePresent = File.Exists(configFilePath);
+
+		_fileSystemWatcher = new(_workspacePath)
+		{
+			Filter = Path.GetFileName(configFilePath)
+		};
+
+		_fileSystemWatcher.Created += OnConfigChange;
+		_fileSystemWatcher.Deleted += OnConfigChange;
+		_fileSystemWatcher.Changed += OnConfigChange;
+		_fileSystemWatcher.EnableRaisingEvents = true;
+
 
 		ProcessStartInfo processStartInfo = new()
 		{
@@ -87,14 +101,43 @@ public class LuaFormatService(CreatorSession session)
 
 	}
 
-	public async void RestartAsync()
+	private void OnConfigChange(object sender, FileSystemEventArgs e)
 	{
-		if (_isRestarting) return;
+		_restartDebounceCts?.Cancel();
+		_restartDebounceCts?.Dispose();
 
+		var cts = new CancellationTokenSource();
+		_restartDebounceCts = cts;
+		var token = cts.Token;
+
+		// need to restart the stylua client
+		PT.Print("StyLua config change detected, restarting.");
+
+		_ = DebouncedRestartAsync(token);
+	}
+
+	private async Task DebouncedRestartAsync(CancellationToken token)
+	{
+		try
+		{
+			await Task.Delay(400, token);
+			await RestartAsync();
+		}
+		catch (OperationCanceledException)
+		{
+			// Another config change happened
+		}
+		catch (Exception ex)
+		{
+			PT.PrintErr($"Debounced restart failed: {ex.Message}");
+		}
+	}
+
+	public async Task RestartAsync()
+	{
 		await _lifecycleLock.WaitAsync();
 		try
 		{
-			_isRestarting = true;
 			PT.Print("Restarting StyLua..");
 
 			Shutdown();
@@ -108,7 +151,6 @@ public class LuaFormatService(CreatorSession session)
 		}
 		finally
 		{
-			_isRestarting = false;
 			_lifecycleLock.Release();
 		}
 	}
@@ -116,6 +158,15 @@ public class LuaFormatService(CreatorSession session)
 	public void Shutdown()
 	{
 		_client?.Dispose();
+
+		_restartDebounceCts?.Cancel();
+		_restartDebounceCts?.Dispose();
+
+		_fileSystemWatcher?.Created -= OnConfigChange;
+		_fileSystemWatcher?.Deleted -= OnConfigChange;
+		_fileSystemWatcher?.Changed -= OnConfigChange;
+
+		_fileSystemWatcher?.Dispose();
 
 		if (_styLuaProcess != null && !_styLuaProcess.HasExited)
 		{

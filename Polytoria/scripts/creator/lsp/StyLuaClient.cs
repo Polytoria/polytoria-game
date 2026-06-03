@@ -17,9 +17,10 @@ namespace Polytoria.Creator.LSP;
 
 public class StyLuaClient(Stream input, Stream output) : LspClientBase(input, output)
 {
+
+
 	public async Task InitializeAsync(string workspacePath, bool configFilePresent)
 	{
-
 		bool useEditorFormattingOptions = CreatorSettingsService.Instance.Get<bool>(CreatorSettingKeys.CodeEditor.UseEditorFormattingOptions);
 		LspInitializeParams initParams = new()
 		{
@@ -48,6 +49,7 @@ public class StyLuaClient(Stream input, Stream output) : LspClientBase(input, ou
 		await SendRequestAsync<LspInitializeResult>("initialize", initParams);
 		await SendNotificationAsync("initialized", new EmptyParams());
 	}
+
 	private static string ApplyTextEdits(string originalText, List<LspTextEdit> edits)
 	{
 		if (edits == null || edits.Count == 0) return originalText;
@@ -114,7 +116,6 @@ public class StyLuaClient(Stream input, Stream output) : LspClientBase(input, ou
 			bool preferSpaces = CreatorSettingsService.Instance.Get<IndentationModeEnum>(CreatorSettingKeys.CodeEditor.IndentationMode) == IndentationModeEnum.Spaces;
 			int tabSize = CreatorSettingsService.Instance.Get<int>(CreatorSettingKeys.CodeEditor.IndentationSize);
 
-			// TODO: Allow these format options to be changed with editor settings
 			JsonElement rawResult = await SendRequestAsync<JsonElement>("textDocument/formatting", new LspDocumentFormattingParams()
 			{
 				TextDocument = new()

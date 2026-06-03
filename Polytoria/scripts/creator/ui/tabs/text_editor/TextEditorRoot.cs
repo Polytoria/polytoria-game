@@ -143,7 +143,7 @@ public partial class TextEditorRoot : Node
 		if (e.Key == CreatorSettingKeys.CodeEditor.UseEditorFormattingOptions)
 		{
 			if (_format == null) return;
-			_format.RestartAsync(); // we need to restart as stylua receives this option only during initialization
+			_ = _format.RestartAsync(); // we need to restart as stylua receives this option only during initialization
 		}
 	}
 
