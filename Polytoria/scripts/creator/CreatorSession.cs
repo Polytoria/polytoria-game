@@ -70,7 +70,6 @@ public partial class CreatorSession : Node, IDisposable
 	public readonly Dictionary<string, World> WorldPathToRoot = [];
 
 	public LuaCompletionService? LuaCompletion;
-	public LuaFormatService? LuaFormat;
 
 	public async Task Init()
 	{
@@ -99,7 +98,6 @@ public partial class CreatorSession : Node, IDisposable
 		Globals.Singleton.AddChild(_backupTimer);
 		StartBackupTimer();
 		StartLuauLSP();
-		StartStyluaLSP();
 	}
 
 	public override void _Process(double delta)
@@ -124,21 +122,6 @@ public partial class CreatorSession : Node, IDisposable
 		{
 			PT.PrintErr(ex);
 			LuaCompletion = null;
-		}
-	}
-
-	private async void StartStyluaLSP()
-	{
-		try
-		{
-			PT.Print("Starting StyLua LSP...");
-			LuaFormat = new(this);
-			await LuaFormat.InitAsync();
-		}
-		catch (Exception ex)
-		{
-			PT.PrintErr(ex);
-			LuaFormat = null;
 		}
 	}
 
@@ -1016,7 +999,6 @@ return module";
 	public new void Dispose()
 	{
 		LuaCompletion?.Shutdown();
-		LuaFormat?.Shutdown();
 
 		Tabs.Singleton.CloseTabsOfSession(this);
 

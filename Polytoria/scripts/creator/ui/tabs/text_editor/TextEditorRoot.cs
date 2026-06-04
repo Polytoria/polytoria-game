@@ -43,7 +43,6 @@ public partial class TextEditorRoot : Node
 	private string _oldText = "";
 	private CodeHighlighter _highlighter = null!;
 	private LuaCompletionService? _completion = null!;
-	private LuaFormatService? _format = null!;
 
 
 	private Godot.Timer _autoCompleteTimer = null!;
@@ -76,8 +75,6 @@ public partial class TextEditorRoot : Node
 
 		_completion = Container.TargetSession.LuaCompletion;
 		_completion?.PublishDiagnostics += OnPublishDiagnostics;
-
-		_format = Container.TargetSession.LuaFormat;
 
 		CodeEditor.Text = File.ReadAllText(Container.TargetFilePathAbsolute);
 		CodeEditor.ClearUndoHistory();
@@ -123,11 +120,8 @@ public partial class TextEditorRoot : Node
 		{
 			case FormatMenuId:
 				{
-					if (_format != null)
-					{
-						CodeEditor.Text = await _format.FormatScriptAsync(Container.TargetFilePathAbsolute, CodeEditor.Text);
-						OnCodeEditTextChanged();
-					}
+					CodeEditor.Text = await LuaFormatService.FormatScriptAsync(Container.TargetFilePathAbsolute, CodeEditor.Text);
+					OnCodeEditTextChanged();
 					break;
 				}
 		}
@@ -138,12 +132,6 @@ public partial class TextEditorRoot : Node
 		if (e.Key == CreatorSettingKeys.CodeEditor.IndentationMode || e.Key == CreatorSettingKeys.CodeEditor.IndentationSize)
 		{
 			ApplyIndentSettings();
-		}
-
-		if (e.Key == CreatorSettingKeys.CodeEditor.UseEditorFormattingOptions)
-		{
-			if (_format == null) return;
-			_ = _format.RestartAsync(); // we need to restart as stylua receives this option only during initialization
 		}
 	}
 
@@ -226,9 +214,10 @@ public partial class TextEditorRoot : Node
 		if (@event.IsActionPressed("save"))
 		{
 			CodeEditor.AcceptEvent();
-			Save();
+			await Save();
 			Saved = true;
 			SavedChanged?.Invoke(true);
+
 			CreatorService.Interface.StatusBar?.SetStatus("Text file saved to " + Container.TargetFilePath + " at " + DateTime.Now.ToString("HH:mm:ss"));
 		}
 		else if (@event.IsActionPressed("textedit_find") || @event.IsActionPressed("textedit_replace"))
@@ -278,8 +267,14 @@ public partial class TextEditorRoot : Node
 		CodeEditor.AddStringDelimiter("[[", "]]", false);
 	}
 
-	public void Save()
+	public async Task Save()
 	{
+		bool formatOnSave = CreatorSettingsService.Instance.Get<bool>(CreatorSettingKeys.CodeEditor.FormatOnSave);
+		if (formatOnSave)
+		{
+			CodeEditor.Text = await LuaFormatService.FormatScriptAsync(Container.TargetFilePathAbsolute, CodeEditor.Text);
+		}
+
 		File.WriteAllText(Container.TargetFilePathAbsolute, CodeEditor.Text);
 	}
 

@@ -155,16 +155,16 @@ public static class CreatorSettingsRegistry
 				]
 			});
 
-		defs.Add(CreatorSettingKeys.CodeEditor.UseEditorFormattingOptions,
+		defs.Add(CreatorSettingKeys.CodeEditor.FormatOnSave,
 			new SettingDef<bool>
 			{
-				Key = CreatorSettingKeys.CodeEditor.UseEditorFormattingOptions,
+				Key = CreatorSettingKeys.CodeEditor.FormatOnSave,
 				SectionKey = "code_editor",
-				Label = "Use Editor Formatting Options",
-				Description = "When enabled, the editor will override StyLua's indent_type and indent_width with the editor's active indentation settings. Disable this if you want StyLua to strictly use the indentation rules defined inside your stylua.toml file.",
+				Label = "Format on save",
+				Description = "When enabled, the editor will automatically format scripts on save.",
 				ValueKind = SettingValueKind.Bool,
 				ControlKind = SettingControlKind.Toggle,
-				DefaultValue = false,
+				DefaultValue = true,
 				Conditions = [
 					new SettingCondition<PreferredEditorEnum>() {
 						Target = CreatorSettingKeys.CodeEditor.PreferredEditor,
