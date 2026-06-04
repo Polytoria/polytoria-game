@@ -229,6 +229,11 @@ public partial class TextEditorRoot : Node
 		_highlighter = new();
 		CodeEditor.SyntaxHighlighter = _highlighter;
 
+		_highlighter.FunctionColor = ColorWarn;
+		_highlighter.MemberVariableColor = ColorWhite;
+		_highlighter.NumberColor = ColorSuccess;
+		_highlighter.SymbolColor = ColorWhite;
+
 		if (fileType == FileTypeEnum.Lua)
 		{
 			foreach (string item in LuaCompletionService.LuaKeywords)
@@ -242,10 +247,6 @@ public partial class TextEditorRoot : Node
 			_highlighter.AddColorRegion("[[", "]]", ColorWarn);
 			_highlighter.AddColorRegion("--[[", "]]", ColorGrey);
 			_highlighter.AddColorRegion("--", "", ColorGrey);
-			_highlighter.FunctionColor = ColorWarn;
-			_highlighter.MemberVariableColor = ColorWhite;
-			_highlighter.NumberColor = ColorSuccess;
-			_highlighter.SymbolColor = ColorWhite;
 
 			CodeEditor.AddStringDelimiter("\"", "\"", true);
 			CodeEditor.AddStringDelimiter("'", "'", true);
