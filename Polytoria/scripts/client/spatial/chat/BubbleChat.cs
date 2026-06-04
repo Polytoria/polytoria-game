@@ -13,7 +13,7 @@ public partial class BubbleChat : Node3D
 {
 	public string BubbleItemPath = "res://scenes/client/spatial/chat/bubble_item.tscn";
 	private const int BubbleCountLimit = 5;
-	public const float BubbleHeightMinus = 2f;
+	public const float BubbleHeightPlus = 4f;
 	private readonly List<BubbleItem> _activeBubbles = [];
 
 	[Export] private Control _itemContainer = null!;
@@ -33,16 +33,16 @@ public partial class BubbleChat : Node3D
 
 	private void OnPlayerChatted(string msg)
 	{
-		Aabb? bounds = TargetPlayer.CalculateBounds();
+		Aabb? bounds = TargetPlayer.Character.GetAttachment(CharacterModel.CharacterAttachmentEnum.Head).CalculateBounds();
 
 		if (bounds.HasValue)
 		{
-			int additional = 0;
+			int decrease = 0;
 			if (TargetPlayer.IsLocal)
 			{
-				additional = 1;
+				decrease = 1;
 			}
-			Position = new Vector3(0, bounds.Value.Size.Y - BubbleHeightMinus - additional, 0);
+			Position = new Vector3(0, bounds.Value.Size.Y + BubbleHeightPlus - decrease, 0);
 		}
 
 		BubbleItem item = Globals.CreateInstanceFromScene<BubbleItem>(BubbleItemPath);
