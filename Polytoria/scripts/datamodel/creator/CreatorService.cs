@@ -381,8 +381,9 @@ public sealed partial class CreatorService : Node, IScriptObject
 			{
 				codeCompletion = FileTypeEnum.Lua;
 			}
-	
-			Tabs.Singleton.Insert(new Tabs.TextEditorTab() {
+
+			Tabs.Singleton.Insert(new Tabs.TextEditorTab()
+			{
 				Session = CurrentSession,
 				TargetPath = pathRelative,
 				CodeCompletion = codeCompletion,
