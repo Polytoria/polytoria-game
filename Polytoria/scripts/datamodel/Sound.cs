@@ -133,17 +133,7 @@ public sealed partial class Sound : Dynamic
 		{
 			_loop = value;
 
-			switch (_currentStream)
-			{
-				case AudioStreamMP3 aStream:
-					aStream.Loop = value;
-					break;
-				case AudioStreamOggVorbis aStream:
-					aStream.Loop = value;
-					break;
-					// unused in Polytoria
-					//case AudioStreamWav aStream:
-			}
+			SetStreamLoop(_currentStream, value);
 			OnPropertyChanged();
 		}
 	}
@@ -162,17 +152,7 @@ public sealed partial class Sound : Dynamic
 
 			_loopStart = value;
 
-			switch (_currentStream)
-			{
-				case AudioStreamMP3 aStream:
-					aStream.LoopOffset = value;
-					break;
-				case AudioStreamOggVorbis aStream:
-					aStream.LoopOffset = value;
-					break;
-					// unused in Polytoria
-					//case AudioStreamWav aStream:
-			}
+			SetStreamLoopStart(_currentStream, value);
 			OnPropertyChanged();
 		}
 	}
@@ -500,6 +480,7 @@ public sealed partial class Sound : Dynamic
 
 			clone.Finished += f;
 
+			SetStreamLoop(clone.Stream, false);
 			clone.Play();
 		}
 
@@ -519,6 +500,7 @@ public sealed partial class Sound : Dynamic
 
 			clone3D.Finished += f;
 
+			SetStreamLoop(clone3D.Stream, false);
 			clone3D.Play();
 		}
 	}
@@ -559,6 +541,36 @@ public sealed partial class Sound : Dynamic
 		{
 			_playAfterLoad = false;
 			InternalPlay();
+		}
+	}
+
+	private static void SetStreamLoop(AudioStream? stream, bool val)
+	{
+		switch (stream)
+		{
+			case AudioStreamMP3 aStream:
+				aStream.Loop = val;
+				break;
+			case AudioStreamOggVorbis aStream:
+				aStream.Loop = val;
+				break;
+				// unused in Polytoria
+				//case AudioStreamWav aStream:
+		}
+	}
+
+	private static void SetStreamLoopStart(AudioStream? stream, float val)
+	{
+		switch (stream)
+		{
+			case AudioStreamMP3 aStream:
+				aStream.LoopOffset = val;
+				break;
+			case AudioStreamOggVorbis aStream:
+				aStream.LoopOffset = val;
+				break;
+				// unused in Polytoria
+				//case AudioStreamWav aStream:
 		}
 	}
 }
