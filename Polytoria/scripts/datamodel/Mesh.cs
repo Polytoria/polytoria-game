@@ -321,7 +321,7 @@ public sealed partial class Mesh : Entity
 
 			UpdateColor();
 			UpdateShadows();
-			UpdateTextureFilter()
+			UpdateTextureFilter();
 
 			_meshContainer.AddChild(obj);
 
