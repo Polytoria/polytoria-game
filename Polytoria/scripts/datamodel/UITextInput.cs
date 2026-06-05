@@ -21,6 +21,7 @@ public partial class UITextInput : UIView
 	private Color _textColor;
 	private float _fontSize;
 	private bool _autoSize;
+	private float _maxAutoSize;
 	private TextHorizontalAlignmentEnum _justify;
 	private bool _multiLine;
 	private string _placeholder = "";
@@ -170,18 +171,17 @@ public partial class UITextInput : UIView
 		}
 	}
 
-	/*
 	[Editable, ScriptProperty]
-	public float MaxFontSize
+	public float MaxAutoSize
 	{
-		get => maxFontSize;
+		get => _maxAutoSize;
 		set
 		{
-			maxFontSize = Mathf.Max(value, fontSize);
-			tmp.fontSizeMax = maxFontSize * FONT_SCALE;
-			tmp.fontSizeMin = fontSize * FONT_SCALE;
+			_maxAutoSize = value;
+			UpdateTextSize();
+			OnPropertyChanged();
 		}
-	}*/
+	}
 
 	[Editable, ScriptProperty]
 	public bool AutoSize
@@ -259,7 +259,8 @@ public partial class UITextInput : UIView
 		{
 			string textDisplayed = !string.IsNullOrEmpty(Text) ? Text : _placeholder;
 			float autoSize = TextUtils.BoundsToTextSize(_textEdit.GetThemeFont("font"), textDisplayed, NodeControl.Size, _multiLine) / UILabel.FontScaleConversion;
-			SetTextSize(autoSize);
+			if (_maxAutoSize > 0 && autoSize > _maxAutoSize) SetTextSize(_maxAutoSize);
+			else SetTextSize(autoSize);
 		}
 		else SetTextSize(_fontSize);
 	}
