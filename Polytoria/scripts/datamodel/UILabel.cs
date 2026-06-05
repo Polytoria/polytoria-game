@@ -6,6 +6,7 @@ using Godot;
 using Polytoria.Attributes;
 using Polytoria.Datamodel.Resources;
 using Polytoria.Enums;
+using Polytoria.Utils;
 
 namespace Polytoria.Datamodel;
 
@@ -19,6 +20,7 @@ public partial class UILabel : UIView
 	private Color _textColor;
 	private float _fontSize;
 	private bool _autoSize;
+	private float _maxAutoSize;
 	private bool _useRichText;
 	private TextHorizontalAlignmentEnum _justify;
 	private TextVerticalAlignmentEnum _verticalAlign;
@@ -40,7 +42,7 @@ public partial class UILabel : UIView
 			_text = value;
 			_richLabel.Text = _text;
 			_label.Text = _text;
-			if (_autoSize) UpdateAutosize();
+			UpdateText();
 			OnPropertyChanged();
 		}
 	}
@@ -144,7 +146,7 @@ public partial class UILabel : UIView
 		set
 		{
 			_fontSize = value;
-			if (!_autoSize) SetTextSize(_fontSize);
+			UpdateText();
 			OnPropertyChanged();
 		}
 	}
@@ -156,16 +158,21 @@ public partial class UILabel : UIView
 		set
 		{
 			_autoSize = value;
-			if (_autoSize)
-			{
-				NodeControl.Resized += UpdateAutosize;
-				UpdateAutosize();
-			}
-			else
-			{
-				NodeControl.Resized -= UpdateAutosize;
-				SetTextSize(_fontSize);
-			}
+			if (_autoSize) NodeControl.Resized += UpdateText;
+			else NodeControl.Resized -= UpdateText;
+			UpdateText();
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float MaxAutoSize
+	{
+		get => _maxAutoSize;
+		set
+		{
+			_maxAutoSize = value;
+			UpdateText();
 			OnPropertyChanged();
 		}
 	}
@@ -257,42 +264,20 @@ public partial class UILabel : UIView
 
 			_label.AutowrapMode = _richLabel.AutowrapMode = _textWrapped ? TextServer.AutowrapMode.WordSmart : TextServer.AutowrapMode.Off;
 
-			if (_autoSize) UpdateAutosize();
+			UpdateText();
 			OnPropertyChanged();
 		}
 	}
 
-	private void UpdateAutosize()
+	private void UpdateText()
 	{
-		Font font = _label.GetThemeFont("font");
-		Vector2 bounds = NodeControl.Size;
-		int lo = 1, hi = 512, result = 0;
-
-		while (lo <= hi)
+		if (_autoSize)
 		{
-			int mid = (lo + hi) / 2;
-			int scaled = (int)(mid * FontScaleConversion);
-			Vector2 textBounds;
-			if (_textWrapped)
-			{
-				textBounds = font.GetMultilineStringSize(
-					text: _text,
-					alignment: _label.HorizontalAlignment,
-					width: bounds.X,
-					fontSize: scaled
-				);
-			}
-			else textBounds = font.GetStringSize(_text, _label.HorizontalAlignment, -1, scaled);
-
-			if (textBounds.X <= bounds.X && textBounds.Y <= bounds.Y)
-			{
-				result = mid;
-				lo = mid + 1;
-			}
-			else hi = mid - 1;
+			float autoSize = TextUtils.BoundsToTextSize(_label.GetThemeFont("font"), _text, NodeControl.Size, _textWrapped) / FontScaleConversion;
+			if (_maxAutoSize > 0 && autoSize > _maxAutoSize) SetTextSize(_maxAutoSize);
+			else SetTextSize(autoSize);
 		}
-
-		SetTextSize(result);
+		else SetTextSize(_fontSize);
 	}
 
 	private void SetTextSize(float size)
@@ -314,7 +299,7 @@ public partial class UILabel : UIView
 		_richLabel.AddThemeFontOverride("bold_italics_font", (Font)resource);
 		_richLabel.AddThemeFontOverride("italics_font", (Font)resource);
 		_richLabel.AddThemeFontOverride("mono_font", (Font)resource);
-		if (_autoSize) UpdateAutosize();
+		UpdateText();
 	}
 
 	public override void Init()
@@ -336,6 +321,8 @@ public partial class UILabel : UIView
 		Text = "Text";
 		TextColor = new(0, 0, 0);
 		FontSize = 16;
+		AutoSize = false;
+		MaxAutoSize = 0;
 		HorizontalAlignment = TextHorizontalAlignmentEnum.Center;
 		VerticalAlignment = TextVerticalAlignmentEnum.Middle;
 		UseRichText = false;
