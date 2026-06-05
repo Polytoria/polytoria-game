@@ -404,7 +404,10 @@ public partial class NPC : Physical
 	public bool IsOnCeiling => CharBody3D.IsOnCeiling();
 
 	[ScriptProperty] public float NavDestinationDistance => _navAgent == null ? Mathf.Inf : _navAgent.DistanceToTarget();
-	[ScriptProperty] public bool NavDestinationReached => _navAgent != null && _navAgent.IsTargetReached();
+
+	[ScriptProperty]
+	public bool NavDestinationReached { get; private set; } = false;
+
 	[ScriptProperty] public bool NavDestinationValid => _navAgent != null && _navAgent.IsTargetReachable();
 
 	public Vector3 CharacterVelocity = Vector3.Zero;
@@ -562,10 +565,8 @@ public partial class NPC : Physical
 		_nametag.Position = NametagOffset + _fixedNametagOffset;
 	}
 
-	public override void Process(double delta)
+	public override void PhysicsProcess(double delta)
 	{
-		base.Process(delta);
-
 		if (Root == null) return;
 		if (Anchored || IsHidden) return;
 		if (!Root.IsLoaded) return;
@@ -601,97 +602,6 @@ public partial class NPC : Physical
 
 		if (Root.Network.LocalPeerID != NetworkAuthority && ExistInNetwork) return;
 
-		bool isOnFloor = CharBody3D.IsOnFloor();
-		bool isOnCeiling = CharBody3D.IsOnCeiling();
-		bool playerNPCOverride = this is Player p && !p.CanMove;
-
-		CharacterModel.CharacterModelStateEnum finalState = CharacterModel.CharacterModelStateEnum.Idle;
-		Vector3? walkTarget = null;
-		float animSpeed = 1;
-
-		if (MoveTarget != null)
-		{
-			walkTarget = MoveTarget.GetGlobalPosition();
-		}
-
-		if (_navAgent != null)
-		{
-			walkTarget = _navAgent.GetNextPathPosition();
-
-			// Adjust Nav agent position in-case of unstable Y position changes
-			_navAgentContainer?.GlobalPosition = _navAgentContainer.GlobalPosition with { Y = walkTarget.Value.Y };
-		}
-
-		if (walkTarget.HasValue)
-		{
-			Vector3 velo = GetGlobalPosition().DirectionTo(walkTarget.Value with { Y = Position.Y });
-			CharacterVelocity = new(velo.X * WalkSpeed, CharacterVelocity.Y, velo.Z * WalkSpeed);
-			GDNode3D.GlobalRotationDegrees = new Vector3(Rotation.X, Mathf.RadToDeg(Mathf.LerpAngle(Mathf.DegToRad(Rotation.Y), Mathf.Atan2(CharacterVelocity.X, CharacterVelocity.Z), MathUtils.ExpDecay((float)delta, BodyRotateLerp))), Rotation.Z);
-
-			float distanceToTarget = GetGlobalPosition().DistanceTo(walkTarget.Value);
-
-			if (distanceToTarget > 0.5f)
-			{
-				finalState = CharacterModel.CharacterModelStateEnum.Walking;
-				animSpeed = WalkSpeed / 8;
-				TryStepUp();
-			}
-		}
-		else if (this is not Player || playerNPCOverride)
-		{
-			CharacterVelocity = new(0, CharacterVelocity.Y, 0);
-		}
-
-		if (!isOnFloor)
-		{
-			finalState = CharacterModel.CharacterModelStateEnum.Jumping;
-		}
-
-		if (this is not Player || playerNPCOverride)
-		{
-			Character?.SetState(finalState);
-			Character?.SetAnimSpeed(animSpeed);
-		}
-
-		// Apply gravity
-		if (!isOnFloor)
-		{
-			CharacterVelocity.Y += Root.Environment.Gravity.Y * (float)delta;
-		}
-		else if (isOnFloor && CharacterVelocity.Y < 0)
-		{
-			// Cancel downward velocity when on floor
-			CharacterVelocity.Y = 0;
-		}
-
-		// Prevent sticking
-		if (isOnCeiling && CharacterVelocity.Y > 0)
-		{
-			CharacterVelocity.Y = 0;
-		}
-
-		UpdateVelocityInternal(CharacterVelocity);
-		if (this is not Player)
-		{
-			CharBody3D.Velocity = Velocity;
-			CharBody3D.MoveAndSlide();
-		}
-
-		if (isOnFloor != _lastOnFloorState)
-		{
-			_lastOnFloorState = isOnFloor;
-
-			// On floor change
-			if (isOnFloor)
-			{
-				_coyoteUsed = false;
-				Landed.Invoke();
-			}
-		}
-	}
-
-	public override void PhysicsProcess(double delta)
-	{
 		if (CharBody3D != null)
 		{
 			bool isOnFloor = CharBody3D.IsOnFloor();
@@ -704,7 +614,95 @@ public partial class NPC : Physical
 			{
 				_timeSinceGrounded += (float)delta;
 			}
+
+			bool isOnCeiling = CharBody3D.IsOnCeiling();
+			bool playerNPCOverride = this is Player p && !p.CanMove;
+
+			CharacterModel.CharacterModelStateEnum finalState = CharacterModel.CharacterModelStateEnum.Idle;
+			Vector3? walkTarget = null;
+			float animSpeed = 1;
+
+			if (MoveTarget != null)
+			{
+				walkTarget = MoveTarget.GetGlobalPosition();
+			}
+
+			if (_navAgent != null)
+			{
+				walkTarget = _navAgent.GetNextPathPosition();
+
+				// Adjust Nav agent position in-case of unstable Y position changes
+				_navAgentContainer?.GlobalPosition = _navAgentContainer.GlobalPosition with { Y = walkTarget.Value.Y };
+			}
+
+			if (walkTarget.HasValue)
+			{
+				Vector3 velo = GetGlobalPosition().DirectionTo(walkTarget.Value with { Y = Position.Y });
+				CharacterVelocity = new(velo.X * WalkSpeed, CharacterVelocity.Y, velo.Z * WalkSpeed);
+				GDNode3D.GlobalRotationDegrees = new Vector3(Rotation.X, Mathf.RadToDeg(Mathf.LerpAngle(Mathf.DegToRad(Rotation.Y), Mathf.Atan2(CharacterVelocity.X, CharacterVelocity.Z), MathUtils.ExpDecay((float)delta, BodyRotateLerp))), Rotation.Z);
+
+				float distanceToTarget = GetGlobalPosition().DistanceTo(walkTarget.Value);
+
+				if (distanceToTarget > 0.5f)
+				{
+					finalState = CharacterModel.CharacterModelStateEnum.Walking;
+					animSpeed = WalkSpeed / 8;
+					TryStepUp();
+				}
+			}
+			else if (this is not Player || playerNPCOverride)
+			{
+				CharacterVelocity = new(0, CharacterVelocity.Y, 0);
+			}
+
+			if (!isOnFloor)
+			{
+				finalState = CharacterModel.CharacterModelStateEnum.Jumping;
+			}
+
+			if (this is not Player || playerNPCOverride)
+			{
+				Character?.SetState(finalState);
+				Character?.SetAnimSpeed(animSpeed);
+			}
+
+			// Apply gravity
+			if (!isOnFloor)
+			{
+				CharacterVelocity.Y += Root.Environment.Gravity.Y * (float)delta;
+			}
+			else if (isOnFloor && CharacterVelocity.Y < 0)
+			{
+				// Cancel downward velocity when on floor
+				CharacterVelocity.Y = 0;
+			}
+
+			// Prevent sticking
+			if (isOnCeiling && CharacterVelocity.Y > 0)
+			{
+				CharacterVelocity.Y = 0;
+			}
+
+			UpdateVelocityInternal(CharacterVelocity);
+			if (this is not Player)
+			{
+				CharBody3D.Velocity = Velocity;
+				CharBody3D.MoveAndSlide();
+			}
+
+			if (isOnFloor != _lastOnFloorState)
+			{
+				_lastOnFloorState = isOnFloor;
+
+				// On floor change
+				if (isOnFloor)
+				{
+					_coyoteUsed = false;
+					Landed.Invoke();
+				}
+			}
 		}
+
 		base.PhysicsProcess(delta);
 	}
 
@@ -846,7 +844,7 @@ public partial class NPC : Physical
 	[ScriptMethod]
 	public virtual void Jump()
 	{
-		bool canJump = CharBody3D.IsOnFloor() || (!_coyoteUsed && _timeSinceGrounded <= CoyoteTime);
+		bool canJump = (CharBody3D.IsOnFloor() || (!_coyoteUsed && _timeSinceGrounded <= CoyoteTime)) && JumpPower > 0;
 		bool playJumpSound = false;
 		if (canJump)
 		{
@@ -1083,6 +1081,7 @@ public partial class NPC : Physical
 			}
 
 			_navAgent.NavigationFinished += OnNavFinished;
+			NavDestinationReached = false;
 		}
 		_navAgent.TargetPosition = pos;
 	}
@@ -1091,6 +1090,7 @@ public partial class NPC : Physical
 	{
 		_navAgentContainer?.QueueFree();
 		_navAgent = null;
+		NavDestinationReached = true;
 		NavFinished.Invoke();
 	}
 

@@ -137,8 +137,10 @@ public class PTAssetProvider : IAssetProvider
 			bool isMesh = child is MeshInstance3D;
 			bool isSkeleton = child is Skeleton3D;
 			bool isExactNode3D = child.GetType() == typeof(Node3D);
+			bool isAnimationPlayer = child is AnimationPlayer;
+			bool isAnimationTree = child is AnimationTree;
 
-			if (!isMesh && !isSkeleton && !isExactNode3D)
+			if (!isMesh && !isSkeleton && !isExactNode3D && !isAnimationPlayer && !isAnimationTree)
 			{
 				child.Free();
 			}

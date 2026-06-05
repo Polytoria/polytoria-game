@@ -41,6 +41,7 @@ public partial class UILeaderboard : Control
 		_players.PlayerRemoved.Connect(RemovePlayer);
 
 		Stats.StatAdded.Connect(OnStatDefinitionChanged);
+		Stats.StatPropertyChanged.Connect(OnStatDefinitionChanged);
 		Stats.StatRemoved.Connect(OnStatDefinitionChanged);
 
 		Teams.TeamAdded.Connect(TeamChanged);
@@ -60,6 +61,7 @@ public partial class UILeaderboard : Control
 		_players.PlayerRemoved.Disconnect(RemovePlayer);
 
 		Stats.StatAdded.Disconnect(OnStatDefinitionChanged);
+		Stats.StatPropertyChanged.Disconnect(OnStatDefinitionChanged);
 		Stats.StatRemoved.Disconnect(OnStatDefinitionChanged);
 
 		Teams.TeamAdded.Disconnect(TeamChanged);
@@ -89,7 +91,7 @@ public partial class UILeaderboard : Control
 		base._Process(delta);
 	}
 
-	private void OnStatDefinitionChanged(Stat _)
+	private void OnStatDefinitionChanged(Stat stat)
 	{
 		CreateHeader();
 		Refresh();
@@ -377,13 +379,14 @@ public partial class UILeaderboard : Control
 		if (statsBox == null)
 			return;
 
-		while (statsBox.GetChildCount() > 0)
+		foreach (Node node in statsBox.GetChildren())
 		{
-			statsBox.GetChild(0).QueueFree();
+			node.QueueFree();
 		}
 
 		foreach (var stat in Stats.GetStats())
 		{
+			if (stat.IsDeleted) continue;
 			Label headerLabel = new()
 			{
 				Text = stat.GetDisplayName(),

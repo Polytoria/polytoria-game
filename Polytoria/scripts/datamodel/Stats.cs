@@ -13,6 +13,7 @@ public sealed partial class Stats : Instance
 {
 	public PTSignal<Stat> StatAdded { get; private set; } = new();
 	public PTSignal<Stat> StatRemoved { get; private set; } = new();
+	public PTSignal<Stat> StatPropertyChanged { get; private set; } = new();
 
 	public override void Init()
 	{
@@ -41,6 +42,10 @@ public sealed partial class Stats : Instance
 	{
 		if (instance is Stat stat)
 		{
+			stat.PropertyChanged.Connect(() =>
+			{
+				StatPropertyChanged.Invoke(stat);
+			});
 			StatAdded.Invoke(stat);
 		}
 	}

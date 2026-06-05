@@ -52,6 +52,12 @@ public partial struct ShadowLayer : IScriptObject, IData
 		BlendMode = BlendModeEnum.Mix;
 	}
 
+	[ScriptMethod]
+	public static ShadowLayer New()
+	{
+		return new ShadowLayer();
+	}
+
 	object IData.Clone() => new ShadowLayer
 	{
 		Color = Color,

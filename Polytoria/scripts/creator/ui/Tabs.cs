@@ -153,7 +153,8 @@ public sealed partial class Tabs : Control
 				CurrentControl = existing;
 				return;
 			}
-			TextEditorContainer tec = new(txt.TargetPath, fullPath, txt.Session) { OriginTabName = txt.Title ?? "" };
+
+			TextEditorContainer tec = new(txt.TargetPath, fullPath, txt.CodeCompletion, txt.Session) { OriginTabName = txt.Title ?? "" };
 			container = tec;
 			ScriptTypeEnum st = CreatorService.GetScriptTypeFromPath(txt.TargetPath);
 			icon = st switch
@@ -250,6 +251,7 @@ public sealed partial class Tabs : Control
 	{
 		public string TargetPath = null!;
 		public CreatorSession Session = null!;
+		public FileTypeEnum CodeCompletion = FileTypeEnum.Lua;
 	}
 
 	public class GameTab : TabData

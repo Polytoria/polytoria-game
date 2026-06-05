@@ -217,14 +217,16 @@ public sealed partial class Globals : Node
 		base._Input(@event);
 	}
 
-	public static T LoadInstance<T>(World? root = null) where T : Instance
+	public static T LoadInstance<T>(World? root = null, Action<T>? preInit = null) where T : Instance
 	{
-		return (T)LoadNetworkedObject(typeof(T).Name, root)!;
+		Action<NetworkedObject>? wrapped = preInit == null ? null : netObj => preInit((T)netObj);
+		return (T)LoadNetworkedObject(typeof(T).Name, root, wrapped)!;
 	}
 
-	public static T? LoadInstance<T>(string className, World? root = null) where T : Instance
+	public static T? LoadInstance<T>(string className, World? root = null, Action<T>? preInit = null) where T : Instance
 	{
-		return (T?)LoadNetworkedObject(className, root);
+		Action<NetworkedObject>? wrapped = preInit == null ? null : netObj => preInit((T)netObj);
+		return (T?)LoadNetworkedObject(className, root, wrapped);
 	}
 
 	[return: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]
@@ -253,7 +255,7 @@ public sealed partial class Globals : Node
 		return null;
 	}
 
-	public static NetworkedObject? LoadNetworkedObject(string className, World? root = null)
+	public static NetworkedObject? LoadNetworkedObject(string className, World? root = null, Action<NetworkedObject>? preInit = null)
 	{
 		Type? type = GetTypeByName(className);
 		if (type != null)
@@ -262,6 +264,7 @@ public sealed partial class Globals : Node
 			if (obj is NetworkedObject netObj)
 			{
 				netObj.NameOverride = className;
+				preInit?.Invoke(netObj);
 				netObj.Root = root!;
 				return netObj;
 			}

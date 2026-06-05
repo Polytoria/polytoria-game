@@ -361,6 +361,7 @@ public partial class DatamodelBridge : Node3D
 		{
 			if (!IsInstanceValid(part.GDNode3D) || !part.GDNode3D.IsInsideTree()) return false;
 			if (part.IsDeleted) return false;
+			if (part.IsDescendantOfClass<Camera>()) return false;
 			return true;
 		}
 		return false;

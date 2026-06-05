@@ -116,6 +116,7 @@ public partial class CreatorInterface : Control, IScriptObject
 		ApplyUIScale();
 		ApplyFullscreen();
 		ApplyVSync();
+		ApplyFpsCap();
 
 		base._Ready();
 	}
@@ -138,6 +139,12 @@ public partial class CreatorInterface : Control, IScriptObject
 				break;
 			case SharedSettingKeys.Display.VSync:
 				ApplyVSync();
+				break;
+			case SharedSettingKeys.Display.FpsPreset:
+				ApplyFpsCap();
+				break;
+			case SharedSettingKeys.Display.FpsCap:
+				ApplyFpsCap();
 				break;
 		}
 	}
@@ -177,6 +184,11 @@ public partial class CreatorInterface : Control, IScriptObject
 		bool useVSync = CreatorSettingsService.Instance.Get<bool>(SharedSettingKeys.Display.VSync);
 		DisplayServer.WindowSetVsyncMode(useVSync ? DisplayServer.VSyncMode.Enabled : DisplayServer.VSyncMode.Disabled);
 		OS.LowProcessorUsageMode = useVSync;
+	}
+
+	private static void ApplyFpsCap()
+	{
+		Engine.MaxFps = ResolveFpsCap(CreatorSettingsService.Instance);
 	}
 
 	public static void CreateNewWorld()
@@ -393,6 +405,25 @@ public partial class CreatorInterface : Control, IScriptObject
 				PopupAlert(ex.Message, "Error creating folder");
 			}
 		}, "Give Folder name");
+	}
+
+	public void PromptCreateFile(string atPath)
+	{
+		if (CreatorService.CurrentSession == null) return;
+		CreatorSession session = CreatorService.CurrentSession;
+		PromptGiveName("File name...", async name =>
+		{
+			try
+			{
+				string createAt = Path.Join(atPath, name).SanitizePath();
+				await session.CreateFile(createAt);
+			}
+			catch (Exception ex)
+			{
+				PT.PrintErr(ex);
+				PopupAlert(ex.Message, "Error creating file");
+			}
+		}, "Give File name");
 	}
 
 
@@ -694,6 +725,24 @@ public partial class CreatorInterface : Control, IScriptObject
 	internal async Task<bool> OnQuitRequested()
 	{
 		return await PromptConfirmation("Are you sure you want to quit? Any unsaved changes will be lost");
+	}
+
+	private static int ResolveFpsCap(ISettingsContext settings)
+	{
+		var preset = settings.Get<FpsPreset>(SharedSettingKeys.Display.FpsPreset);
+
+		return preset switch
+		{
+			FpsPreset.Custom => settings.Get<int>(SharedSettingKeys.Display.FpsCap),
+			FpsPreset.Limitless => 0,
+			FpsPreset.Reduced => 30,
+			FpsPreset.Standard => 60,
+			FpsPreset.Extended => 90,
+			FpsPreset.Smooth => 120,
+			FpsPreset.Slick => 144,
+			FpsPreset.Fluid => 240,
+			_ => 0
+		};
 	}
 }
 

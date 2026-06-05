@@ -1,0 +1,31 @@
+[gd_scene format=3 uid="uid://bw4vyy3kobp0o"]
+
+[ext_resource type="Script" uid="uid://be1p88hmkjpjg" path="res://scripts/shared/settings/UIViewLicensesRow.cs" id="1_2jj5a"]
+
+[node name="LicensesRow" type="PanelContainer" unique_id=1734216534 node_paths=PackedStringArray("_viewLicensesButton")]
+script = ExtResource("1_2jj5a")
+_viewLicensesButton = NodePath("HBoxContainer/ViewLicensesButton")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1185765028]
+layout_mode = 2
+
+[node name="TextLayout" type="VBoxContainer" parent="HBoxContainer" unique_id=1221442046]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Title" type="Label" parent="HBoxContainer/TextLayout" unique_id=792188936]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Licenses"
+
+[node name="Description" type="Label" parent="HBoxContainer/TextLayout" unique_id=970096772]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+text = "View third party licenses and attributions."
+autowrap_mode = 2
+
+[node name="ViewLicensesButton" type="Button" parent="HBoxContainer" unique_id=2030554355]
+custom_minimum_size = Vector2(220, 40)
+layout_mode = 2
+size_flags_vertical = 4
+text = "View Licenses"
