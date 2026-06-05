@@ -229,13 +229,13 @@ public partial class TextEditorRoot : Node
 		_highlighter = new();
 		CodeEditor.SyntaxHighlighter = _highlighter;
 
-		_highlighter.FunctionColor = ColorWarn;
-		_highlighter.MemberVariableColor = ColorWhite;
-		_highlighter.NumberColor = ColorSuccess;
-		_highlighter.SymbolColor = ColorWhite;
-
 		if (fileType == FileTypeEnum.Lua)
 		{
+			_highlighter.FunctionColor = ColorWarn;
+			_highlighter.MemberVariableColor = ColorWhite;
+			_highlighter.NumberColor = ColorSuccess;
+			_highlighter.SymbolColor = ColorWhite;
+
 			foreach (string item in LuaCompletionService.LuaKeywords)
 			{
 				_highlighter.AddKeywordColor(item, ColorDanger);
@@ -251,6 +251,13 @@ public partial class TextEditorRoot : Node
 			CodeEditor.AddStringDelimiter("\"", "\"", true);
 			CodeEditor.AddStringDelimiter("'", "'", true);
 			CodeEditor.AddStringDelimiter("[[", "]]", false);
+		}
+		else
+		{
+			_highlighter.FunctionColor = ColorWhite;
+			_highlighter.MemberVariableColor = ColorWhite;
+			_highlighter.NumberColor = ColorWhite;
+			_highlighter.SymbolColor = ColorWhite;
 		}
 	}
 
