@@ -33,18 +33,19 @@ public partial class BubbleChat : Node3D
 
 	private void OnPlayerChatted(string msg)
 	{
-		Aabb? bounds = TargetPlayer.Character.GetAttachment(CharacterModel.CharacterAttachmentEnum.Head).CalculateBounds();
-
-		if (bounds.HasValue)
+		if (TargetPlayer.Character != null)
 		{
-			int decrease = 0;
-			if (TargetPlayer.IsLocal)
+			Aabb? bounds = TargetPlayer.Character.GetAttachment(CharacterModel.CharacterAttachmentEnum.Head).CalculateBounds();
+			if (bounds.HasValue)
 			{
-				decrease = 1;
+				int decrease = 0;
+				if (TargetPlayer.IsLocal)
+				{
+					decrease = 1;
+				}
+				Position = new Vector3(0, bounds.Value.Size.Y + BubbleHeightPlus - decrease, 0);
 			}
-			Position = new Vector3(0, bounds.Value.Size.Y + BubbleHeightPlus - decrease, 0);
 		}
-
 		BubbleItem item = Globals.CreateInstanceFromScene<BubbleItem>(BubbleItemPath);
 		item.Content = msg;
 		_itemContainer.AddChild(item);
