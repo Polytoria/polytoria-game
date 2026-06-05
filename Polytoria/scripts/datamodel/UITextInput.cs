@@ -105,6 +105,32 @@ public partial class UITextInput : UIView
 	}
 
 	[Editable, ScriptProperty]
+	public bool AutoSize
+	{
+		get => _autoSize;
+		set
+		{
+			_autoSize = value;
+			if (_autoSize) NodeControl.Resized += UpdateTextSize;
+			else NodeControl.Resized -= UpdateTextSize;
+			UpdateTextSize();
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float MaxAutoSize
+	{
+		get => _maxAutoSize;
+		set
+		{
+			_maxAutoSize = value;
+			UpdateTextSize();
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
 	public bool MultiLine
 	{
 		get => _multiLine;
@@ -167,32 +193,6 @@ public partial class UITextInput : UIView
 			_readOnly = value;
 			_textEdit.Editable = !_readOnly;
 			_lineEdit.Editable = !_readOnly;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
-	public float MaxAutoSize
-	{
-		get => _maxAutoSize;
-		set
-		{
-			_maxAutoSize = value;
-			UpdateTextSize();
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
-	public bool AutoSize
-	{
-		get => _autoSize;
-		set
-		{
-			_autoSize = value;
-			if (_autoSize) NodeControl.Resized += UpdateTextSize;
-			else NodeControl.Resized -= UpdateTextSize;
-			UpdateTextSize();
 			OnPropertyChanged();
 		}
 	}
