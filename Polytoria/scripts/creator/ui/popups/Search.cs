@@ -4,6 +4,7 @@ using Polytoria.Datamodel;
 using Polytoria.Shared;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 public partial class Search : Panel
@@ -63,8 +64,10 @@ public partial class Search : Panel
 		public bool IsText = false;
 	}
 
-	public override void _Ready() {
-		searchBar.TextChanged += (_) => {
+	public override void _Ready()
+	{
+		searchBar.TextChanged += (_) =>
+		{
 			_searchQuery = searchBar.Text;
 			searchResults = [];
 			UpdateResults();
@@ -104,6 +107,35 @@ public partial class Search : Panel
 		}
 	}
 
+	private string[] _textBasedFiles = ["md", "txt", "ptproject", "json", "xml", "lua", "luau", "cs"];
+	private bool IsTextBasedFile(string path) { // file extension checking as its cheap and fast :3
+		string? ext = Path.GetExtension(path);
+		if (ext == null) {
+			return false;
+		}
+		return _textBasedFiles.Contains(ext);
+	}
+
+	private void NavigateDirectory(string rootPath, string path, int maxSize) {
+		string[] files = Directory.GetFiles(path);
+		foreach (var file in files) {
+			FileInfo info = new FileInfo(file);
+			FileSearchResult result = new();
+			result.Primary = info.Name;
+			result.Location = Path.GetRelativePath(rootPath, path);
+			result.IsText = IsTextBasedFile(path);
+			if (result.IsText && info.Length < maxSize) {
+				var text = File.ReadAllText(path);
+				result.Content = text;
+			}
+			searchCandidates.Add(result);
+		}
+		string[] subdirectories = Directory.GetDirectories(path);
+		foreach (var dir in subdirectories) {
+			NavigateDirectory(rootPath, dir, maxSize);
+		}
+	}
+
 	private List<SearchResult> searchCandidates = [];
 	private void GetSearchCandidates()
 	{
@@ -113,7 +145,12 @@ public partial class Search : Panel
 		{
 			NavigateInstance(world.World, Tabs.Singleton.WorldContainerToTabTitle(world));
 		}
-		// PrintSearchCandidates();
+		var path = FileBrowser.CurrentSession?.ProjectFolderPath;
+		if (path == null)
+		{ // skip loading file assets
+			return;
+		}
+		NavigateDirectory(path, path, 1048576); // 1mb
 	}
 
 	private void PrintSearchCandidates()
@@ -200,7 +237,8 @@ public partial class Search : Panel
 				unrankedResults.Add(cand);
 			}
 		}
-		foreach (var result in unrankedResults) {
+		foreach (var result in unrankedResults)
+		{
 			result.Matches = 0;
 		}
 		foreach (var result in unrankedResults)
@@ -243,7 +281,8 @@ public partial class Search : Panel
 		{
 			child.QueueFree();
 		}
-		foreach (var result in searchResults) {
+		foreach (var result in searchResults)
+		{
 			var resultNode = searchResult.Instantiate();
 			resultNode.GetNode<Label>("HBoxContainer/VBoxContainer/Name").Text = result.Primary + $" ({result.Matches})";
 			resultNode.GetNode<Label>("HBoxContainer/VBoxContainer/Location").Text = result.Location;
