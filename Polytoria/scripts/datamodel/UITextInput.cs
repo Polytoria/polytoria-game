@@ -7,6 +7,7 @@ using Polytoria.Attributes;
 using Polytoria.Datamodel.Resources;
 using Polytoria.Enums;
 using Polytoria.Scripting;
+using Polytoria.Utils;
 using System;
 
 namespace Polytoria.Datamodel;
@@ -19,6 +20,7 @@ public partial class UITextInput : UIView
 
 	private Color _textColor;
 	private float _fontSize;
+	private bool _autoSize;
 	private TextHorizontalAlignmentEnum _justify;
 	private bool _multiLine;
 	private string _placeholder = "";
@@ -47,6 +49,7 @@ public partial class UITextInput : UIView
 		{
 			_lineEdit.Text = value;
 			_textEdit.Text = value;
+			UpdateTextSize();
 			OnPropertyChanged();
 		}
 	}
@@ -95,8 +98,7 @@ public partial class UITextInput : UIView
 		set
 		{
 			_fontSize = value;
-			_textEdit.AddThemeFontSizeOverride("font_size", Convert.ToInt32(_fontSize * UILabel.FontScaleConversion));
-			_lineEdit.AddThemeFontSizeOverride("font_size", Convert.ToInt32(_fontSize * UILabel.FontScaleConversion));
+			UpdateTextSize();
 			OnPropertyChanged();
 		}
 	}
@@ -110,6 +112,7 @@ public partial class UITextInput : UIView
 			_multiLine = value;
 			_textEdit.Visible = _multiLine;
 			_lineEdit.Visible = !_multiLine;
+			UpdateTextSize();
 			OnPropertyChanged();
 		}
 	}
@@ -123,6 +126,7 @@ public partial class UITextInput : UIView
 			_placeholder = value;
 			_textEdit.PlaceholderText = _placeholder;
 			_lineEdit.PlaceholderText = _placeholder;
+			UpdateTextSize();
 			OnPropertyChanged();
 		}
 	}
@@ -177,19 +181,21 @@ public partial class UITextInput : UIView
 			tmp.fontSizeMax = maxFontSize * FONT_SCALE;
 			tmp.fontSizeMin = fontSize * FONT_SCALE;
 		}
-	}
+	}*/
 
 	[Editable, ScriptProperty]
 	public bool AutoSize
 	{
-		get => autoSize;
+		get => _autoSize;
 		set
 		{
-			autoSize = value;
-			tmp.enableAutoSizing = autoSize;
+			_autoSize = value;
+			if (_autoSize) NodeControl.Resized += UpdateTextSize;
+			else NodeControl.Resized -= UpdateTextSize;
+			UpdateTextSize();
+			OnPropertyChanged();
 		}
 	}
-	*/
 
 	[Editable, ScriptProperty]
 	public FontAsset? FontAsset
@@ -244,8 +250,26 @@ public partial class UITextInput : UIView
 	{
 		_textEdit.AddThemeFontOverride("font", (Font)resource);
 		_lineEdit.AddThemeFontOverride("font", (Font)resource);
+		UpdateTextSize();
 	}
 
+	private void UpdateTextSize()
+	{
+		if (_autoSize)
+		{
+			string textDisplayed = !string.IsNullOrEmpty(Text) ? Text : _placeholder;
+			float autoSize = TextUtils.BoundsToTextSize(_textEdit.GetThemeFont("font"), textDisplayed, NodeControl.Size, _multiLine) / UILabel.FontScaleConversion;
+			SetTextSize(autoSize);
+		}
+		else SetTextSize(_fontSize);
+	}
+
+	private void SetTextSize(float size)
+	{
+		int setto = Convert.ToInt32(size * UILabel.FontScaleConversion);
+		_textEdit.AddThemeFontSizeOverride("font_size", setto);
+		_lineEdit.AddThemeFontSizeOverride("font_size", setto);
+	}
 
 	public override void Init()
 	{
@@ -266,6 +290,7 @@ public partial class UITextInput : UIView
 		_lineEdit.AddThemeStyleboxOverride("read_only", empty);
 		_lineEdit.AddThemeStyleboxOverride("focus", empty);
 		_textEdit.MouseDefaultCursorShape = _lineEdit.MouseDefaultCursorShape = Control.CursorShape.Ibeam;
+		_textEdit.AddThemeConstantOverride("line_spacing", 0);
 
 		// Set pass
 		_textEdit.MouseFilter = Control.MouseFilterEnum.Pass;
@@ -289,6 +314,7 @@ public partial class UITextInput : UIView
 		ReadOnlyColor = new(0, 0, 0, 0.2f);
 		MultiLine = false;
 		FontSize = 16;
+		AutoSize = false;
 		ReadOnly = false;
 
 		base.Init();
@@ -338,11 +364,13 @@ public partial class UITextInput : UIView
 	private void OnTextEditTextChanged()
 	{
 		Changed.Invoke(_textEdit.Text);
+		UpdateTextSize();
 	}
 
 	private void OnLineEditTextChanged(string txt)
 	{
 		Changed.Invoke(txt);
+		UpdateTextSize();
 	}
 
 	private void OnLineEditTextSubmitted(string str)
