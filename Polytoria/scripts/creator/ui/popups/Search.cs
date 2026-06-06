@@ -1,22 +1,28 @@
 using Godot;
 using Polytoria.Creator.UI;
 using Polytoria.Datamodel;
+using Polytoria.Datamodel.Creator;
 using Polytoria.Shared;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 public partial class Search : Panel
 {
 	[Export] public LineEdit? searchBar;
 	[Export] public PackedScene? searchResult;
 	[Export] public VBoxContainer? searchResultsContainer;
-	[Export] public LoadingGuy? loadingGuy;
+	[Export] public Control? loadingSpinner;
+
+	[Export] public Label? statusText;
+
+	private int searchResultIndex = 0;
 
 	private string _searchQuery = "";
 	private string _classFilter = ""; // class:<class> e.g. class:InteractionPrompt
-	private string _typeFilter = ""; // type:Object or type:File
+	private string _typeFilter = ""; // type:Instance or type:File
 
 	private SearchType _searchType = SearchType.All;
 	private enum SearchType
@@ -34,7 +40,7 @@ public partial class Search : Panel
 		set
 		{
 			_loading = value;
-			loadingGuy?.Visible = _loading;
+			loadingSpinner?.Visible = _loading;
 		}
 	}
 
@@ -68,10 +74,20 @@ public partial class Search : Panel
 	{
 		searchBar.TextChanged += (_) =>
 		{
+			statusText.Visible = false;
 			_searchQuery = searchBar.Text;
 			searchResults = [];
 			UpdateResults();
 			ProcessSearch();
+			if (searchResultIndex >= searchResults.Count) {
+				searchResultIndex = Math.Max(0, searchResults.Count - 1);
+				SelectResultBasedOnIndex();
+			}
+			if (searchResults.Count == 0 && searchBar.Text.Length > 0)
+			{
+				statusText?.Text = "No Results Found";
+				statusText?.Visible = true;
+			}
 		};
 	}
 
@@ -83,13 +99,40 @@ public partial class Search : Panel
 			_searchQuery = "";
 			if (Visible)
 			{
+				searchResultIndex = -1;
 				OnSearchQueryUpdate();
 				searchBar.GrabFocus();
 				GetSearchCandidates();
 			}
 			GetViewport().SetInputAsHandled();
 		}
+		if (!Visible) {
+			return;
+		}
+		if (@event.IsActionPressed("ui_down")) {
+			searchResultIndex++;
+			if (searchResultIndex >= searchResults.Count) {
+				searchResultIndex = 0;
+			}
+			SelectResultBasedOnIndex();
+		}
+		if (@event.IsActionPressed("ui_up")) {
+			searchResultIndex--;
+			if (searchResultIndex < 0) {
+				searchResultIndex = searchResults.Count - 1;
+			}
+			SelectResultBasedOnIndex();
+		}
 	}
+
+	private void SelectResultBasedOnIndex() {
+		var child = searchResultsContainer.GetChild(searchResultIndex);
+		if (child is PanelContainer pc) {
+			pc.GetNode<Button>("Button").GrabFocus();
+			GetViewport().SetInputAsHandled();
+		}
+	}
+	
 
 	private void NavigateInstance(Instance instance, string prefix)
 	{
@@ -107,33 +150,53 @@ public partial class Search : Panel
 		}
 	}
 
-	private string[] _textBasedFiles = ["md", "txt", "ptproject", "json", "xml", "lua", "luau", "cs"];
-	private bool IsTextBasedFile(string path) { // file extension checking as its cheap and fast :3
+	private string[] _textBasedFiles = ["md", "txt", "ptproj", "json", "xml", "lua", "luau", "cs"];
+	private bool IsTextBasedFile(string path)
+	{ // file extension checking as its cheap and fast :3
 		string? ext = Path.GetExtension(path);
-		if (ext == null) {
+		if (ext == null)
+		{
 			return false;
+		}
+		if (ext.StartsWith("."))
+		{ // sometimes does? idk
+			ext = ext[1..];
 		}
 		return _textBasedFiles.Contains(ext);
 	}
 
-	private void NavigateDirectory(string rootPath, string path, int maxSize) {
-		string[] files = Directory.GetFiles(path);
-		foreach (var file in files) {
-			FileInfo info = new FileInfo(file);
-			FileSearchResult result = new();
-			result.Primary = info.Name;
-			result.Location = Path.GetRelativePath(rootPath, path);
-			result.IsText = IsTextBasedFile(path);
-			if (result.IsText && info.Length < maxSize) {
-				var text = File.ReadAllText(path);
-				result.Content = text;
+	private async Task NavigateDirectory(string rootPath, string path, int maxSize)
+	{
+		Loading = true;
+		await Task.Run(() =>
+		{
+			string[] files = Directory.GetFiles(path);
+			foreach (var file in files)
+			{
+				FileInfo info = new FileInfo(file);
+				FileSearchResult result = new();
+				result.Primary = info.Name;
+				result.Location = Path.Join(Path.GetRelativePath(rootPath, path), result.Primary);
+				result.IsText = IsTextBasedFile(file);
+				if (result.IsText && info.Length < maxSize)
+				{
+					var text = File.ReadAllText(file);
+					result.Content = text;
+				}
+				searchCandidates.Add(result);
 			}
-			searchCandidates.Add(result);
-		}
-		string[] subdirectories = Directory.GetDirectories(path);
-		foreach (var dir in subdirectories) {
-			NavigateDirectory(rootPath, dir, maxSize);
-		}
+			string[] subdirectories = Directory.GetDirectories(path);
+			foreach (var dir in subdirectories)
+			{
+				bool? isHidden = Path.GetFileName(dir)?.StartsWith(".");
+				if (isHidden == true)
+				{
+					continue; // mainly to avoid .git and .poly dirs
+				}
+				NavigateDirectory(rootPath, dir, maxSize);
+			}
+		});
+		Loading = false;
 	}
 
 	private List<SearchResult> searchCandidates = [];
@@ -152,16 +215,6 @@ public partial class Search : Panel
 		}
 		NavigateDirectory(path, path, 1048576); // 1mb
 	}
-
-	private void PrintSearchCandidates()
-	{
-		PT.Print("got candidates");
-		foreach (var cand in searchCandidates)
-		{
-			PT.Print($"{cand.Primary} ({cand.Location})");
-		}
-	}
-
 	private void ProcessSearch()
 	{
 		Loading = true;
@@ -186,6 +239,10 @@ public partial class Search : Panel
 			default:
 				_searchType = SearchType.All;
 				break;
+		}
+		if (_searchType != SearchType.All)
+		{
+			_searchQuery = _searchQuery[1..];
 		}
 		List<string> query = [.. _searchQuery.Split(" ")];
 		string finalQuery = "";
@@ -259,10 +316,9 @@ public partial class Search : Panel
 			}
 			if (
 				(_searchType == SearchType.Content || _searchType == SearchType.All) &&
-				result is FileSearchResult
+				result is FileSearchResult resultFile
 				)
 			{
-				FileSearchResult resultFile = (FileSearchResult)result;
 				if (resultFile.IsText && resultFile.Content != null && resultFile.Content.ToLower().Contains(query))
 				{
 					result.Matches++;
@@ -284,8 +340,17 @@ public partial class Search : Panel
 		foreach (var result in searchResults)
 		{
 			var resultNode = searchResult.Instantiate();
-			resultNode.GetNode<Label>("HBoxContainer/VBoxContainer/Name").Text = result.Primary + $" ({result.Matches})";
-			resultNode.GetNode<Label>("HBoxContainer/VBoxContainer/Location").Text = result.Location;
+			resultNode.GetNode<Button>("Button").Pressed += () => {
+				if (result is FileSearchResult fileResult) {
+					CreatorService.OpenFile(result.Location);
+				} else if (result is InstanceSearchResult instanceResult) {
+					Explorer.CurrentRoot?.CreatorContext.Selections.DeselectAll();
+					Explorer.Select(instanceResult.ResultInstance);
+				}
+				Visible = false;
+			};
+			resultNode.GetNode<Label>("HBoxContainer/Name").Text = result.Primary;
+			resultNode.GetNode<Label>("HBoxContainer/Location").Text = result.Location;
 			searchResultsContainer.AddChild(resultNode);
 		}
 	}
