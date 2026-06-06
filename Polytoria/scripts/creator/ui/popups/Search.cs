@@ -79,7 +79,8 @@ public partial class Search : Panel
 			searchResults = [];
 			UpdateResults();
 			ProcessSearch();
-			if (searchResultIndex >= searchResults.Count) {
+			if (searchResultIndex >= searchResults.Count)
+			{
 				searchResultIndex = Math.Max(0, searchResults.Count - 1);
 				SelectResultBasedOnIndex();
 			}
@@ -106,33 +107,40 @@ public partial class Search : Panel
 			}
 			GetViewport().SetInputAsHandled();
 		}
-		if (!Visible) {
+		if (!Visible)
+		{
 			return;
 		}
-		if (@event.IsActionPressed("ui_down")) {
+		if (@event.IsActionPressed("ui_down"))
+		{
 			searchResultIndex++;
-			if (searchResultIndex >= searchResults.Count) {
+			if (searchResultIndex >= searchResults.Count)
+			{
 				searchResultIndex = 0;
 			}
 			SelectResultBasedOnIndex();
 		}
-		if (@event.IsActionPressed("ui_up")) {
+		if (@event.IsActionPressed("ui_up"))
+		{
 			searchResultIndex--;
-			if (searchResultIndex < 0) {
+			if (searchResultIndex < 0)
+			{
 				searchResultIndex = searchResults.Count - 1;
 			}
 			SelectResultBasedOnIndex();
 		}
 	}
 
-	private void SelectResultBasedOnIndex() {
+	private void SelectResultBasedOnIndex()
+	{
 		var child = searchResultsContainer.GetChild(searchResultIndex);
-		if (child is PanelContainer pc) {
+		if (child is PanelContainer pc)
+		{
 			pc.GetNode<Button>("Button").GrabFocus();
 			GetViewport().SetInputAsHandled();
 		}
 	}
-	
+
 
 	private void NavigateInstance(Instance instance, string prefix)
 	{
@@ -279,19 +287,31 @@ public partial class Search : Panel
 		List<SearchResult> unrankedResults = [];
 		foreach (var cand in searchCandidates)
 		{
+			if (_classFilter == "" && _typeFilter == "")
+			{
+				unrankedResults.Add(cand);
+				continue;
+			}
 			if (_typeFilter != "")
 			{
 				if (
-					(_typeFilter.ToLower() == "file" && cand is FileSearchResult) ||
+					(_typeFilter.ToLower() == "file" && _classFilter == "" && cand is FileSearchResult) ||
 					(_typeFilter.ToLower() == "instance" && cand is InstanceSearchResult)
 					)
 				{
 					unrankedResults.Add(cand);
 				}
 			}
-			else
+
+			if (_classFilter != "")
 			{
-				unrankedResults.Add(cand);
+				if (cand is InstanceSearchResult instanceCand)
+				{
+					if (_classFilter.ToLower() == instanceCand.ResultInstance.ClassName.ToLower())
+					{
+						unrankedResults.Add(cand);
+					}
+				}
 			}
 		}
 		foreach (var result in unrankedResults)
@@ -340,10 +360,14 @@ public partial class Search : Panel
 		foreach (var result in searchResults)
 		{
 			var resultNode = searchResult.Instantiate();
-			resultNode.GetNode<Button>("Button").Pressed += () => {
-				if (result is FileSearchResult fileResult) {
+			resultNode.GetNode<Button>("Button").Pressed += () =>
+			{
+				if (result is FileSearchResult fileResult)
+				{
 					CreatorService.OpenFile(result.Location);
-				} else if (result is InstanceSearchResult instanceResult) {
+				}
+				else if (result is InstanceSearchResult instanceResult)
+				{
 					Explorer.CurrentRoot?.CreatorContext.Selections.DeselectAll();
 					Explorer.Select(instanceResult.ResultInstance);
 				}
