@@ -12,7 +12,7 @@ namespace Polytoria.Datamodel;
 [Instantiable]
 public partial class Seat : Part
 {
-	private bool _canSit;
+	private bool _canPlayerSit;
 	private bool _canNPCSit;
 
 	private NPC? _occupant = null;
@@ -32,12 +32,12 @@ public partial class Seat : Part
 	}
 
 	[Editable, ScriptProperty, DefaultValue(true)]
-	public bool CanSit
+	public bool CanPlayerSit
 	{
-		get => _canSit;
+		get => _canPlayerSit;
 		set
 		{
-			_canSit = value;
+			_canPlayerSit = value;
 			OnPropertyChanged();
 		}
 	}
@@ -83,12 +83,12 @@ public partial class Seat : Part
 		}
 		if (hit is Player plr)
 		{
-			if (!CanSit) { return; }
+			if (!CanPlayerSit) { return; }
 			plr.Sit(this);
 		}
 		else if (hit is NPC npc)
 		{
-			if (!CanNPCSit || !CanSit) { return; }
+			if (!CanNPCSit) { return; }
 			npc.Sit(this);
 		}
 	}
