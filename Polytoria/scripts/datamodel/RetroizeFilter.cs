@@ -8,15 +8,27 @@ using Polytoria.Attributes;
 namespace Polytoria.Datamodel;
 
 [Instantiable]
-public partial class DitherFilter : PixelFilter
+public partial class RetroizeFilter : BaseFilter
 {
 	internal override Shader _filterShader
 	{
-		get => GD.Load<Shader>("res://resources/shaders/filters/dither.gdshader");
+		get => GD.Load<Shader>("res://resources/shaders/filters/retroize.gdshader");
 	}
 
+	private int _pixelSize;
 	private int _bayerResolution;
 	private int _brightnessLevels;
+
+	[Editable, ScriptProperty, DefaultValue(3)]
+	public int PixelSize
+	{
+		get => _pixelSize;
+		set
+		{
+			_pixelSize = value;
+			UpdateFilter();
+		}
+	}
 
 	[Editable, ScriptProperty, DefaultValue(2)]
 	public int BayerResolution
@@ -42,6 +54,7 @@ public partial class DitherFilter : PixelFilter
 
 	protected override void UpdateFilter()
 	{
+		_shaderMaterial.SetShaderParameter("pixel_size", _pixelSize);
 		_shaderMaterial.SetShaderParameter("bayer_resolution", _bayerResolution);
 		_shaderMaterial.SetShaderParameter("brightness_levels", _brightnessLevels);
 		base.UpdateFilter();
