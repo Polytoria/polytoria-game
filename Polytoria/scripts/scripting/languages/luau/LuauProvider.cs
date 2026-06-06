@@ -923,14 +923,30 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			return lua.Error("coroutine.resume requires a thread");
 		}
 
-		async void run()
+		LuaState thread = lua.ToThread(1);
+		int narg = lua.GetTop() - 1;
+		lua.XMove(thread, narg);
+
+		try
 		{
-			await ResumeThread(lua.ToThread(1), lua, lua.GetTop() - 1);
+			ResumeThread(thread, lua, narg, true).Wait();
+			lua.PushBoolean(true);
+
+			int nresults = thread.GetTop();
+			if (nresults > 0)
+			{
+				thread.XMove(lua, nresults);
+			}
+
+			return 1 + nresults;
 		}
+		catch (Exception ex)
+		{
+			lua.PushBoolean(false);
+			lua.PushString(ex.InnerException?.Message ?? ex.Message);
 
-		run();
-
-		return 0;
+			return 2;
+		}
 	}
 
 	public static int LuaCoroutineWrap(IntPtr L)
@@ -945,26 +961,40 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		LuaState newThread = NewThread(lua);
 		lua.PushValue(1);
 		lua.XMove(newThread, 1);
-		int threadRef = lua.Ref();
 
-		LuaWrappedCoroutine c = new() { ThreadRef = threadRef };
-
-		GCHandle handle = GCHandle.Alloc(c);
-		IntPtr handlePtr = GCHandle.ToIntPtr(handle);
-		IntPtr userdataPtr = lua.NewUserDataDTor((UIntPtr)IntPtr.Size, GarbageCollect);
-		Marshal.WriteIntPtr(userdataPtr, handlePtr);
-
-		lua.NewTable();
-
-		lua.PushCFunction(c.WrapCall, "__call");
-		lua.SetField(-2, "__call");
-
-		lua.PushBoolean(false);
-		lua.SetField(-2, "__metatable");
-
-		lua.SetMetaTable(-2);
+		lua.PushCFunction(AuxCoroutineWrap, n: 1);
 
 		return 1;
+	}
+
+	private static int AuxCoroutineWrap(IntPtr L)
+	{
+		LuaState lua = LuaState.FromIntPtr(L);
+
+		string? errorMsg;
+
+		LuaState thread = lua.ToThread(LuaState.UpValIndex(1));
+		int narg = lua.GetTop();
+		lua.XMove(thread, narg);
+
+		try
+		{
+			ResumeThread(thread, lua, narg, true).Wait();
+
+			int nresults = thread.GetTop();
+			if (nresults > 0)
+			{
+				thread.XMove(lua, nresults);
+			}
+
+			return nresults;
+		}
+		catch (Exception ex)
+		{
+			errorMsg = (ex.InnerException ?? ex).Message;
+		}
+
+		return lua.Error(errorMsg);
 	}
 
 #if DEBUG

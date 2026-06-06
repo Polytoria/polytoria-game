@@ -550,55 +550,6 @@ public sealed partial class Player : NPC
 		{
 			return;
 		}
-
-		if (Anchored)
-		{
-			// just in case it's anchored cuz ragdoll
-			if (Character is PolytorianModel pt && pt.Ragdolling == false)
-			{
-				UpdateCamera(delta);
-			}
-			AfkTick(delta);
-			return;
-		}
-
-		Camera? cam = Root.Environment.CurrentCamera;
-
-		// Apply camera modifier if enabled
-		if (UseHeadTurning && cam != null && cam.Mode == Camera.CameraModeEnum.Follow && cam.Target == CamAttach)
-		{
-			Character?.ApplyCameraModifier(cam);
-		}
-
-		if (IsSitting)
-		{
-			// Add stamina while sitting
-			AddStaminaTick(delta);
-			UpdateCamera(delta);
-			return;
-		}
-
-		if (PlayerMovement != null)
-		{
-			var snapshot = PlayerMovement.SampleInput(delta);
-			PlayerMovement.ProcessInput(snapshot);
-		}
-		else
-		{
-			IsMoving = Velocity.Length() > 0.01f;
-		}
-
-		// Stop animation on move
-		if (IsMoving && !AllowAnimationWhileMoving)
-		{
-			Character?.Animator?.StopAnimation();
-		}
-
-		// Update camera right after position set
-		UpdateCamera(delta);
-		AfkTick(delta);
-
-		ApplyPushForce();
 	}
 
 	private void UpdateCamera(double delta)
@@ -709,6 +660,55 @@ public sealed partial class Player : NPC
 		{
 			EndClimb();
 		}
+
+		if (Anchored)
+		{
+			// just in case it's anchored cuz ragdoll
+			if (Character is PolytorianModel pt2 && pt2.Ragdolling == false)
+			{
+				UpdateCamera(delta);
+			}
+			AfkTick(delta);
+			return;
+		}
+
+		Camera? cam = Root.Environment.CurrentCamera;
+
+		// Apply camera modifier if enabled
+		if (UseHeadTurning && cam != null && cam.Mode == Camera.CameraModeEnum.Follow && cam.Target == CamAttach)
+		{
+			Character?.ApplyCameraModifier(cam);
+		}
+
+		if (IsSitting)
+		{
+			// Add stamina while sitting
+			AddStaminaTick(delta);
+			UpdateCamera(delta);
+			return;
+		}
+
+		if (PlayerMovement != null)
+		{
+			var snapshot = PlayerMovement.SampleInput(delta);
+			PlayerMovement.ProcessInput(snapshot);
+		}
+		else
+		{
+			IsMoving = Velocity.Length() > 0.01f;
+		}
+
+		// Stop animation on move
+		if (IsMoving && !AllowAnimationWhileMoving)
+		{
+			Character?.Animator?.StopAnimation();
+		}
+
+		// Update camera right after position set
+		UpdateCamera(delta);
+		AfkTick(delta);
+
+		ApplyPushForce();
 
 		base.PhysicsProcess(delta);
 	}
