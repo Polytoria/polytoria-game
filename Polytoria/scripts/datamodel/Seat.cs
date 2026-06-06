@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+using System.Numerics;
+using System.Runtime.Intrinsics.X86;
 using Polytoria.Attributes;
 using Polytoria.Scripting;
 
@@ -10,7 +12,9 @@ namespace Polytoria.Datamodel;
 [Instantiable]
 public partial class Seat : Part
 {
+	private bool _canSit;
 	private bool _canNPCSit;
+	private float HeightOffset = 1.1f;
 
 	private NPC? _occupant = null;
 
@@ -26,6 +30,17 @@ public partial class Seat : Part
 			return _occupant;
 		}
 		set => _occupant = value;
+	}
+
+	[Editable, ScriptProperty, DefaultValue(true)]
+	public bool CanSit
+	{
+		get => _canSit;
+		set
+		{
+			_canSit = value;
+			OnPropertyChanged();
+		}
 	}
 
 	[Editable, ScriptProperty, DefaultValue(false)]
@@ -69,11 +84,12 @@ public partial class Seat : Part
 		}
 		if (hit is Player plr)
 		{
+			if (!CanSit) { return; }
 			plr.Sit(this);
 		}
 		else if (hit is NPC npc)
 		{
-			if (!CanNPCSit) { return; }
+			if (!CanNPCSit || !CanSit) { return; }
 			npc.Sit(this);
 		}
 	}
