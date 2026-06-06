@@ -4,6 +4,7 @@
 
 using Godot;
 using Polytoria.Attributes;
+using Polytoria.Enums;
 using Polytoria.Scripting;
 using Polytoria.Shared;
 using Polytoria.Utils;
@@ -277,13 +278,21 @@ public sealed partial class Environment : Instance
 	{
 		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
 
+		uint usedCollisionMask = UsesRaycastLayer ? (uint)PhysicsLayerEnum.RaycastCollision : (uint)PhysicsLayerEnum.All;
+
+		if (collisionMask != null)
+		{
+			usedCollisionMask = (uint)collisionMask;
+		}
+
+
 		PhysicsRayQueryParameters3D query = new()
 		{
 			From = origin,
 			To = origin + direction.Normalized() * maxDistance,
 			CollideWithAreas = true,
 			CollideWithBodies = true,
-			CollisionMask = collisionMask
+			CollisionMask = usedCollisionMask
 		};
 
 		if (ignoreList != null)
@@ -295,6 +304,8 @@ public sealed partial class Environment : Instance
 
 		if (result.Count > 0)
 		{
+			//PT.Print("Name of node collided : " + ((Node)result["collider"]).Name);
+
 			Vector3 hitPos = (Vector3)result["position"];
 			Vector3 normal = (Vector3)result["normal"];
 			Node collider = (Node)(GodotObject)result["collider"];
@@ -314,7 +325,7 @@ public sealed partial class Environment : Instance
 	}
 
 	[ScriptMethod]
-	public RayResult[] RaycastAll(Vector3 origin, Vector3 direction, float maxDistance = 1000, Instance[]? ignoreList = null)
+	public RayResult[] RaycastAll(Vector3 origin, Vector3 direction, float maxDistance = 1000, Instance[]? ignoreList = null, uint mask = (uint)PhysicsLayerEnum.RaycastCollision)
 	{
 		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
 		Godot.Collections.Array<Rid> ignoreRids = [];
@@ -333,6 +344,7 @@ public sealed partial class Environment : Instance
 				To = origin + direction.Normalized() * maxDistance,
 				CollideWithAreas = true,
 				CollideWithBodies = true,
+				CollisionMask = mask,
 				Exclude = ignoreRids
 			});
 
@@ -344,6 +356,9 @@ public sealed partial class Environment : Instance
 			Rid colliderRid = (Rid)result["rid"];
 			ignoreRids.Add(colliderRid);
 			Node collider = (Node)(GodotObject)result["collider"];
+
+			PT.Print("All Collider to instance : " + ((CollisionObject3D)collider).CollisionLayer);
+			PT.Print("All Collider to instance : " + ColliderToInstance(collider)?.Name);
 
 			rayResults.Add(new()
 			{

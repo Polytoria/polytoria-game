@@ -6,6 +6,7 @@ using Godot;
 using Godot.Collections;
 using Polytoria.Attributes;
 using Polytoria.Client;
+using Polytoria.Enums;
 using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
@@ -449,6 +450,7 @@ public partial class NPC : Physical
 	public override void InitGDNode()
 	{
 		CharBody3D = (CharacterBody3D)GDNode;
+		PT.Print(CharBody3D.CollisionLayer);
 		base.InitGDNode();
 	}
 
@@ -773,6 +775,7 @@ public partial class NPC : Physical
 		OverrideCanCollide = true;
 		OverrideCanCollideTo = false;
 		Unsit(false);
+		SetCollisionLayerEnum(PhysicsLayerEnum.RaycastCollision, false);
 		UpdateCollision();
 
 		Character?.Animator?.StopAnimation();

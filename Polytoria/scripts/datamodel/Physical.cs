@@ -869,7 +869,7 @@ public partial class Physical : Dynamic
 		// Handle Physical Area
 		if (PhysicalArea != null)
 		{
-			var areaShape = CreateLinkedShape(PhysicalArea);
+			var areaShape = CreateLinkedShape(PhysicalArea); //PHYS AREA MAKES SHAPE
 			AreaCollisionShapes.Add(areaShape);
 		}
 
@@ -1148,7 +1148,7 @@ public partial class Physical : Dynamic
 			Scale = new(1.01f, 1.01f, 1.01f)
 		};
 
-		SetCollisionMask(2, true);
+		SetCollisionMaskEnum(PhysicsLayerEnum.Player, true);
 
 		PhysicalArea.AreaEntered += AreaEntered;
 		PhysicalArea.AreaExited += AreaExited;
@@ -1158,6 +1158,27 @@ public partial class Physical : Dynamic
 
 		_proxyToPhysical[PhysicalArea] = this;
 		GDNode3D.AddChild(PhysicalArea, false, Node.InternalMode.Front);
+
+		//TODO : REMOVE TESTING What it looks like
+		OrmMaterial3D boxMeshMaterial = new() 
+		{
+			Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+			AlbedoColor = new Color(1.0f,0.0f,0.0f,0.5f)
+		};
+
+		BoxMesh playerBoxMesh = new() {
+			Material = boxMeshMaterial
+		};
+
+		
+		MeshInstance3D visualMesh = new() 
+		{
+			Mesh = playerBoxMesh,
+		};
+		
+		PhysicalArea.AddChild(visualMesh, false, Node.InternalMode.Front);
+
+		PhysicalArea.MouseEntered += () => {PT.Print(PhysicalArea.GlobalBasis.Scale);};
 
 		foreach (CollisionShape3D item in CollisionShapes)
 		{
@@ -1171,10 +1192,20 @@ public partial class Physical : Dynamic
 		CollisionLayers = BitmapUtils.Set(CollisionLayers, layer, value);
 	}
 
+	public void SetCollisionLayerEnum(PhysicsLayerEnum layerName, bool value) 
+	{
+		CollisionLayers = BitmapUtils.SetRaw(CollisionMask, (uint)layerName, value);
+	}
+
 	[ScriptMethod]
 	public void SetCollisionMask(int layer, bool value)
 	{
 		CollisionMask = BitmapUtils.Set(CollisionMask, layer, value);
+	}
+
+	public void SetCollisionMaskEnum(PhysicsLayerEnum layerName, bool value)
+	{
+		CollisionMask = BitmapUtils.SetRaw(CollisionMask, (uint)layerName, value);
 	}
 
 	[ScriptMethod]
@@ -1183,10 +1214,20 @@ public partial class Physical : Dynamic
 		return BitmapUtils.Get(CollisionLayers, layer);
 	}
 
+	public bool GetCollisionLayerEnum(PhysicsLayerEnum layerName)
+	{
+		return BitmapUtils.GetRaw(CollisionLayers, (uint)layerName);
+	}
+
 	[ScriptMethod]
 	public bool GetCollisionMask(int layer)
 	{
 		return BitmapUtils.Get(CollisionMask, layer);
+	}
+
+	public bool GetCollisionMaskEnum(PhysicsLayerEnum layerName)
+	{
+		return BitmapUtils.GetRaw(CollisionMask, (uint)layerName);
 	}
 
 	[ScriptMethod]

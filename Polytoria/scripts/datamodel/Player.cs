@@ -483,7 +483,7 @@ public sealed partial class Player : NPC
 	/*public override void InitGDNode()
 	{
 		base.InitGDNode();
-		CollisionLayers = (uint)PhysicsLayerEnum.Player;
+		CollisionLayers = (uint)(PhysicsLayerEnum.Player | PhysicsLayerEnum.RaycastCollision);
 		CollisionMask = (uint)(PhysicsLayerEnum.Default | PhysicsLayerEnum.Player);
 	}*/
 
@@ -579,11 +579,11 @@ public sealed partial class Player : NPC
 	{
 		if (Root.Players.PlayerCollisionEnabled)
 		{
-			SetCollisionMask((int)PhysicsLayerEnum.Player, true);
+			SetCollisionMaskEnum(PhysicsLayerEnum.Player, true);
 		}
 		else
 		{
-			SetCollisionMask((int)PhysicsLayerEnum.Player, false);
+			SetCollisionMaskEnum(PhysicsLayerEnum.Player, false);
 		}
 	}
 
