@@ -14,7 +14,6 @@ public partial class Seat : Part
 {
 	private bool _canSit;
 	private bool _canNPCSit;
-	private float HeightOffset = 1.1f;
 
 	private NPC? _occupant = null;
 
