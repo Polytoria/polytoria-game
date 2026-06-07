@@ -179,6 +179,8 @@ public partial class Physical : Dynamic
 		{
 			return;
 		}
+		PhysicalArea?.CollisionLayer = GetAppliedCollisionLayers();
+		PhysicalArea?.CollisionMask = _collisionMask;
 
 		collisionObject3D.CollisionLayer = GetAppliedCollisionLayers();
 		collisionObject3D.CollisionMask = _collisionMask;
@@ -1145,10 +1147,11 @@ public partial class Physical : Dynamic
 		{
 			Monitorable = true,
 			Monitoring = _canTouch,
-			Scale = new(1.01f, 1.01f, 1.01f)
+			Scale = new(1.01f, 1.01f, 1.01f),
 		};
 
 		SetCollisionMaskEnum(PhysicsLayerEnum.Player, true);
+		SetCollisionMaskEnum(PhysicsLayerEnum.RaycastCollision, true);
 
 		PhysicalArea.AreaEntered += AreaEntered;
 		PhysicalArea.AreaExited += AreaExited;
@@ -1158,27 +1161,6 @@ public partial class Physical : Dynamic
 
 		_proxyToPhysical[PhysicalArea] = this;
 		GDNode3D.AddChild(PhysicalArea, false, Node.InternalMode.Front);
-
-		//TODO : REMOVE TESTING What it looks like
-		OrmMaterial3D boxMeshMaterial = new() 
-		{
-			Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-			AlbedoColor = new Color(1.0f,0.0f,0.0f,0.5f)
-		};
-
-		BoxMesh playerBoxMesh = new() {
-			Material = boxMeshMaterial
-		};
-
-		
-		MeshInstance3D visualMesh = new() 
-		{
-			Mesh = playerBoxMesh,
-		};
-		
-		PhysicalArea.AddChild(visualMesh, false, Node.InternalMode.Front);
-
-		PhysicalArea.MouseEntered += () => {PT.Print(PhysicalArea.GlobalBasis.Scale);};
 
 		foreach (CollisionShape3D item in CollisionShapes)
 		{
@@ -1194,6 +1176,7 @@ public partial class Physical : Dynamic
 
 	public void SetCollisionLayerEnum(PhysicsLayerEnum layerName, bool value) 
 	{
+		PT.Print("[" + Name + "] : " + "Setting Collision Layers to : " + BitmapUtils.SetRaw(CollisionMask, (uint)layerName, value));
 		CollisionLayers = BitmapUtils.SetRaw(CollisionMask, (uint)layerName, value);
 	}
 

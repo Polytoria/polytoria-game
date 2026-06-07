@@ -304,8 +304,6 @@ public sealed partial class Environment : Instance
 
 		if (result.Count > 0)
 		{
-			//PT.Print("Name of node collided : " + ((Node)result["collider"]).Name);
-
 			Vector3 hitPos = (Vector3)result["position"];
 			Vector3 normal = (Vector3)result["normal"];
 			Node collider = (Node)(GodotObject)result["collider"];
@@ -356,9 +354,6 @@ public sealed partial class Environment : Instance
 			Rid colliderRid = (Rid)result["rid"];
 			ignoreRids.Add(colliderRid);
 			Node collider = (Node)(GodotObject)result["collider"];
-
-			PT.Print("All Collider to instance : " + ((CollisionObject3D)collider).CollisionLayer);
-			PT.Print("All Collider to instance : " + ColliderToInstance(collider)?.Name);
 
 			rayResults.Add(new()
 			{
