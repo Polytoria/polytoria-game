@@ -34,6 +34,7 @@ public static class XmlFormat
 		ShapeEnum.Bevel,
 		ShapeEnum.Concave,
 		ShapeEnum.Cone,
+		ShapeEnum.Torus,
 		ShapeEnum.Corner,
 		ShapeEnum.Octant,
 		ShapeEnum.BeveledCorner,

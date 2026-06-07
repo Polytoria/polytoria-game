@@ -296,10 +296,11 @@ public partial class Part : Entity
 		Truss = 8,
 		Frame = 9,
 		Octant = 10,
-		BeveledCorner = 11,
-		ConcaveCorner = 12,
-		TriangleCorner = 13,
-		TriangleConcaveCorner = 14
+		Torus = 11,
+		BeveledCorner = 12,
+		ConcaveCorner = 13,
+		TriangleCorner = 14,
+		TriangleConcaveCorner = 15
 	}
 
 	[Attributes.Obsolete("This should not be used, it's here only for compatibility with legacy scripts.")]
