@@ -9,7 +9,6 @@ using Polytoria.Creator.UI;
 using Polytoria.Creator.Spatial;
 using Polytoria.Datamodel.Interfaces;
 #endif
-using Polytoria.Enums;
 using Polytoria.Utils;
 using Polytoria.Utils.DTOs;
 using System;

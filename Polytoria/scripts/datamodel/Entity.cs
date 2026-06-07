@@ -4,7 +4,6 @@
 
 using Godot;
 using Polytoria.Attributes;
-using Polytoria.Enums;
 
 namespace Polytoria.Datamodel;
 
