@@ -8,15 +8,14 @@ using System;
 namespace Polytoria.Enums;
 
 [ScriptEnum, Flags]
-public enum PhysicsLayerEnum : uint
+public enum PhysicsLayerEnum
 {
-    None = 0u,
-    Default = 1u,
-    Player = 2u,
-    CreatorBounds = 4u,
-    CreatorBoundsCanCollide = 8u,
-    RaycastCollision = 16u,
+    None = 0,
+    Default = 1,
+    Player = 2,
+    CreatorBounds = 4,
+    CreatorBoundsCanCollide = 8,
+    RaycastCollision = 16,
 
-
-    All = uint.MaxValue
+    All = -1 //Sense it's in 2's compliment being converted to a uint equivelent to every bit being 1
 }

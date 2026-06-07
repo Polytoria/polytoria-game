@@ -871,7 +871,7 @@ public partial class Physical : Dynamic
 		// Handle Physical Area
 		if (PhysicalArea != null)
 		{
-			var areaShape = CreateLinkedShape(PhysicalArea); //PHYS AREA MAKES SHAPE
+			var areaShape = CreateLinkedShape(PhysicalArea);
 			AreaCollisionShapes.Add(areaShape);
 		}
 
@@ -1176,7 +1176,6 @@ public partial class Physical : Dynamic
 
 	public void SetCollisionLayerEnum(PhysicsLayerEnum layerName, bool value) 
 	{
-		PT.Print("[" + Name + "] : " + "Setting Collision Layers to : " + BitmapUtils.SetRaw(CollisionMask, (uint)layerName, value));
 		CollisionLayers = BitmapUtils.SetRaw(CollisionMask, (uint)layerName, value);
 	}
 
