@@ -230,11 +230,14 @@ public sealed partial class CreatorService : Node, IScriptObject
 		Interface.StatusBar?.SetEmpty();
 	}
 
-	public static void SaveCurrentFile()
+	public static void SaveCurrentFile(out float savingTime)
 	{
+		savingTime = 0f;
+
 		if (World.Current == null) { CreatorService.Interface.StatusBar?.SetStatus("No current game opened, did not save"); return; }
 		if (CurrentSession == null) { CreatorService.Interface.StatusBar?.SetStatus("No session, did not save"); return; }
 		string placePath = CurrentSession.GlobalizePath(World.Current.WorldFilePath!);
+		var start = Time.GetTicksUsec();
 
 		Interface.LoadOverlay?.SetTitle("Saving world");
 		Interface.LoadOverlay?.SetStatus("Saving world");
@@ -254,9 +257,15 @@ public sealed partial class CreatorService : Node, IScriptObject
 		Interface.LoadOverlay?.SetStatus("Saving index...");
 		Interface.LoadOverlay?.SetProgress(1);
 
+		savingTime = (Time.GetTicksUsec() - start) / 1000f;
 		CurrentSession.Save();
-		Interface.StatusBar?.SetStatus("Saved to " + placePath + " at " + DateTime.Now.ToString("HH:mm:ss"));
+		Interface.StatusBar?.SetStatus("Saved to " + placePath + " at " + DateTime.Now.ToString("HH:mm:ss") + " in " + savingTime.ToString("0.00") + " milliseconds");
 		Interface.LoadOverlay?.Hide();
+	}
+
+	public static void SaveCurrentFile()
+	{
+		SaveCurrentFile(out _);
 	}
 
 	public static void SaveCurrentFileAs()
@@ -365,16 +374,24 @@ public sealed partial class CreatorService : Node, IScriptObject
 
 		PreferredEditorEnum userPref = CreatorSettingsService.Instance.Get<PreferredEditorEnum>(CreatorSettingKeys.CodeEditor.PreferredEditor);
 
-		if (Globals.ScriptFileExtensions.Contains(path.GetExtension()))
+		if (userPref == PreferredEditorEnum.BuiltIn)
 		{
-			if (userPref == PreferredEditorEnum.BuiltIn)
+			FileTypeEnum codeCompletion = FileTypeEnum.Plaintext;
+			if (Globals.ScriptFileExtensions.Contains(path.GetExtension()))
 			{
-				Tabs.Singleton.Insert(new Tabs.TextEditorTab() { Session = CurrentSession, TargetPath = pathRelative, Title = pathRelative.GetFile() });
-				return;
+				codeCompletion = FileTypeEnum.Lua;
 			}
-		}
 
-		if (userPref == PreferredEditorEnum.VSCode)
+			Tabs.Singleton.Insert(new Tabs.TextEditorTab()
+			{
+				Session = CurrentSession,
+				TargetPath = pathRelative,
+				CodeCompletion = codeCompletion,
+				Title = pathRelative.GetFile()
+			});
+			return;
+		}
+		else if (userPref == PreferredEditorEnum.VSCode)
 		{
 			CurrentSession.CreateVSCodeConfig();
 			// open in vscode
@@ -494,7 +511,12 @@ public sealed partial class CreatorService : Node, IScriptObject
 		CreatorSession session = game.LinkedSession;
 
 		// Check if current session is already open
-		if (SessionToLocalTestID.ContainsKey(session)) return;
+		if (SessionToLocalTestID.ContainsKey(session))
+		{
+			StopLocalTest();
+			CleanupLocalTest();
+			LocalTestStopped.Invoke();
+		}
 
 		// Save current project
 		SaveCurrentFile();
@@ -629,4 +651,10 @@ public enum ScriptTypeEnum
 	Client,
 	Module,
 	Unknown
+}
+
+public enum FileTypeEnum
+{
+	Plaintext,
+	Lua
 }

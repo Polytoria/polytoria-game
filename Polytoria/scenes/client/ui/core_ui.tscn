@@ -27,6 +27,7 @@
 [ext_resource type="Texture2D" uid="uid://x8rbtcckir1a" path="res://assets/textures/client/ui/indicators/silence.svg" id="20_gmv8i"]
 [ext_resource type="PackedScene" uid="uid://bycaka8x6gyon" path="res://scenes/client/ui/core/debug_console_window.tscn" id="20_yrpeo"]
 [ext_resource type="PackedScene" uid="uid://b8dmrhqpwspyn" path="res://scenes/client/ui/purchase/purchase_prompt.tscn" id="28_gmv8i"]
+[ext_resource type="Texture2D" uid="uid://dgrks31ws6ixy" path="res://assets/textures/client/cursor/ctrl-lock/chevron.svg" id="28_tesjd"]
 
 [sub_resource type="Animation" id="Animation_mt8aq"]
 length = 0.001
@@ -271,7 +272,7 @@ corner_radius_top_right = 20
 corner_radius_bottom_right = 20
 corner_radius_bottom_left = 20
 
-[node name="CoreUI" type="CanvasLayer" unique_id=520186302 node_paths=PackedStringArray("GameMenu", "MenuButton", "UserCard", "Chat", "ChatButton", "HealthBar", "Leaderboard", "Inventory", "EmoteWheel", "NotificationCenter", "CapturePreview", "PurchasePrompt", "DevWindow")]
+[node name="CoreUI" type="CanvasLayer" unique_id=520186302 node_paths=PackedStringArray("GameMenu", "MenuButton", "UserCard", "Chat", "ChatButton", "HealthBar", "Leaderboard", "Inventory", "EmoteWheel", "NotificationCenter", "CapturePreview", "PurchasePrompt", "CtrlLockCursor", "DevWindow")]
 layer = 100
 script = ExtResource("1_aji3h")
 GameMenu = NodePath("Control/GameMenu")
@@ -286,7 +287,9 @@ EmoteWheel = NodePath("Control/EmoteWheel")
 NotificationCenter = NodePath("Control/Notification")
 CapturePreview = NodePath("Control/Capture")
 PurchasePrompt = NodePath("Control/PurchasePrompt")
+CtrlLockCursor = NodePath("Control/CtrlLockCursor")
 DevWindow = NodePath("Control/DebugConsole")
+CtrlLockCursorsFilepath = "res://assets/textures/client/cursor/ctrl-lock"
 metadata/_edit_horizontal_guides_ = [16.0, 64.0]
 metadata/_edit_vertical_guides_ = [1136.0]
 
@@ -532,5 +535,25 @@ visibility_mode = 1
 
 [node name="PurchasePrompt" parent="Control" unique_id=1791377018 instance=ExtResource("28_gmv8i")]
 layout_mode = 1
+
+[node name="CtrlLockCursor" type="TextureRect" parent="Control" unique_id=1661787608]
+z_index = 9
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -18.0
+offset_top = -18.0
+offset_right = 18.0
+offset_bottom = 18.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(16, 16)
+mouse_filter = 2
+texture = ExtResource("28_tesjd")
+expand_mode = 1
+stretch_mode = 5
 
 [editable path="Control/Playerlist"]

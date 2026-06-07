@@ -12,8 +12,7 @@ public partial class PlayOptionsMenu : Control
 	[Export] private Button _playBtn = null!;
 	[Export] private Button _playAtCamBtn = null!;
 	[Export] private Button _stopBtn = null!;
-	[Export] private MenuButton _playerCountMenu = null!;
-	private PopupMenu _plrCountPopup = null!;
+	[Export] private OptionButton _playerCountOption = null!;
 
 	public override void _Ready()
 	{
@@ -21,33 +20,19 @@ public partial class PlayOptionsMenu : Control
 		_playAtCamBtn.Pressed += OnPlayAtCamPressed;
 		_stopBtn.Pressed += OnStopButtonPressed;
 		_stopBtn.Disabled = true;
-		_plrCountPopup = _playerCountMenu.GetPopup();
-		_plrCountPopup.IdPressed += OnPlrCountIdPressed;
 
-		_playBtn.GuiInput += OnPlayBtnGUIInput;
-
-		OnPlrCountIdPressed(1);
+		_playerCountOption.ItemSelected += OnPlayerCountSelected;
+		_playerCountOption.Select(0);
+		_playerCountOption.Text = _playerCountOption.GetItemId(0).ToString();
 
 		CreatorService.Singleton.LocalTestStarted.Connect(OnLocalTestStarted);
 		CreatorService.Singleton.LocalTestStopped.Connect(OnLocalTestStopped);
 	}
 
-	private void OnPlayBtnGUIInput(InputEvent @event)
+	private void OnPlayerCountSelected(long index)
 	{
-		if (@event is InputEventMouseButton btn && btn.ButtonIndex == MouseButton.Right && btn.Pressed)
-		{
-			_playerCountMenu.ShowPopup();
-		}
-	}
-
-	private void OnPlrCountIdPressed(long id)
-	{
-		for (int i = 0; i < _plrCountPopup.ItemCount; i++)
-		{
-			_plrCountPopup.SetItemChecked(i, false);
-		}
-		_plrCountPopup.SetItemChecked(_plrCountPopup.GetItemIndex((int)id), true);
-		CreatorService.Singleton.LocalTestPlayerCount = (int)id;
+		CreatorService.Singleton.LocalTestPlayerCount = (int)_playerCountOption.GetItemId((int)index);
+		_playerCountOption.Text = _playerCountOption.GetItemId((int)index).ToString();
 	}
 
 	private void OnLocalTestStarted()

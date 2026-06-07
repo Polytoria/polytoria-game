@@ -32,6 +32,12 @@ public sealed partial class DisplaySettingsApplier : Node
 			case SharedSettingKeys.Display.VSync:
 				ApplyVsync();
 				break;
+			case SharedSettingKeys.Display.FpsPreset:
+				ApplyFpsCap();
+				break;
+			case SharedSettingKeys.Display.FpsCap:
+				ApplyFpsCap();
+				break;
 			case ClientSettingKeys.Display.UiScale:
 				ApplyUiScale();
 				break;
@@ -42,6 +48,7 @@ public sealed partial class DisplaySettingsApplier : Node
 	{
 		ApplyFullscreen();
 		ApplyVsync();
+		ApplyFpsCap();
 		ApplyUiScale();
 	}
 
@@ -62,6 +69,11 @@ public sealed partial class DisplaySettingsApplier : Node
 		DisplayServer.WindowSetVsyncMode(vsync ? DisplayServer.VSyncMode.Enabled : DisplayServer.VSyncMode.Disabled);
 	}
 
+	private void ApplyFpsCap()
+	{
+		Engine.MaxFps = ResolveFpsCap(ClientSettingsService.Instance);
+	}
+
 	private void ApplyUiScale()
 	{
 		float scale = ClientSettingsService.Instance.Get<float>(ClientSettingKeys.Display.UiScale);
@@ -70,5 +82,23 @@ public sealed partial class DisplaySettingsApplier : Node
 		float osScale = DisplayServer.ScreenGetScale(screenId);
 		finalScale = scale * osScale;
 		GetTree().Root.ContentScaleFactor = finalScale;
+	}
+
+	private static int ResolveFpsCap(ISettingsContext settings)
+	{
+		var preset = settings.Get<FpsPreset>(SharedSettingKeys.Display.FpsPreset);
+
+		return preset switch
+		{
+			FpsPreset.Custom => settings.Get<int>(SharedSettingKeys.Display.FpsCap),
+			FpsPreset.Limitless => 0,
+			FpsPreset.Reduced => 30,
+			FpsPreset.Standard => 60,
+			FpsPreset.Extended => 90,
+			FpsPreset.Smooth => 120,
+			FpsPreset.Slick => 144,
+			FpsPreset.Fluid => 240,
+			_ => 0
+		};
 	}
 }

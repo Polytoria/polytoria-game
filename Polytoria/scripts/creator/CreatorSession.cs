@@ -523,6 +523,21 @@ return module";
 		RescanFolder();
 	}
 
+	public async Task CreateFile(string atPath)
+	{
+		atPath = atPath.SanitizePath();
+		string globalized = GlobalizePath(atPath);
+
+		if (File.Exists(globalized))
+		{
+			throw new Exception("File already exists");
+		}
+
+		await File.WriteAllBytesAsync(globalized, []);
+		FileBrowserTab.AutoSelects.Add(atPath);
+		RescanFolder();
+	}
+
 	public void RemoveFile(string src, bool toRecycleBin = false)
 	{
 		if (src == Globals.ProjectMetaFileName) throw new InvalidOperationException("Cannot delete the project metadata file");

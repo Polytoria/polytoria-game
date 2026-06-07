@@ -116,7 +116,7 @@ public static class ClientSettingsRegistry
 				ValueKind = SettingValueKind.Float,
 				ControlKind = SettingControlKind.Slider,
 				DefaultValue = 0.6f,
-				MinValue = 0.2f,
+				MinValue = 0.1f,
 				MaxValue = 1.2f,
 				Step = 0.1f
 			});

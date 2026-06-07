@@ -4,22 +4,42 @@
 
 using Godot;
 
-namespace Polytoria.Client.UI;
+namespace Polytoria.Shared.Settings;
 
-public partial class UIViewLicensesButton : Button
+public partial class UIViewLicensesRow : PanelContainer
 {
 	private const string WindowScenePath = "res://scenes/shared/licenses/licenses_window.tscn";
+
 	private Window? _licenseWindow;
 
-	public override void _Pressed()
+	[Export] private Button _viewLicensesButton = null!;
+
+	public override void _Ready()
+	{
+		_viewLicensesButton.Pressed += OnViewLicensesPressed;
+		base._Ready();
+	}
+
+	public override void _ExitTree()
+	{
+		if (_licenseWindow != null)
+		{
+			_licenseWindow.QueueFree();
+			_licenseWindow = null;
+		}
+		base._ExitTree();
+	}
+
+	private void OnViewLicensesPressed()
 	{
 		if (_licenseWindow == null)
 		{
 			_licenseWindow = GD.Load<PackedScene>(WindowScenePath).Instantiate<Window>();
+			_licenseWindow.Visible = false;
+			_licenseWindow.ForceNative = true;
 			_licenseWindow.CloseRequested += () => { _licenseWindow.QueueFree(); _licenseWindow = null; };
-			AddChild(_licenseWindow);
+			GetTree().Root.AddChild(_licenseWindow);
 		}
 		_licenseWindow.PopupCentered();
-		base._Pressed();
 	}
 }

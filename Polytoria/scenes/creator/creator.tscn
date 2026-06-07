@@ -100,13 +100,13 @@ corner_radius_bottom_left = 3
 corner_detail = 5
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1xu8h"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
 
-[sub_resource type="Theme" id="Theme_v5oku"]
-Button/styles/hover = SubResource("StyleBoxFlat_87ukk")
-Button/styles/normal = SubResource("StyleBoxEmpty_1xu8h")
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c7ht3"]
-bg_color = Color(0.04, 0.04, 0.04, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qmplr"]
+bg_color = Color(0.129412, 0.588235, 0.952941, 1)
 corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
@@ -118,6 +118,37 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
+
+[sub_resource type="Theme" id="Theme_v5oku"]
+Button/colors/font_color = Color(0.8, 0.8, 0.8, 1)
+Button/colors/font_focus_color = Color(0.8, 0.8, 0.8, 1)
+Button/colors/font_hover_color = Color(0.8, 0.8, 0.8, 1)
+Button/colors/font_hover_pressed_color = Color(0.8, 0.8, 0.8, 1)
+Button/colors/font_pressed_color = Color(0.8, 0.8, 0.8, 1)
+Button/font_sizes/font_size = 12
+Button/styles/hover = SubResource("StyleBoxFlat_87ukk")
+Button/styles/normal = SubResource("StyleBoxEmpty_1xu8h")
+OptionButton/colors/font_color = Color(0.8, 0.8, 0.8, 1)
+OptionButton/colors/font_focus_color = Color(0.8, 0.8, 0.8, 1)
+OptionButton/colors/font_hover_color = Color(1, 1, 1, 1)
+OptionButton/colors/font_hover_pressed_color = Color(1, 1, 1, 1)
+OptionButton/colors/font_pressed_color = Color(1, 1, 1, 1)
+OptionButton/font_sizes/font_size = 12
+OptionButton/styles/hover = SubResource("StyleBoxFlat_87ukk")
+OptionButton/styles/normal = SubResource("StyleBoxEmpty_1xu8h")
+OptionButton/styles/pressed = SubResource("StyleBoxFlat_87ukk")
+PopupMenu/colors/font_color = Color(0.8, 0.8, 0.8, 1)
+PopupMenu/colors/font_hover_color = Color(1, 1, 1, 1)
+PopupMenu/font_sizes/font_size = 12
+PopupMenu/styles/hover = SubResource("StyleBoxFlat_qmplr")
+PopupMenu/styles/panel = SubResource("StyleBoxFlat_1juwm")
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c7ht3"]
+bg_color = Color(0.04, 0.04, 0.04, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ohlc5"]
 content_margin_left = 8.0
@@ -459,7 +490,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 alignment = 2
 
-[node name="PlayOptions" type="PanelContainer" parent="GUI/Menu/Layout/Margin/Layout" unique_id=1850775813 node_paths=PackedStringArray("_playBtn", "_playAtCamBtn", "_stopBtn", "_playerCountMenu")]
+[node name="PlayOptions" type="PanelContainer" parent="GUI/Menu/Layout/Margin/Layout" unique_id=1850775813 node_paths=PackedStringArray("_playBtn", "_playAtCamBtn", "_stopBtn", "_playerCountOption")]
 layout_mode = 2
 theme = SubResource("Theme_v5oku")
 theme_override_styles/panel = SubResource("StyleBoxFlat_c7ht3")
@@ -467,7 +498,7 @@ script = ExtResource("5_c7ht3")
 _playBtn = NodePath("Layout/Play")
 _playAtCamBtn = NodePath("Layout/PlayAtCam")
 _stopBtn = NodePath("Layout/Stop")
-_playerCountMenu = NodePath("Layout/Play/MenuButton")
+_playerCountOption = NodePath("Layout/PlayerCount")
 
 [node name="Layout" type="HBoxContainer" parent="GUI/Menu/Layout/Margin/Layout/PlayOptions" unique_id=438009992]
 layout_mode = 2
@@ -494,23 +525,18 @@ texture = ExtResource("5_imygl")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="MenuButton" type="MenuButton" parent="GUI/Menu/Layout/Margin/Layout/PlayOptions/Layout/Play" unique_id=1993994925]
-layout_mode = 0
-offset_right = 64.0
-offset_bottom = 32.0
-mouse_filter = 2
+[node name="PlayerCount" type="OptionButton" parent="GUI/Menu/Layout/Margin/Layout/PlayOptions/Layout" unique_id=1993994925]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+alignment = 1
 item_count = 4
 popup/item_0/text = "1 Player"
-popup/item_0/checkable = 2
 popup/item_0/id = 1
 popup/item_1/text = "2 Players"
-popup/item_1/checkable = 2
 popup/item_1/id = 2
 popup/item_2/text = "3 Players"
-popup/item_2/checkable = 2
 popup/item_2/id = 3
 popup/item_3/text = "4 Players"
-popup/item_3/checkable = 2
 popup/item_3/id = 4
 
 [node name="PlayAtCam" type="Button" parent="GUI/Menu/Layout/Margin/Layout/PlayOptions/Layout" unique_id=816052539]
@@ -1121,7 +1147,6 @@ tabs_position = 1
 deselect_enabled = true
 
 [node name="Console" type="MarginContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs" unique_id=259802220 node_paths=PackedStringArray("_richLabel", "_searchEdit", "_clearBtn", "_filterBtn")]
-
 custom_minimum_size = Vector2(0, 220)
 layout_mode = 2
 theme_override_constants/margin_left = 8
@@ -1179,7 +1204,6 @@ icon = ExtResource("22_i1txp")
 expand_icon = true
 
 [node name="ConsoleFilters" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console" unique_id=1370024561 instance=ExtResource("40_console_filters")]
-size = Vector2i(270, 150)
 visible = false
 
 [node name="Right" type="PanelContainer" parent="GUI/Splitter" unique_id=528512110]

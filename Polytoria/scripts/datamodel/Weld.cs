@@ -63,7 +63,7 @@ public partial class Weld : Instance
 		}
 	}
 
-	[SyncVar, ScriptProperty]
+	[SyncVar]
 	public Transform3D C0
 	{
 		get => _c0;
@@ -76,7 +76,7 @@ public partial class Weld : Instance
 		}
 	}
 
-	[SyncVar, ScriptProperty]
+	[SyncVar]
 	public Transform3D C1
 	{
 		get => _c1;

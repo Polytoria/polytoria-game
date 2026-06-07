@@ -1,0 +1,60 @@
+[gd_scene format=3 uid="uid://dyx6ud2blb8oe"]
+
+[ext_resource type="Script" uid="uid://dswy0ulcmdrff" path="res://scripts/creator/properties/NumberSeriesProperty.cs" id="1_5bkue"]
+[ext_resource type="Texture2D" uid="uid://cym4kvy4h2vh5" path="res://assets/textures/ui-icons/plus.svg" id="2_tv7ny"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_it30t"]
+
+[sub_resource type="CurveTexture" id="CurveTexture_5bkue"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_tmmp5"]
+
+[node name="NumberSeries" type="PanelContainer" unique_id=263212813 node_paths=PackedStringArray("_previewRect", "_addButton", "_points")]
+custom_minimum_size = Vector2(200, 24)
+offset_right = 147.0
+offset_bottom = 119.0
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxEmpty_it30t")
+script = ExtResource("1_5bkue")
+_previewRect = NodePath("Foldable/Layout/TextureRect")
+_addButton = NodePath("Foldable/Layout/PointsInfo/Add")
+_points = NodePath("Foldable/Layout/Points")
+
+[node name="Foldable" type="FoldableContainer" parent="." unique_id=364384733]
+layout_mode = 2
+size_flags_vertical = 0
+title = "NumberSeries"
+title_text_overrun_behavior = 1
+
+[node name="Layout" type="VBoxContainer" parent="Foldable" unique_id=393173104]
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="TextureRect" type="TextureRect" parent="Foldable/Layout" unique_id=507113816]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+texture = SubResource("CurveTexture_5bkue")
+expand_mode = 1
+
+[node name="PointsInfo" type="HBoxContainer" parent="Foldable/Layout" unique_id=30430467]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Foldable/Layout/PointsInfo" unique_id=1518031354]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Points"
+
+[node name="Add" type="Button" parent="Foldable/Layout/PointsInfo" unique_id=2015815793]
+custom_minimum_size = Vector2(24, 0)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_tmmp5")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_tmmp5")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_tmmp5")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_tmmp5")
+icon = ExtResource("2_tv7ny")
+flat = true
+icon_alignment = 1
+expand_icon = true
+
+[node name="Points" type="VBoxContainer" parent="Foldable/Layout" unique_id=218380154]
+layout_mode = 2

@@ -5,6 +5,7 @@
 using Godot;
 using Polytoria.Creator.Managers;
 using Polytoria.Shared;
+using System.Threading.Tasks;
 
 namespace Polytoria.Creator.UI.Splashes.Components;
 
@@ -16,13 +17,13 @@ public partial class RecentPlaceList : Control
 
 	public override void _Ready()
 	{
-		LoadList();
+		_ = LoadList();
 	}
 
 	public void Reload()
 	{
 		Clear();
-		LoadList();
+		_ = LoadList();
 	}
 
 	public void Clear()
@@ -33,7 +34,7 @@ public partial class RecentPlaceList : Control
 		}
 	}
 
-	public async void LoadList()
+	public async Task LoadList()
 	{
 		_loader.Visible = true;
 		Clear();

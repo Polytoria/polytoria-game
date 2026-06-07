@@ -54,6 +54,7 @@ public partial class InsertMenuPopup : PopupPanel
 		},
 		[new() { Title = "Scripting", RecommendOn = [typeof(ScriptService), typeof(Folder)] }] = new()
 		{
+			"InteractionPrompt",
 			"NetworkEvent",
 			"BindableEvent",
 		},
