@@ -642,13 +642,13 @@ public sealed partial class Player : NPC
 			{
 				if (!IsClimbing)
 				{
-					if (ClimbDebounce)
+					if (!ClimbDebounce)
 					{
-						return;
+						ClimbingTruss = truss;
+						IsClimbing = true;
+						Character?.PlayClimb();
 					}
-					ClimbingTruss = truss;
-					IsClimbing = true;
-					Character?.PlayClimb();
+					
 				}
 			}
 			else
