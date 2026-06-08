@@ -142,6 +142,7 @@ public partial class InsertMenuPopup : PopupPanel
 		[new() { Title = "Gizmos" }] = new()
 		{
 			"Marker3D",
+			"VoiceBox",
 		},
 	};
 
