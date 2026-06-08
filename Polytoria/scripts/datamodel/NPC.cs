@@ -588,10 +588,11 @@ public partial class NPC : Physical
 			{
 				Velocity = Vector3.Zero;
 				Position = SittingIn.Position + SeatOffset * Up;
-				if(SittingIn.CanRotate)
+				if (SittingIn.CanRotate)
 				{
-					Rotation = new Vector3(SittingIn.Rotation.X , Rotation.Y, SittingIn.Rotation.X);
-				}else
+					Rotation = new Vector3(SittingIn.Rotation.X, Rotation.Y, SittingIn.Rotation.X);
+				}
+				else
 				{
 					Rotation = SittingIn.Rotation;
 				}
