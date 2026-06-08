@@ -46,6 +46,8 @@ public sealed partial class Player : NPC
 	private bool _useStamina = true;
 	private float _staminaRegen = 1.2f;
 	private float _staminaBurn = 1.2f;
+
+	private float _pushForce = 5.0f;
 	private bool _useHeadTurning = false;
 	private int _userID;
 	private bool _useBubbleChat = true;
@@ -153,6 +155,17 @@ public sealed partial class Player : NPC
 		set
 		{
 			_maxStamina = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float PushForce
+	{
+		get => _pushForce;
+		set
+		{
+			_pushForce = value;
 			OnPropertyChanged();
 		}
 	}
@@ -608,7 +621,7 @@ public sealed partial class Player : NPC
 			if (GetNetObjFromProxy((Node)collision.GetCollider()) is Physical body)
 			{
 				// Push the rigidbody
-				body.ApplyForceFromPlayer(-collision.GetNormal());
+				body.ApplyForceFromPlayer(-collision.GetNormal() * _pushForce);
 			}
 		}
 	}
@@ -642,13 +655,12 @@ public sealed partial class Player : NPC
 			{
 				if (!IsClimbing)
 				{
-					if (ClimbDebounce)
+					if (!ClimbDebounce)
 					{
-						return;
+						ClimbingTruss = truss;
+						IsClimbing = true;
+						Character?.PlayClimb();
 					}
-					ClimbingTruss = truss;
-					IsClimbing = true;
-					Character?.PlayClimb();
 				}
 			}
 			else
@@ -657,7 +669,7 @@ public sealed partial class Player : NPC
 			}
 		}
 		else
-		{
+	{
 			EndClimb();
 		}
 
@@ -1022,6 +1034,7 @@ public sealed partial class Player : NPC
 		UseBubbleChat = Root.PlayerDefaults.UseBubbleChat;
 		AutoLoadAppearance = Root.PlayerDefaults.AutoLoadAppearance;
 		MovementMode = Root.PlayerDefaults.MovementMode;
+		PushForce = Root.PlayerDefaults.PushForce;
 
 		if (Character is PolytorianModel ptmodel)
 		{

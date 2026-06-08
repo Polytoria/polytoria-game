@@ -18,6 +18,7 @@ public sealed partial class PlayerDefaults : HiddenBase
 	private float _respawnTime;
 	private bool _canMove;
 	private float _sprintSpeed;
+	private float _pushForce;
 	private float _stamina;
 	private float _maxStamina;
 	private bool _useStamina;
@@ -69,6 +70,17 @@ public sealed partial class PlayerDefaults : HiddenBase
 		set
 		{
 			_jumpPower = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float PushForce
+	{
+		get => _pushForce;
+		set
+		{
+			_pushForce = value;
 			OnPropertyChanged();
 		}
 	}
@@ -264,5 +276,6 @@ public sealed partial class PlayerDefaults : HiddenBase
 		AutoLoadAppearance = true;
 		LoadAppearanceTools = true;
 		MovementMode = Player.PlayerMovementModeEnum.Default;
+		PushForce = 5f;
 	}
 }
