@@ -27,7 +27,7 @@ public sealed partial class Properties : TabContainer
 	private static readonly Type _editable = typeof(EditableAttribute);
 	private static readonly Type _obsolete = typeof(Attributes.ObsoleteAttribute);
 	private PackedScene _propertiesPacked = GD.Load<PackedScene>("res://scenes/creator/docks/properties/properties_view.tscn");
-	private static readonly Texture2D _arrowDown = GD.Load<Texture2D>("res://assets/textures/ui-icons/arrow-down.svg");
+	private static readonly Texture2D _arrowDown = GD.Load<Texture2D>("res://assets/textures/ui-icons/chevron-down.svg");
 	private static readonly Texture2D _arrowRight = GD.Load<Texture2D>("res://assets/textures/ui-icons/chevron-right.svg");
 	private static readonly Dictionary<string, bool> _foldedSections = [];
 	private static readonly Dictionary<World, List<PropertyConnection>> _gameToConnections = [];
