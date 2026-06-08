@@ -92,7 +92,9 @@ public partial class Dynamic : Instance
 		{
 			Vector3 sanitizedValue = value.SanitizeNaN();
 			GDNode3D.GlobalRotationDegrees = sanitizedValue;
-			_oldGlobalTransformApplied.Basis = Basis.FromEuler(sanitizedValue);
+			ForceUpdateTransform();
+			_oldGlobalTransformApplied = GetGlobalTransform();
+
 			if (AutoUpdateNetTransform)
 			{
 				UpdateNetTransformReliable();
