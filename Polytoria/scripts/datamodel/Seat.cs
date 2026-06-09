@@ -12,7 +12,7 @@ public partial class Seat : Part
 {
 	private bool _canPlayerSit;
 	private bool _canNPCSit;
-	private bool _canRotate;
+	private bool _sitDirectionLocked;
 
 	private NPC? _occupant = null;
 
@@ -51,13 +51,13 @@ public partial class Seat : Part
 			OnPropertyChanged();
 		}
 	}
-	[Editable, ScriptProperty, DefaultValue(false)]
-	public bool CanRotate
+	[Editable, ScriptProperty, DefaultValue(true)]
+	public bool SitDirectionLocked
 	{
-		get => _canRotate;
+		get => _sitDirectionLocked;
 		set
 		{
-			_canRotate = value;
+			_sitDirectionLocked = value;
 			OnPropertyChanged();
 		}
 	}
