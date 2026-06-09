@@ -9,7 +9,6 @@ using Polytoria.Datamodel.Creator;
 #endif
 using Polytoria.Scripting;
 using Polytoria.Shared;
-using Polytoria.Utils;
 
 namespace Polytoria.Datamodel;
 
@@ -514,6 +513,54 @@ public partial class UIField : Instance
 		}
 
 		Vector2 size = _sizeOffset + (parentSize * _sizeRelative);
+
+
+		UIAspectRatioRestraint? aspectRatioConstraint = (UIAspectRatioRestraint?)FindChildByClass("UIAspectRatioRestraint");
+		if (aspectRatioConstraint != null)
+		{
+			Vector2? maxSize;
+			switch (aspectRatioConstraint.ScaleType)
+			{
+				case AspectRatioScaleType.FitContainer:
+					maxSize = parentSize;
+					break;
+				case AspectRatioScaleType.FitMaxSize:
+					maxSize = size;
+					break;
+				default:
+					maxSize = null;
+					break;
+			}
+
+			if (aspectRatioConstraint.DominantAxis == DominantAxisEnum.Width)
+			{
+				size.Y = size.X / aspectRatioConstraint.AspectRatio;
+			}
+			else
+			{
+				size.X = size.Y / aspectRatioConstraint.AspectRatio;
+			}
+
+			if (maxSize != null && (maxSize.Value.X < size.X || maxSize.Value.Y < size.Y))
+			{
+				Vector2 ratio;
+				float subordinateAxis = 1 / aspectRatioConstraint.AspectRatio;
+				float dominantAxis = 1;
+				float higherAxis = Mathf.Max(dominantAxis, subordinateAxis);
+				dominantAxis /= higherAxis;
+				subordinateAxis /= higherAxis;
+
+				if (aspectRatioConstraint.DominantAxis == DominantAxisEnum.Width)
+				{
+					ratio = new Vector2(dominantAxis, subordinateAxis);
+				}
+				else
+				{
+					ratio = new Vector2(subordinateAxis, dominantAxis);
+				}
+				size = ratio * Mathf.Min(maxSize.Value.X, maxSize.Value.Y);
+			}
+		}
 
 		NodeControl.CustomMinimumSize = size;
 

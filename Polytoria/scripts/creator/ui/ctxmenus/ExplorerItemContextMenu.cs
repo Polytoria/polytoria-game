@@ -55,7 +55,7 @@ public partial class ExplorerItemContextMenu : ContextMenu
 		AddIconItem("select-all", "Select Children", 25);
 		AddSeparator();
 		AddIconItem("group", "Group", 31);
-		if (Target is IGroup)
+		if (Target is IGroup or RigidBody)
 		{
 			AddIconItem("ungroup", "Ungroup", 32);
 		}

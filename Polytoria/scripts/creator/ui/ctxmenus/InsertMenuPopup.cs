@@ -117,6 +117,7 @@ public partial class InsertMenuPopup : PopupPanel
 			"UICorner",
 			"UIStroke",
 			"UIShadow",
+			"UIAspectRatioRestraint",
 		},
 		[new() { Title = "Teams", RecommendOn = [typeof(Teams)] }] = new()
 		{

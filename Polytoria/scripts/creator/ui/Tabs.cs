@@ -327,4 +327,16 @@ public sealed partial class Tabs : Control
 		}
 		else if (!_leftButton.Visible) _leftButton.Visible = true;
 	}
+
+	public List<WorldContainer> GetAllOpenWorlds()
+	{
+		return _orderedControls
+			.OfType<WorldContainer>()
+			.ToList();
+	}
+
+	public string WorldContainerToTabTitle(WorldContainer wc)
+	{
+		return _tabBar.GetTabTitle(wc.GetIndex());
+	}
 }
