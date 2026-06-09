@@ -41,7 +41,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	private const string WeakUserdataCache = "__UDCACHE";
 	private static readonly int ThreadDataKey = 0x1247;
 
-	private static readonly ConditionalWeakTable<object, string> _objectIDS= new();
+	private static readonly ConditionalWeakTable<object, string> _objectIDS = new();
 	private static long _nextObjectID;
 
 	private static int _allocsSinceLastGC = 0;
