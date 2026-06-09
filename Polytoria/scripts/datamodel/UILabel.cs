@@ -295,7 +295,7 @@ public partial class UILabel : UIView
 	{
 		_label.AddThemeFontOverride("font", (Font)resource);
 		_richLabel.AddThemeFontOverride("normal_font", (Font)resource);
-		_richLabel.AddThemeFontOverride("bold_fonte", (Font)resource);
+		_richLabel.AddThemeFontOverride("bold_font", (Font)resource);
 		_richLabel.AddThemeFontOverride("bold_italics_font", (Font)resource);
 		_richLabel.AddThemeFontOverride("italics_font", (Font)resource);
 		_richLabel.AddThemeFontOverride("mono_font", (Font)resource);
