@@ -27,6 +27,9 @@ public sealed partial class Properties : TabContainer
 	private static readonly Type _editable = typeof(EditableAttribute);
 	private static readonly Type _obsolete = typeof(Attributes.ObsoleteAttribute);
 	private PackedScene _propertiesPacked = GD.Load<PackedScene>("res://scenes/creator/docks/properties/properties_view.tscn");
+	private static readonly Texture2D _arrowDown = GD.Load<Texture2D>("res://assets/textures/ui-icons/chevron-down.svg");
+	private static readonly Texture2D _arrowRight = GD.Load<Texture2D>("res://assets/textures/ui-icons/chevron-right.svg");
+	private static readonly Dictionary<string, bool> _foldedSections = [];
 	private static readonly Dictionary<World, List<PropertyConnection>> _gameToConnections = [];
 
 	private class PropertyConnection
@@ -205,11 +208,27 @@ public sealed partial class Properties : TabContainer
 			title.AddThemeColorOverride("font_color", new(0xccccccff));
 			title.AddThemeFontSizeOverride("font_size", 14);
 
-			HBoxContainer hbox = new();
+			TextureRect arrow = new()
+			{
+				Texture = _arrowDown,
+				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+				StretchMode = TextureRect.StretchModeEnum.KeepAspect,
+				CustomMinimumSize = new(14, 14),
+				Modulate = new(0x888888ff)
+			};
+
+			HBoxContainer hbox = new()
+			{
+				MouseFilter = MouseFilterEnum.Pass
+			};
 			hbox.AddChild(icon);
 			hbox.AddChild(title);
+			hbox.AddChild(arrow);
 
-			PanelContainer header = new();
+			PanelContainer header = new()
+			{
+				MouseDefaultCursorShape = CursorShape.PointingHand
+			};
 			header.AddThemeStyleboxOverride("panel", new StyleBoxFlat()
 			{
 				BgColor = new(0x161616ff),
@@ -226,12 +245,29 @@ public sealed partial class Properties : TabContainer
 			header.AddChild(hbox);
 			list.AddChild(header);
 			list.AddChild(layout);
+
+			header.GuiInput += (@event) =>
+			{
+				if (@event is InputEventMouseButton button && button.ButtonIndex == MouseButton.Left && button.Pressed)
+				{
+					ToggleSection(type.Name, layout, arrow);
+				}
+			};
 		}
 
 		if (multiple == null && type.BaseType?.Namespace == "Polytoria.Datamodel")
 		{
 			WalkProperties(list, instance, type.BaseType);
 		}
+	}
+
+	private static void ToggleSection(string typeName, VBoxContainer layout, TextureRect arrow)
+	{
+		bool folded = _foldedSections.GetValueOrDefault(typeName);
+		folded = !folded;
+		_foldedSections[typeName] = folded;
+		layout.Visible = !folded;
+		arrow.Texture = folded ? _arrowRight : _arrowDown;
 	}
 
 	public static Control CreatePropertyControl(List<NetworkedObject> networkedObjects, PropertyInfo property)

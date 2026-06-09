@@ -5,6 +5,7 @@
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Datamodel.Resources;
+using Polytoria.Enums;
 using Polytoria.Scripting;
 using Polytoria.Utils;
 using System;
@@ -24,6 +25,7 @@ public sealed partial class Mesh : Entity
 	private Node3D? _meshNode = null; // offset only
 
 	private CollisionTypeEnum _collisionType = CollisionTypeEnum.Bounds;
+	private TextureFilterEnum _textureFilter;
 	private bool _playAnimationOnStart;
 	private bool _usePartColor;
 	private Color _color = new(1, 1, 1);
@@ -112,6 +114,18 @@ public sealed partial class Mesh : Entity
 		{
 			_collisionType = value;
 			RecalculateCollision();
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue(TextureFilterEnum.Linear)]
+	public TextureFilterEnum TextureFilter
+	{
+		get => _textureFilter;
+		set
+		{
+			_textureFilter = value;
+			UpdateTextureFilter();
 			OnPropertyChanged();
 		}
 	}
@@ -231,6 +245,31 @@ public sealed partial class Mesh : Entity
 		}
 	}
 
+	private static BaseMaterial3D.TextureFilterEnum ToGodotTextureFilter(TextureFilterEnum filter)
+	{
+		return filter switch
+		{
+			TextureFilterEnum.Nearest => BaseMaterial3D.TextureFilterEnum.NearestWithMipmaps,
+			TextureFilterEnum.NearestNoMipmaps => BaseMaterial3D.TextureFilterEnum.Nearest,
+			TextureFilterEnum.Linear => BaseMaterial3D.TextureFilterEnum.LinearWithMipmaps,
+			TextureFilterEnum.LinearNoMipmaps => BaseMaterial3D.TextureFilterEnum.Linear,
+			_ => BaseMaterial3D.TextureFilterEnum.Linear,
+		};
+	}
+
+	private void UpdateTextureFilter()
+	{
+		BaseMaterial3D.TextureFilterEnum godotFilter = ToGodotTextureFilter(_textureFilter);
+
+		foreach (Material material in _materials)
+		{
+			if (material is BaseMaterial3D baseMaterial)
+			{
+				baseMaterial.TextureFilter = godotFilter;
+			}
+		}
+	}
+
 	private void OnResourceLoaded(Resource resource)
 	{
 		if (_prevResource == resource) return;
@@ -282,6 +321,7 @@ public sealed partial class Mesh : Entity
 
 			UpdateColor();
 			UpdateShadows();
+			UpdateTextureFilter();
 
 			_meshContainer.AddChild(obj);
 

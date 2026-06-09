@@ -567,6 +567,8 @@ public partial class NPC : Physical
 
 	public override void PhysicsProcess(double delta)
 	{
+		base.PhysicsProcess(delta);
+
 		if (Root == null) return;
 		if (Anchored || IsHidden) return;
 		if (!Root.IsLoaded) return;
@@ -702,8 +704,6 @@ public partial class NPC : Physical
 				}
 			}
 		}
-
-		base.PhysicsProcess(delta);
 	}
 
 	[ScriptMethod]

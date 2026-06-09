@@ -469,7 +469,7 @@ public partial class CreatorInterface : Control, IScriptObject
 			}
 		}
 
-		if (!await PromptConfirmation("Are you sure you want to delete " + wordToUse + "? You can recover this from the recycle bin")) return;
+		if (!await PromptConfirmation("Are you sure you want to delete " + wordToUse + "? You can recover this from the recycle bin.")) return;
 		try
 		{
 			foreach (string item in files)

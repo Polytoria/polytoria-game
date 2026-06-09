@@ -927,9 +927,10 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		int narg = lua.GetTop() - 1;
 		lua.XMove(thread, narg);
 
-		try
+		LuaStatus status = ResumeThreadDirect(thread, lua, narg, out ThreadData? threadData);
+
+		if (status == LuaStatus.OK || status == LuaStatus.Break)
 		{
-			ResumeThread(thread, lua, narg, true).Wait();
 			lua.PushBoolean(true);
 
 			int nresults = thread.GetTop();
@@ -940,10 +941,32 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 			return 1 + nresults;
 		}
-		catch (Exception ex)
+		else if (status == LuaStatus.Yield)
 		{
+			if (threadData.HasValue)
+			{
+				_ = HandleYieldTaskAsync(thread, lua, threadData.Value.Task);
+				lua.PushBoolean(true);
+				return 1;
+			}
+			else
+			{
+				lua.PushBoolean(true);
+
+				int nresults = thread.GetTop();
+				if (nresults > 0)
+				{
+					thread.XMove(lua, nresults);
+				}
+
+				return 1 + nresults;
+			}
+		}
+		else
+		{
+			string errorMessage = thread.ToString(-1);
 			lua.PushBoolean(false);
-			lua.PushString(ex.InnerException?.Message ?? ex.Message);
+			lua.PushString(errorMessage);
 
 			return 2;
 		}
@@ -971,16 +994,14 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	{
 		LuaState lua = LuaState.FromIntPtr(L);
 
-		string? errorMsg;
-
 		LuaState thread = lua.ToThread(LuaState.UpValIndex(1));
 		int narg = lua.GetTop();
 		lua.XMove(thread, narg);
 
-		try
-		{
-			ResumeThread(thread, lua, narg, true).Wait();
+		LuaStatus status = ResumeThreadDirect(thread, lua, narg, out ThreadData? threadData);
 
+		if (status == LuaStatus.OK || status == LuaStatus.Break)
+		{
 			int nresults = thread.GetTop();
 			if (nresults > 0)
 			{
@@ -989,12 +1010,56 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 			return nresults;
 		}
-		catch (Exception ex)
+		else if (status == LuaStatus.Yield)
 		{
-			errorMsg = (ex.InnerException ?? ex).Message;
+			if (threadData.HasValue)
+			{
+				_ = HandleYieldTaskAsync(thread, lua, threadData.Value.Task);
+				return 0;
+			}
+			else
+			{
+				int nresults = thread.GetTop();
+				if (nresults > 0)
+				{
+					thread.XMove(lua, nresults);
+				}
+
+				return nresults;
+			}
+		}
+		else
+		{
+			return lua.Error(thread.ToString(-1));
+		}
+	}
+
+	private static LuaStatus ResumeThreadDirect(LuaState thread, LuaState from, int narg, out ThreadData? threadData)
+	{
+		LuaStatus status;
+		lock (thread)
+		{
+			status = thread.Resume(from, narg);
 		}
 
-		return lua.Error(errorMsg);
+		if (status == LuaStatus.Yield)
+		{
+			lock (thread)
+			{
+				threadData = GetThreadData(thread);
+			}
+		}
+		else
+		{
+			threadData = null;
+		}
+
+		return status;
+	}
+
+	private static async Task HandleYieldTaskAsync(LuaState thread, LuaState from, Task<int> initialTask)
+	{
+		await ResumeThread(thread, from, await initialTask, false);
 	}
 
 #if DEBUG
