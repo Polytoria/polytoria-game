@@ -669,7 +669,7 @@ public sealed partial class Player : NPC
 			}
 		}
 		else
-	{
+		{
 			EndClimb();
 		}
 
