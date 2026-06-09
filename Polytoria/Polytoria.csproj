@@ -1,4 +1,4 @@
-﻿<Project Sdk="Godot.NET.Sdk/4.6.3">
+<Project Sdk="Godot.NET.Sdk/4.6.2">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<Nullable>enable</Nullable>
@@ -125,7 +125,7 @@
 	<PropertyGroup Condition="'$(PT_PRIVATE_API)' == 'TRUE'">
 		<DefineConstants>$(DefineConstants);PT_PRIVATE_API</DefineConstants>
 	</PropertyGroup>
-	
+
 	<!-- Delete PDB files after publish, we don't want leaks happening TヮT -->
 	<Target Name="DeleteFiles" AfterTargets="Publish">
 		<ItemGroup>
