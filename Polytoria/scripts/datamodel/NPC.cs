@@ -590,7 +590,7 @@ public partial class NPC : Physical
 				Position = SittingIn.Position + SeatOffset * Up;
 				if (SittingIn.CanRotate)
 				{
-					Rotation = new Vector3(SittingIn.Rotation.X, Rotation.Y, SittingIn.Rotation.X);
+					Rotation = new Vector3(SittingIn.Rotation.X, Rotation.Y, SittingIn.Rotation.Z);
 				}
 				else
 				{
