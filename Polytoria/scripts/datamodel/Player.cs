@@ -648,7 +648,7 @@ public sealed partial class Player : NPC
 						IsClimbing = true;
 						Character?.PlayClimb();
 					}
-					
+
 				}
 			}
 			else
