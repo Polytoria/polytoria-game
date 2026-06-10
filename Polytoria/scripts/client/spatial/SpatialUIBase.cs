@@ -18,7 +18,7 @@ public partial class SpatialUIBase : Sprite3D
 
 		if (cam != null)
 		{
-			Visible = (cam.Position - GlobalPosition).Length() < SpatialVisibleRange;
+			Visible = (cam.Position - GlobalPosition).Length() < World.Current.CoreUI.ChatBubbleRenderDistance;
 		}
 	}
 }
