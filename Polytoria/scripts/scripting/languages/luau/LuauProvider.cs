@@ -32,7 +32,7 @@ namespace Polytoria.Scripting.Luau;
 public sealed partial class LuauProvider : IScriptLanguageProvider
 {
 	private const DynamicallyAccessedMemberTypes DynamicallyAccessedTypes = DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicMethods;
-	private const int GCStepThreshold = int.MaxValue;
+	private const int GCStepThreshold = 100;
 
 	private static readonly Dictionary<Type, MethodInfo?> _gdToProxy = [];
 	private static readonly Dictionary<IntPtr, PTCallbackData> _ptrToCallback = [];
@@ -1580,13 +1580,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 		GCHandle handle = GCHandle.Alloc(value);
 		IntPtr handlePtr = GCHandle.ToIntPtr(handle);
-
-#if GODOT_ANDROID
-    	IntPtr userdataPtr = NativeBindings.lua_newuserdata(lua.State, (UIntPtr)IntPtr.Size);
-#else
 		IntPtr userdataPtr = lua.NewUserDataDTor((UIntPtr)IntPtr.Size, GarbageCollect);
-#endif
-
 		Marshal.WriteIntPtr(userdataPtr, handlePtr);
 
 		_ptrToObject.Add(handlePtr, value);
@@ -1663,13 +1657,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	{
 		GCHandle handle = GCHandle.Alloc(objKey);
 		IntPtr handlePtr = GCHandle.ToIntPtr(handle);
-
-#if GODOT_ANDROID
-    	IntPtr userdataPtr = NativeBindings.lua_newuserdata(lua.State, (UIntPtr)IntPtr.Size);
-#else
 		IntPtr userdataPtr = lua.NewUserDataDTor((UIntPtr)IntPtr.Size, GarbageCollect);
-#endif
-
 		Marshal.WriteIntPtr(userdataPtr, handlePtr);
 		_ptrToObject.Add(handlePtr, objKey);
 	}
