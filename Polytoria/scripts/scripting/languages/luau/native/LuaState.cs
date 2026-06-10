@@ -420,6 +420,14 @@ public partial class LuaState : IDisposable
 
 	public void PushCFunction(LuaFunction func, string? name = null, int n = 0)
 	{
+#if GODOT_ANDROID
+    GCHandle handle = GCHandle.Alloc(func);
+    IntPtr handlePtr = GCHandle.ToIntPtr(handle);
+    _pinnedFunctions[handlePtr] = func;
+
+    lock (_lock)
+        NativeBindings.lua_pushcclosurek(_state, func, name, n, null);
+#else
 		IntPtr userdataPtr = NewUserDataDTor((UIntPtr)IntPtr.Size, FunctionGarbageCollect);
 
 		GCHandle handle = GCHandle.Alloc(func);
@@ -430,6 +438,7 @@ public partial class LuaState : IDisposable
 
 		lock (_lock)
 			NativeBindings.lua_pushcclosurek(_state, func, name, n + 1, null);
+#endif
 	}
 
 	private static void FunctionGarbageCollect(IntPtr ud)

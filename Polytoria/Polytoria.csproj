@@ -9,10 +9,13 @@
 		<Configurations>Debug;ExportDebug;ExportRelease</Configurations>
 	</PropertyGroup>
 
-	<!-- NativeAOT Configuration for Android-->
-	<PropertyGroup Condition=" '$(GodotTargetPlatform)' == 'android' ">
+	<!-- NativeAOT Configuration for Android and iOS -->
+	<PropertyGroup Condition=" '$(GodotTargetPlatform)' == 'android' Or '$(GodotTargetPlatform)' == 'ios' ">
 		<DisableUnsupportedError>true</DisableUnsupportedError>
 		<PublishAotUsingRuntimePack>true</PublishAotUsingRuntimePack>
+		<IsCreator>false</IsCreator>
+		<IsMobile>true</IsMobile>
+		<DefineConstants>$(DefineConstants);CLIENT</DefineConstants>
 	</PropertyGroup>
 
 	<ItemGroup>
