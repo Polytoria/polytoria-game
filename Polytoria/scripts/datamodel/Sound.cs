@@ -21,24 +21,29 @@ public sealed partial class Sound : Dynamic
 {
 	public const float SoundDistanceMultipler = 1.25f;
 	private const float MinPitch = 0.001f;
-	private const float MaxVolume = 2;
+	private const float MaxVolume = 2f;
+	private static int _counter = 0;
 	private AudioStreamPlayer? _audioPlayer;
 	private AudioStreamPlayer3D? _audioPlayer3D;
 	private bool _playAfterLoad = false;
 	private bool _serverIsPlaying = false;
 	private Resource? _prevAsset;
+	private string _audioBusName = "Master";
+	private AudioEffectPanner? _efPanner;
+	private int _id = System.Threading.Interlocked.Increment(ref _counter);
 
 	private AudioAsset? _asset;
 	private int _soundID = 0;
 	private bool _autoplay = false;
-	private float _volume = 1;
-	private float _time = 0;
+	private float _volume = 1f;
+	private float _time = 0f;
 	private bool _loop = false;
-	private float _loopStart = 0;
+	private float _loopStart = 0f;
 	private bool _playInWorld = false;
 	private bool _paused = false;
 	private float _pitch = 1f;
 	private float _maxDistance = 60f;
+	private float _pan = 0f;
 
 	private AudioStream? _currentStream;
 
@@ -110,6 +115,18 @@ public sealed partial class Sound : Dynamic
 		{
 			_pitch = Mathf.Max(value, MinPitch);
 			UpdatePitch();
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float Pan
+	{
+		get => _pan;
+		set
+		{
+			_pan = Mathf.Clamp(value, -1f, 1f);
+			UpdatePan();
 			OnPropertyChanged();
 		}
 	}
@@ -289,12 +306,21 @@ public sealed partial class Sound : Dynamic
 
 		if (!PlayInWorld)
 		{
+			_audioBusName = $"Sound_{_id}";
+			AudioServer.AddBus();
+			int idx = AudioServer.BusCount - 1;
+			AudioServer.SetBusName(idx, _audioBusName);
+			AudioServer.SetBusSend(idx, "Master");
+			_efPanner = new AudioEffectPanner();
+			AudioServer.AddBusEffect(idx, _efPanner);
+
 			_audioPlayer = new AudioStreamPlayer
 			{
 				Stream = _currentStream
 			};
 			GDNode.AddChild(_audioPlayer, @internal: Node.InternalMode.Back);
 			_audioPlayer.Finished += OnPlayerFinished;
+			_audioPlayer.Bus = _audioBusName;
 		}
 		else
 		{
@@ -319,6 +345,15 @@ public sealed partial class Sound : Dynamic
 
 		_audioPlayer = null;
 		_audioPlayer3D = null;
+
+		if (_audioBusName != "Master")
+		{
+			int idx = AudioServer.GetBusIndex(_audioBusName);
+
+			if (idx >= 0) AudioServer.RemoveBus(idx);
+
+			_efPanner = null;
+		}
 	}
 
 	private void UpdateMaxDistance()
@@ -336,6 +371,12 @@ public sealed partial class Sound : Dynamic
 	{
 		_audioPlayer?.PitchScale = _pitch;
 		_audioPlayer3D?.PitchScale = _pitch;
+	}
+
+	private void UpdatePan()
+	{
+		// Pan does not apply to in-world sounds
+		_efPanner?.Pan = _pan;
 	}
 
 	private void CreatePTAudioAsset()
@@ -377,13 +418,13 @@ public sealed partial class Sound : Dynamic
 	}
 
 	[ScriptMethod]
-	public void PlayOneShot(float volume = 1f)
+	public void PlayOneShot(float volume = 1f/*, float pan = 0f*/)
 	{
-		InternalPlayOneShot(volume);
+		InternalPlayOneShot(volume/*, pan*/);
 
 		if (HasAuthority)
 		{
-			Rpc(nameof(NetPlayOneshot), volume);
+			Rpc(nameof(NetPlayOneshot), volume/*, pan*/);
 		}
 	}
 
@@ -405,11 +446,12 @@ public sealed partial class Sound : Dynamic
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
-	private void NetPlayOneshot(float volume)
+	private void NetPlayOneshot(float volume/*, float pan*/)
 	{
-		volume = Mathf.Clamp(volume, 0, MaxVolume);
+		Mathf.Clamp(volume, 0f, 1f);
+		/*Mathf.Clamp(pan, -1f, 1f);*/
 
-		InternalPlayOneShot(volume);
+		InternalPlayOneShot(volume/*, pan*/);
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
@@ -451,7 +493,7 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
-	private void InternalPlayOneShot(float volume)
+	private void InternalPlayOneShot(float volume/*, float pan*/)
 	{
 		// can safely mute on the server since this method doesn't change any properties
 		if (Root.Network.IsServer) return;
