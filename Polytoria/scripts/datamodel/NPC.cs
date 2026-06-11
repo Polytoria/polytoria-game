@@ -17,7 +17,7 @@ namespace Polytoria.Datamodel;
 public partial class NPC : Physical
 {
 	private const float CoyoteTime = 0.15f;
-	private const float NavigationDistance = 1f;
+	private const float NavigationDistance = 2f;
 	public const float BodyRotateLerp = 10f;
 	private const float StepHeight = 1.5f;
 	private Tool? _holdingTool;
@@ -1077,7 +1077,7 @@ public partial class NPC : Physical
 				PathDesiredDistance = NavigationDistance,
 				TargetDesiredDistance = 0.5f,
 				PathHeightOffset = -(CalculateBounds().Size.Y / 2),
-				PathMaxDistance = 3f,
+				PathMaxDistance = 3f
 			};
 
 			_navAgentContainer.AddChild(_navAgent);
