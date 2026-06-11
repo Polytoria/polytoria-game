@@ -22,13 +22,13 @@ public sealed partial class Sound : Dynamic
 	public const float SoundDistanceMultipler = 1.25f;
 	private const float MinPitch = 0.001f;
 	private const float MaxVolume = 2;
-	private AudioAsset? _asset;
 	private AudioStreamPlayer? _audioPlayer;
 	private AudioStreamPlayer3D? _audioPlayer3D;
 	private bool _playAfterLoad = false;
 	private bool _serverIsPlaying = false;
 	private Resource? _prevAsset;
 
+	private AudioAsset? _asset;
 	private int _soundID = 0;
 	private bool _autoplay = false;
 	private float _volume = 1;
@@ -307,7 +307,9 @@ public sealed partial class Sound : Dynamic
 			GDNode.AddChild(_audioPlayer3D, @internal: Node.InternalMode.Back);
 			_audioPlayer3D.Finished += OnPlayerFinished;
 		}
-		UpdateAudioPlayer();
+		UpdateMaxDistance();
+		UpdateVolume();
+		UpdatePitch();
 	}
 
 	private void CleanupAudioPlayer()
@@ -317,13 +319,6 @@ public sealed partial class Sound : Dynamic
 
 		_audioPlayer = null;
 		_audioPlayer3D = null;
-	}
-
-	private void UpdateAudioPlayer()
-	{
-		UpdateMaxDistance();
-		UpdateVolume();
-		UpdatePitch();
 	}
 
 	private void UpdateMaxDistance()
@@ -412,10 +407,7 @@ public sealed partial class Sound : Dynamic
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
 	private void NetPlayOneshot(float volume)
 	{
-		if (volume > MaxVolume)
-		{
-			volume = MaxVolume;
-		}
+		volume = Mathf.Clamp(volume, 0, MaxVolume);
 
 		InternalPlayOneShot(volume);
 	}
