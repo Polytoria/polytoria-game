@@ -607,6 +607,10 @@ public partial class NPC : Physical
 			{
 				return;
 			}
+			if (plr.MovementMode == Player.PlayerMovementModeEnum.Scripted)
+			{
+				return;
+			}
 		}
 
 		if (Root.Network.LocalPeerID != NetworkAuthority && ExistInNetwork) return;
