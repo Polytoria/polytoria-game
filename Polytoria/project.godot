@@ -439,10 +439,15 @@ pointing/android/enable_pan_and_scale_gestures=true
 [physics]
 
 2d/physics_engine="Dummy"
-3d/physics_engine="Jolt Physics"
+3d/physics_engine="Rapier3D"
 jolt_physics_3d/simulation/generate_all_kinematic_contacts=true
 jolt_physics_3d/limits/max_bodies=131070
 3d/default_gravity=17.0
+rapier/solver/preset=1
+rapier/solver/num_internal_pgs_iterations=4
+rapier/solver/num_internal_stabilization_iterations=4
+rapier/solver/contact_damping_ratio=20.0
+rapier/solver/contact_natural_frequency=50.0
 
 [rendering]
 
