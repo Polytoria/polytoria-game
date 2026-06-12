@@ -521,10 +521,10 @@ public partial class UIField : Instance
 			Vector2? maxSize;
 			switch (aspectRatioConstraint.ScaleType)
 			{
-				case AspectRatioScaleType.FitContainer:
+				case AspectRatioScaleTypeEnum.FitContainer:
 					maxSize = parentSize;
 					break;
-				case AspectRatioScaleType.FitMaxSize:
+				case AspectRatioScaleTypeEnum.FitMaxSize:
 					maxSize = size;
 					break;
 				default:

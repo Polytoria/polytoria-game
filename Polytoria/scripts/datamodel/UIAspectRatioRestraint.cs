@@ -6,7 +6,7 @@ namespace Polytoria.Datamodel;
 public partial class UIAspectRatioRestraint : Instance
 {
 	private DominantAxisEnum _dominantAxis = default;
-	private AspectRatioScaleType _scaleType = default;
+	private AspectRatioScaleTypeEnum _scaleType = default;
 	private float _aspectRatio = 1;
 	private UIField? oldParent = null;
 
@@ -22,7 +22,7 @@ public partial class UIAspectRatioRestraint : Instance
 		}
 	}
 	[Editable, ScriptProperty]
-	public AspectRatioScaleType ScaleType
+	public AspectRatioScaleTypeEnum ScaleType
 	{
 		get => _scaleType;
 		set
@@ -82,7 +82,7 @@ public enum DominantAxisEnum
 	Height = 1
 }
 [ScriptEnum]
-public enum AspectRatioScaleType
+public enum AspectRatioScaleTypeEnum
 {
 	FitContainer = 0,
 	FitMaxSize = 1,

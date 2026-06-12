@@ -23,6 +23,8 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using Script = Polytoria.Datamodel.Script;
 
 namespace Polytoria.Scripting.Luau;
@@ -38,6 +40,9 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	private static readonly Dictionary<IntPtr, object> _ptrToObject = [];
 	private const string WeakUserdataCache = "__UDCACHE";
 	private static readonly int ThreadDataKey = 0x1247;
+
+	private static readonly ConditionalWeakTable<object, string> _objectIDS = new();
+	private static long _nextObjectID;
 
 	private static int _allocsSinceLastGC = 0;
 
@@ -1604,7 +1609,10 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 	private static string GetRegKeyFromObj(object obj)
 	{
-		return "__userdata_" + obj.GetType().Name + obj.GetHashCode();
+		return _objectIDS.GetValue(
+			obj,
+			_ => "__userdata_" + Interlocked.Increment(ref _nextObjectID)
+		);
 	}
 
 	private void PushCSClassInternal(LuaState lua, IScriptObject? obj, [DynamicallyAccessedMembers(DynamicallyAccessedTypes)] Type? specifyType = null)

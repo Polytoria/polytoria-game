@@ -1,4 +1,4 @@
-﻿<Project Sdk="Godot.NET.Sdk/4.6.2">
+<Project Sdk="Godot.NET.Sdk/4.6.2">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<Nullable>enable</Nullable>
@@ -9,10 +9,13 @@
 		<Configurations>Debug;ExportDebug;ExportRelease</Configurations>
 	</PropertyGroup>
 
-	<!-- NativeAOT Configuration for Android-->
-	<PropertyGroup Condition=" '$(GodotTargetPlatform)' == 'android' ">
+	<!-- NativeAOT Configuration for Android and iOS -->
+	<PropertyGroup Condition=" '$(GodotTargetPlatform)' == 'android' Or '$(GodotTargetPlatform)' == 'ios' ">
 		<DisableUnsupportedError>true</DisableUnsupportedError>
 		<PublishAotUsingRuntimePack>true</PublishAotUsingRuntimePack>
+		<IsCreator>false</IsCreator>
+		<IsMobile>true</IsMobile>
+		<DefineConstants>$(DefineConstants);CLIENT</DefineConstants>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -47,8 +50,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Polytoria.SourceGen\Polytoria.SourceGen.csproj"
-			OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<ProjectReference Include="..\Polytoria.SourceGen\Polytoria.SourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 	<!-- ExportRelease configuration -->
@@ -126,7 +128,7 @@
 	<PropertyGroup Condition="'$(PT_PRIVATE_API)' == 'TRUE'">
 		<DefineConstants>$(DefineConstants);PT_PRIVATE_API</DefineConstants>
 	</PropertyGroup>
-	
+
 	<!-- Delete PDB files after publish, we don't want leaks happening TヮT -->
 	<Target Name="DeleteFiles" AfterTargets="Publish">
 		<ItemGroup>
