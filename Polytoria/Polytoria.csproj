@@ -18,6 +18,28 @@
 		<DefineConstants>$(DefineConstants);CLIENT</DefineConstants>
 	</PropertyGroup>
 
+	<ItemGroup Condition="'$(RuntimeIdentifier)' == 'ios-arm64'">
+		<DirectPInvoke Include="Luau.VM" />
+		<DirectPInvoke Include="Luau.Compiler" />
+
+		<NativeLibrary Include="native/luau/ios/libLuau.VM.a" />
+		<NativeLibrary Include="native/luau/ios/libLuau.Compiler.a" />
+		<NativeLibrary Include="native/luau/ios/libLuau.Ast.a" />
+		<NativeLibrary Include="native/luau/ios/libLuau.Bytecode.a" />
+		<NativeLibrary Include="native/luau/ios/libLuau.Common.a" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(RuntimeIdentifier)' == 'iossimulator-arm64'">
+		<DirectPInvoke Include="Luau.VM" />
+		<DirectPInvoke Include="Luau.Compiler" />
+
+		<NativeLibrary Include="native/luau/iossimulator-arm64/libLuau.VM.a" />
+		<NativeLibrary Include="native/luau/iossimulator-arm64/libLuau.Compiler.a" />
+		<NativeLibrary Include="native/luau/iossimulator-arm64/libLuau.Ast.a" />
+		<NativeLibrary Include="native/luau/iossimulator-arm64/libLuau.Bytecode.a" />
+		<NativeLibrary Include="native/luau/iossimulator-arm64/libLuau.Common.a" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<!-- Trimmer ignores, this is currently required for Godot NativeAOT projects -->
 		<TrimmerRootAssembly Include="$(TargetName)" />
