@@ -30,8 +30,6 @@ public partial class JoystickArea : InputFallbackBase
 	{
 		if (!_dragging) { return; }
 
-
-		// Vector2 normalized = (_startPos - _endPos).Normalized();
 		Vector2 axis = GetThumbstickAxis();
 		
 		_line.ClearPoints();
