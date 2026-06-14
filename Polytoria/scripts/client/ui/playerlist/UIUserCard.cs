@@ -22,6 +22,7 @@ public partial class UIUserCard : Control
 	[Export] private Control _statsContainer = null!;
 	[Export] private TextureRect _pfpIconRect = null!;
 	[Export] private TextureRect _badgeRect = null!;
+	[Export] private UIPlayerList _playerList = null!;
 	private readonly PTImageAsset _plrIconAsset = new();
 	private static World Root => CoreUIRoot.Singleton.Root;
 	internal static Player TargetPlayer => Root.Players.LocalPlayer;
@@ -117,5 +118,25 @@ public partial class UIUserCard : Control
 	{
 		await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
 		SetAnchorsAndOffsetsPreset(LayoutPreset.TopRight);
+	}
+
+	public override void _GuiInput(InputEvent @event)
+	{
+		if (Root.Input.IsTouchscreen)
+		{
+			if (@event is InputEventScreenTouch touch && !touch.Pressed)
+			{
+				_playerList?.ToggleLeaderboard();
+				AcceptEvent();
+			}
+
+			return;
+		}
+
+		if (@event is InputEventMouseButton mouse && mouse.ButtonIndex == MouseButton.Left && !mouse.Pressed)
+		{
+			_playerList?.ToggleLeaderboard();
+			AcceptEvent();
+		}
 	}
 }
