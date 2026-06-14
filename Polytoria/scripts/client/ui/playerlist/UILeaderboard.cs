@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Polytoria.Client.UI.Playerlist;
 
-public partial class UILeaderboard : Control
+public partial class UILeaderboard : TouchScrollContainer
 {
 	private const int LeaderboardMaxHeight = 300;
 	private const string ItemPath = "res://scenes/client/ui/playerlist/leaderboard_user_item.tscn";

@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://d0o0v65f7o0u3" path="res://scripts/client/ui/chat/UIChat.cs" id="1_15ajx"]
 [ext_resource type="Texture2D" uid="uid://diu2hnj2i6klb" path="res://assets/textures/ui-icons/chat-send.svg" id="2_b3ukd"]
+[ext_resource type="Script" uid="uid://deb73krnthej6" path="res://scripts/client/TouchScrollContainer.cs" id="2_cr8st"]
 [ext_resource type="Texture2D" uid="uid://bctbyvslc3xgd" path="res://assets/textures/ui-icons/resize-handle.svg" id="3_resize"]
 [ext_resource type="PackedScene" uid="uid://yo4rf0hswo46" path="res://scenes/client/ui/chat/emoji_picker.tscn" id="4_picker"]
 [ext_resource type="Texture2D" uid="uid://bm1o0k3aprejc" path="res://assets/textures/ui-icons/face.svg" id="5_face"]
@@ -299,6 +300,7 @@ size_flags_vertical = 3
 mouse_filter = 0
 mouse_force_pass_scroll_events = false
 theme_override_styles/panel = SubResource("StyleBoxEmpty_m8q8u")
+script = ExtResource("2_cr8st")
 
 [node name="ChatLayout" type="VBoxContainer" parent="Point/Panel/Layout/Chat" unique_id=133232772]
 layout_mode = 2
