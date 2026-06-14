@@ -31,7 +31,7 @@ public partial class JoystickArea : InputFallbackBase
 		if (!_dragging) { return; }
 
 		Vector2 axis = GetThumbstickAxis();
-		
+
 		_line.ClearPoints();
 		_line.AddPoint(_startPos);
 		_line.AddPoint(_startPos + axis * MaxThumbstickDistance);
@@ -110,7 +110,8 @@ public partial class JoystickArea : InputFallbackBase
 				SendInputEnd();
 				AcceptEvent();
 			}
-		} else if (@event is InputEventScreenDrag drag && _dragging && drag.Index == _activeTouchIndex)
+		}
+		else if (@event is InputEventScreenDrag drag && _dragging && drag.Index == _activeTouchIndex)
 		{
 			_endPos = drag.Position;
 			AcceptEvent();

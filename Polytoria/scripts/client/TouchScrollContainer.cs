@@ -69,7 +69,7 @@ public partial class TouchScrollContainer : ScrollContainer
 				_isScrolling = true;
 			}
 		}
-		
+
 		VScrollBar bar = GetVScrollBar();
 		float maxScroll = (float)Mathf.Max(0, bar.MaxValue - bar.Page);
 		ScrollVertical = Mathf.RoundToInt(Mathf.Clamp(ScrollVertical - drag.Relative.Y * TouchScrollMultiplier, 0, maxScroll));
