@@ -316,6 +316,7 @@ public partial class UILabel : UIView
 		_label.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 
 		_label.ClipContents = false;
+		_label.MouseFilter = Control.MouseFilterEnum.Ignore;
 		_label.AddThemeConstantOverride("line_spacing", 0);
 
 		Text = "Text";

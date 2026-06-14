@@ -459,6 +459,21 @@ public partial class UIField : Instance
 				MouseUp.Invoke();
 			}
 		}
+
+		if (@event is InputEventScreenTouch touch)
+		{
+			if (touch.Pressed)
+			{
+				MouseDown.Invoke();
+			}
+			else
+			{
+				MouseUp.Invoke();
+			}
+
+			NodeControl.AcceptEvent();
+			return;
+		}
 	}
 
 	private bool IsMouseOverChildUIField()
