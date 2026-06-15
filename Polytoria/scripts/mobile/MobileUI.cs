@@ -45,17 +45,9 @@ public partial class MobileUI : Control
 		cmdargs.TryGetValue("code", out string? mobileCode);
 		cmdargs.TryGetValue("state", out string? mobileState);
 
-		GD.Print($"[DEEPLINK] Has singleton: {Engine.HasSingleton("DeeplinkPlugin")}");
-
 		AddChild(_deepLink, true);
 
 		var initResult = _deepLink.Initialize();
-		GD.Print($"[DEEPLINK] Initialize result: {initResult}");
-
-		GD.Print($"[DEEPLINK] Added node. Initial URL: '{_deepLink.GetLinkUrl()}'");
-		GD.Print($"[DEEPLINK] Initial scheme: '{_deepLink.GetLinkScheme()}'");
-		GD.Print($"[DEEPLINK] Initial host: '{_deepLink.GetLinkHost()}'");
-		GD.Print($"[DEEPLINK] Initial path: '{_deepLink.GetLinkPath()}'");
 
 		_deepLink.DeeplinkReceived += OnDeeplinkReceived;
 
@@ -126,16 +118,12 @@ public partial class MobileUI : Control
 
 	private async void OnDeeplinkReceived(DeeplinkURL url)
 	{
-		GD.Print($"[DEEPLINK] received");
-    	GD.Print($"[DEEPLINK] scheme='{url.Scheme}' host='{url.Host}' path='{url.Path}' query='{url.Query}'");
 		// Handle polytoria://auth link
 		if (url.Host == "auth")
 		{
 			NameValueCollection authQuery = HttpUtility.ParseQueryString(url.Query);
 			string code = authQuery.Get("code")!;
 			string state = authQuery.Get("state")!;
-
-			GD.Print($"[DEEPLINK] code present={code != null}, state present={state != null}");
 
 			LoadingScreen.ShowScreen();
 			await PolyMobileAuthAPI.LoginWithCodeAndState(code, state);
