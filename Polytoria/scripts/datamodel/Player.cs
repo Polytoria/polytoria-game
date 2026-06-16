@@ -534,7 +534,8 @@ public sealed partial class Player : NPC
 	public override void Process(double delta)
 	{
 		base.Process(delta);
-		if (!Root.Network.IsServer) {
+		if (!Root.Network.IsServer)
+		{
 			UpdateCamera(delta);
 		}
 		if (!IsLocal)
