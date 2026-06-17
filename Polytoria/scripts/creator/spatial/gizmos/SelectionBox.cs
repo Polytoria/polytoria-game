@@ -24,6 +24,8 @@ public partial class SelectionBox : Node
 			{
 				_target?.TransformChanged -= UpdateBox;
 				_target = value;
+				// When the target changes drop the cache so the new target recalculates it's bounds.
+				InvalidateBoundCache();
 				UpdateBox();
 				_target?.TransformChanged += UpdateBox;
 			}
