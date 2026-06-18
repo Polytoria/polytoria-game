@@ -67,6 +67,11 @@ public sealed partial class Globals : Node
 
 	private static readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materialCache = [];
 
+	private static readonly Dictionary<(Material, Color), ShaderMaterial> _colorMaterialCache = [];
+
+	private static bool? _usesGLCompatibility;
+	public static bool UsesGLCompatibility => _usesGLCompatibility ??= RenderingServer.GetCurrentRenderingMethod() == "gl_compatibility";
+
 	private static bool _isExiting = false;
 
 	public static bool IsExiting => _isExiting;
@@ -357,6 +362,24 @@ public sealed partial class Globals : Node
 		return mat;
 	}
 
+	public static Material LoadColorMaterial(Material baseMaterial, Color color)
+	{
+		if (baseMaterial is not ShaderMaterial baseShaderMat)
+		{
+			return baseMaterial;
+		}
+
+		if (_colorMaterialCache.TryGetValue((baseMaterial, color), out ShaderMaterial? mat))
+		{
+			return mat;
+		}
+
+		mat = (ShaderMaterial)baseShaderMat.Duplicate();
+		mat.SetShaderParameter("color", color);
+		_colorMaterialCache[(baseMaterial, color)] = mat;
+		return mat;
+	}
+
 	public static void SetNormalMapsEnabled(bool enabled)
 	{
 		foreach (var mat in _materialCache.Values)
@@ -365,6 +388,10 @@ public sealed partial class Globals : Node
 			{
 				shaderMat.SetShaderParameter("use_normal_texture", enabled);
 			}
+		}
+		foreach (var mat in _colorMaterialCache.Values)
+		{
+			mat.SetShaderParameter("use_normal_texture", enabled);
 		}
 	}
 

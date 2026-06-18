@@ -1,7 +1,7 @@
 shader_type spatial;
 render_mode blend_mix, depth_prepass_alpha, cull_back, diffuse_burley, specular_schlick_ggx;
 
-instance uniform vec4 color : source_color = vec4(1.0);
+uniform vec4 color : source_color = vec4(1.0);
 
 uniform sampler2D albedo : source_color;
 uniform bool use_albedo_texture = true;

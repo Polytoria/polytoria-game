@@ -75,6 +75,9 @@ public partial class DatamodelBridge : Node3D
 		base._ExitTree();
 	}
 
+	// opengl on mobile needs sRGB instead of linear, otherwise material colors will be dark.
+	private static Color ToInstanceColor(Color color) => Globals.UsesGLCompatibility ? color : color.SrgbToLinear();
+
 	private Material GetMaterial(Part.PartMaterialEnum partMaterial, bool isTransparent)
 	{
 		if (_materials.TryGetValue((partMaterial, isTransparent), out Material? mat))
@@ -136,7 +139,7 @@ public partial class DatamodelBridge : Node3D
 				{
 					ChunkBatch batch = _batches[handle.Key];
 					batch.MultiMesh.SetInstanceTransform(handle.Index, part.GetGlobalTransform());
-					batch.MultiMesh.SetInstanceColor(handle.Index, part.Color.SrgbToLinear());
+					batch.MultiMesh.SetInstanceColor(handle.Index, ToInstanceColor(part.Color));
 				}
 			}
 			else
@@ -252,7 +255,7 @@ public partial class DatamodelBridge : Node3D
 		batch.MultiMesh.VisibleInstanceCount = batch.Count;
 
 		batch.MultiMesh.SetInstanceTransform(index, part.GetGlobalTransform());
-		batch.MultiMesh.SetInstanceColor(index, part.Color.SrgbToLinear());
+		batch.MultiMesh.SetInstanceColor(index, ToInstanceColor(part.Color));
 
 		_handles[part] = new PartHandle { Key = key, Index = index };
 	}
@@ -280,7 +283,7 @@ public partial class DatamodelBridge : Node3D
 			{
 				batch.MultiMesh.SetInstanceTransform(index, lastPart.GetGlobalTransform());
 			}
-			batch.MultiMesh.SetInstanceColor(index, lastPart.Color.SrgbToLinear());
+			batch.MultiMesh.SetInstanceColor(index, ToInstanceColor(lastPart.Color));
 		}
 
 		batch.Parts.RemoveAt(lastIndex);
@@ -315,7 +318,7 @@ public partial class DatamodelBridge : Node3D
 		{
 			var p = batch.Parts[i];
 			batch.MultiMesh.SetInstanceTransform(i, p.GetGlobalTransform());
-			batch.MultiMesh.SetInstanceColor(i, p.Color.SrgbToLinear());
+			batch.MultiMesh.SetInstanceColor(i, ToInstanceColor(p.Color));
 		}
 	}
 

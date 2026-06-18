@@ -234,14 +234,14 @@ public partial class Part : Entity
 	{
 		if (_isSeparateMesh && _mesh != null)
 		{
-			Material targetMat = Globals.LoadMaterial(_material, Color.A);
+			Material baseMat = Globals.LoadMaterial(_material, Color.A);
+			Material targetMat = Globals.LoadColorMaterial(baseMat, _color);
+
 			if (!ReferenceEquals(_meshMaterial, targetMat))
 			{
 				_meshMaterial = targetMat;
 				_mesh.MaterialOverride = _meshMaterial;
 			}
-
-			_mesh.SetInstanceShaderParameter("color", _color);
 		}
 
 		UpdateCamLayer();
