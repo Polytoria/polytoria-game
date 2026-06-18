@@ -594,7 +594,7 @@ public sealed partial class Mesh : Entity
 	public struct MeshAnimationInfo : IScriptObject
 	{
 		[ScriptProperty] public string Name { get; set; }
-		[ScriptProperty] public float Length { get; set; }
+		[ScriptProperty] public double Length { get; set; }
 		[ScriptProperty] public bool IsPlaying { get; set; }
 
 		public override readonly int GetHashCode()
