@@ -46,7 +46,21 @@ public class DefaultMovement : IPlayerMovement
 				}
 			}
 
-			camLocked = cam.IsFirstPerson || cam.CtrlLocked;
+			switch (Target.RotationMode)
+			{
+				case Player.PlayerRotationModeEnum.Automatic:
+					camLocked = cam.IsFirstPerson || cam.CtrlLocked;
+					break;
+				case Player.PlayerRotationModeEnum.CameraLocked:
+					camLocked = true;
+					break;
+				case Player.PlayerRotationModeEnum.RotateToMovement:
+					camLocked = false;
+					break;
+				case Player.PlayerRotationModeEnum.RotateToMovementCtrlLockOnly:
+					camLocked = cam.IsFirstPerson;
+					break;
+			}
 		}
 
 		return new()
