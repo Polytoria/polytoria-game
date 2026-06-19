@@ -52,25 +52,28 @@ public partial class UIInventory : Control
 	public void ToggleBackpack()
 	{
 		if (!CoreUI.Service.UseBackpack) return;
-		IsBackpackOpened = !IsBackpackOpened;
 		if (IsBackpackOpened)
 		{
-			OpenBackpack();
+			CloseBackpack();
 		}
 		else
 		{
-			CloseBackpack();
+			OpenBackpack();
 		}
 	}
 
 	public void OpenBackpack()
 	{
+		if (!CoreUI.Service.UseBackpack) return;
+		IsBackpackOpened = true;
 		_backpackAnim.Stop();
 		_backpackAnim.Play("appear");
 	}
 
 	public void CloseBackpack()
 	{
+		if (!CoreUI.Service.UseBackpack) return;
+		IsBackpackOpened = false;
 		_backpackAnim.Stop();
 		_backpackAnim.Play("disappear");
 	}

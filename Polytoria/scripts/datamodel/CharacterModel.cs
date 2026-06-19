@@ -103,36 +103,43 @@ public partial class CharacterModel : Dynamic
 		}
 	}
 
+	[ScriptMethod]
 	public void PlayIdle()
 	{
 		SetState(CharacterModelStateEnum.Idle);
 	}
 
+	[ScriptMethod]
 	public void PlayWalk()
 	{
 		SetState(CharacterModelStateEnum.Walking);
 	}
 
+	[ScriptMethod]
 	public void PlayRun()
 	{
 		SetState(CharacterModelStateEnum.Running);
 	}
 
+	[ScriptMethod]
 	public void PlayJump()
 	{
 		SetState(CharacterModelStateEnum.Jumping);
 	}
 
+	[ScriptMethod]
 	public void PlayClimb()
 	{
 		SetState(CharacterModelStateEnum.Climbing);
 	}
 
+	[ScriptMethod]
 	public void SetAnimSpeed(float speed)
 	{
 		CurrentSpeed = speed;
 	}
 
+	[ScriptMethod]
 	public void SetState(CharacterModelStateEnum newState)
 	{
 		if (newState != CurrentState)

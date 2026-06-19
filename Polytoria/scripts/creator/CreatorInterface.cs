@@ -632,6 +632,11 @@ public partial class CreatorInterface : Control, IScriptObject
 		window.Visible = false;
 		window.ForceNative = true;
 		window.Theme = _creatorTheme;
+
+		float uiScale = GetWindow().ContentScaleFactor;
+		window.ContentScaleFactor = uiScale;
+		window.Size = (Vector2I)((Vector2)window.Size * uiScale);
+
 		AddChild(window);
 		window.PopupCentered();
 	}

@@ -12,7 +12,7 @@ public partial class CameraTurnArea : InputFallbackBase
 	public const float MobileZoomMultipler = 4;
 	private bool _justZoomed = false;
 
-	public override void _GuiInput(InputEvent @event)
+	public override void _UnhandledInput(InputEvent @event)
 	{
 		if (@event is InputEventScreenDrag eventDrag)
 		{
@@ -32,7 +32,5 @@ public partial class CameraTurnArea : InputFallbackBase
 			float zoomDelta = length * camera.ScrollSensitivity * MobileZoomMultipler;
 			camera.Distance += zoomDelta;
 		}
-
-		base._GuiInput(@event);
 	}
 }

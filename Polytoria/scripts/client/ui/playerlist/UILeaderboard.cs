@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Polytoria.Client.UI.Playerlist;
 
-public partial class UILeaderboard : Control
+public partial class UILeaderboard : TouchScrollContainer
 {
 	private const int LeaderboardMaxHeight = 300;
 	private const string ItemPath = "res://scenes/client/ui/playerlist/leaderboard_user_item.tscn";
@@ -399,6 +399,18 @@ public partial class UILeaderboard : Control
 		}
 	}
 
+	private float GetMaxHeight()
+	{
+		if (!Globals.IsMobileBuild)
+		{
+			return LeaderboardMaxHeight;
+		}
+
+		float viewportHeight = GetViewportRect().Size.Y;
+		const float reservedBottom = 240f;
+		return Mathf.Clamp(viewportHeight - reservedBottom - GlobalPosition.Y, 120f, LeaderboardMaxHeight);
+	}
+
 	private async void LeaderboardUpdate()
 	{
 		_container.Visible = Visible && _playerToItem.Count > 0;
@@ -410,9 +422,9 @@ public partial class UILeaderboard : Control
 		await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
 		float ys = _layout.Size.Y + 16;
 
-		if (ys > LeaderboardMaxHeight)
+		if (ys > GetMaxHeight())
 		{
-			ys = LeaderboardMaxHeight;
+			ys = GetMaxHeight();
 		}
 
 		_container.Size = new(_userCard.Size.X, ys);

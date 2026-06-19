@@ -216,6 +216,12 @@ public sealed partial class World : Instance
 	[ScriptProperty, Attributes.Obsolete("Use InstanceCount instead")]
 	public int LocalInstanceCount => InstanceCount;
 
+	[ScriptMethod]
+	public async Task<NetworkedObject?> GetNetworkedObject(string networkID)
+	{
+		return await WaitForNetObjectAsync(networkID);
+	}
+
 	[SyncVar]
 	public bool ServerUnderLoad
 	{
