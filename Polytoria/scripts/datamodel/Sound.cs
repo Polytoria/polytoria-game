@@ -418,13 +418,14 @@ public sealed partial class Sound : Dynamic
 	}
 
 	[ScriptMethod]
-	public void PlayOneShot(float volume = 1f/*, float pan = 0f*/)
+	public void PlayOneShot(float volume = 1f)
 	{
-		InternalPlayOneShot(volume/*, pan*/);
+		// WARN: only add panning to oneshot after sorting extra complexity of audiobus and safety
+		InternalPlayOneShot(volume);
 
 		if (HasAuthority)
 		{
-			Rpc(nameof(NetPlayOneshot), volume/*, pan*/);
+			Rpc(nameof(NetPlayOneshot), volume);
 		}
 	}
 
@@ -446,12 +447,11 @@ public sealed partial class Sound : Dynamic
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
-	private void NetPlayOneshot(float volume/*, float pan*/)
+	private void NetPlayOneshot(float volume)
 	{
 		Mathf.Clamp(volume, 0f, 1f);
-		/*Mathf.Clamp(pan, -1f, 1f);*/
 
-		InternalPlayOneShot(volume/*, pan*/);
+		InternalPlayOneShot(volume);
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
@@ -493,7 +493,7 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
-	private void InternalPlayOneShot(float volume/*, float pan*/)
+	private void InternalPlayOneShot(float volume)
 	{
 		// can safely mute on the server since this method doesn't change any properties
 		if (Root.Network.IsServer) return;
