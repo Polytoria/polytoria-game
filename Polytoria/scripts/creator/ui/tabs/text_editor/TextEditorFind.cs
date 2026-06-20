@@ -179,9 +179,7 @@ public sealed partial class TextEditorFind : Control
 		int line = result.X;
 		int column = result.Y;
 
-		Root.CodeEditor.SetCaretLine(line);
-		Root.CodeEditor.SetCaretColumn(column);
-		Root.CodeEditor.SelectWordUnderCaret();
+		Root.CodeEditor.Select(line, column, line, column + _searchField.Text.Length);
 		Root.CodeEditor.CenterViewportToCaret();
 	}
 

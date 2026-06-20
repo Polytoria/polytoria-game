@@ -16,6 +16,7 @@ public sealed partial class CoreUIService : Instance
 {
 	private const string CoreUIPath = "res://scenes/client/ui/core_ui.tscn";
 
+	private int _chatBubbleRenderDistance = 40;
 	private bool _useUserCard = true;
 	private bool _useChat = true;
 	private bool _useHealthBar = true;
@@ -44,6 +45,13 @@ public sealed partial class CoreUIService : Instance
 			OnPropertyChanged();
 			CtrlLockCursorChanged.Invoke();
 		}
+	}
+
+	[Editable, ScriptProperty]
+	public int ChatBubbleRenderDistance
+	{
+		get => _chatBubbleRenderDistance;
+		set { _chatBubbleRenderDistance = value; }
 	}
 
 	[Editable, ScriptProperty, ScriptLegacyProperty("UserCardEnabled")]

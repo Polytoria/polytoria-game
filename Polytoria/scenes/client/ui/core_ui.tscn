@@ -5,6 +5,7 @@
 [ext_resource type="Texture2D" uid="uid://th3l6kkfjdl2" path="res://assets/textures/client/ui/menu_button/chat.png" id="4_c3g11"]
 [ext_resource type="PackedScene" uid="uid://catf08041fifw" path="res://scenes/client/ui/health/health_bar.tscn" id="5_6062u"]
 [ext_resource type="Texture2D" uid="uid://dhbxwwpkupvvt" path="res://assets/textures/client/ui/mobile_controls/jump.png" id="5_aji3h"]
+[ext_resource type="Script" uid="uid://bj4rd3qyx7fr8" path="res://scripts/client/ui/playerlist/UILeaderboardOpener.cs" id="5_gbck0"]
 [ext_resource type="Texture2D" uid="uid://c226wtcviyejd" path="res://assets/textures/client/ui/menu_button/backpack.png" id="5_msdsf"]
 [ext_resource type="Script" uid="uid://c7vhlpnqh3xxg" path="res://scripts/client/ui/chat/UIChatButton.cs" id="5_px6m7"]
 [ext_resource type="PackedScene" uid="uid://dxpt467wotnp" path="res://scenes/client/ui/playerlist/playerlist.tscn" id="7_0yob1"]
@@ -17,6 +18,7 @@
 [ext_resource type="Script" uid="uid://cvbexph60048q" path="res://scripts/client/ui/touch/JumpButton.cs" id="12_pljxg"]
 [ext_resource type="Texture2D" uid="uid://8pnjtnn5sm2" path="res://assets/textures/client/ui/menu_button/pt/close.png" id="13_e84r2"]
 [ext_resource type="PackedScene" uid="uid://kd4fs42si2ah" path="res://scenes/client/ui/menu/game_menu.tscn" id="14_6062u"]
+[ext_resource type="Script" uid="uid://cuh01vstvvhv0" path="res://scripts/client/ui/inventory/UIInventoryButton.cs" id="15_tesjd"]
 [ext_resource type="Texture2D" uid="uid://doqoshw2g8hpk" path="res://assets/textures/client/ui/indicators/high_ping.svg" id="17_dsnfc"]
 [ext_resource type="Script" uid="uid://cgjl4npuupe5l" path="res://scripts/client/ui/indicators/UIIndicators.cs" id="17_gx3lw"]
 [ext_resource type="PackedScene" uid="uid://dxj38lpkxcdxy" path="res://scenes/client/ui/emotes/emote_wheel.tscn" id="17_mt8aq"]
@@ -306,6 +308,19 @@ theme = ExtResource("1_otsis")
 [node name="HealthBar" parent="Control" unique_id=705297481 instance=ExtResource("5_6062u")]
 layout_mode = 1
 
+[node name="LeaderboardOpener" type="Control" parent="Control" unique_id=1874413183 node_paths=PackedStringArray("_playerList")]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -276.0
+offset_top = 16.0
+offset_right = -13.0
+offset_bottom = 65.0
+grow_horizontal = 0
+script = ExtResource("5_gbck0")
+_playerList = NodePath("../Playerlist")
+
 [node name="Playerlist" parent="Control" unique_id=56716410 instance=ExtResource("7_0yob1")]
 layout_mode = 1
 
@@ -444,12 +459,13 @@ text = "0"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Backpack" type="Button" parent="Control/MenuButton" unique_id=1533108562]
-visible = false
+[node name="Backpack" type="Button" parent="Control/MenuButton" unique_id=1533108562 node_paths=PackedStringArray("InventoryUI")]
 custom_minimum_size = Vector2(48, 48)
 layout_mode = 2
 focus_mode = 0
 toggle_mode = true
+script = ExtResource("15_tesjd")
+InventoryUI = NodePath("../../Inventory")
 
 [node name="TextureRect" type="TextureRect" parent="Control/MenuButton/Backpack" unique_id=1194705713]
 layout_mode = 1

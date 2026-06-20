@@ -485,6 +485,24 @@ public partial class Instance : NetworkedObject
 	}
 
 	[ScriptMethod]
+	public Instance? FindDescendant(string path)
+	{
+		string[] separatedPath = path.Split('.');
+		Instance? inst = this;
+
+		foreach (string segment in separatedPath)
+		{
+			inst = inst.FindChild(segment);
+			if (inst == null)
+			{
+				return null;
+			}
+		}
+
+		return inst;
+	}
+
+	[ScriptMethod]
 	public Instance[] GetChildrenWithTag(string tag)
 	{
 		List<Instance> childs = [];

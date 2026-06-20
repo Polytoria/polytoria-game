@@ -1,0 +1,51 @@
+[gd_scene format=3 uid="uid://j5qqfs2eybqu"]
+
+[ext_resource type="Script" uid="uid://dh2mywepg4jt3" path="res://scripts/client/spatial/chat/BubbleText.cs" id="1_md3r1"]
+[ext_resource type="Script" uid="uid://db3j7t8ufakic" path="res://scripts/client/spatial/SpatialUIBase.cs" id="2_wqhtf"]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_gv7gn"]
+viewport_path = NodePath("SubViewport")
+
+[node name="BubbleText" type="Node3D" unique_id=1552858701 node_paths=PackedStringArray("_itemContainer")]
+script = ExtResource("1_md3r1")
+_itemContainer = NodePath("SubViewport/Control/Layout/Bubble")
+
+[node name="Sprite3D" type="Sprite3D" parent="." unique_id=470399632]
+offset = Vector2(0, 400)
+billboard = 1
+no_depth_test = true
+render_priority = 10
+texture = SubResource("ViewportTexture_gv7gn")
+script = ExtResource("2_wqhtf")
+
+[node name="SubViewport" type="SubViewport" parent="." unique_id=824291738]
+transparent_bg = true
+msaa_2d = 1
+gui_disable_input = true
+positional_shadow_atlas_16_bits = false
+oversampling = false
+size = Vector2i(400, 700)
+
+[node name="Control" type="Control" parent="SubViewport" unique_id=1784420457]
+custom_minimum_size = Vector2(400, 400)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Layout" type="VBoxContainer" parent="SubViewport/Control" unique_id=554361987]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+alignment = 2
+
+[node name="Bubble" type="VBoxContainer" parent="SubViewport/Control/Layout" unique_id=327160248]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 2

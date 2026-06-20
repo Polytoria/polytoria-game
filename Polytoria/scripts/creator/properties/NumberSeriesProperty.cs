@@ -16,7 +16,7 @@ namespace Polytoria.Creator.Properties;
 public sealed partial class NumberSeriesProperty : Control, IProperty<NumberSeries>
 {
 	private const string NumberSeriesPointPath = "res://scenes/creator/properties/components/number_series/point.tscn";
-	private NumberSeries _value;
+	private NumberSeries _value = new();
 	[Export] private TextureRect _previewRect = null!;
 	[Export] private Button _addButton = null!;
 	[Export] private Control _points = null!;
@@ -78,7 +78,7 @@ public sealed partial class NumberSeriesProperty : Control, IProperty<NumberSeri
 	private void ListPoints()
 	{
 		int i = 0;
-		foreach (var p in Value.Points)
+		foreach (var p in Value.Points ?? [])
 		{
 			int myI = i;
 			NumberSeriesPoint ps = Globals.CreateInstanceFromScene<NumberSeriesPoint>(NumberSeriesPointPath);

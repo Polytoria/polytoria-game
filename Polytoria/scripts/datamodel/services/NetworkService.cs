@@ -621,6 +621,15 @@ public sealed partial class NetworkService : Instance
 			{
 				userData = await PolyAPI.GetUserFromID(validateRes.UserID);
 			}
+
+			if (Root.WorldInfo.HasValue)
+			{
+				if (Root.WorldInfo.Value.Creator.Type == "guild")
+				{
+					APIGuildInfo guildInfo = await PolyAPI.GetGuildFromID(Root.WorldInfo.Value.Creator.Id);
+					validateRes.IsCreator = guildInfo.Creator.Id == userData.Id ? true : false;
+				}
+			}
 		}
 		catch (Exception e)
 		{
@@ -653,7 +662,6 @@ public sealed partial class NetworkService : Instance
 		plr.Name = username;
 		plr.IsAdmin = userData.IsStaff;
 		plr.UserRoleClass = userData.UserRoleClass ?? "";
-
 		// Apply validation data
 		plr.IsCreator = validateRes.IsCreator;
 		plr.IsAgeRestricted = validateRes.IsAgeRestricted;

@@ -10,7 +10,8 @@ public partial class UIPlayerList : Node
 {
 	[Export] private AnimationPlayer _leaderboardAnim = null!;
 
-	private bool IsLeaderboardShown = true;
+	private bool _shown = true;
+	public bool IsLeaderboardShown => _shown;
 
 	public override void _UnhandledKeyInput(InputEvent @event)
 	{
@@ -21,11 +22,26 @@ public partial class UIPlayerList : Node
 		base._UnhandledKeyInput(@event);
 	}
 
-	private void ToggleLeaderboard()
+	public void Open()
 	{
-		IsLeaderboardShown = !IsLeaderboardShown;
+		if (_shown) return;
+		_shown = true;
 		_leaderboardAnim.Stop();
-		_leaderboardAnim.Play(IsLeaderboardShown ? "open" : "close");
+		_leaderboardAnim.Play("open");
 	}
 
+	public void Close()
+	{
+		if (!_shown) return;
+		_shown = false;
+		_leaderboardAnim.Stop();
+		_leaderboardAnim.Play("close");
+	}
+
+	public void ToggleLeaderboard()
+	{
+		_shown = !_shown;
+		_leaderboardAnim.Stop();
+		_leaderboardAnim.Play(_shown ? "open" : "close");
+	}
 }

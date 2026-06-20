@@ -374,22 +374,40 @@ public sealed partial class CreatorService : Node, IScriptObject
 
 		PreferredEditorEnum userPref = CreatorSettingsService.Instance.Get<PreferredEditorEnum>(CreatorSettingKeys.CodeEditor.PreferredEditor);
 
-		if (Globals.ScriptFileExtensions.Contains(path.GetExtension()))
+		if (userPref == PreferredEditorEnum.BuiltIn)
 		{
-			if (userPref == PreferredEditorEnum.BuiltIn)
+			FileTypeEnum codeCompletion = FileTypeEnum.Plaintext;
+			if (Globals.ScriptFileExtensions.Contains(path.GetExtension()))
 			{
-				Tabs.Singleton.Insert(new Tabs.TextEditorTab() { Session = CurrentSession, TargetPath = pathRelative, Title = pathRelative.GetFile() });
-				return;
+				codeCompletion = FileTypeEnum.Lua;
 			}
-		}
 
-		if (userPref == PreferredEditorEnum.VSCode)
+			Tabs.Singleton.Insert(new Tabs.TextEditorTab()
+			{
+				Session = CurrentSession,
+				TargetPath = pathRelative,
+				CodeCompletion = codeCompletion,
+				Title = pathRelative.GetFile()
+			});
+			return;
+		}
+		else if (userPref == PreferredEditorEnum.VSCode)
 		{
 			CurrentSession.CreateVSCodeConfig();
 			// open in vscode
 			System.Diagnostics.Process p = new();
-			p.StartInfo.FileName = "code";
-			p.StartInfo.Arguments = $"\"{path}\" \"{CurrentSession.ProjectFolderPath}\"";
+
+			if (OS.HasFeature("macos"))
+			{
+				p.StartInfo.FileName = "open";
+				p.StartInfo.Arguments = $"-a \"Visual Studio Code\" \"{path}\" \"{CurrentSession.ProjectFolderPath}\"";
+			}
+			else
+			{
+				p.StartInfo.FileName = "code";
+				p.StartInfo.Arguments = $"\"{path}\" \"{CurrentSession.ProjectFolderPath}\"";
+			}
+
 			p.StartInfo.UseShellExecute = true;
 			p.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
 			p.Start();
@@ -399,8 +417,18 @@ public sealed partial class CreatorService : Node, IScriptObject
 		{
 			// open in zed
 			System.Diagnostics.Process p = new();
-			p.StartInfo.FileName = "zed";
-			p.StartInfo.Arguments = $"\"{path}\" \"{CurrentSession.ProjectFolderPath}\"";
+
+			if (OS.HasFeature("macos"))
+			{
+				p.StartInfo.FileName = "open";
+				p.StartInfo.Arguments = $"-a Zed \"{path}\" \"{CurrentSession.ProjectFolderPath}\"";
+			}
+			else
+			{
+				p.StartInfo.FileName = "zed";
+				p.StartInfo.Arguments = $"\"{path}\" \"{CurrentSession.ProjectFolderPath}\"";
+			}
+
 			p.StartInfo.UseShellExecute = true;
 			p.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
 			p.Start();
@@ -643,4 +671,10 @@ public enum ScriptTypeEnum
 	Client,
 	Module,
 	Unknown
+}
+
+public enum FileTypeEnum
+{
+	Plaintext,
+	Lua
 }

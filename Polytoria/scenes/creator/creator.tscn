@@ -39,6 +39,7 @@
 [ext_resource type="PackedScene" uid="uid://msq1k3h4a75p" path="res://scenes/creator/wizard/new_project/new_project.tscn" id="31_87ukk"]
 [ext_resource type="PackedScene" uid="uid://cvxoyotxeotax" path="res://scenes/creator/docks/explorer/explorer.tscn" id="32_4fw2t"]
 [ext_resource type="PackedScene" uid="uid://duq8icfg2fwo0" path="res://scenes/creator/docks/properties/properties.tscn" id="34_bc04q"]
+[ext_resource type="PackedScene" uid="uid://dccewf7osrg82" path="res://scenes/creator/popups/search/search.tscn" id="38_ce354"]
 [ext_resource type="PackedScene" uid="uid://dauvdi8d2yqpy" path="res://scenes/creator/wizard/introduction_wizard.tscn" id="39_dfqoe"]
 [ext_resource type="PackedScene" uid="uid://b7voaj38vy8xd" path="res://scenes/creator/docks/bottombar/console_filters.tscn" id="40_console_filters"]
 
@@ -624,6 +625,7 @@ button_pressed = true
 action_mode = 0
 button_group = SubResource("ButtonGroup_v0rtd")
 script = ExtResource("8_c8w7j")
+ToolMode = null
 
 [node name="Icon" type="TextureRect" parent="GUI/Ribbon/Buttons/Select" unique_id=75873074]
 layout_mode = 1
@@ -1271,6 +1273,17 @@ layout_mode = 2
 mouse_filter = 0
 edit_intensity = false
 picker_shape = 2
+
+[node name="Search" parent="GUI" unique_id=512968994 instance=ExtResource("38_ce354")]
+visible = false
+z_index = 20
+custom_minimum_size = Vector2(500, 400)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
 
 [node name="StartupSplash" parent="GUI" unique_id=286100395 instance=ExtResource("30_8cbqn")]
 visible = false

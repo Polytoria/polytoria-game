@@ -4,16 +4,16 @@
 
 class_name DeeplinkUrl extends RefCounted
 
-const SCHEME_PROPERTY: String = "scheme"
-const USER_PROPERTY: String = "user"
-const PASSWORD_PROPERTY: String = "password"
-const HOST_PROPERTY: String = "host"
-const PORT_PROPERTY: String = "port"
-const PATH_PROPERTY: String = "path"
-const PATH_EXTENSION_PROPERTY: String = "path_extension"
-const PATH_COMPONENTS_PROPERTY: String = "path_components"
-const QUERY_PROPERTY: String = "query"
-const FRAGMENT_PROPERTY: String = "fragment"
+const SCHEME_PROPERTY := &"scheme"
+const USER_PROPERTY := &"user"
+const PASSWORD_PROPERTY := &"password"
+const HOST_PROPERTY := &"host"
+const PORT_PROPERTY := &"port"
+const PATH_PROPERTY := &"path"
+const PATH_EXTENSION_PROPERTY := &"path_extension"
+const PATH_COMPONENTS_PROPERTY := &"path_components"
+const QUERY_PROPERTY := &"query"
+const FRAGMENT_PROPERTY := &"fragment"
 
 var _data: Dictionary
 

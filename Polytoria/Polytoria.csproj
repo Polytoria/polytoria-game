@@ -1,4 +1,4 @@
-﻿<Project Sdk="Godot.NET.Sdk/4.6.2">
+<Project Sdk="Godot.NET.Sdk/4.7.0">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<Nullable>enable</Nullable>
@@ -9,11 +9,36 @@
 		<Configurations>Debug;ExportDebug;ExportRelease</Configurations>
 	</PropertyGroup>
 
-	<!-- NativeAOT Configuration for Android-->
-	<PropertyGroup Condition=" '$(GodotTargetPlatform)' == 'android' ">
+	<!-- NativeAOT Configuration for Android and iOS -->
+	<PropertyGroup Condition=" '$(GodotTargetPlatform)' == 'android' Or '$(GodotTargetPlatform)' == 'ios' ">
 		<DisableUnsupportedError>true</DisableUnsupportedError>
 		<PublishAotUsingRuntimePack>true</PublishAotUsingRuntimePack>
+		<IsCreator>false</IsCreator>
+		<IsMobile>true</IsMobile>
+		<DefineConstants>$(DefineConstants);CLIENT</DefineConstants>
 	</PropertyGroup>
+
+	<ItemGroup Condition="'$(RuntimeIdentifier)' == 'ios-arm64'">
+		<DirectPInvoke Include="Luau.VM" />
+		<DirectPInvoke Include="Luau.Compiler" />
+
+		<NativeLibrary Include="native/luau/ios/libLuau.VM.a" />
+		<NativeLibrary Include="native/luau/ios/libLuau.Compiler.a" />
+		<NativeLibrary Include="native/luau/ios/libLuau.Ast.a" />
+		<NativeLibrary Include="native/luau/ios/libLuau.Bytecode.a" />
+		<NativeLibrary Include="native/luau/ios/libLuau.Common.a" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(RuntimeIdentifier)' == 'iossimulator-arm64'">
+		<DirectPInvoke Include="Luau.VM" />
+		<DirectPInvoke Include="Luau.Compiler" />
+
+		<NativeLibrary Include="native/luau/iossimulator-arm64/libLuau.VM.a" />
+		<NativeLibrary Include="native/luau/iossimulator-arm64/libLuau.Compiler.a" />
+		<NativeLibrary Include="native/luau/iossimulator-arm64/libLuau.Ast.a" />
+		<NativeLibrary Include="native/luau/iossimulator-arm64/libLuau.Bytecode.a" />
+		<NativeLibrary Include="native/luau/iossimulator-arm64/libLuau.Common.a" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<!-- Trimmer ignores, this is currently required for Godot NativeAOT projects -->
@@ -47,8 +72,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Polytoria.SourceGen\Polytoria.SourceGen.csproj"
-			OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<ProjectReference Include="..\Polytoria.SourceGen\Polytoria.SourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 	<!-- ExportRelease configuration -->
@@ -126,7 +150,7 @@
 	<PropertyGroup Condition="'$(PT_PRIVATE_API)' == 'TRUE'">
 		<DefineConstants>$(DefineConstants);PT_PRIVATE_API</DefineConstants>
 	</PropertyGroup>
-	
+
 	<!-- Delete PDB files after publish, we don't want leaks happening TヮT -->
 	<Target Name="DeleteFiles" AfterTargets="Publish">
 		<ItemGroup>

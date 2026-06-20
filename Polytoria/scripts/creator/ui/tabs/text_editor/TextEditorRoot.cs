@@ -70,20 +70,24 @@ public partial class TextEditorRoot : Node
 		_autoCompleteTimer.OneShot = true;
 		_autoCompleteTimer.Timeout += OnCompletionRequest;
 
-		_completion = Container.TargetSession.LuaCompletion;
-		_completion?.PublishDiagnostics += OnPublishDiagnostics;
+		if (Container.CodeCompletion == FileTypeEnum.Lua)
+		{
+			_completion = Container.TargetSession.LuaCompletion;
+			_completion?.PublishDiagnostics += OnPublishDiagnostics;
+
+			CodeEditor.CodeCompletionPrefixes = [".", ":", "\n", ",", " ", "("];
+			CodeEditor.CodeCompletionEnabled = true;
+			CodeEditor.CodeCompletionRequested += OnCompletionRequest;
+		}
 
 		CodeEditor.Text = File.ReadAllText(Container.TargetFilePathAbsolute);
 		CodeEditor.ClearUndoHistory();
 		CodeEditor.TextChanged += OnCodeEditTextChanged;
-		InitSyntaxHighlighter();
+		InitSyntaxHighlighter(Container.CodeCompletion);
 
 		CreatorSettingsService.Instance.Changed += OnCreatorSettingChanged;
 		ApplyIndentSettings();
 
-		CodeEditor.CodeCompletionPrefixes = [".", ":", "\n", ",", " ", "("];
-		CodeEditor.CodeCompletionEnabled = true;
-		CodeEditor.CodeCompletionRequested += OnCompletionRequest;
 		CodeEditor.GuiInput += OnCodeEditGUIInput;
 
 		CodeEditor.GuttersDrawLineNumbers = true;
@@ -220,30 +224,41 @@ public partial class TextEditorRoot : Node
 		}
 	}
 
-	private void InitSyntaxHighlighter()
+	private void InitSyntaxHighlighter(FileTypeEnum fileType)
 	{
 		_highlighter = new();
 		CodeEditor.SyntaxHighlighter = _highlighter;
 
-		foreach (string item in LuaCompletionService.LuaKeywords)
+		if (fileType == FileTypeEnum.Lua)
 		{
-			_highlighter.AddKeywordColor(item, ColorDanger);
+			_highlighter.FunctionColor = ColorWarn;
+			_highlighter.MemberVariableColor = ColorWhite;
+			_highlighter.NumberColor = ColorSuccess;
+			_highlighter.SymbolColor = ColorWhite;
+
+			foreach (string item in LuaCompletionService.LuaKeywords)
+			{
+				_highlighter.AddKeywordColor(item, ColorDanger);
+			}
+
+			_highlighter.AddColorRegion("\"", "\"", ColorWarn);
+			_highlighter.AddColorRegion("'", "'", ColorWarn);
+			_highlighter.AddColorRegion("`", "`", ColorWarn);
+			_highlighter.AddColorRegion("[[", "]]", ColorWarn);
+			_highlighter.AddColorRegion("--[[", "]]", ColorGrey);
+			_highlighter.AddColorRegion("--", "", ColorGrey);
+
+			CodeEditor.AddStringDelimiter("\"", "\"", true);
+			CodeEditor.AddStringDelimiter("'", "'", true);
+			CodeEditor.AddStringDelimiter("[[", "]]", false);
 		}
-
-		_highlighter.AddColorRegion("\"", "\"", ColorWarn);
-		_highlighter.AddColorRegion("'", "'", ColorWarn);
-		_highlighter.AddColorRegion("`", "`", ColorWarn);
-		_highlighter.AddColorRegion("[[", "]]", ColorWarn);
-		_highlighter.AddColorRegion("--[[", "]]", ColorGrey);
-		_highlighter.AddColorRegion("--", "", ColorGrey);
-		_highlighter.FunctionColor = ColorWarn;
-		_highlighter.MemberVariableColor = ColorWhite;
-		_highlighter.NumberColor = ColorSuccess;
-		_highlighter.SymbolColor = ColorWhite;
-
-		CodeEditor.AddStringDelimiter("\"", "\"", true);
-		CodeEditor.AddStringDelimiter("'", "'", true);
-		CodeEditor.AddStringDelimiter("[[", "]]", false);
+		else
+		{
+			_highlighter.FunctionColor = ColorWhite;
+			_highlighter.MemberVariableColor = ColorWhite;
+			_highlighter.NumberColor = ColorWhite;
+			_highlighter.SymbolColor = ColorWhite;
+		}
 	}
 
 	public void Save()

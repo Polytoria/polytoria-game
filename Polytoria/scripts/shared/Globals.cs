@@ -616,16 +616,22 @@ public sealed partial class Globals : Node
 			return IntPtr.Zero;
 		}
 
+		string platform = ResolveCurrentPlatform();
+
 		if (!OS.HasFeature("x86_64"))
 		{
 			if (IsInGDEditor)
 			{
 				PT.PrintWarn("Unsupported platform for development");
 			}
-			return IntPtr.Zero;
+
+			// i wasted an hour finding this damn return statement... -jeweleyed
+			if (platform == "android" || platform == "ios")
+			{
+				return IntPtr.Zero;
+			}
 		}
 
-		string platform = ResolveCurrentPlatform();
 		string? dllPath = ResolveDllPath(libraryName, platform);
 
 		if (dllPath == null)

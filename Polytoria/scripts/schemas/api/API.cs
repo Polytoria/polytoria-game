@@ -274,6 +274,55 @@ public struct APIPlaceInfo
 	[JsonPropertyName("updatedAt")]
 	public DateTime? UpdatedAt { get; set; }
 }
+public struct APIGuildCreator
+{
+	[JsonPropertyName("id")]
+	public int Id { get; set; }
+
+	[JsonPropertyName("name")]
+	public string Name { get; set; }
+
+	[JsonPropertyName("thumbnail")]
+	public string Thumbnail { get; set; }
+}
+public struct APIGuildInfo
+{
+	[JsonPropertyName("id")]
+	public int Id { get; set; }
+
+	[JsonPropertyName("name")]
+	public string Name { get; set; }
+
+	[JsonPropertyName("description")]
+	public string Description { get; set; }
+
+	[JsonPropertyName("creator")]
+	public APIGuildCreator Creator { get; set; }
+
+	[JsonPropertyName("thumbnail")]
+	public string Thumbnail { get; set; }
+
+	[JsonPropertyName("banner")]
+	public string Banner { get; set; }
+
+	[JsonPropertyName("color")]
+	public string Color { get; set; }
+
+	[JsonPropertyName("joinType")]
+	public string Jointype { get; set; }
+
+	[JsonPropertyName("memberCount")]
+	public int MemberCount { get; set; }
+
+	[JsonPropertyName("vaultBalance")]
+	public int VaultBalance { get; set; }
+
+	[JsonPropertyName("isVerified")]
+	public bool IsVerified { get; set; }
+
+	[JsonPropertyName("createdAt")]
+	public DateTime CreatedAt { get; set; }
+}
 
 public struct APIMeResponse
 {
@@ -606,6 +655,8 @@ public enum LibraryQueryTypeEnum
 [JsonSerializable(typeof(APIStoreItemCreator))]
 [JsonSerializable(typeof(APIOwnsItem))]
 [JsonSerializable(typeof(APIPlaceMedia))]
+[JsonSerializable(typeof(APIGuildCreator))]
+[JsonSerializable(typeof(APIGuildInfo))]
 
 [JsonSerializable(typeof(APIJoinPlaceResponse))]
 [JsonSerializable(typeof(APIJoinPlaceRequest))]

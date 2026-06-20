@@ -2,6 +2,7 @@
 
 [ext_resource type="Theme" uid="uid://c18b344unwt2y" path="res://resources/themes/menu.tres" id="1_8qh8u"]
 [ext_resource type="Script" uid="uid://d3ft3c8slyhuj" path="res://scripts/client/ui/menu/views/UIMenuSettings.cs" id="1_eqv2t"]
+[ext_resource type="Script" uid="uid://deb73krnthej6" path="res://scripts/client/TouchScrollContainer.cs" id="3_w1ee2"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8o6pa"]
 content_margin_left = 16.0
@@ -60,3 +61,4 @@ theme_override_constants/separation = 4
 layout_mode = 2
 size_flags_horizontal = 3
 horizontal_scroll_mode = 0
+script = ExtResource("3_w1ee2")

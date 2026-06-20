@@ -117,6 +117,7 @@ public partial class InsertMenuPopup : PopupPanel
 			"UICorner",
 			"UIStroke",
 			"UIShadow",
+			"UIAspectRatioRestraint",
 		},
 		[new() { Title = "Teams", RecommendOn = [typeof(Teams)] }] = new()
 		{
@@ -136,12 +137,14 @@ public partial class InsertMenuPopup : PopupPanel
 		{
 			"RigidBody",
 			"BodyPosition",
+			"BodyRotation",
 			"Grabbable",
 			"Weld",
 		},
 		[new() { Title = "Gizmos" }] = new()
 		{
 			"Marker3D",
+			"VoiceBox",
 		},
 	};
 

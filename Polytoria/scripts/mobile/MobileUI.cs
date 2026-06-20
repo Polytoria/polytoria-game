@@ -47,6 +47,10 @@ public partial class MobileUI : Control
 
 		AddChild(_deepLink, true);
 
+		var initResult = _deepLink.Initialize();
+
+		_deepLink.DeeplinkReceived += OnDeeplinkReceived;
+
 		if (Globals.IsMobileBuild)
 		{
 			GetTree().Root.ContentScaleFactor = Globals.MobileScale;
@@ -72,8 +76,6 @@ public partial class MobileUI : Control
 		{
 			_ = PolyMobileAuthAPI.LoginWithCodeAndState(mobileCode, mobileState);
 		}
-
-		_deepLink.DeeplinkReceived += OnDeeplinkReceived;
 
 		_mainView = GetNode<Control>("Layout/MainView");
 		if (Globals.IsMobileBuild)

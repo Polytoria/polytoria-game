@@ -70,6 +70,13 @@ public static class PolyAPI
 			APIGenerationContext.Default.APIPlaceInfo
 		);
 	}
+	public static Task<APIGuildInfo> GetGuildFromID(int guildID)
+	{
+		return _client.GetFromJsonAsync(
+			Globals.ApiEndpoint.PathJoin("/v1/guilds/" + guildID.ToString()),
+			APIGenerationContext.Default.APIGuildInfo
+		);
+	}
 
 	public static Task<APIPlaceMedia[]?> GetWorldMedia(int placeID)
 	{

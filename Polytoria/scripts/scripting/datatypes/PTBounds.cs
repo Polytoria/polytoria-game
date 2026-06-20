@@ -53,7 +53,7 @@ public class PTBounds : IScriptGDObject
 	public static string ToString(PTBounds? v)
 	{
 		if (v == null) return "<Bounds>";
-		return $"<Bounds:({v.Start}, {v.End}, {v.Size}>";
+		return $"<Bounds:({v.Start}, {v.End}, {v.Size})>";
 	}
 
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static Vector3 ClosestPoint(PTBounds bounds, PTVector3 point) => bounds.aabb.GetSupport(point.vector);
