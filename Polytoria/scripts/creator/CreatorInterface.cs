@@ -407,6 +407,25 @@ public partial class CreatorInterface : Control, IScriptObject
 		}, "Give Folder name");
 	}
 
+	public void PromptCreateFile(string atPath)
+	{
+		if (CreatorService.CurrentSession == null) return;
+		CreatorSession session = CreatorService.CurrentSession;
+		PromptGiveName("File name...", async name =>
+		{
+			try
+			{
+				string createAt = Path.Join(atPath, name).SanitizePath();
+				await session.CreateFile(createAt);
+			}
+			catch (Exception ex)
+			{
+				PT.PrintErr(ex);
+				PopupAlert(ex.Message, "Error creating file");
+			}
+		}, "Give File name");
+	}
+
 
 	public void PromptCreateWorld(string atPath)
 	{
@@ -450,7 +469,7 @@ public partial class CreatorInterface : Control, IScriptObject
 			}
 		}
 
-		if (!await PromptConfirmation("Are you sure you want to delete " + wordToUse + "? You can recover this from the recycle bin")) return;
+		if (!await PromptConfirmation("Are you sure you want to delete " + wordToUse + "? You can recover this from the recycle bin.")) return;
 		try
 		{
 			foreach (string item in files)
@@ -613,6 +632,11 @@ public partial class CreatorInterface : Control, IScriptObject
 		window.Visible = false;
 		window.ForceNative = true;
 		window.Theme = _creatorTheme;
+
+		float uiScale = GetWindow().ContentScaleFactor;
+		window.ContentScaleFactor = uiScale;
+		window.Size = (Vector2I)((Vector2)window.Size * uiScale);
+
 		AddChild(window);
 		window.PopupCentered();
 	}

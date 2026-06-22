@@ -1,0 +1,25 @@
+;
+; © 2024-present https://github.com/cengiz-pz
+;
+
+[config]
+name="DeeplinkPlugin"
+binary="DeeplinkPlugin.xcframework"
+
+initialization="deeplink_plugin_init"
+deinitialization="deeplink_plugin_deinit"
+
+use_swift_runtime=true
+
+[dependencies]
+linked=[]
+embedded=[]
+system=[]
+
+capabilities=[]
+
+files=[]
+
+linker_flags=[]
+
+[plist]

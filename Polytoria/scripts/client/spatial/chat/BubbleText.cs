@@ -1,0 +1,57 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+
+using Godot;
+using Polytoria.Datamodel;
+using Polytoria.Shared;
+using System.Collections.Generic;
+
+namespace Polytoria.Client.UI.Chat;
+
+public partial class BubbleText : Node3D
+{
+	private float yOffset = -1f;
+	public string BubbleItemPath = "res://scenes/client/spatial/chat/bubble_item.tscn";
+	private const int BubbleCountLimit = 5;
+	private readonly List<BubbleItem> _activeBubbles = [];
+
+	[Export] private Control _itemContainer = null!;
+	public VoiceBox TargetBox = null!;
+
+	public override void _EnterTree()
+	{
+		TargetBox.CreateChatBubble.Connect(OnChat);
+		base._EnterTree();
+	}
+
+	public override void _ExitTree()
+	{
+		TargetBox.CreateChatBubble.Disconnect(OnChat);
+		base._ExitTree();
+	}
+
+	private void OnChat(string msg)
+	{
+		if (TargetBox != null)
+		{
+			Position = new Vector3(0, TargetBox.CalculateBounds().Size.Y * 1.5f + yOffset, 0);
+		}
+		BubbleItem item = Globals.CreateInstanceFromScene<BubbleItem>(BubbleItemPath);
+		item.Content = msg;
+		_itemContainer.AddChild(item);
+
+		_activeBubbles.Add(item);
+
+		if (_activeBubbles.Count > BubbleCountLimit)
+		{
+			BubbleItem oldest = _activeBubbles[0];
+			_activeBubbles.RemoveAt(0);
+			if (IsInstanceValid(oldest))
+			{
+				oldest.Disappear();
+			}
+		}
+	}
+}

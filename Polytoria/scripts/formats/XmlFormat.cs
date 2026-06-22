@@ -34,7 +34,13 @@ public static class XmlFormat
 		ShapeEnum.Bevel,
 		ShapeEnum.Concave,
 		ShapeEnum.Cone,
-		ShapeEnum.Corner
+		ShapeEnum.Corner,
+		ShapeEnum.Torus,
+		ShapeEnum.Octant,
+		ShapeEnum.BeveledCorner,
+		ShapeEnum.ConcaveCorner,
+		ShapeEnum.TriangleCorner,
+		ShapeEnum.TriangleConcaveCorner
 	];
 
 	private static readonly PartMaterialEnum[] _partMaterials = [

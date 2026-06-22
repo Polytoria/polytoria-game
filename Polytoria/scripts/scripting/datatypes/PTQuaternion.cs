@@ -86,7 +86,7 @@ public class PTQuaternion : IScriptGDObject
 	public static string ToString(PTQuaternion? v)
 	{
 		if (v == null) return "<Quaternion>";
-		return $"<Quaternion:({v.quat.X}, {v.quat.Y}, {v.quat.Z}, {v.quat.W}>";
+		return $"<Quaternion:({v.quat.X}, {v.quat.Y}, {v.quat.Z}, {v.quat.W})>";
 	}
 
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)]

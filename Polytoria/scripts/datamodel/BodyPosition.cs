@@ -81,6 +81,10 @@ public partial class BodyPosition : Instance
 					Vector3 dir = gdPos - currentPos;
 					rigid3D.LinearVelocity = dir * Force;
 				}
+				else
+				{
+					rigid3D.LinearVelocity = Vector3.Zero;
+				}
 			}
 		}
 		base.PhysicsProcess(delta);

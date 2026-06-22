@@ -1,6 +1,6 @@
-[gd_scene load_steps=3 format=3 uid="uid://b7vn9j38vy8xd"]
+[gd_scene format=3 uid="uid://b7voaj38vy8xd"]
 
-[ext_resource type="Script" uid="uid://dw0gk8ey3i3f1" path="res://scripts/creator/ui/docks/bottombar/console/ConsoleFilters.cs" id="1_ab8cd"]
+[ext_resource type="Script" uid="uid://2y0ebr2su3hf" path="res://scripts/creator/ui/docks/bottombar/console/ConsoleFilters.cs" id="1_ab8cd"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_popup"]
 content_margin_left = 12.0
@@ -18,10 +18,11 @@ corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
-[node name="ConsoleFilters" type="PopupPanel" node_paths=PackedStringArray("_infoCheckBox", "_warningCheckBox", "_errorCheckBox", "_noneCheckBox", "_clientCheckBox", "_serverCheckBox", "_addonCheckBox")]
+[node name="ConsoleFilters" type="PopupPanel" unique_id=204993074 node_paths=PackedStringArray("_infoCheckBox", "_warningCheckBox", "_errorCheckBox", "_noneCheckBox", "_clientCheckBox", "_serverCheckBox", "_addonCheckBox")]
 auto_translate_mode = 1
+oversampling_override = 1.0
 initial_position = 1
-size = Vector2i(270, 150)
+size = Vector2i(277, 158)
 visible = true
 theme_override_styles/panel = SubResource("StyleBoxFlat_popup")
 script = ExtResource("1_ab8cd")
@@ -33,67 +34,67 @@ _clientCheckBox = NodePath("MainHBox/SourceColumn/ClientCheckBox")
 _serverCheckBox = NodePath("MainHBox/SourceColumn/ServerCheckBox")
 _addonCheckBox = NodePath("MainHBox/SourceColumn/AddonCheckBox")
 
-[node name="MainHBox" type="HBoxContainer" parent="."]
+[node name="MainHBox" type="HBoxContainer" parent="." unique_id=1593872279]
 offset_left = 12.0
 offset_top = 10.0
-offset_right = 258.0
-offset_bottom = 140.0
+offset_right = 265.0
+offset_bottom = 148.0
 theme_override_constants/separation = 15
 
-[node name="TypeColumn" type="VBoxContainer" parent="MainHBox"]
+[node name="TypeColumn" type="VBoxContainer" parent="MainHBox" unique_id=1799073132]
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="Label" type="Label" parent="MainHBox/TypeColumn"]
+[node name="Label" type="Label" parent="MainHBox/TypeColumn" unique_id=908130403]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.588235, 0.588235, 0.588235, 1)
 theme_override_font_sizes/font_size = 11
 text = "LOG LEVEL"
 
-[node name="InfoCheckBox" type="CheckBox" parent="MainHBox/TypeColumn"]
+[node name="InfoCheckBox" type="CheckBox" parent="MainHBox/TypeColumn" unique_id=262696563]
 layout_mode = 2
 button_pressed = true
 text = "Information"
 
-[node name="WarningCheckBox" type="CheckBox" parent="MainHBox/TypeColumn"]
+[node name="WarningCheckBox" type="CheckBox" parent="MainHBox/TypeColumn" unique_id=2015872617]
 layout_mode = 2
 button_pressed = true
 text = "Warnings"
 
-[node name="ErrorCheckBox" type="CheckBox" parent="MainHBox/TypeColumn"]
+[node name="ErrorCheckBox" type="CheckBox" parent="MainHBox/TypeColumn" unique_id=2001618650]
 layout_mode = 2
 button_pressed = true
 text = "Errors"
 
-[node name="VSeparator" type="VSeparator" parent="MainHBox"]
+[node name="VSeparator" type="VSeparator" parent="MainHBox" unique_id=1484312149]
 layout_mode = 2
 
-[node name="SourceColumn" type="VBoxContainer" parent="MainHBox"]
+[node name="SourceColumn" type="VBoxContainer" parent="MainHBox" unique_id=2019942950]
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="Label" type="Label" parent="MainHBox/SourceColumn"]
+[node name="Label" type="Label" parent="MainHBox/SourceColumn" unique_id=845526448]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.588235, 0.588235, 0.588235, 1)
 theme_override_font_sizes/font_size = 11
 text = "SOURCE"
 
-[node name="NoneCheckBox" type="CheckBox" parent="MainHBox/SourceColumn"]
+[node name="NoneCheckBox" type="CheckBox" parent="MainHBox/SourceColumn" unique_id=1335539117]
 layout_mode = 2
 button_pressed = true
 text = "System"
 
-[node name="ClientCheckBox" type="CheckBox" parent="MainHBox/SourceColumn"]
+[node name="ClientCheckBox" type="CheckBox" parent="MainHBox/SourceColumn" unique_id=559919689]
 layout_mode = 2
 button_pressed = true
 text = "Client"
 
-[node name="ServerCheckBox" type="CheckBox" parent="MainHBox/SourceColumn"]
+[node name="ServerCheckBox" type="CheckBox" parent="MainHBox/SourceColumn" unique_id=853569225]
 layout_mode = 2
 button_pressed = true
 text = "Server"
 
-[node name="AddonCheckBox" type="CheckBox" parent="MainHBox/SourceColumn"]
+[node name="AddonCheckBox" type="CheckBox" parent="MainHBox/SourceColumn" unique_id=2108218429]
 layout_mode = 2
 button_pressed = true
 text = "Addons"

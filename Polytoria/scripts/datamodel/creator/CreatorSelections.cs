@@ -248,7 +248,7 @@ public sealed partial class CreatorSelections : Instance
 
 		foreach (Instance item in models)
 		{
-			if (item is not IGroup and RigidBody) continue;
+			if (item is not IGroup and not RigidBody) continue;
 			foreach (Instance modelItem in item.GetChildren())
 			{
 				modelItem.Reparent(item.Parent!);
