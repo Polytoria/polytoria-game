@@ -93,13 +93,13 @@ public partial class Seat : Part
 		if (hit is Player plr)
 		{
 			if (!CanPlayerSit) { return; }
-			if(plr.IsSitting) { return; }
+			if (plr.IsSitting) { return; }
 			plr.Sit(this);
 		}
 		else if (hit is NPC npc)
 		{
 			if (!CanNPCSit) { return; }
-			if(npc.IsSitting) { return; }
+			if (npc.IsSitting) { return; }
 			npc.Sit(this);
 		}
 	}
