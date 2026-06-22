@@ -201,7 +201,7 @@ public sealed partial class Player : NPC
 			OnPropertyChanged();
 		}
 	}
-	
+
 	[Editable, ScriptProperty]
 	public bool KeepInventory
 	{
