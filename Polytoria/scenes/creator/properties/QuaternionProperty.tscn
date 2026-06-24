@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://b8idijqb8aw3a"]
 
-[ext_resource type="Script" uid="uid://deg0ht5fobrth" path="res://scripts/creator/properties/Vector3Property.cs" id="1_djbn4"]
+[ext_resource type="Script" uid="uid://bnb5r7y4plnl6" path="res://scripts/creator/properties/QuaternionProperty.cs" id="1_djbn4"]
 
 [sub_resource type="Theme" id="Theme_tpni3"]
 HBoxContainer/constants/separation = 0
