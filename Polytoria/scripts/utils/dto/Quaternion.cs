@@ -26,12 +26,12 @@ public partial class QuaternionDto
 
 	public static string ToString(Quaternion src)
 	{
-		// Limit to 4 decimals
+		// Limit to 5 decimals; orientation error of ~0.001 degrees, nearly matching Euler angle precision.
 		return string.Join(",",
-			src.X.ToString("0.####", CultureInfo.InvariantCulture),
-			src.Y.ToString("0.####", CultureInfo.InvariantCulture),
-			src.Z.ToString("0.####", CultureInfo.InvariantCulture),
-			src.W.ToString("0.####", CultureInfo.InvariantCulture)
+			src.X.ToString("0.#####", CultureInfo.InvariantCulture),
+			src.Y.ToString("0.#####", CultureInfo.InvariantCulture),
+			src.Z.ToString("0.#####", CultureInfo.InvariantCulture),
+			src.W.ToString("0.#####", CultureInfo.InvariantCulture)
 		);
 	}
 
