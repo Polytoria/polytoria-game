@@ -14,15 +14,18 @@ namespace Polytoria.Scripting.Datatypes;
 
 public class PTVariant : IScriptGDObject
 {
-	// ---------------------------------------------- Internal Logic ---------------------------------------------------
+	// -----------------------------------------------------------------------------------------------------------------
+	// Internal Data
 
 	Variant variant;
 
-	// ------------------------------------------------ Properties -----------------------------------------------------
+	// -----------------------------------------------------------------------------------------------------------------
+	// Exposed Properties
 
 	[ScriptProperty] public object? Value => ToScript(variant);
 
-	// -------------------------------------------------- Methods ------------------------------------------------------
+	// -----------------------------------------------------------------------------------------------------------------
+	// Exposed Scripting Methods
 
 	[ScriptMethod]
 	public static PTVariant New()
@@ -46,7 +49,8 @@ public class PTVariant : IScriptGDObject
 		return $"<Variant:{v.variant}>";
 	}
 
-	// ----------------------------------------------- Conversion ------------------------------------------------------
+	// -----------------------------------------------------------------------------------------------------------------
+	// Internal Conversions
 
 	// Implicit conversion from ACL type to Godot type.
 	public static implicit operator Variant(PTVariant acl) => acl.variant;
