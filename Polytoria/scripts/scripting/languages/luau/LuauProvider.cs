@@ -1064,7 +1064,19 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 	private static async Task HandleYieldTaskAsync(LuaState thread, LuaState from, Task<int> initialTask)
 	{
-		await ResumeThread(thread, from, await initialTask, false);
+		int narg = await initialTask;
+		LuaCoStatus costatus;
+		lock (thread)
+		{
+			costatus = thread.CoStatus(from);
+		}
+
+		// Luau will throw an error if you attempt to resume a dead coroutine.
+		// If the coroutine is finished, don't resume.
+		if (costatus == LuaCoStatus.CoFin)
+			return;
+
+		await ResumeThread(thread, from, narg, false);
 	}
 
 #if DEBUG
