@@ -982,7 +982,7 @@ public static partial class PolyFormat
 	[JsonSourceGenerationOptions(WriteIndented = true, Converters = [
 		typeof(Vector2JsonConverter),
 		typeof(Vector3JsonConverter),
-		typeof(QuaternionJsonConverter),
+		typeof(UnitQuaternionUInt64JsonConverter),
 		typeof(ColorJsonConverter),
 		typeof(ColorSeriesJsonConverter),
 		typeof(NumberSeriesJsonConverter),
