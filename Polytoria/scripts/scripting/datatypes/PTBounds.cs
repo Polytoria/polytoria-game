@@ -61,6 +61,7 @@ public class PTBounds : IScriptGDObject
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTBounds Encapsulate(PTBounds bounds, PTVector3 point) => FromGDClass(bounds.aabb.Expand(point.vector));
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTBounds Expand(PTBounds bounds, float amount) => FromGDClass(bounds.aabb.Grow(amount));
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static bool Intersects(PTBounds bounds, PTBounds other) => bounds.aabb.Intersects(other.aabb);
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTBounds Intersection(PTBounds bounds, PTBounds other) => FromGDClass(bounds.aabb.Intersection(other.aabb));
 
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)]
 	public static PTBounds SetMinMax(PTBounds bounds, PTVector3 min, PTVector3 max)

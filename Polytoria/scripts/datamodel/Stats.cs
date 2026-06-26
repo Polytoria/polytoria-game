@@ -38,6 +38,22 @@ public sealed partial class Stats : Instance
 		return [.. stats];
 	}
 
+	[ScriptMethod]
+	public Stat[] GetVisibleStats()
+	{
+		List<Stat> stats = [];
+
+		foreach (Instance item in GetChildren())
+		{
+			if (item is Stat { Visible: true } s)
+			{
+				stats.Add(s);
+			}
+		}
+
+		return [.. stats];
+	}
+
 	private void OnChildAdded(Instance instance)
 	{
 		if (instance is Stat stat)
