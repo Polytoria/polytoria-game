@@ -23,6 +23,7 @@ public partial class NetMessage : IScriptObject
 	public Dictionary<string, Vector2> Vec2s = [];
 	public Dictionary<string, Vector3> Vec3s = [];
 	public Dictionary<string, Color> Colors = [];
+	public Dictionary<string, Quaternion> Quaternions = [];
 	public Dictionary<string, Instance> Instances = [];
 	public Dictionary<string, byte[]> Buffers = [];
 
@@ -69,6 +70,12 @@ public partial class NetMessage : IScriptObject
 	}
 
 	[ScriptMethod]
+	public void AddQuaternion(string key, Quaternion value)
+	{
+		Quaternions.Add(key, value);
+	}
+
+	[ScriptMethod]
 	public void AddInstance(string key, Instance value)
 	{
 		Instances.Add(key, value);
@@ -100,6 +107,9 @@ public partial class NetMessage : IScriptObject
 
 	[ScriptMethod]
 	public Color? GetColor(string key) => Colors.TryGetValue(key, out var value) ? value : (Color?)null;
+
+	[ScriptMethod]
+	public Quaternion? GetQuaternion(string key) => Quaternions.TryGetValue(key, out var value) ? value : (Quaternion?)null;
 
 	[ScriptMethod]
 	public Instance? GetInstance(string key) => Instances.TryGetValue(key, out var value) ? value : null;
@@ -135,6 +145,10 @@ public partial class NetMessage : IScriptObject
 		{
 			payload.Colors[key] = new ColorDto(c);
 		}
+		foreach ((string key, Quaternion q) in Quaternions)
+		{
+			payload.Quaternions[key] = new UnitQuaternionUInt64Dto(q);
+		}
 		foreach ((string key, Instance i) in Instances)
 		{
 			payload.Instances[key] = i.NetworkedObjectID;
@@ -165,6 +179,10 @@ public partial class NetMessage : IScriptObject
 		{
 			msg.Colors[key] = c.ToColor();
 		}
+		foreach ((string key, UnitQuaternionUInt64Dto q) in payload.Quaternions)
+		{
+			msg.Quaternions[key] = q.ToQuaternion();
+		}
 		foreach ((string key, string netID) in payload.Instances)
 		{
 			NetworkedObject? netobj = await World.Current!.WaitForNetObjectAsync(netID);
@@ -186,6 +204,7 @@ public partial class NetMessage : IScriptObject
 		public Dictionary<string, Vector2Dto> Vec2s = [];
 		public Dictionary<string, Vector3Dto> Vec3s = [];
 		public Dictionary<string, ColorDto> Colors = [];
+		public Dictionary<string, UnitQuaternionUInt64Dto> Quaternions = [];
 		public Dictionary<string, string> Instances = [];
 		public Dictionary<string, byte[]> Buffers = [];
 	}
