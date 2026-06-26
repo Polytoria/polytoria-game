@@ -66,7 +66,7 @@ public class VariantJsonConverter : JsonConverter<Variant>
 {
 	private static readonly Vector2JsonConverter Vector2Converter = new();
 	private static readonly Vector3JsonConverter Vector3Converter = new();
-	private static readonly QuaternionJsonConverter QuaternionConverter = new();
+	private static readonly UnitQuaternionUInt64JsonConverter QuaternionConverter = new();
 	private static readonly ColorJsonConverter ColorConverter = new();
 
 	public override Variant Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
