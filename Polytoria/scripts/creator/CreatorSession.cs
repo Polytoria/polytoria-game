@@ -214,7 +214,11 @@ public partial class CreatorSession : Node, IDisposable
 
 			PT.Print("Writing doc...");
 			File.WriteAllText(versionPath, Globals.AppVersion);
-			File.WriteAllText(luauRcPath, LuauRCContent);
+
+			if (!File.Exists(luauRcPath))
+			{
+				File.WriteAllText(luauRcPath, LuauRCContent);
+			}
 		}
 	}
 
