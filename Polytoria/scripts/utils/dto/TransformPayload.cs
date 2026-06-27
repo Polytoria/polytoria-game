@@ -55,6 +55,8 @@ public partial class TransformPayloadDto
 	// UnitQuaternionDto has a ~0.137 degree step and uses 4 bytes,
 	// UnitQuaternionUInt64Dto has a ~0.003 497 degree step and uses 8 bytes.
 	// This is the the unimplemented TransformPayload logic for higher precision network replication of rotations.
+	[MemoryPackIgnore]
+	[JsonIgnore]
 	public ulong RawRotationUInt64
 	{
 		get => BitConverter.ToUInt64(Data, 12);
@@ -65,6 +67,8 @@ public partial class TransformPayloadDto
 		}
 	}
 
+	[MemoryPackIgnore]
+	[JsonIgnore]
 	public Quaternion RotationUInt64
 	{
 		get => UnitQuaternionUInt64Dto.FromCompressed(RawRotationUInt64);
