@@ -197,6 +197,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		SetGlobalTablePtr(state, _loggerPtr, script.Root.ScriptService.Logger);
 
 		state.Register("print", LuaPrint);
+		state.Register("warn", LuaWarn);
 		state.Register("wait", LuaWait);
 		state.Register("spawn", LuaSpawn);
 		state.Register("tick", LuaTick);
@@ -627,6 +628,37 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 		string logInfo = sb.ToString();
 		logger.LogInfo(script, logInfo);
+		return 0;
+	}
+	public static int LuaWarn(IntPtr L)
+	{
+		LuaState lua = LuaState.FromIntPtr(L);
+		Script script = GetScriptInstance(lua);
+		LogDispatcher logger = GetLogger(lua);
+
+		int n = lua.GetTop();
+		StringBuilder sb = new();
+
+		for (int i = 1; i <= n; i++)
+		{
+			if (i > 1)
+				sb.Append('\t');
+			LuaType dataType = lua.Type(i);
+			if (dataType == LuaType.Boolean)
+			{
+				sb.Append(lua.ToBoolean(i));
+			}
+			else if (dataType == LuaType.Number)
+			{
+				sb.Append(lua.ToNumber(i));
+			}
+			else
+			{
+				sb.Append(lua.ToString(i, true) ?? "<" + lua.TypeName(i) + ">");
+			}
+		}
+		string logInfo = sb.ToString();
+		logger.LogWarning(script, logInfo);
 		return 0;
 	}
 	public int LuaWait(IntPtr L)

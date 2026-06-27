@@ -23,6 +23,7 @@ public sealed partial class PlayerDefaults : HiddenBase
 	private bool _useStamina;
 	private float _staminaRegen;
 	private float _staminaBurn;
+	private bool _keepInventory;
 	private bool _useHeadTurning;
 	private bool _useBubbleChat;
 	private bool _autoLoadAppearance;
@@ -175,6 +176,18 @@ public sealed partial class PlayerDefaults : HiddenBase
 		set
 		{
 			_staminaRegen = value;
+			OnPropertyChanged();
+		}
+	}
+
+
+	[Editable, ScriptProperty]
+	public bool KeepInventory
+	{
+		get => _keepInventory;
+		set
+		{
+			_keepInventory = value;
 			OnPropertyChanged();
 		}
 	}

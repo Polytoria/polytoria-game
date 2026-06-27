@@ -253,6 +253,14 @@ public static class XmlFormat
 						_y = 0;
 						_z = 0;
 					}
+					else if (name.SequenceEqual("quaternion"))
+					{
+						value = new Quaternion(_x, _y, _z, _w);
+						_x = 0;
+						_y = 0;
+						_z = 0;
+						_w = 1;
+					}
 					else if (name.SequenceEqual("color"))
 					{
 						value = new Color(_x, _y, _z, _w);

@@ -15,7 +15,7 @@ public partial class RigidBody : Physical
 	internal RigidBody3D GDRigidBody = null!;
 	internal PhysicsMaterial PhysicsMat = null!;
 
-	private bool _useGravity = true;
+	private float _gravityScale;
 	private bool _lockRotation = false;
 	private float _mass;
 	private float _friction;
@@ -51,20 +51,37 @@ public partial class RigidBody : Physical
 		}
 	}
 
-	[Editable, ScriptProperty, DefaultValue(true)]
-	public bool UseGravity
+	[Editable, ScriptProperty, DefaultValue(1f)]
+	public float GravityScale
 	{
-		get => _useGravity;
+		get => _gravityScale;
 		set
 		{
-			if (_useGravity == value)
+			if (_gravityScale == value)
 			{
 				return;
 			}
 
-			_useGravity = value;
+			_gravityScale = value;
 
-			GDRigidBody.GravityScale = value ? 2 : 0;
+			GDRigidBody.GravityScale = value * 2f;
+
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use GravityScale instead"), CloneIgnore, SaveIgnore]
+	public bool UseGravity
+	{
+		get => GravityScale != 0f;
+		set
+		{
+			if (UseGravity == value)
+			{
+				return;
+			}
+
+			GravityScale = value ? 1f : 0f;
 
 			OnPropertyChanged();
 		}

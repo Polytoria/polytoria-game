@@ -109,6 +109,8 @@ public static partial class PolyFormat
 					return JsonSerializer.Deserialize(element.GetRawText(), PolyJSONGenerationContext.Default.Vector2);
 				if (targetType == typeof(Vector3))
 					return JsonSerializer.Deserialize(element.GetRawText(), PolyJSONGenerationContext.Default.Vector3);
+				if (targetType == typeof(Quaternion))
+					return JsonSerializer.Deserialize(element.GetRawText(), PolyJSONGenerationContext.Default.Quaternion);
 				break;
 		}
 
@@ -980,6 +982,7 @@ public static partial class PolyFormat
 	[JsonSourceGenerationOptions(WriteIndented = true, Converters = [
 		typeof(Vector2JsonConverter),
 		typeof(Vector3JsonConverter),
+		typeof(UnitQuaternionUInt64JsonConverter),
 		typeof(ColorJsonConverter),
 		typeof(ColorSeriesJsonConverter),
 		typeof(NumberSeriesJsonConverter),
@@ -1001,6 +1004,7 @@ public static partial class PolyFormat
 
 	[JsonSerializable(typeof(Vector2))]
 	[JsonSerializable(typeof(Vector3))]
+	[JsonSerializable(typeof(Quaternion))]
 	[JsonSerializable(typeof(Color))]
 
 	[JsonSerializable(typeof(ColorSeries))]

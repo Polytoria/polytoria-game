@@ -8,6 +8,7 @@ using Polytoria.Datamodel;
 using Polytoria.Datamodel.Resources;
 using Polytoria.Schemas.API;
 using Polytoria.Shared;
+using System;
 using System.Collections.Generic;
 
 namespace Polytoria.Client.UI.Playerlist;
@@ -70,10 +71,25 @@ public partial class UIUserCard : Control
 	private void AddStat(Stat stat)
 	{
 		if (_statToUserCardStat.ContainsKey(stat)) return;
+
+		stat.PropertyChanged.Connect(_ => OnStatVisibilityChanged(stat));
+
+		if (!stat.Visible) return;
+
+		CreateStatRow(stat);
+	}
+
+	private void CreateStatRow(Stat stat)
+	{
+		if (_statToUserCardStat.ContainsKey(stat)) return;
+
 		var s = Globals.CreateInstanceFromScene<UIUserCardStat>(UserCardStat);
 		s.TargetStat = stat;
 		s.Root = this;
+
 		_statsContainer.AddChild(s);
+		_statsContainer.MoveChild(s, GetInsertIndex(stat));
+
 		_statToUserCardStat.Add(stat, s);
 
 		void OnStatDeleted()
@@ -84,6 +100,28 @@ public partial class UIUserCard : Control
 
 		stat.Deleted += OnStatDeleted;
 		RefreshBox();
+	}
+
+	private int GetInsertIndex(Stat stat)
+	{
+		Stat[] visibleStats = Root.Stats.GetVisibleStats();
+		return Array.IndexOf(visibleStats, stat);
+	}
+
+	private void OnStatVisibilityChanged(Stat stat)
+	{
+		bool hasRow = _statToUserCardStat.ContainsKey(stat);
+
+		if (stat.Visible && !hasRow)
+		{
+			CreateStatRow(stat);
+		}
+		else if (!stat.Visible && hasRow)
+		{
+			_statToUserCardStat[stat].QueueFree();
+			_statToUserCardStat.Remove(stat);
+			RefreshBox();
+		}
 	}
 
 	private void RemoveStat(Stat stat)
