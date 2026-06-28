@@ -65,7 +65,7 @@ public class LuaDefinitionGenerator
 			builder.AppendLine($"declare class {e.InternalName} extends Enum");
 			foreach (string item in e.Options)
 			{
-				builder.AppendLine($"\t{item}:{e.Name}");
+				builder.AppendLine($"\t{item}: {e.Name}");
 			}
 			builder.AppendLine($"end");
 		}
