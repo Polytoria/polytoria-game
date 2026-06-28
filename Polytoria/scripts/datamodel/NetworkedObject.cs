@@ -78,6 +78,7 @@ public partial class NetworkedObject : IScriptObject
 				preI.Children.Remove(selfpreI);
 				preI.ChildRemoved.Invoke(selfpreI);
 			}
+			NetworkedObject? preParent = _networkParent;
 
 			UnregisterName();
 			_networkParent = value;
@@ -94,6 +95,70 @@ public partial class NetworkedObject : IScriptObject
 				postI.Children.Add(selfpostI);
 				selfpostI.Index = postI.Children.Count - 1;
 				postI.ChildAdded.Invoke(selfpostI);
+
+				List<Instance>? previousAncestors = null;
+				if (preParent != null)
+				{
+					previousAncestors = [];
+					Instance? previousAncestor = (Instance)preParent;
+					do
+					{
+						previousAncestors.Add(previousAncestor);
+						previousAncestor = previousAncestor.Parent;
+					} while (previousAncestor != null);
+
+					previousAncestors.Reverse();
+				}
+
+				Instance? ancestor = postI;
+				List<Instance> newAncestors = [];
+				do
+				{
+					newAncestors.Add(ancestor);
+					ancestor = ancestor.Parent;
+				} while (ancestor != null);
+				newAncestors.Reverse();
+
+				Instance[] descendants = selfpostI.GetDescendants();
+				if (previousAncestors != null)
+				{
+					/**
+					 * Filter out matching ancestors
+					 * Remember that the eldest ancestor has an index of 0
+					*/
+					int oldestMatchingAncestorIndex;
+					for (oldestMatchingAncestorIndex = 0; oldestMatchingAncestorIndex < Math.Min(previousAncestors.Count, newAncestors.Count); oldestMatchingAncestorIndex++)
+					{
+						if (previousAncestors[oldestMatchingAncestorIndex] != newAncestors[oldestMatchingAncestorIndex])
+						{
+							oldestMatchingAncestorIndex--;
+							break; /// Younger ancestors will not match if this one doesn't
+						}
+						;
+					}
+					if (oldestMatchingAncestorIndex != -1)
+					{
+						newAncestors.RemoveRange(0, oldestMatchingAncestorIndex);
+						previousAncestors.RemoveRange(0, oldestMatchingAncestorIndex);
+					}
+
+					foreach (Instance oldAncestor in previousAncestors)
+					{
+						oldAncestor.DescendantRemoved.Invoke(selfpostI);
+						foreach (Instance descendant in descendants)
+						{
+							oldAncestor.DescendantRemoved.Invoke(descendant);
+						}
+					}
+				}
+				foreach (Instance newAncestor in newAncestors)
+				{
+					newAncestor.DescendantAdded.Invoke(selfpostI);
+					foreach (Instance descendant in descendants)
+					{
+						newAncestor.DescendantAdded.Invoke(descendant);
+					}
+				}
 			}
 
 			if (_networkParent != null)
@@ -1853,6 +1918,13 @@ public partial class NetworkedObject : IScriptObject
 		if (parent != null && parent is Instance prei)
 		{
 			prei.ChildDeleting.Invoke(this);
+
+			Instance? ancestor = prei;
+			do
+			{
+				ancestor.DescendantDeleting.Invoke(this);
+				ancestor = ancestor.Parent;
+			} while (ancestor != null);
 		}
 
 		// Propagate deletion
@@ -1867,7 +1939,14 @@ public partial class NetworkedObject : IScriptObject
 
 		if (parent != null && parent is Instance i)
 		{
-			i.ChildDeleted.Invoke(this);
+			i.ChildDeleted.Invoke();
+
+			Instance? ancestor = i;
+			do
+			{
+				ancestor.DescendantDeleted.Invoke();
+				ancestor = ancestor.Parent;
+			} while (ancestor != null);
 		}
 
 		// Send remove command explicitly to make sure it's in order

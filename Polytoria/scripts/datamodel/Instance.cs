@@ -291,7 +291,12 @@ public partial class Instance : NetworkedObject
 	[ScriptProperty] public PTSignal<Instance> ChildAdded { get; private set; } = new();
 	[ScriptProperty] public PTSignal<Instance> ChildRemoved { get; private set; } = new();
 	[ScriptProperty] public PTSignal<Instance> ChildDeleting { get; private set; } = new();
-	[ScriptProperty] public PTSignal<Instance> ChildDeleted { get; private set; } = new();
+	[ScriptProperty] public PTSignal ChildDeleted { get; private set; } = new();
+
+	[ScriptProperty] public PTSignal<Instance> DescendantAdded { get; private set; } = new();
+	[ScriptProperty] public PTSignal<Instance> DescendantRemoved { get; private set; } = new();
+	[ScriptProperty] public PTSignal<Instance> DescendantDeleting { get; private set; } = new();
+	[ScriptProperty] public PTSignal DescendantDeleted { get; private set; } = new();
 
 	internal void AddLegacyNameToParent()
 	{
