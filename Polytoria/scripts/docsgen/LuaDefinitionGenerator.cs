@@ -93,25 +93,6 @@ public class LuaDefinitionGenerator
 	{
 		StringBuilder builder = new();
 
-		if (c.IsInstantiable)
-		{
-			// Add new to instantiatables
-			c.Methods.Add(new()
-			{
-				IsStatic = true,
-				Name = "New",
-				Parameters = [
-					new() {
-						Name = "parent",
-						Type = "NetworkedObject",
-						IsOptional = true,
-						DefaultValue = null
-					}
-				],
-				ReturnType = c.Name
-			});
-		}
-
 		bool hasStatic = false;
 
 		string baseType = c.BaseType != null ? $" extends {c.BaseType}" : "";
@@ -121,14 +102,14 @@ public class LuaDefinitionGenerator
 		{
 			if (p.IsObsolete) continue;
 			if (p.IsStatic) { hasStatic = true; continue; }
-			builder.AppendLine($"\t{p.Name} : {ProcessType(p.Type ?? "nil")}");
+			builder.AppendLine($"\t{p.Name} : {p.Type ?? "nil"}");
 		}
 
 		foreach (ScriptEvent e in c.Events)
 		{
-			if (e.Parameters != null && e.Parameters.Count > 0)
+			if (e.Parameters.Length > 0)
 			{
-				string typeParams = string.Join(", ", e.Parameters.Select(p => ProcessType(p.Type ?? "nil")));
+				string typeParams = string.Join(", ", e.Parameters.Select(p => p.Type ?? "nil"));
 				builder.AppendLine($"\t{e.Name} : PTSignal<{typeParams}>");
 			}
 			else
@@ -140,24 +121,35 @@ public class LuaDefinitionGenerator
 		foreach (ScriptMethod m in c.Methods)
 		{
 			if (m.IsObsolete) continue;
-			if (SkippedMetamethods.Contains(m.Name)) continue;
-			if (m.IsStatic && !m.Name.StartsWith("__"))
+			if (m.IsMetamethod)
+			{
+				if (SkippedMetamethods.Contains(m.Name)) continue;
+				if (m.IsStatic && m.Parameters.Length > 0 && m.Parameters[0].Type != c.Name) continue;
+			}
+			else if (m.IsStatic)
 			{
 				hasStatic = true;
-				if (!m.IsSemiStatic) { continue; }
+				if (!m.IsSemiStatic) continue;
 			}
 			List<string> args = [];
 
 			foreach (ScriptParameter param in m.Parameters)
 			{
 				if (param.Type == null) continue;
-				args.Add($"{param.Name}: {ProcessType(param.Type) + (param.IsOptional ? "?" : "")}");
+				args.Add($"{param.Name}: {param.Type + (param.IsOptional ? "?" : "")}");
 			}
 
-			if (!m.IsSemiStatic) { args.Insert(0, "self"); }
-			else { args[0] = "self"; }
+			if (m.IsSemiStatic)
+			{
+				args[0] = "self";
+			}
+			else
+			{
+				args.Insert(0, "self");
+			}
 
-			builder.AppendLine($"\tfunction {m.Name}({string.Join(", ", args)}): {ProcessType(m.ReturnType ?? "")}");
+			string returnType = m.ReturnType != null ? $": {m.ReturnType}" : "";
+			builder.AppendLine($"\tfunction {m.Name}({string.Join(", ", args)}){returnType}");
 		}
 
 		builder.AppendLine($"end");
@@ -179,41 +171,25 @@ public class LuaDefinitionGenerator
 		foreach (ScriptProperty p in c.Properties)
 		{
 			if (!p.IsStatic) continue;
-			builder.AppendLine($"\t{p.Name} : {ProcessType(p.Type ?? "nil")},");
+			builder.AppendLine($"\t{p.Name} : {p.Type ?? "nil"},");
 		}
 
 		foreach (ScriptMethod m in c.Methods)
 		{
-			if (m.IsObsolete) continue;
-			if (!m.IsStatic) continue;
-			// Ignore metamethods
-			if (m.Name.StartsWith("__")) continue;
+			if (m.IsObsolete || !m.IsStatic || m.IsMetamethod) continue;
 			List<string> args = [];
 
 			foreach (ScriptParameter param in m.Parameters)
 			{
 				if (param.Type == null) continue;
-				args.Add($"{ProcessType(param.Type) + (param.IsOptional ? "?" : "")}");
+				args.Add($"{param.Type + (param.IsOptional ? "?" : "")}");
 			}
 
-			builder.AppendLine($"{m.Name}: ({string.Join(", ", args)}) -> ({ProcessType(m.ReturnType ?? "")}),");
+			builder.AppendLine($"{m.Name}: ({string.Join(", ", args)}) -> {m.ReturnType ?? "()"},");
 		}
 
 		builder.AppendLine($"}}");
 
 		return builder.ToString();
-	}
-
-	private static string ProcessType(string t)
-	{
-		if (t == "function")
-		{
-			return "() -> nil";
-		}
-		else if (t == "table")
-		{
-			return "{ any }";
-		}
-		return t;
 	}
 }
