@@ -4,8 +4,10 @@
 
 using Polytoria.Attributes;
 using Polytoria.Client.UI;
+using Polytoria.Datamodel.Resources;
 using Polytoria.Scripting;
 using Polytoria.Shared;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Polytoria.Datamodel.Services;
@@ -25,7 +27,13 @@ public sealed partial class CoreUIService : Instance
 	private bool _useMenuButton = true;
 	private bool _useEmoteWheel = true;
 	private bool _canRespawn = true;
+
 	private CtrlLockCursorEnum _ctrlLockCursor = CtrlLockCursorEnum.Chevron;
+	private CursorAsset? _defaultCursorOverride;
+	private CursorAsset? _pointerCursorOverride;
+	private CursorAsset? _grabCursorOverride;
+	private CursorAsset? _grabbingCursorOverride;
+	private CursorAsset? _crosshairCursorOverride;
 
 	public CoreUIRoot CoreUI = null!;
 
@@ -41,6 +49,61 @@ public sealed partial class CoreUIService : Instance
 			RefreshCoreUIsVisibility();
 			OnPropertyChanged();
 			CtrlLockCursorChanged.Invoke();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public CursorAsset? DefaultCursorOverride
+	{
+		get { return _defaultCursorOverride; }
+		set
+		{
+			SetMouseCursor(ref _defaultCursorOverride, value, Input.CursorShape.Arrow);
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public CursorAsset? PointerCursorOverride
+	{
+		get { return _pointerCursorOverride; }
+		set
+		{
+			SetMouseCursor(ref _pointerCursorOverride, value, Input.CursorShape.PointingHand);
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public CursorAsset? GrabCursorOverride
+	{
+		get { return _grabCursorOverride; }
+		set
+		{
+			SetMouseCursor(ref _grabCursorOverride, value, Input.CursorShape.Drag);
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public CursorAsset? GrabbingCursorOverride
+	{
+		get { return _grabbingCursorOverride; }
+		set
+		{
+			SetMouseCursor(ref _grabbingCursorOverride, value, Input.CursorShape.CanDrop);
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public CursorAsset? CrosshairCursorOverride
+	{
+		get { return _crosshairCursorOverride; }
+		set
+		{
+			_crosshairCursorOverride = value;
+			OnPropertyChanged();
 		}
 	}
 
@@ -117,7 +180,7 @@ public sealed partial class CoreUIService : Instance
 	public override void Init()
 	{
 		Root.Loaded.Once(OnGameLoaded);
-
+		ReloadCursors();
 		base.Init();
 	}
 
@@ -150,7 +213,7 @@ public sealed partial class CoreUIService : Instance
 
 	private void OnGameLoaded()
 	{
-		if (Root.Network.IsServer || Root.SessionType != World.SessionTypeEnum.Client) { return; }
+		if (Root.Network.IsServer || Root.SessionType != World.SessionTypeEnum.Client) return;
 
 		CoreUIRoot coreUI = Globals.CreateInstanceFromScene<CoreUIRoot>(CoreUIPath);
 		coreUI.Root = Root;
@@ -158,6 +221,7 @@ public sealed partial class CoreUIService : Instance
 		CoreUI = coreUI;
 		GDNode.AddChild(coreUI, true, Godot.Node.InternalMode.Front);
 		RefreshCoreUIsVisibility();
+		ReloadCursors();
 	}
 
 	internal async Task<CoreUIRoot> WaitRoot()
@@ -173,6 +237,79 @@ public sealed partial class CoreUIService : Instance
 		}
 
 		return CoreUI;
+	}
+
+	private void SetMouseCursor(ref CursorAsset? cursor, CursorAsset? newCursor, Input.CursorShape shape)
+	{
+		if (cursor != null && cursor != newCursor)
+		{
+			// Wish there was a more optimal method for this. Oh well!
+			cursor.CursorAdjustInternal.Disconnect(ReloadCursors);
+			cursor.UnlinkFrom(this);
+		}
+
+		cursor = newCursor;
+
+		if (cursor != null)
+		{
+			cursor.LinkTo(this);
+			cursor.CursorAdjustInternal.Connect(ReloadCursors);
+			if (!cursor.IsResourceLoaded)
+				cursor.QueueLoadResource();
+		}
+		
+		LoadMouseCursor(shape, cursor);
+	}
+
+	private void ReloadCursors()
+	{
+		LoadMouseCursor(Input.CursorShape.Arrow, DefaultCursorOverride);
+		LoadMouseCursor(Input.CursorShape.PointingHand, PointerCursorOverride);
+		LoadMouseCursor(Input.CursorShape.Drag, GrabCursorOverride);
+		LoadMouseCursor(Input.CursorShape.CanDrop, GrabbingCursorOverride);
+	}
+
+	private void LoadMouseCursor(Input.CursorShape shape, CursorAsset? cursor = null)
+	{
+		if (Root == null) return;
+		if (Root.SessionType != World.SessionTypeEnum.Client) return;
+
+		if (cursor != null)
+		{
+			if (cursor is PTCursorAsset cursorImage)
+			{
+				void apply(Resource? res)
+				{
+					cursorImage.ResourceLoaded -= apply;
+					Input.SetCustomMouseCursor(res, shape, cursorImage.Hotspot);
+				}
+
+				if (cursorImage.IsResourceLoaded && cursorImage.Resource != null)
+				{
+					apply(cursorImage.Resource);
+				}
+				else
+				{
+					cursorImage.ResourceLoaded += apply;
+					cursorImage.QueueLoadResource();
+				}
+			}
+
+			return;
+		}
+
+		// Load default cursors if no custom cursor is provided.
+		// Default to loading the arrow cursor.
+		Image defaultCursorImage = shape switch
+		{
+			Input.CursorShape.PointingHand => GD.Load<Image>("res://assets/textures/client/cursor/click.png"),
+			Input.CursorShape.Drag => GD.Load<Image>("res://assets/textures/client/cursor/grab.png"),
+			Input.CursorShape.CanDrop => GD.Load<Image>("res://assets/textures/client/cursor/grabbing.png"),
+			_ => GD.Load<Image>("res://assets/textures/client/cursor/arrow.png"),
+		};
+
+		Input.SetCustomMouseCursor(defaultCursorImage, shape);
+		return;
 	}
 
 	[ScriptEnum("CtrlLockCursor")]
