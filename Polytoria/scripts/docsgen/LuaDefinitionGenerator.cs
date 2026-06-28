@@ -51,7 +51,7 @@ public class LuaDefinitionGenerator
 
 		builder.AppendLine("export type PTSignal<T... = ...any> = {");
 		builder.AppendLine("\tConnect: (self: PTSignal<T...>, callback: (T...) -> ()) -> PTSignalConnection,");
-		builder.AppendLine("\tDisconnect: (self: PTSignal<T...>, callback: (T...) -> ()) -> nil,");
+		builder.AppendLine("\tDisconnect: (self: PTSignal<T...>, callback: (T...) -> ()) -> (),");
 		builder.AppendLine("\tOnce: (self: PTSignal<T...>, callback: (T...) -> ()) -> PTSignalConnection,");
 		builder.AppendLine("\tWait: (self: PTSignal<T...>) -> T...,");
 		builder.AppendLine("}");
