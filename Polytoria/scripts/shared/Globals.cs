@@ -135,6 +135,7 @@ public sealed partial class Globals : Node
 		PTImageAsset.RegisterAsset();
 		PTAudioAsset.RegisterAsset();
 		PTMeshAsset.RegisterAsset();
+		PTCursorAsset.RegisterAsset();
 		BuiltInAudioAsset.RegisterAsset();
 		BuiltInFontAsset.RegisterAsset();
 		FileLinkAsset.RegisterAsset();
