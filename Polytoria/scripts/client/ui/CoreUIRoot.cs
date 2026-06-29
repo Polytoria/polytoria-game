@@ -8,6 +8,7 @@ using Polytoria.Client.UI.Chat;
 using Polytoria.Client.UI.Playerlist;
 using Polytoria.Client.UI.Purchases;
 using Polytoria.Datamodel;
+using Polytoria.Datamodel.Resources;
 using Polytoria.Datamodel.Services;
 
 #if DEBUG && !EXPORTDEBUG
@@ -98,42 +99,63 @@ public partial class CoreUIRoot : CanvasLayer
 
 	private void OnCtrlLockCursorChanged()
 	{
-		string filename = "";
-		switch (Service.CtrlLockCursor)
+		if (Service.CrosshairCursorOverride == null)
 		{
-			case CoreUIService.CtrlLockCursorEnum.StereotypicalDot:
-				filename = "stereotypical-dot.svg";
-				break;
-			case CoreUIService.CtrlLockCursorEnum.Stereotypical:
-				filename = "stereotypical.svg";
-				break;
-			case CoreUIService.CtrlLockCursorEnum.Tactical:
-				filename = "tactical.svg";
-				break;
-			case CoreUIService.CtrlLockCursorEnum.TacticalDot:
-				filename = "tactical-dot.svg";
-				break;
-			case CoreUIService.CtrlLockCursorEnum.Dot:
-				filename = "dot.svg";
-				break;
-			case CoreUIService.CtrlLockCursorEnum.Plus:
-				filename = "plus.svg";
-				break;
-			case CoreUIService.CtrlLockCursorEnum.X:
-				filename = "plus.svg";
-				break;
-			case CoreUIService.CtrlLockCursorEnum.Chevron:
-				filename = "chevron.svg";
-				break;
-		}
+			string filename = "";
+			switch (Service.CtrlLockCursor)
+			{
+				case CoreUIService.CtrlLockCursorEnum.StereotypicalDot:
+					filename = "stereotypical-dot.svg";
+					break;
+				case CoreUIService.CtrlLockCursorEnum.Stereotypical:
+					filename = "stereotypical.svg";
+					break;
+				case CoreUIService.CtrlLockCursorEnum.Tactical:
+					filename = "tactical.svg";
+					break;
+				case CoreUIService.CtrlLockCursorEnum.TacticalDot:
+					filename = "tactical-dot.svg";
+					break;
+				case CoreUIService.CtrlLockCursorEnum.Dot:
+					filename = "dot.svg";
+					break;
+				case CoreUIService.CtrlLockCursorEnum.Plus:
+					filename = "plus.svg";
+					break;
+				case CoreUIService.CtrlLockCursorEnum.X:
+					filename = "plus.svg";
+					break;
+				case CoreUIService.CtrlLockCursorEnum.Chevron:
+					filename = "chevron.svg";
+					break;
+			}
 
-		if (Service.CtrlLockCursor == CoreUIService.CtrlLockCursorEnum.None)
-		{
-			CtrlLockCursor.Texture = null;
-			return;
+			if (Service.CtrlLockCursor == CoreUIService.CtrlLockCursorEnum.None)
+			{
+				CtrlLockCursor.Texture = null;
+				return;
+			}
+			var dpiTexture = GD.Load<DpiTexture>(CtrlLockCursorsFilepath + "/" + filename);
+			CtrlLockCursor.Texture = dpiTexture;
 		}
-		var dpiTexture = GD.Load<DpiTexture>(CtrlLockCursorsFilepath + "/" + filename);
-		CtrlLockCursor.Texture = dpiTexture;
+		else if (Service.CrosshairCursorOverride is PTCursorAsset cursorImage)
+		{
+			void apply(Resource? res)
+			{
+				cursorImage.ResourceLoaded -= apply;
+				CtrlLockCursor.Texture = (Texture2D)res;
+			}
+
+			if (cursorImage.IsResourceLoaded && cursorImage.Resource != null)
+			{
+				apply(cursorImage.Resource);
+			}
+			else
+			{
+				cursorImage.ResourceLoaded += apply;
+				cursorImage.QueueLoadResource();
+			}
+		}
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
