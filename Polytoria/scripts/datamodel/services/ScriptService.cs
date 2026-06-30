@@ -380,14 +380,14 @@ public sealed partial class ScriptService : Instance
 			return true;
 		}
 
-		// IConvertible fallback
-		if (arg is IConvertible && typeof(IConvertible).IsAssignableFrom(underlying))
-			return true;
-
 		// string to double
 		if (arg is string s && (underlying == typeof(int) || underlying == typeof(long)
 			|| underlying == typeof(short) || underlying == typeof(float) || underlying == typeof(double)))
 			return double.TryParse(s, out _);
+
+		// IConvertible fallback
+		if (arg is IConvertible && typeof(IConvertible).IsAssignableFrom(underlying))
+			return true;
 
 		return false;
 	}
