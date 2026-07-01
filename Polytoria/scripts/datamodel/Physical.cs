@@ -4,7 +4,6 @@
 
 using Godot;
 using Polytoria.Attributes;
-using Polytoria.Datamodel.Data;
 using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
@@ -273,7 +272,7 @@ public partial class Physical : Dynamic
 	{
 		foreach (CollisionShape3D c in CollisionShapes.ToArray())
 		{
-			if (!Node.IsInstanceValid(c)) continue;
+			if (!GodotObject.IsInstanceValid(c)) continue;
 			c.Disabled = disabled;
 		}
 	}
@@ -339,7 +338,7 @@ public partial class Physical : Dynamic
 			// create pending shapes
 			foreach (var shape in _pendingAreaShapes.ToArray())
 			{
-				if (Node.IsInstanceValid(shape))
+				if (GodotObject.IsInstanceValid(shape))
 					CreateAreaShape(shape);
 			}
 
@@ -442,7 +441,7 @@ public partial class Physical : Dynamic
 			PhysicalArea.BodyShapeEntered -= BodyShapeEntered;
 			PhysicalArea.BodyShapeExited -= BodyShapeExited;
 
-			if (Node.IsInstanceValid(PhysicalArea))
+			if (GodotObject.IsInstanceValid(PhysicalArea))
 			{
 				PhysicalArea.QueueFree();
 			}
@@ -679,7 +678,7 @@ public partial class Physical : Dynamic
 		List<Node> createdNodes = selector(state);
 		foreach (Node node in createdNodes)
 		{
-			if (node != null && Node.IsInstanceValid(node))
+			if (node != null && GodotObject.IsInstanceValid(node))
 			{
 				if (removeAreaShapes && node is CollisionShape3D shape)
 				{
@@ -709,7 +708,7 @@ public partial class Physical : Dynamic
 
 	private void CreateAreaShape(CollisionShape3D origin)
 	{
-		if (!Node.IsInstanceValid(origin)) return;
+		if (!GodotObject.IsInstanceValid(origin)) return;
 
 		// If is hidden, don't create area shape yet
 		if (IsHidden && PhysicalRoot == null)
@@ -724,7 +723,7 @@ public partial class Physical : Dynamic
 	internal static void SetRemoteLinkTarget(CollisionShape3D collisionShape, Node? target)
 	{
 		RemoteLinkConfig config = _remoteLinkConfigs.GetOrCreateValue(collisionShape);
-		config.Target = target != null && Node.IsInstanceValid(target) ? target : null;
+		config.Target = target != null && GodotObject.IsInstanceValid(target) ? target : null;
 	}
 
 	internal static void SetRemoteLinkOffset(CollisionShape3D collisionShape, Vector3 offset)
@@ -760,7 +759,7 @@ public partial class Physical : Dynamic
 		for (int i = trackedNodes.Count - 1; i >= 0; i--)
 		{
 			Node node = trackedNodes[i];
-			if (node != null && Node.IsInstanceValid(node))
+			if (node != null && GodotObject.IsInstanceValid(node))
 			{
 				return true;
 			}
@@ -789,7 +788,7 @@ public partial class Physical : Dynamic
 		RemoteLinkConfig? config = GetRemoteLinkConfig(origin);
 		Node? target = config?.Target;
 
-		if (target != null && Node.IsInstanceValid(target))
+		if (target != null && GodotObject.IsInstanceValid(target))
 		{
 			target.AddChild(scaleNode, @internal: Node.InternalMode.Back);
 		}
@@ -818,7 +817,7 @@ public partial class Physical : Dynamic
 
 	private void EnsureRemoteTransform(CollisionShape3D origin)
 	{
-		if (!Node.IsInstanceValid(origin)) return;
+		if (!GodotObject.IsInstanceValid(origin)) return;
 
 		if (HasValidTrackedNodes(origin, static state => state.CollisionSyncNodes))
 		{
@@ -831,7 +830,7 @@ public partial class Physical : Dynamic
 
 	private void CreateAreaShapeInternal(CollisionShape3D origin)
 	{
-		if (!Node.IsInstanceValid(origin) || origin.Shape == null) return;
+		if (!GodotObject.IsInstanceValid(origin) || origin.Shape == null) return;
 
 		Shape3D sharedShape = origin.Shape;
 		List<Node> createdNodes = [];
@@ -914,10 +913,10 @@ public partial class Physical : Dynamic
 
 	private void AttachCollisionShape(CollisionShape3D origin)
 	{
-		if (!Node.IsInstanceValid(origin)) return;
+		if (!GodotObject.IsInstanceValid(origin)) return;
 
 		Node targetRoot = GetCollisionShapeRoot();
-		if (!Node.IsInstanceValid(targetRoot)) return;
+		if (!GodotObject.IsInstanceValid(targetRoot)) return;
 
 		if (origin.GetParent() == targetRoot)
 		{
@@ -939,7 +938,7 @@ public partial class Physical : Dynamic
 
 	private void RevertCollisionShape(CollisionShape3D origin)
 	{
-		if (!Node.IsInstanceValid(origin)) return;
+		if (!GodotObject.IsInstanceValid(origin)) return;
 
 		if (origin.GetParent() == GDNode)
 		{
@@ -1139,7 +1138,7 @@ public partial class Physical : Dynamic
 	protected void EnsureTouchArea()
 	{
 		if (PhysicalArea != null) return;
-		if (!Node.IsInstanceValid(GDNode3D)) return;
+		if (!GodotObject.IsInstanceValid(GDNode3D)) return;
 
 		PhysicalArea = new()
 		{
