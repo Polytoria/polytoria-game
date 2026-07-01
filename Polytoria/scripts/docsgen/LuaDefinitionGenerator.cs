@@ -141,10 +141,24 @@ public class LuaDefinitionGenerator
 		{
 			if (m.IsObsolete) continue;
 			if (SkippedMetamethods.Contains(m.Name)) continue;
-			if (m.IsStatic && !m.Name.StartsWith("__"))
+			bool isMetamethod = m.Name.StartsWith("__");
+			if (m.IsStatic)
 			{
-				hasStatic = true;
-				if (!m.IsSemiStatic) { continue; }
+				if (isMetamethod)
+				{
+					// first param is not this class, skip
+					// the Luau type checker will blatantly guess that the order of
+					// operator metamethods do not matter. e.g. `A / number` and
+					// `number / A` are valid, even if the type definition of `A`
+					// only declares `function __div(self, b: number)`, where only
+					// `A / number` is supported
+					if (m.Parameters.Count > 0 && m.Parameters[0].Type != c.Name) continue;
+				}
+				else
+				{
+					hasStatic = true;
+					if (!m.IsSemiStatic) continue;
+				}
 			}
 			List<string> args = [];
 
@@ -154,8 +168,14 @@ public class LuaDefinitionGenerator
 				args.Add($"{param.Name}: {ProcessType(param.Type) + (param.IsOptional ? "?" : "")}");
 			}
 
-			if (!m.IsSemiStatic) { args.Insert(0, "self"); }
-			else { args[0] = "self"; }
+			if (isMetamethod || m.IsSemiStatic)
+			{
+				args[0] = "self";
+			}
+			else
+			{
+				args.Insert(0, "self");
+			}
 
 			builder.AppendLine($"\tfunction {m.Name}({string.Join(", ", args)}): {ProcessType(m.ReturnType ?? "")}");
 		}

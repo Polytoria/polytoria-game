@@ -175,7 +175,7 @@ public class APIReferenceGenerator
 					Parameters = paramsDef,
 					IsObsolete = method.GetCustomAttribute<Attributes.ObsoleteAttribute>() != null,
 					IsStatic = method.IsStatic,
-					IsSemiStatic = metaMethodAttribute != null || (method.IsStatic && (methodAttribute?.SemiStatic ?? false)),
+					IsSemiStatic = method.IsStatic && (methodAttribute?.SemiStatic ?? false),
 				};
 
 				methodsDef.Add(methodDef);
@@ -191,7 +191,7 @@ public class APIReferenceGenerator
 					IsAsync = false,
 					Parameters =
 					[
-						new() { Name = "indexer", Type = "any" }
+						new() { Name = "self", Type = nameof(Instance) },
 					],
 					IsObsolete = false,
 					IsStatic = false,
@@ -203,7 +203,8 @@ public class APIReferenceGenerator
 					IsAsync = false,
 					Parameters =
 					[
-						new() { Name = "indexer", Type = "any" }
+						new() { Name = "self", Type = nameof(Instance) },
+						new() { Name = "val", Type = "any" },
 					],
 					IsObsolete = false,
 					IsStatic = false,
