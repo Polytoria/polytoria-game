@@ -64,7 +64,7 @@ public partial class UIInventory : Control
 
 	public void OpenBackpack()
 	{
-		if (!CoreUI.Service.UseBackpack) return;
+		if (IsBackpackOpened || !CoreUI.Service.UseBackpack) return;
 		IsBackpackOpened = true;
 		_backpackAnim.Stop();
 		_backpackAnim.Play("appear");
@@ -72,7 +72,7 @@ public partial class UIInventory : Control
 
 	public void CloseBackpack()
 	{
-		if (!CoreUI.Service.UseBackpack) return;
+		if (!IsBackpackOpened) return;
 		IsBackpackOpened = false;
 		_backpackAnim.Stop();
 		_backpackAnim.Play("disappear");
