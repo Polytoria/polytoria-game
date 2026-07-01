@@ -147,11 +147,12 @@ public class LuaDefinitionGenerator
 				if (isMetamethod)
 				{
 					// first param is not this class, skip
-					// the Luau type checker will blatantly guess that the order of
-					// operator metamethods do not matter. e.g. `A / number` and
-					// `number / A` are valid, even if the type definition of `A`
-					// only declares `function __div(self, b: number)`, where only
-					// `A / number` is supported
+					// we don't need to cover explicit overloads since the Luau type
+					// checker will blatantly guess that the order of operator
+					// metamethods do not matter. e.g. `A / number` and `number / A`
+					// are valid, even if the type definition of `A` only declares
+					// `function __div(self, b: number)`, where only `A / number` is
+					// supported
 					if (m.Parameters.Count > 0 && m.Parameters[0].Type != c.Name) continue;
 				}
 				else
