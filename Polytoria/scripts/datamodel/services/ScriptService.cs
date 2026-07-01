@@ -349,10 +349,7 @@ public sealed partial class ScriptService : Instance
 		{
 			Type? elemType = targetType.GetElementType();
 			if (elemType == null) return false;
-			foreach (object? elem in objArr)
-				if (elem != null && !elemType.IsAssignableFrom(elem.GetType()))
-					return false;
-			return true;
+			return objArr.All((element) => IsObjectConvertible(element, elemType));
 		}
 
 		// Empty array to dictionary
@@ -476,20 +473,8 @@ public sealed partial class ScriptService : Instance
 			if (targetElementType == null)
 				return null;
 
-			// Check if all elements are assignable to target element type
-			bool allCompatible = true;
-
-			for (int i = 0; i < objectArray.Length; i++)
-			{
-				if (objectArray[i] != null && !targetElementType.IsAssignableFrom(objectArray[i].GetType()))
-				{
-					allCompatible = false;
-					break;
-				}
-			}
-
 			// If all elements are compatible, create a typed array
-			if (allCompatible)
+			if (objectArray.All((element) => IsObjectConvertible(element, targetElementType)))
 			{
 				List<object> convertedList = [];
 				for (int i = 0; i < objectArray.Length; i++)
