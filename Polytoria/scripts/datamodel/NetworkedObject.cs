@@ -83,19 +83,6 @@ public partial class NetworkedObject : IScriptObject
 			_networkParent = value;
 			ReenforceName();
 
-			if (_networkParent != null && this is not Instance)
-			{
-				_networkParent.NonInstanceChildren.Add(this);
-			}
-			if (_networkParent is Instance postI && this is Instance selfpostI)
-			{
-				selfpostI.AddNameToParent();
-				selfpostI.AddLegacyNameToParent();
-				postI.Children.Add(selfpostI);
-				selfpostI.Index = postI.Children.Count - 1;
-				postI.ChildAdded.Invoke(selfpostI);
-			}
-
 			if (_networkParent != null)
 			{
 				if (!InvokedEntry)
@@ -105,6 +92,23 @@ public partial class NetworkedObject : IScriptObject
 				else
 				{
 					InvokeEnterTree();
+				}
+
+				if (this is Instance selfpostI)
+				{
+					if (_networkParent is Instance postI)
+					{
+						selfpostI.AddNameToParent();
+						selfpostI.AddLegacyNameToParent();
+						int index = postI.Children.Count;
+						postI.Children.Add(selfpostI);
+						selfpostI.Index = index;
+						postI.ChildAdded.Invoke(selfpostI);
+					}
+				}
+				else
+				{
+					_networkParent.NonInstanceChildren.Add(this);
 				}
 
 				try
