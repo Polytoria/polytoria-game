@@ -650,7 +650,7 @@ public partial class NetworkedObject : IScriptObject
 		if (_netObjToProxy.Remove(this, out var gdn))
 		{
 			// Delete Valid Root node only
-			if (Node.IsInstanceValid(gdn) && !DeletedAsChild)
+			if (GodotObject.IsInstanceValid(gdn) && !DeletedAsChild)
 			{
 				gdn.QueueFree();
 				gdn.Dispose();
@@ -913,7 +913,7 @@ public partial class NetworkedObject : IScriptObject
 
 		if (GDNode != null && NetworkParent != null)
 		{
-			if (!Node.IsInstanceValid(NetworkParent.SlotNode)) return;
+			if (!GodotObject.IsInstanceValid(NetworkParent.SlotNode)) return;
 			Node? parent = GDNode.GetParentOrNull<Node>();
 			if (parent == null)
 			{
@@ -1239,7 +1239,7 @@ public partial class NetworkedObject : IScriptObject
 		NetPropReplicateData[] props = data.Props;
 		//PT.Print(Root.Network.LocalPeerID, " ", data.nodePath, " on the way");
 
-		NetworkedObject? existingObj = null;
+		NetworkedObject? existingObj;
 
 
 		if (this is Instance i3)
@@ -1569,7 +1569,7 @@ public partial class NetworkedObject : IScriptObject
 
 	internal NetworkedObject CloneInternal(NetworkedObject? parent = null, bool isRoot = false)
 	{
-		NetworkedObject clonedRoot = NewInternal(ClassName, null, Root)!;
+		NetworkedObject clonedRoot = NewInternal(ClassName, null, Root);
 
 		// Disable auto replicate on instances
 		// NOTE: This could be reworked so it sends a chunk of networked objects.
