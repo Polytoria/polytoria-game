@@ -19,7 +19,7 @@ public sealed class ScriptPropertyAttribute : Attribute
 /// <summary>
 /// Mark this property as accessible by legacy scripts
 /// </summary>
-/// <param name="methodName">Name to be overrided in script</param>
+/// <param name="propName">Name to be overrided in script</param>
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class ScriptLegacyPropertyAttribute(string propName) : Attribute
 {
@@ -92,4 +92,14 @@ public sealed class ScriptMetamethodAttribute(ScriptObjectMetamethod metamethod)
 	/// Should the argument types be converted to Godot equivalent
 	/// </summary>
 	public bool ConvertParamsToGD { get; set; } = false;
+}
+
+/// <summary>
+/// Mark this method or property as depricated
+/// </summary>
+/// <param name="message">The warning message</param>
+[AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
+public sealed class ScriptDepricatedAttribute(string message) : Attribute
+{
+	public string Message { get; } = message;
 }

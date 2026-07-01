@@ -63,7 +63,7 @@ public class LuaMetatable : LuaObject
 				return;
 			}
 
-			// --------------- HANDLE TASK --------------- 
+			// --------------- HANDLE TASK ---------------
 			if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
 			{
 				try
@@ -283,6 +283,13 @@ public class LuaMetatable : LuaObject
 						throw new UnauthorizedAccessException("script does not have permission to access the specified property (" + key + ")");
 					}
 				}
+			}
+
+			ScriptDepricatedAttribute? depricatedAttribute = prop.GetCustomAttribute<ScriptDepricatedAttribute>();
+
+			if (depricatedAttribute != null)
+			{
+				PT.PrintWarn($"{prop.Name} is depricated. {depricatedAttribute.Message}");
 			}
 
 			object? value = prop.GetValue(targetObject);
@@ -840,6 +847,13 @@ public class LuaMetatable : LuaObject
 					throw new UnauthorizedAccessException("script does not have permission to call the specified method (" + targetMethod.Name + ")");
 				}
 			}
+		}
+
+		ScriptDepricatedAttribute? depricatedAttribute = targetMethod.GetCustomAttribute<ScriptDepricatedAttribute>();
+
+		if (depricatedAttribute != null)
+		{
+			PT.PrintWarn($"{targetMethod.Name} is depricated. {depricatedAttribute.Message}");
 		}
 
 		// Prepare args array formatted for params

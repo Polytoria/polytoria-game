@@ -58,6 +58,7 @@ public sealed partial class World : Instance
 
 	public PTSignal Loaded { get; private set; } = new();
 
+	[ScriptDepricated("Use 'Event.Updated' instead.")]
 	[ScriptProperty]
 	public PTSignal<double> Rendered { get; private set; } = new();
 
@@ -124,6 +125,7 @@ public sealed partial class World : Instance
 	public IOService IO => FindChild<IOService>("IO")!;
 	public WorldsService Worlds => FindChild<WorldsService>("Worlds")!;
 	public SocialService Social => FindChild<SocialService>("Social")!;
+	public EventService Event => FindChild<EventService>("Event")!;
 #if CREATOR
 	public CreatorContextService CreatorContext => FindChild<CreatorContextService>("CreatorContext")!;
 #endif
@@ -730,6 +732,14 @@ public sealed partial class World : Instance
 			tweenService = Globals.LoadInstance<TweenService>(Root);
 			tweenService.NameOverride = "Tween";
 			tweenService.NetworkParent = this;
+		}
+
+		EventService? eventService = FindChild<EventService>("Event");
+		if (eventService == null)
+		{
+			eventService = Globals.LoadInstance<EventService>(Root);
+			eventService.NameOverride = "Event";
+			eventService.NetworkParent = this;
 		}
 
 		CaptureService? captureService = FindChild<CaptureService>("Capture");
