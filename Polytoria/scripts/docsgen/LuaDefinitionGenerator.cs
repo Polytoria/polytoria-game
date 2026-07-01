@@ -45,7 +45,7 @@ public class LuaDefinitionGenerator
 
 		// Add PTSignal type definitions
 		builder.AppendLine("declare class PTSignalConnection");
-		builder.AppendLine("\tfunction Disconnect(self): ()");
+		builder.AppendLine("\tfunction Disconnect(self)");
 		builder.AppendLine("end");
 		builder.AppendLine();
 
@@ -57,7 +57,7 @@ public class LuaDefinitionGenerator
 		builder.AppendLine("}");
 		builder.AppendLine();
 
-		builder.AppendLine($"declare class Enum end");
+		builder.AppendLine("declare class Enum end");
 
 		foreach (ScriptEnum e in refer.Enums)
 		{
@@ -67,16 +67,18 @@ public class LuaDefinitionGenerator
 			{
 				builder.AppendLine($"\t{item}: {e.Name}");
 			}
-			builder.AppendLine($"end");
+			builder.AppendLine("end");
+			builder.AppendLine();
 		}
 
-		builder.AppendLine($"type ENUM_LIST = {{");
+		builder.AppendLine("type ENUM_LIST = {");
 		foreach (ScriptEnum e in refer.Enums)
 		{
-			builder.AppendLine($"\t{e.Name}:{e.InternalName},");
+			builder.AppendLine($"\t{e.Name}: {e.InternalName},");
 		}
-		builder.AppendLine($"}} & {{ }}");
-		builder.AppendLine($"declare Enums: ENUM_LIST");
+		builder.AppendLine("}");
+		builder.AppendLine("declare Enums: ENUM_LIST");
+		builder.AppendLine();
 
 		foreach (ScriptClass item in refer.Classes)
 		{
@@ -102,7 +104,7 @@ public class LuaDefinitionGenerator
 		{
 			if (p.IsObsolete) continue;
 			if (p.IsStatic) { hasStatic = true; continue; }
-			builder.AppendLine($"\t{p.Name} : {p.Type ?? "nil"}");
+			builder.AppendLine($"\t{p.Name}: {p.Type ?? "nil"}");
 		}
 
 		foreach (ScriptEvent e in c.Events)
@@ -110,11 +112,11 @@ public class LuaDefinitionGenerator
 			if (e.Parameters.Length > 0)
 			{
 				string typeParams = string.Join(", ", e.Parameters.Select(p => p.Type ?? "nil"));
-				builder.AppendLine($"\t{e.Name} : PTSignal<{typeParams}>");
+				builder.AppendLine($"\t{e.Name}: PTSignal<{typeParams}>");
 			}
 			else
 			{
-				builder.AppendLine($"\t{e.Name} : PTSignal");
+				builder.AppendLine($"\t{e.Name}: PTSignal");
 			}
 		}
 
@@ -131,32 +133,22 @@ public class LuaDefinitionGenerator
 				hasStatic = true;
 				if (!m.IsSemiStatic) continue;
 			}
-			List<string> args = [];
-
-			foreach (ScriptParameter param in m.Parameters)
+			bool overwriteSelf = m.IsMetamethod || m.IsSemiStatic;
+			string[] args = new string[overwriteSelf ? m.Parameters.Length : m.Parameters.Length + 1];
+			args[0] = "self";
+			for (int i = overwriteSelf ? 1 : 0; i < m.Parameters.Length; i++)
 			{
-				if (param.Type == null) continue;
-				args.Add($"{param.Name}: {param.Type + (param.IsOptional ? "?" : "")}");
+				args[i] = m.Parameters[i].ToString();
 			}
-
-			if (m.IsSemiStatic)
-			{
-				args[0] = "self";
-			}
-			else
-			{
-				args.Insert(0, "self");
-			}
-
-			string returnType = m.ReturnType != null ? $": {m.ReturnType}" : "";
-			builder.AppendLine($"\tfunction {m.Name}({string.Join(", ", args)}){returnType}");
+			string methodDef = $"function {m.Name}({string.Join(", ", args)})";
+			return m.ReturnType != null ? $"{methodDef}: {m.ReturnType}" : methodDef;
 		}
 
-		builder.AppendLine($"end");
+		builder.AppendLine("end");
 
 		if (hasStatic)
 		{
-			builder.AppendLine(GenerateStaticClass(c));
+			builder.Append(GenerateStaticClass(c));
 		}
 
 		return builder.ToString();
@@ -171,24 +163,22 @@ public class LuaDefinitionGenerator
 		foreach (ScriptProperty p in c.Properties)
 		{
 			if (!p.IsStatic) continue;
-			builder.AppendLine($"\t{p.Name} : {p.Type ?? "nil"},");
+			builder.AppendLine($"\t{p.Name}: {p.Type ?? "nil"},");
 		}
 
 		foreach (ScriptMethod m in c.Methods)
 		{
 			if (m.IsObsolete || !m.IsStatic || m.IsMetamethod) continue;
-			List<string> args = [];
-
-			foreach (ScriptParameter param in m.Parameters)
+			int len = m.Parameters.Length;
+			string[] args = new string[len];
+			for (int i = 0; i < len; i++)
 			{
-				if (param.Type == null) continue;
-				args.Add($"{param.Type + (param.IsOptional ? "?" : "")}");
+				args[i] = m.Parameters[i].ToString();
 			}
-
-			builder.AppendLine($"{m.Name}: ({string.Join(", ", args)}) -> {m.ReturnType ?? "()"},");
+			builder.AppendLine($"\t{m.Name}: ({string.Join(", ", args)}) -> {m.ReturnType ?? "()"},");
 		}
 
-		builder.AppendLine($"}}");
+		builder.AppendLine("}");
 
 		return builder.ToString();
 	}

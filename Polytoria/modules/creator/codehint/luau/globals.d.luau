@@ -1,13 +1,13 @@
 declare json: {
-    parse: ((string?) -> any),
-    serialize: ((any?) -> string),
-    null: (() -> string),
-    isNull: ((string?) -> boolean),
+	parse: (string?) -> any,
+	serialize: (any?) -> string,
+	null: () -> string,
+	isNull: (string?) -> boolean,
 }
 
 declare guid: {
-    new: (() -> string),
-    empty: (() -> string),
+	new: () -> string,
+	empty: () -> string,
 }
 
 declare _POLY_VERSION: string
@@ -26,7 +26,7 @@ declare function tick(): number
 
 declare function time(): number
 
-declare function require(moduleScript: (ModuleScript)): any
+declare function require(moduleScript: ModuleScript): any
 
 declare function pcall(f: (...any) -> (boolean, any))
 

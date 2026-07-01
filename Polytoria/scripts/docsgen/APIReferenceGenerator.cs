@@ -11,6 +11,7 @@ using Polytoria.Shared;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
@@ -61,10 +62,10 @@ public class APIReferenceGenerator
 
 			foreach (PropertyInfo property in properties)
 			{
-				ScriptPropertyAttribute? propAttribute = property.GetCustomAttribute<ScriptPropertyAttribute>();
-				EditableAttribute? editableAttribute = property.GetCustomAttribute<EditableAttribute>();
+				bool isScriptProperty = property.IsDefined(typeof(ScriptPropertyAttribute));
+				bool isEditable = property.IsDefined(typeof(EditableAttribute));
 
-				if (propAttribute == null && editableAttribute == null) continue;
+				if (!isScriptProperty && !isEditable) continue;
 
 				if (property.PropertyType == typeof(PTSignal) ||
 					(property.PropertyType.IsGenericType &&
@@ -78,8 +79,8 @@ public class APIReferenceGenerator
 						Type[] genericArgs = propertyType.GetGenericArguments();
 						for (int i = 0; i < genericArgs.Length; i++)
 						{
-							string tn = ProcessTypeName(genericArgs[i]) ?? "any";
-							paramsDef.Add(new(tn.ToCamelCase(), tn));
+							string tn = ProcessTypeName(genericArgs[i]) ?? "nil";
+							paramsDef.Add(new(null, tn));
 						}
 					}
 
@@ -95,8 +96,8 @@ public class APIReferenceGenerator
 					propertiesDef.Add(new(
 						property.Name,
 						ProcessTypeName(property.PropertyType),
-						editableAttribute == null || propAttribute != null,
-						propAttribute != null && property.GetSetMethod(false) == null,
+						isEditable || isScriptProperty,
+						isScriptProperty && property.GetSetMethod(false) == null,
 						property.IsDefined(typeof(Attributes.ObsoleteAttribute)),
 						property.GetAccessors(true)[0].IsStatic
 					));
@@ -133,11 +134,13 @@ public class APIReferenceGenerator
 					if (item.ParameterType == typeof(Node)) continue;
 					if (item.IsDefined(typeof(ScriptingCallerAttribute))) continue;
 
+					bool isVarArg = item.IsDefined(typeof(ParamArrayAttribute));
 					paramsDef.Add(new(
-						item.Name ?? "",
-						ProcessTypeName(item.ParameterType),
+						isVarArg ? "..." : item.Name,
+						ProcessTypeName(isVarArg ? item.ParameterType.GetElementType() : item.ParameterType),
 						item.HasDefaultValue,
-						item.DefaultValue?.ToString() ?? null
+						item.HasDefaultValue ? item.DefaultValue?.ToString() : null,
+						isVarArg
 					));
 				}
 
@@ -159,15 +162,15 @@ public class APIReferenceGenerator
 					"__index",
 					"any",
 					[
-						new("index", "any"),
+						new("self", nameof(Instance)),
 					]
 				));
 				methodsDef.Add(new(
 					"__newindex",
 					null,
 					[
-						new("index", "any"),
-						new("value", "any"),
+						new("self", nameof(Instance)),
+						new("val", "any"),
 					]
 				));
 			}
@@ -175,7 +178,14 @@ public class APIReferenceGenerator
 			bool isInstantiable = type.IsDefined(typeof(InstantiableAttribute), false);
 			if (isInstantiable)
 			{
-				methodsDef.Add(new("New", name, [new("parent", "NetworkedObject")], isStatic: true));
+				methodsDef.Add(new(
+					"New",
+					name,
+					[
+						new("parent", nameof(NetworkedObject))
+					],
+					isStatic: true
+				));
 			}
 
 			StaticAttribute? staticA = type.GetCustomAttribute<StaticAttribute>();
@@ -363,25 +373,55 @@ public class APIReferenceGenerator
 		return type.Name;
 	}
 
+	private static readonly ReadOnlyDictionary<Type, string?> _typeNameLookup = new(
+		new Dictionary<Type, string?>()
+		{
+			{typeof(object), "any"},
+			{typeof(byte[]), "buffer"},
+			{typeof(PTCallback), "() -> ()"},
+			{typeof(PTFunction), "() -> ()"},
+			// --- Proxies --- //
+			{typeof(Aabb), "Bounds"},
+			// -------------- //
+			{typeof(void), null},
+			{typeof(Task), null},
+			{typeof(Nullable), null},
+			{typeof(ValueType), null},
+		}
+	);
+
 	private static string? ProcessTypeName(Type? type)
 	{
 		if (type == null) return null;
 		if (Nullable.GetUnderlyingType(type) is Type underlying)
 			type = underlying;
 
-		if (type == typeof(byte) ||
-			type == typeof(sbyte) ||
-			type == typeof(short) ||
-			type == typeof(ushort) ||
-			type == typeof(int) ||
-			type == typeof(uint) ||
-			type == typeof(long) ||
-			type == typeof(ulong) ||
-			type == typeof(float) ||
-			type == typeof(double) ||
-			type == typeof(decimal))
+		// primitives
+		switch (Type.GetTypeCode(type))
 		{
-			return "number";
+			case TypeCode.Byte:
+			case TypeCode.SByte:
+			case TypeCode.Int16:
+			case TypeCode.UInt16:
+			case TypeCode.Int32:
+			case TypeCode.UInt32:
+			case TypeCode.Int64:
+			case TypeCode.UInt64:
+			case TypeCode.Single:
+			case TypeCode.Double:
+			case TypeCode.Decimal:
+				return "number";
+			case TypeCode.String:
+				return "string";
+			case TypeCode.Boolean:
+				return "boolean";
+			case TypeCode.DBNull:
+				return null;
+		}
+
+		if (_typeNameLookup.TryGetValue(type, out string? typeName))
+		{
+			return typeName;
 		}
 
 		if (type.IsAssignableTo(typeof(IScriptGDObject)))
@@ -389,60 +429,24 @@ public class APIReferenceGenerator
 			return ProcessClassName(type);
 		}
 
-		if (type == typeof(Nullable) || type == typeof(void) || type == typeof(Task) || type == typeof(ValueType))
-		{
-			return null;
-		}
-
 		if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Task<>))
 		{
 			return ProcessTypeName(type.GetGenericArguments()[0]);
 		}
 
-		if (type == typeof(string))
+		if (type.IsArray)
 		{
-			return "string";
-		}
-
-		if (type == typeof(byte[]))
-		{
-			return "buffer";
-		}
-
-		if (type == typeof(bool))
-		{
-			return "boolean";
-		}
-
-		if (type == typeof(object))
-		{
-			return "any";
+			return $"{{ {ProcessTypeName(type.GetElementType())} }}";
 		}
 
 		if (type.IsAssignableTo(typeof(IDictionary)))
 		{
 			Type[] args = type.GetGenericArguments();
-			return "{ [" + ProcessTypeName(args[0]) + "]: " + ProcessTypeName(args[1]) + " }";
+			string? indexType = ProcessTypeName(args[0]);
+			string? valueType = ProcessTypeName(args[1]);
+			if (indexType == null || valueType == null) return "{  }";
+			return $"{{ [{indexType}]: {valueType} }}";
 		}
-
-		if (type.IsArray)
-		{
-			return "{ " + ProcessTypeName(type.GetElementType()) + " }";
-		}
-
-		if (type == typeof(PTCallback) || type == typeof(PTFunction))
-		{
-			return "() -> ()";
-		}
-
-		// --- Proxies --- //
-
-		if (type == typeof(Aabb))
-		{
-			return "Bounds";
-		}
-
-		// -------------- //
 
 		if (type.IsEnum)
 		{
@@ -455,12 +459,19 @@ public class APIReferenceGenerator
 		return type.Name;
 	}
 
-	public readonly struct ScriptParameter(string name, string? type = null, bool isOptional = false, string? defaultValue = null)
+	public readonly struct ScriptParameter(string? name, string? type = null, bool isOptional = false, string? defaultValue = null, bool isVarArg = false)
 	{
-		public readonly string Name = name;
+		public readonly string? Name = name;
 		public readonly string? Type = type;
 		public readonly bool IsOptional = isOptional;
 		public readonly string? DefaultValue = defaultValue;
+		public readonly bool IsVarArg = isVarArg;
+
+		public readonly override string ToString()
+		{
+			string argType = Type != null ? $"{Type}{(IsOptional ? "?" : "")}": "nil";
+			return Name != null ? $"{Name}: {argType}" : argType;
+		}
 	}
 
 	public readonly struct ScriptMethod(string name, string? returnType, ScriptParameter[] parameters, bool isAsync = false, bool isObsolete = false, bool isStatic = false, bool isSemiStatic = false)
@@ -472,6 +483,7 @@ public class APIReferenceGenerator
 		public readonly bool IsObsolete = isObsolete;
 		public readonly bool IsStatic = isStatic;
 		public readonly bool IsSemiStatic = isSemiStatic;
+		[JsonIgnore]
 		public readonly bool IsMetamethod = name.StartsWith("__");
 	}
 
@@ -532,11 +544,11 @@ public class APIReferenceGenerator
 [JsonSerializable(typeof(double))]
 [JsonSerializable(typeof(float))]
 [JsonSerializable(typeof(bool))]
-[JsonSerializable(typeof(List<ScriptClass>))]
-[JsonSerializable(typeof(List<ScriptEnum>))]
-[JsonSerializable(typeof(List<string>))]
-[JsonSerializable(typeof(List<ScriptProperty>))]
-[JsonSerializable(typeof(List<ScriptMethod>))]
-[JsonSerializable(typeof(List<ScriptEvent>))]
-[JsonSerializable(typeof(List<ScriptParameter>))]
+[JsonSerializable(typeof(ScriptClass[]))]
+[JsonSerializable(typeof(ScriptEnum[]))]
+[JsonSerializable(typeof(string[]))]
+[JsonSerializable(typeof(ScriptProperty[]))]
+[JsonSerializable(typeof(ScriptMethod[]))]
+[JsonSerializable(typeof(ScriptEvent[]))]
+[JsonSerializable(typeof(ScriptParameter[]))]
 internal partial class APIRefGenerationContext : JsonSerializerContext { }
