@@ -58,7 +58,7 @@ public sealed partial class World : Instance
 
 	public PTSignal Loaded { get; private set; } = new();
 
-	[ScriptDepricated("Use 'Event.Updated' instead.")]
+	[Attributes.Obsolete("Use 'Event.Updated' instead.")]
 	[ScriptProperty]
 	public PTSignal<double> Rendered { get; private set; } = new();
 

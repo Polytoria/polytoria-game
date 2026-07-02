@@ -285,11 +285,11 @@ public class LuaMetatable : LuaObject
 				}
 			}
 
-			ScriptDepricatedAttribute? depricatedAttribute = prop.GetCustomAttribute<ScriptDepricatedAttribute>();
+			Attributes.ObsoleteAttribute? obsoleteAttribute = prop.GetCustomAttribute<Attributes.ObsoleteAttribute>();
 
-			if (depricatedAttribute != null)
+			if (obsoleteAttribute != null)
 			{
-				PT.PrintWarn($"{prop.Name} is depricated. {depricatedAttribute.Message}");
+				PT.PrintWarn($"{prop.Name} is obsolete. {obsoleteAttribute.Message}");
 			}
 
 			object? value = prop.GetValue(targetObject);
@@ -849,11 +849,11 @@ public class LuaMetatable : LuaObject
 			}
 		}
 
-		ScriptDepricatedAttribute? depricatedAttribute = targetMethod.GetCustomAttribute<ScriptDepricatedAttribute>();
+		Attributes.ObsoleteAttribute? obsoleteAttribute = targetMethod.GetCustomAttribute<Attributes.ObsoleteAttribute>();
 
-		if (depricatedAttribute != null)
+		if (obsoleteAttribute != null)
 		{
-			PT.PrintWarn($"{targetMethod.Name} is depricated. {depricatedAttribute.Message}");
+			PT.PrintWarn($"{targetMethod.Name} is obsolete. {obsoleteAttribute.Message}");
 		}
 
 		// Prepare args array formatted for params

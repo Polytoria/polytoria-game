@@ -93,13 +93,3 @@ public sealed class ScriptMetamethodAttribute(ScriptObjectMetamethod metamethod)
 	/// </summary>
 	public bool ConvertParamsToGD { get; set; } = false;
 }
-
-/// <summary>
-/// Mark this method or property as depricated
-/// </summary>
-/// <param name="message">The warning message</param>
-[AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
-public sealed class ScriptDepricatedAttribute(string message) : Attribute
-{
-	public string Message { get; } = message;
-}
