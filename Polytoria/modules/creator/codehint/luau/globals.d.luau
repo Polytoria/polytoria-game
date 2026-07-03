@@ -20,15 +20,13 @@ declare function warn(message: string)
 
 declare function wait(seconds: number?)
 
-declare function spawn(callback: () -> ())
+declare function spawn<T...>(callback: (T...) -> ...any, ...: T...)
 
 declare function tick(): number
 
 declare function time(): number
 
 declare function require(moduleScript: ModuleScript): any
-
-declare function pcall(f: (...any) -> (boolean, any))
 
 declare world: World
 
