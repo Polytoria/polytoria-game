@@ -477,7 +477,7 @@ public class APIReferenceGenerator
 		public readonly bool IsOptional = isOptional;
 		public readonly string? DefaultValue = defaultValue;
 		[JsonIgnore]
-		public readonly bool IsVarArg = name == "...";
+		public readonly bool IsVarArg => Name == "...";
 
 		public readonly override string ToString()
 		{
@@ -486,7 +486,7 @@ public class APIReferenceGenerator
 		}
 	}
 
-	public readonly struct ScriptObsoleteInfo(string? reason = null, string? use = null)
+	public readonly struct ScriptObsoletionInfo(string? reason = null, string? use = null)
 	{
 		public readonly string? Reason = reason;
 		public readonly string? UseInstead = use;
@@ -510,7 +510,7 @@ public class APIReferenceGenerator
 		}
 	}
 
-	public readonly struct ScriptMethod(string name, string? returnType, ScriptParameter[] parameters, bool isAsync = false, bool isObsolete = false, bool isStatic = false, bool isSemiStatic = false, ScriptObsoleteInfo? obsoleteInfo = null)
+	public readonly struct ScriptMethod(string name, string? returnType, ScriptParameter[] parameters, bool isAsync = false, bool isObsolete = false, bool isStatic = false, bool isSemiStatic = false, ScriptObsoletionInfo? obsoletionInfo = null)
 	{
 		public readonly string Name = name;
 		public readonly string? ReturnType = returnType;
@@ -519,9 +519,9 @@ public class APIReferenceGenerator
 		public readonly bool IsObsolete = isObsolete;
 		public readonly bool IsStatic = isStatic;
 		public readonly bool IsSemiStatic = isSemiStatic;
-		public readonly ScriptObsoleteInfo? ObsoleteInfo = obsoleteInfo;
+		public readonly ScriptObsoletionInfo? ObsoletionInfo = obsoletionInfo;
 		[JsonIgnore]
-		public readonly bool IsMetamethod = name.StartsWith("__");
+		public readonly bool IsMetamethod => Name.StartsWith("__");
 	}
 
 	public readonly struct ScriptProperty(string name, string? type, bool isAccessibleByScripts, bool isReadOnly, bool isObsolete, bool isStatic)
@@ -532,6 +532,11 @@ public class APIReferenceGenerator
 		public readonly bool IsReadOnly = isReadOnly;
 		public readonly bool IsObsolete = isObsolete;
 		public readonly bool IsStatic = isStatic;
+
+		public readonly override string ToString()
+		{
+			return $"{Name}: {Type ?? "nil"}";
+		}
 	}
 
 	public readonly struct ScriptEvent(string name, ScriptParameter[] parameters)
@@ -575,7 +580,7 @@ public class APIReferenceGenerator
 [JsonSerializable(typeof(ScriptEnum))]
 [JsonSerializable(typeof(ScriptEvent))]
 [JsonSerializable(typeof(ScriptProperty))]
-[JsonSerializable(typeof(ScriptObsoleteInfo))]
+[JsonSerializable(typeof(ScriptObsoletionInfo))]
 [JsonSerializable(typeof(ScriptMethod))]
 [JsonSerializable(typeof(ScriptParameter))]
 [JsonSerializable(typeof(string))]

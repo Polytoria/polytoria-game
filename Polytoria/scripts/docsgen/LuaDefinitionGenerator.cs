@@ -111,7 +111,7 @@ public class LuaDefinitionGenerator
 				hasStatic = true;
 				continue;
 			}
-			builder.AppendLine($"\t{p.Name}: {p.Type ?? "nil"}");
+			builder.AppendLine($"\t{p}");
 		}
 
 		foreach (ScriptEvent e in c.Events)
@@ -147,7 +147,7 @@ public class LuaDefinitionGenerator
 			}
 			if (m.IsObsolete)
 			{
-				builder.AppendLine($"\t{m.ObsoleteInfo}");
+				builder.AppendLine($"\t{m.ObsoletionInfo}");
 			}
 			builder.Append($"\tfunction {m.Name}({string.Join(", ", iter.Prepend("self"))})");
 			if (m.ReturnType != null)
@@ -176,7 +176,7 @@ public class LuaDefinitionGenerator
 		foreach (ScriptProperty p in c.Properties)
 		{
 			if (!p.IsStatic) continue;
-			builder.AppendLine($"\t{p.Name}: {p.Type ?? "nil"},");
+			builder.AppendLine($"\t{p},");
 		}
 
 		Dictionary<string, List<string>> methodOverloads = [];
