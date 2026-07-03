@@ -102,7 +102,11 @@ public class LuaDefinitionGenerator
 		foreach (ScriptProperty p in c.Properties)
 		{
 			if (p.IsObsolete) continue;
-			if (p.IsStatic) { hasStatic = true; continue; }
+			if (p.IsStatic)
+			{
+				hasStatic = true;
+				continue;
+			}
 			builder.AppendLine($"\t{p.Name}: {p.Type ?? "nil"}");
 		}
 
