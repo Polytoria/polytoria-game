@@ -24,7 +24,7 @@ public sealed partial class InsertService : Instance
 	private readonly PTHttpClient _httpClient = new();
 	private static readonly Dictionary<int, APIStoreItem> _storeItemCache = [];
 
-	[ScriptMethod, Attributes.Obsolete("Use ModelAsync instead")]
+	[ScriptMethod, Obsolete(use: "ModelAsync")]
 	public void Model(int id, PTCallback? callback = null)
 	{
 		_ = ModelAsync(id).ContinueWith(tsk =>

@@ -220,7 +220,7 @@ public partial class UILabel : UIView
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use FontAsset instead"), CloneIgnore]
+	[Editable, ScriptProperty, NoSync, Obsolete(use: "FontAsset"), CloneIgnore]
 	public BuiltInFontAsset.BuiltInTextFontPresetEnum Font
 	{
 		get => _fontPreset;

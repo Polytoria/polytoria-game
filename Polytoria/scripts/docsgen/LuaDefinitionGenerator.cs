@@ -96,8 +96,12 @@ public class LuaDefinitionGenerator
 
 		bool hasStatic = false;
 
-		string baseType = c.BaseType != null ? $" extends {c.BaseType}" : "";
-		builder.AppendLine($"declare class {c.Name}{baseType}");
+		builder.Append($"declare class {c.Name}");
+		if (c.BaseType != null)
+		{
+			builder.Append($" extends {c.BaseType}");
+		}
+		builder.AppendLine();
 
 		foreach (ScriptProperty p in c.Properties)
 		{
@@ -112,20 +116,16 @@ public class LuaDefinitionGenerator
 
 		foreach (ScriptEvent e in c.Events)
 		{
+			builder.Append($"\t{e.Name}: PTSignal");
 			if (e.Parameters.Length > 0)
 			{
-				string typeParams = string.Join(", ", e.Parameters.Select(p => p.Type ?? "nil"));
-				builder.AppendLine($"\t{e.Name}: PTSignal<{typeParams}>");
+				builder.Append($"<{string.Join(", ", e.Parameters.Select(p => p.Type ?? "nil"))}>");
 			}
-			else
-			{
-				builder.AppendLine($"\t{e.Name}: PTSignal");
-			}
+			builder.AppendLine();
 		}
 
 		foreach (ScriptMethod m in c.Methods)
 		{
-			if (m.IsObsolete) continue;
 			if (m.IsMetamethod)
 			{
 				if (SkippedMetamethods.Contains(m.Name)) continue;
@@ -142,12 +142,19 @@ public class LuaDefinitionGenerator
 			IEnumerable<string> iter = m.Parameters.Select(p => p.ToString());
 			if (m.IsMetamethod || m.IsSemiStatic)
 			{
-				// overwrite first parameter with "self"
+				// overwrite first parameter with self
 				iter = iter.Skip(1);
 			}
-			string[] args = ["self", .. iter];
-			string methodDef = $"\tfunction {m.Name}({string.Join(", ", args)})";
-			builder.AppendLine(m.ReturnType != null ? $"{methodDef}: {m.ReturnType}" : methodDef);
+			if (m.IsObsolete)
+			{
+				builder.AppendLine($"\t{m.ObsoleteInfo}");
+			}
+			builder.Append($"\tfunction {m.Name}({string.Join(", ", iter.Prepend("self"))})");
+			if (m.ReturnType != null)
+			{
+				builder.Append($": {m.ReturnType}");
+			}
+			builder.AppendLine();
 		}
 
 		builder.AppendLine("end");
@@ -176,8 +183,7 @@ public class LuaDefinitionGenerator
 		foreach (ScriptMethod m in c.Methods)
 		{
 			if (m.IsObsolete || !m.IsStatic || m.IsMetamethod) continue;
-			IEnumerable<string> iter = m.Parameters.Select(p => p.ToString());
-			string def = $"({string.Join(", ", iter)}) -> {m.ReturnType ?? "()"}";
+			string def = $"({string.Join(", ", m.Parameters.Select(p => p.ToString()))}) -> {m.ReturnType ?? "()"}";
 			if (methodOverloads.TryGetValue(m.Name, out List<string>? overloads))
 			{
 				overloads.Add(def);
@@ -189,14 +195,7 @@ public class LuaDefinitionGenerator
 		}
 		foreach ((string name, List<string> overloads) in methodOverloads)
 		{
-			if (overloads.Count > 1)
-			{
-				builder.AppendLine($"\t{name}: ({string.Join(") & (", overloads)}),");
-			}
-			else
-			{
-				builder.AppendLine($"\t{name}: {overloads[0]},");
-			}
+			builder.AppendLine($"\t{name}: {(overloads.Count > 1 ? $"({string.Join(") & (", overloads)})" : overloads[0])},");
 		}
 
 		builder.AppendLine("}");

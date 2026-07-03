@@ -21,7 +21,7 @@ public sealed partial class AssetsService : Instance
 		base.PreDelete();
 	}
 
-	[ScriptMethod, Obsolete("Use .New static instead")]
+	[ScriptMethod, Obsolete("Use the .New static instead")]
 	public BaseAsset? NewAsset(string assetClassName)
 	{
 		NetworkedObject? obj = NewInternal(assetClassName, Root);
@@ -33,7 +33,7 @@ public sealed partial class AssetsService : Instance
 		return (BaseAsset)obj;
 	}
 
-	[ScriptMethod, Obsolete("Use .New static instead")]
+	[ScriptMethod, Obsolete(use: "PTImageAsset.New")]
 	public PTImageAsset? NewPTImage(uint imgID)
 	{
 		PTImageAsset ptImg = New<PTImageAsset>();
@@ -41,7 +41,7 @@ public sealed partial class AssetsService : Instance
 		return ptImg;
 	}
 
-	[ScriptMethod, Obsolete("Use .New static instead")]
+	[ScriptMethod, Obsolete(use: "PTAudioAsset.New")]
 	public PTAudioAsset? NewPTAudio(uint audioID)
 	{
 		PTAudioAsset ptAudio = New<PTAudioAsset>();
@@ -49,7 +49,7 @@ public sealed partial class AssetsService : Instance
 		return ptAudio;
 	}
 
-	[ScriptMethod, Obsolete("Use .New static instead")]
+	[ScriptMethod, Obsolete(use: "PTMeshAsset.New")]
 	public PTMeshAsset? NewPTMesh(uint assetID)
 	{
 		PTMeshAsset ptMesh = New<PTMeshAsset>();

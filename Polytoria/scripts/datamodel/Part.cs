@@ -303,7 +303,7 @@ public partial class Part : Entity
 		TriangleConcaveCorner = 15
 	}
 
-	[Attributes.Obsolete("This should not be used, it's here only for compatibility with legacy scripts.")]
+	[Obsolete("This should not be used, it's here only for compatibility with legacy scripts.")]
 	public enum LegacyShapeEnum
 	{
 		Brick = 0,

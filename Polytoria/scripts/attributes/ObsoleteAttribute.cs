@@ -7,11 +7,13 @@ using System;
 namespace Polytoria.Attributes;
 
 /// <summary>
-/// Mark this as obsolete
+/// Mark this as obsolete. Maps to Luau's <c>@deprecated</c> attribute
 /// </summary>
-/// <param name="message">The message regarding the obsolete reason</param>
+/// <param name="reason">The reason for obsoletion</param>
+/// <param name="use">The name of what should be used instead</param>
 [AttributeUsage(AttributeTargets.All)]
-public sealed class ObsoleteAttribute(string message) : Attribute
+public sealed class ObsoleteAttribute(string? reason = null, string? use = null) : Attribute
 {
-	public string Message => message;
+	public readonly string? Reason = reason;
+	public readonly string? UseInstead = use;
 }

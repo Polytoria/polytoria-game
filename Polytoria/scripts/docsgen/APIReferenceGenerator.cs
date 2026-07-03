@@ -11,7 +11,6 @@ using Polytoria.Shared;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
@@ -32,7 +31,6 @@ public class APIReferenceGenerator
 
 		List<ScriptEnum> enums = [];
 		List<string> instanceClasses = [];
-		// APIReferenceRoot apiRef = new() { Version = Globals.AppVersion, Classes = [], InstanceClasses = [] };
 		List<Type> missingEnums = [];
 		Dictionary<Type, ScriptClass> classMap = [];
 
@@ -143,14 +141,16 @@ public class APIReferenceGenerator
 					));
 				}
 
+				Attributes.ObsoleteAttribute? obsoleteAttribute = method.GetCustomAttribute<Attributes.ObsoleteAttribute>();
 				methodsDef.Add(new(
 					metaMethodAttribute != null ? GetMetamethodIndexer(metaMethodAttribute.Metamethod) : methodAttribute?.MethodName ?? method.Name,
 					ProcessTypeName(returnType),
 					[.. paramsDef],
 					asyncFunc,
-					method.IsDefined(typeof(Attributes.ObsoleteAttribute)),
+					obsoleteAttribute != null,
 					method.IsStatic,
-					method.IsStatic && (methodAttribute?.SemiStatic ?? false)
+					method.IsStatic && (methodAttribute?.SemiStatic ?? false),
+					obsoleteAttribute != null ? new(obsoleteAttribute.Reason, obsoleteAttribute.UseInstead) : null
 				));
 			}
 
@@ -486,7 +486,31 @@ public class APIReferenceGenerator
 		}
 	}
 
-	public readonly struct ScriptMethod(string name, string? returnType, ScriptParameter[] parameters, bool isAsync = false, bool isObsolete = false, bool isStatic = false, bool isSemiStatic = false)
+	public readonly struct ScriptObsoleteInfo(string? reason = null, string? use = null)
+	{
+		public readonly string? Reason = reason;
+		public readonly string? UseInstead = use;
+
+		public readonly override string ToString()
+		{
+			List<string> parameters = [];
+			if (Reason != null)
+			{
+				parameters.Add($"reason = \"{Reason}\"");
+			}
+			if (UseInstead != null)
+			{
+				parameters.Add($"use = \"{UseInstead}\"");
+			}
+			if (parameters.Count > 0)
+			{
+				return $"@[deprecated {{ {string.Join(", ", parameters)} }}]";
+			}
+			return "@deprecated";
+		}
+	}
+
+	public readonly struct ScriptMethod(string name, string? returnType, ScriptParameter[] parameters, bool isAsync = false, bool isObsolete = false, bool isStatic = false, bool isSemiStatic = false, ScriptObsoleteInfo? obsoleteInfo = null)
 	{
 		public readonly string Name = name;
 		public readonly string? ReturnType = returnType;
@@ -495,6 +519,7 @@ public class APIReferenceGenerator
 		public readonly bool IsObsolete = isObsolete;
 		public readonly bool IsStatic = isStatic;
 		public readonly bool IsSemiStatic = isSemiStatic;
+		public readonly ScriptObsoleteInfo? ObsoleteInfo = obsoleteInfo;
 		[JsonIgnore]
 		public readonly bool IsMetamethod = name.StartsWith("__");
 	}
@@ -550,6 +575,7 @@ public class APIReferenceGenerator
 [JsonSerializable(typeof(ScriptEnum))]
 [JsonSerializable(typeof(ScriptEvent))]
 [JsonSerializable(typeof(ScriptProperty))]
+[JsonSerializable(typeof(ScriptObsoleteInfo))]
 [JsonSerializable(typeof(ScriptMethod))]
 [JsonSerializable(typeof(ScriptParameter))]
 [JsonSerializable(typeof(string))]
