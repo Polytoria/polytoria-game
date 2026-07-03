@@ -71,13 +71,12 @@ public class LuaDefinitionGenerator
 			builder.AppendLine();
 		}
 
-		builder.AppendLine("type ENUM_LIST = {");
+		builder.AppendLine("declare Enums: {");
 		foreach (ScriptEnum e in refer.Enums)
 		{
 			builder.AppendLine($"\t{e.Name}: {e.InternalName},");
 		}
 		builder.AppendLine("}");
-		builder.AppendLine("declare Enums: ENUM_LIST");
 		builder.AppendLine();
 
 		foreach (ScriptClass item in refer.Classes)
@@ -126,22 +125,25 @@ public class LuaDefinitionGenerator
 			if (m.IsMetamethod)
 			{
 				if (SkippedMetamethods.Contains(m.Name)) continue;
-				if (m.IsStatic && m.Parameters.Length > 0 && m.Parameters[0].Type != c.Name) continue;
+				// if static, the first parameter must be this class (self)
+				// we can skip explicit metamethod operator overloads since the type
+				// checker will blatantly assume that they already exist
+				if (m.IsStatic && (m.Parameters.Length == 0 || m.Parameters[0].Type != c.Name)) continue;
 			}
 			else if (m.IsStatic)
 			{
 				hasStatic = true;
 				if (!m.IsSemiStatic) continue;
 			}
-			bool overwriteSelf = m.IsMetamethod || m.IsSemiStatic;
-			string[] args = new string[overwriteSelf ? m.Parameters.Length : m.Parameters.Length + 1];
-			args[0] = "self";
-			for (int i = overwriteSelf ? 1 : 0; i < m.Parameters.Length; i++)
+			IEnumerable<string> iter = m.Parameters.Select(p => p.ToString());
+			// force self to be the first parameter?
+			if (m.IsMetamethod || m.IsSemiStatic)
 			{
-				args[i] = m.Parameters[i].ToString();
+				iter = iter.Skip(1);
 			}
-			string methodDef = $"function {m.Name}({string.Join(", ", args)})";
-			return m.ReturnType != null ? $"{methodDef}: {m.ReturnType}" : methodDef;
+			string[] args = ["self", .. iter];
+			string methodDef = $"\tfunction {m.Name}({string.Join(", ", args)})";
+			builder.AppendLine(m.ReturnType != null ? $"{methodDef}: {m.ReturnType}" : methodDef);
 		}
 
 		builder.AppendLine("end");
@@ -166,16 +168,31 @@ public class LuaDefinitionGenerator
 			builder.AppendLine($"\t{p.Name}: {p.Type ?? "nil"},");
 		}
 
+		Dictionary<string, List<string>> methodOverloads = [];
 		foreach (ScriptMethod m in c.Methods)
 		{
 			if (m.IsObsolete || !m.IsStatic || m.IsMetamethod) continue;
-			int len = m.Parameters.Length;
-			string[] args = new string[len];
-			for (int i = 0; i < len; i++)
+			IEnumerable<string> iter = m.Parameters.Select(p => p.ToString());
+			string def = $"({string.Join(", ", iter)}) -> {m.ReturnType ?? "()"}";
+			if (methodOverloads.TryGetValue(m.Name, out List<string>? overloads))
 			{
-				args[i] = m.Parameters[i].ToString();
+				overloads.Add(def);
 			}
-			builder.AppendLine($"\t{m.Name}: ({string.Join(", ", args)}) -> {m.ReturnType ?? "()"},");
+			else
+			{
+				methodOverloads.Add(m.Name, [ def ]);
+			}
+		}
+		foreach ((string name, List<string> overloads) in methodOverloads)
+		{
+			if (overloads.Count > 1)
+			{
+				builder.AppendLine($"\t{name}: ({string.Join(") & (", overloads)}),");
+			}
+			else
+			{
+				builder.AppendLine($"\t{name}: {overloads[0]},");
+			}
 		}
 
 		builder.AppendLine("}");

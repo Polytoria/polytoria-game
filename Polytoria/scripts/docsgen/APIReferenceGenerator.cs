@@ -139,8 +139,7 @@ public class APIReferenceGenerator
 						isVarArg ? "..." : item.Name,
 						ProcessTypeName(isVarArg ? item.ParameterType.GetElementType() : item.ParameterType),
 						item.HasDefaultValue,
-						item.HasDefaultValue ? item.DefaultValue?.ToString() : null,
-						isVarArg
+						item.HasDefaultValue ? item.DefaultValue?.ToString() : null
 					));
 				}
 
@@ -182,7 +181,7 @@ public class APIReferenceGenerator
 					"New",
 					name,
 					[
-						new("parent", nameof(NetworkedObject))
+						new("parent", nameof(NetworkedObject), true)
 					],
 					isStatic: true
 				));
@@ -373,56 +372,68 @@ public class APIReferenceGenerator
 		return type.Name;
 	}
 
-	private static readonly ReadOnlyDictionary<Type, string?> _typeNameLookup = new(
-		new Dictionary<Type, string?>()
-		{
-			{typeof(object), "any"},
-			{typeof(byte[]), "buffer"},
-			{typeof(PTCallback), "() -> ()"},
-			{typeof(PTFunction), "() -> ()"},
-			// --- Proxies --- //
-			{typeof(Aabb), "Bounds"},
-			// -------------- //
-			{typeof(void), null},
-			{typeof(Task), null},
-			{typeof(Nullable), null},
-			{typeof(ValueType), null},
-		}
-	);
-
 	private static string? ProcessTypeName(Type? type)
 	{
 		if (type == null) return null;
 		if (Nullable.GetUnderlyingType(type) is Type underlying)
 			type = underlying;
 
-		// primitives
-		switch (Type.GetTypeCode(type))
+		if (type == typeof(byte) ||
+			type == typeof(sbyte) ||
+			type == typeof(short) ||
+			type == typeof(ushort) ||
+			type == typeof(int) ||
+			type == typeof(uint) ||
+			type == typeof(long) ||
+			type == typeof(ulong) ||
+			type == typeof(float) ||
+			type == typeof(double) ||
+			type == typeof(decimal))
 		{
-			case TypeCode.Byte:
-			case TypeCode.SByte:
-			case TypeCode.Int16:
-			case TypeCode.UInt16:
-			case TypeCode.Int32:
-			case TypeCode.UInt32:
-			case TypeCode.Int64:
-			case TypeCode.UInt64:
-			case TypeCode.Single:
-			case TypeCode.Double:
-			case TypeCode.Decimal:
-				return "number";
-			case TypeCode.String:
-				return "string";
-			case TypeCode.Boolean:
-				return "boolean";
-			case TypeCode.DBNull:
-				return null;
+			return "number";
 		}
 
-		if (_typeNameLookup.TryGetValue(type, out string? typeName))
+		if (type == typeof(string))
 		{
-			return typeName;
+			return "string";
 		}
+
+		if (type == typeof(bool))
+		{
+			return "boolean";
+		}
+
+		if (type == typeof(object))
+		{
+			return "any";
+		}
+
+		if (type == typeof(byte[]))
+		{
+			return "buffer";
+		}
+
+		if (type == typeof(PTCallback) || type == typeof(PTFunction))
+		{
+			return "() -> ()";
+		}
+
+		if (type == typeof(void) ||
+			type == typeof(Task) ||
+			type == typeof(Nullable) ||
+			type == typeof(ValueType))
+		{
+			return null;
+		}
+
+		// --- Proxies --- //
+
+		if (type == typeof(Aabb))
+		{
+			return "Bounds";
+		}
+
+		// --------------- //
 
 		if (type.IsAssignableTo(typeof(IScriptGDObject)))
 		{
@@ -459,13 +470,14 @@ public class APIReferenceGenerator
 		return type.Name;
 	}
 
-	public readonly struct ScriptParameter(string? name, string? type = null, bool isOptional = false, string? defaultValue = null, bool isVarArg = false)
+	public readonly struct ScriptParameter(string? name, string? type = null, bool isOptional = false, string? defaultValue = null)
 	{
 		public readonly string? Name = name;
 		public readonly string? Type = type;
 		public readonly bool IsOptional = isOptional;
 		public readonly string? DefaultValue = defaultValue;
-		public readonly bool IsVarArg = isVarArg;
+		[JsonIgnore]
+		public readonly bool IsVarArg = name == "...";
 
 		public readonly override string ToString()
 		{
