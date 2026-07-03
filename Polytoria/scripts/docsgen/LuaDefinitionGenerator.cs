@@ -140,9 +140,9 @@ public class LuaDefinitionGenerator
 				if (!m.IsSemiStatic) continue;
 			}
 			IEnumerable<string> iter = m.Parameters.Select(p => p.ToString());
-			// force self to be the first parameter?
 			if (m.IsMetamethod || m.IsSemiStatic)
 			{
+				// overwrite first parameter with "self"
 				iter = iter.Skip(1);
 			}
 			string[] args = ["self", .. iter];
