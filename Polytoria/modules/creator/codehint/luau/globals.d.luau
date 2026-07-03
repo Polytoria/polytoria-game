@@ -16,7 +16,7 @@ declare _POLY_2: boolean
 
 declare _LOCALTEST: boolean
 
-declare function warn(message: string)
+declare function warn<T...>(...: T...)
 
 declare function wait(seconds: number?)
 
