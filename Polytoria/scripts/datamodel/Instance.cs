@@ -264,9 +264,14 @@ public partial class Instance : NetworkedObject
 			{
 				return;
 			}
-
+			var added = value.Except(_tags ?? []).ToArray();
+			var removed = (_tags ?? []).Except(value).ToArray();
 			_tags = value;
 			OnPropertyChanged();
+			foreach (var tag in added)
+				OnTagAdded(tag);
+			foreach (var tag in removed)
+				OnTagRemoved(tag);
 		}
 	}
 
@@ -283,6 +288,7 @@ public partial class Instance : NetworkedObject
 
 			_archivable = value;
 			OnPropertyChanged();
+
 		}
 	}
 
@@ -293,6 +299,37 @@ public partial class Instance : NetworkedObject
 	[ScriptProperty] public PTSignal<Instance> ChildDeleting { get; private set; } = new();
 	[ScriptProperty] public PTSignal<Instance> ChildDeleted { get; private set; } = new();
 
+	[ScriptProperty] public PTSignal<Instance> TagAdded { get; private set; } = new();
+
+	[ScriptProperty] public PTSignal<Instance> DescendantTagAdded { get; private set; } = new();
+
+	[ScriptProperty] public PTSignal<Instance> TagRemoved { get; private set; } = new();
+
+	[ScriptProperty] public PTSignal<Instance> DescendantTagRemoved { get; private set; } = new();
+
+	private void OnTagAdded(string tag)
+	{
+		TagAdded?.Invoke(tag);
+
+		Instance? parent = Parent;
+		while (parent != null)
+		{
+			parent.DescendantTagAdded?.Invoke(this,tag);
+			parent = parent.Parent;
+		}
+
+	}
+	private void OnTagRemoved(string tag)
+	{
+		TagRemoved?.Invoke(tag);
+
+		Instance? parent = Parent;
+		while (parent != null)
+		{
+			parent.DescendantTagRemoved?.Invoke(this,tag);
+			parent = parent.Parent;
+		}
+	}
 	internal void AddLegacyNameToParent()
 	{
 		if (_legacyName != null && Parent != null)
@@ -300,7 +337,6 @@ public partial class Instance : NetworkedObject
 			Parent.legacyChild.TryAdd(_legacyName, this);
 		}
 	}
-
 	internal void RemoveLegacyNameFromParent()
 	{
 		if (_legacyName != null && Parent != null)
