@@ -34,13 +34,13 @@ public class PTBounds : IScriptGDObject
 	[ScriptMethod]
 	public static PTBounds New()
 	{
-		return FromGDClass(new Aabb(Vector3.Zero, Vector3.Zero));
+		return FromGDClass(new());
 	}
 
 	[ScriptMethod]
 	public static PTBounds New(Vector3 position, Vector3 size)
 	{
-		return FromGDClass(new Aabb(position, size));
+		return FromGDClass(new(position, size));
 	}
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Eq)]
