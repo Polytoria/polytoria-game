@@ -616,10 +616,10 @@ public sealed partial class Globals : Node
 			return IntPtr.Zero;
 		}
 
-    string platform = ResolveCurrentPlatform();
-    bool siliconMac = (OS.HasFeature("macos") && OS.HasFeature("arm64")); // development is supported on mac silicon
-    
-    if (!OS.HasFeature("x86_64") && !siliconMac)
+		string platform = ResolveCurrentPlatform();
+		bool siliconMac = (OS.HasFeature("macos") && OS.HasFeature("arm64")); // development is supported on mac silicon
+
+		if (!OS.HasFeature("x86_64") && !siliconMac)
 		{
 			if (IsInGDEditor)
 			{
