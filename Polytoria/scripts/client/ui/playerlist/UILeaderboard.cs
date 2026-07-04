@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Polytoria.Client.UI.Playerlist;
 
-public partial class UILeaderboard : Control
+public partial class UILeaderboard : TouchScrollContainer
 {
 	private const int LeaderboardMaxHeight = 300;
 	private const string ItemPath = "res://scenes/client/ui/playerlist/leaderboard_user_item.tscn";
@@ -176,7 +176,7 @@ public partial class UILeaderboard : Control
 
 		_layout.AddChild(card);
 
-		foreach (var st in Stats.GetStats())
+		foreach (var st in Stats.GetVisibleStats())
 			card.AddStat(st);
 
 		player.StatChanged.Connect(OnPlayerStatChanged);
@@ -195,7 +195,7 @@ public partial class UILeaderboard : Control
 
 		_layout.AddChild(card);
 
-		foreach (var st in Stats.GetStats())
+		foreach (var st in Stats.GetVisibleStats())
 		{
 			card.AddStat(st);
 		}
@@ -225,7 +225,7 @@ public partial class UILeaderboard : Control
 			_neutralTeamItem = null;
 		}
 
-		foreach (var st in Stats.GetStats())
+		foreach (var st in Stats.GetVisibleStats())
 		{
 			if (st is Stat stat)
 			{
@@ -319,7 +319,7 @@ public partial class UILeaderboard : Control
 		card.SetNeutral("Neutral Team", new Color(0.56f, 0.61f, 0.66f));
 		_layout.AddChild(card);
 		_neutralTeamItem = card;
-		foreach (var st in Stats.GetStats())
+		foreach (var st in Stats.GetVisibleStats())
 			card.AddStat(st);
 	}
 
@@ -352,7 +352,7 @@ public partial class UILeaderboard : Control
 			_neutralTeamItem = null;
 		}
 
-		foreach (var st in Stats.GetStats())
+		foreach (var st in Stats.GetVisibleStats())
 		{
 			if (st is Stat stat)
 			{
@@ -368,6 +368,8 @@ public partial class UILeaderboard : Control
 
 	private void OnPlayerStatChanged(Stat stat, object? _)
 	{
+		if (!stat.Visible) return;
+
 		foreach (var item in _teamToItem.Values)
 			item.UpdateStat(stat);
 		_neutralTeamItem?.UpdateStat(stat);
@@ -384,7 +386,7 @@ public partial class UILeaderboard : Control
 			node.QueueFree();
 		}
 
-		foreach (var stat in Stats.GetStats())
+		foreach (var stat in Stats.GetVisibleStats())
 		{
 			if (stat.IsDeleted) continue;
 			Label headerLabel = new()
@@ -399,6 +401,18 @@ public partial class UILeaderboard : Control
 		}
 	}
 
+	private float GetMaxHeight()
+	{
+		if (!Globals.IsMobileBuild)
+		{
+			return LeaderboardMaxHeight;
+		}
+
+		float viewportHeight = GetViewportRect().Size.Y;
+		const float reservedBottom = 240f;
+		return Mathf.Clamp(viewportHeight - reservedBottom - GlobalPosition.Y, 120f, LeaderboardMaxHeight);
+	}
+
 	private async void LeaderboardUpdate()
 	{
 		_container.Visible = Visible && _playerToItem.Count > 0;
@@ -410,9 +424,9 @@ public partial class UILeaderboard : Control
 		await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
 		float ys = _layout.Size.Y + 16;
 
-		if (ys > LeaderboardMaxHeight)
+		if (ys > GetMaxHeight())
 		{
-			ys = LeaderboardMaxHeight;
+			ys = GetMaxHeight();
 		}
 
 		_container.Size = new(_userCard.Size.X, ys);

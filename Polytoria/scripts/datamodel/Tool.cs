@@ -14,7 +14,7 @@ using System.Linq;
 
 namespace Polytoria.Datamodel;
 
-[Instantiable]
+[Instantiable, PhysicalRootStop]
 public sealed partial class Tool : RigidBody
 {
 	private bool _droppable = true;

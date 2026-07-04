@@ -158,12 +158,11 @@ grow_horizontal = 0
 
 [node name="Pivot" type="Control" parent="Pivot" unique_id=1148353977]
 layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
+anchors_preset = 10
 anchor_right = 1.0
-grow_horizontal = 0
+grow_horizontal = 2
 
-[node name="UserCard" parent="Pivot/Pivot" unique_id=1642777641 instance=ExtResource("2_dwkfi")]
+[node name="UserCard" parent="Pivot/Pivot" unique_id=1642777641 node_paths=PackedStringArray("_playerList") instance=ExtResource("2_dwkfi")]
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
@@ -172,6 +171,7 @@ offset_left = -260.0
 offset_bottom = 48.0
 grow_horizontal = 0
 pivot_offset_ratio = Vector2(1, 0)
+_playerList = NodePath("../../..")
 
 [node name="Pivot" type="Control" parent="Pivot/Pivot" unique_id=2048561395]
 layout_mode = 1

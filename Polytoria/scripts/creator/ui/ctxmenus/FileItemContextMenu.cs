@@ -54,8 +54,9 @@ public partial class FileItemContextMenu : ContextMenu
 			{
 				_newMenu = new();
 				SetIconItem(_newMenu, "folder", "Folder", 1);
-				SetIconItem(_newMenu, "script", "Script", 2);
-				SetIconItem(_newMenu, "planet", "World", 3);
+				SetIconItem(_newMenu, "script", "File", 2);
+				SetIconItem(_newMenu, "script", "Script", 3);
+				SetIconItem(_newMenu, "planet", "World", 4);
 				_newMenu.IdPressed += OnNewMenuIdPressed;
 
 				AddSubmenuNodeItem("New", _newMenu, 1);
@@ -99,10 +100,13 @@ public partial class FileItemContextMenu : ContextMenu
 			case 1: // New Folder
 				CreatorService.Interface.PromptCreateFolder(Target!);
 				break;
-			case 2: // New Script
+			case 2: // New File
+				CreatorService.Interface.PromptCreateFile(atPath: Target);
+				break;
+			case 3: // New Script
 				CreatorService.Interface.PromptCreateScript(atPath: Target);
 				break;
-			case 3: // New World
+			case 4: // New World
 				CreatorService.Interface.PromptCreateWorld(Target!);
 				break;
 		}

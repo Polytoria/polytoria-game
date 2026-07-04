@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+using Polytoria.Datamodel.Creator;
 
 namespace Polytoria.Creator.UI.TextEditor;
 
@@ -14,13 +15,15 @@ public sealed partial class TextEditorContainer : Control
 	public string TargetFilePath = "";
 	public string TargetFilePathAbsolute = "";
 	public string OriginTabName = "";
+	public FileTypeEnum CodeCompletion = FileTypeEnum.Plaintext;
 	public CreatorSession TargetSession;
 
-	public TextEditorContainer(string path, string fpath, CreatorSession session)
+	public TextEditorContainer(string path, string fpath, FileTypeEnum codeCompletion, CreatorSession session)
 	{
 		TargetFilePath = path;
 		TargetFilePathAbsolute = fpath;
 		TargetSession = session;
+		CodeCompletion = codeCompletion;
 		EditorRoot = _textEditorPacked.Instantiate<TextEditorRoot>();
 		EditorRoot.Container = this;
 	}

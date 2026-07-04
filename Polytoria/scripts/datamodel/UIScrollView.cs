@@ -4,13 +4,14 @@
 
 using Godot;
 using Polytoria.Attributes;
+using Polytoria.Client.UI;
 
 namespace Polytoria.Datamodel;
 
 [Instantiable]
 public partial class UIScrollView : UIContainer
 {
-	private ScrollContainer _scrollContainer = null!;
+	private TouchScrollContainer _scrollContainer = null!;
 	private ScrollModeEnum _horizontalScrollMode = ScrollModeEnum.Auto;
 	private ScrollModeEnum _verticalScrollMode = ScrollModeEnum.Auto;
 
@@ -58,12 +59,12 @@ public partial class UIScrollView : UIContainer
 
 	public override Node CreateGDNode()
 	{
-		return new ScrollContainer();
+		return new TouchScrollContainer();
 	}
 
 	public override void InitGDNode()
 	{
-		_scrollContainer = (ScrollContainer)GDNode;
+		_scrollContainer = (TouchScrollContainer)GDNode;
 		base.InitGDNode();
 	}
 

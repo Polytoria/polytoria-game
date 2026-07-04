@@ -10,7 +10,7 @@ namespace Polytoria.Datamodel;
 [Instantiable]
 public partial class QuaternionValue : ValueBase
 {
-	private Quaternion _val = new(0, 0, 0, 0);
+	private Quaternion _val = new(0, 0, 0, 1);
 
 	[Editable, ScriptProperty]
 	public Quaternion Value

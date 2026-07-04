@@ -1,5 +1,5 @@
 {
-  "Version": "2.0.6\u002Bdev",
+  "Version": "2.0.12\u002Bdev",
   "FileType": 0,
   "Objects": [
     {
@@ -80,6 +80,8 @@
                 ],
                 "Anchored": true,
                 "CanCollide": true,
+                "CollisionLayers": 1,
+                "CollisionMask": 1,
                 "LocalPosition": [
                   -7.9231944E-07,
                   0,
@@ -122,6 +124,8 @@
                 ],
                 "Anchored": true,
                 "CanCollide": true,
+                "CollisionLayers": 1,
+                "CollisionMask": 1,
                 "LocalPosition": [
                   0,
                   3,
@@ -140,6 +144,53 @@
                 "Tags": []
               },
               "Children": [],
+              "LinkedModel": null,
+              "IsLinkedChild": false
+            },
+            {
+              "Name": "ParentChildRoot",
+              "ClassName": "Folder",
+              "ID": "c0e57857-fd07-4cc4-89da-00f50cd00a26",
+              "Properties": {
+                "Tags": []
+              },
+              "Children": [
+                {
+                  "Name": "One",
+                  "ClassName": "Folder",
+                  "ID": "4ad8e825-40c8-4521-a59c-b3f795739d3e",
+                  "Properties": {
+                    "Tags": []
+                  },
+                  "Children": [
+                    {
+                      "Name": "Two",
+                      "ClassName": "Folder",
+                      "ID": "2dd1465a-d9f0-48d9-b47b-e72d327d738b",
+                      "Properties": {
+                        "Tags": []
+                      },
+                      "Children": [
+                        {
+                          "Name": "Three",
+                          "ClassName": "Folder",
+                          "ID": "94b3d6e5-dd9f-4e43-b4ab-fea9cabb8963",
+                          "Properties": {
+                            "Tags": []
+                          },
+                          "Children": [],
+                          "LinkedModel": null,
+                          "IsLinkedChild": false
+                        }
+                      ],
+                      "LinkedModel": null,
+                      "IsLinkedChild": false
+                    }
+                  ],
+                  "LinkedModel": null,
+                  "IsLinkedChild": false
+                }
+              ],
               "LinkedModel": null,
               "IsLinkedChild": false
             },
@@ -184,6 +235,8 @@
                     ],
                     "Anchored": true,
                     "CanCollide": true,
+                    "CollisionLayers": 1,
+                    "CollisionMask": 1,
                     "LocalPosition": [
                       -1.5,
                       0.6666665,
@@ -223,6 +276,8 @@
                     ],
                     "Anchored": true,
                     "CanCollide": true,
+                    "CollisionLayers": 1,
+                    "CollisionMask": 1,
                     "LocalPosition": [
                       1.5,
                       -1.3333335,
@@ -262,6 +317,8 @@
                     ],
                     "Anchored": true,
                     "CanCollide": true,
+                    "CollisionLayers": 1,
+                    "CollisionMask": 1,
                     "LocalPosition": [
                       0,
                       0.6666665,
@@ -355,6 +412,8 @@
                     ],
                     "Anchored": true,
                     "CanCollide": true,
+                    "CollisionLayers": 1,
+                    "CollisionMask": 1,
                     "LocalPosition": [
                       0,
                       0,
@@ -394,6 +453,8 @@
                     ],
                     "Anchored": true,
                     "CanCollide": true,
+                    "CollisionLayers": 1,
+                    "CollisionMask": 1,
                     "LocalPosition": [
                       0,
                       0,
@@ -433,6 +494,8 @@
                     ],
                     "Anchored": true,
                     "CanCollide": true,
+                    "CollisionLayers": 1,
+                    "CollisionMask": 1,
                     "LocalPosition": [
                       0,
                       0,
@@ -485,6 +548,8 @@
                     "Character": "c4f96fd9-aba4-4141-80e8-f4bb0086646d",
                     "Anchored": false,
                     "CanCollide": true,
+                    "CollisionLayers": 1,
+                    "CollisionMask": 3,
                     "AngularVelocity": [
                       0,
                       -0,
@@ -566,6 +631,7 @@
                         "PlayInWorld": true,
                         "Paused": false,
                         "MaxDistance": 60,
+                        "AttenuationMode": 0,
                         "LocalPosition": [
                           0,
                           0,
@@ -878,6 +944,20 @@
                   "IsLinkedChild": false
                 },
                 {
+                  "Name": "ParentsAndChildren",
+                  "ClassName": "ServerScript",
+                  "ID": "2a647b4c-9d7c-4ee8-8ba0-c90c231e36f8",
+                  "Properties": {
+                    "IsEnabled": true,
+                    "LinkedScript": "c102ab47-bbfd-4273-a6a8-520ed7c2f5b7",
+                    "Compatibility": false,
+                    "Tags": []
+                  },
+                  "Children": [],
+                  "LinkedModel": null,
+                  "IsLinkedChild": false
+                },
+                {
                   "Name": "Shared",
                   "ClassName": "ServerScript",
                   "ID": "82df70ed-5e52-417f-983c-affbba301887",
@@ -1048,6 +1128,7 @@
           "ClassName": "CoreUIService",
           "ID": "1e50f39e-881b-4444-b137-2b90385018a5",
           "Properties": {
+            "CtrlLockCursor": 1,
             "UseUserCard": true,
             "UseChat": true,
             "UseHealthBar": true,

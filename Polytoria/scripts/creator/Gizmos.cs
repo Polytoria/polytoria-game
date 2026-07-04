@@ -130,7 +130,8 @@ public sealed partial class Gizmos : Node
 		Vector3 currentAxisVector = oldScaleVector * globalDirection;
 		int localDirection = rawMotion.Dot(currentAxisVector) > 0 ? 1 : -1;
 
-		float snappedDelta = rawMotion.Snap(moveSnap).Length() * localDirection;
+		Vector3 axisDir = currentAxisVector.Normalized();
+		float snappedDelta = Mathf.Snapped(rawMotion.Dot(axisDir), moveSnap);
 		Vector3 resizeDirection = oldScaleVector.Normalized();
 		Vector3 newScaleVector = oldScaleVector + resizeDirection * snappedDelta * scaleFactor;
 

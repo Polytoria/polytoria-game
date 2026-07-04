@@ -616,16 +616,23 @@ public sealed partial class Globals : Node
 			return IntPtr.Zero;
 		}
 
-		if (!OS.HasFeature("x86_64") && !(OS.HasFeature("macos") && OS.HasFeature("arm64")))
+    string platform = ResolveCurrentPlatform();
+    bool siliconMac = (OS.HasFeature("macos") && OS.HasFeature("arm64")); // development is supported on mac silicon
+    
+    if (!OS.HasFeature("x86_64") && !siliconMac)
 		{
 			if (IsInGDEditor)
 			{
 				PT.PrintWarn("Unsupported platform for development");
 			}
-			return IntPtr.Zero;
+
+			// i wasted an hour finding this damn return statement... -jeweleyed
+			if (platform == "android" || platform == "ios")
+			{
+				return IntPtr.Zero;
+			}
 		}
 
-		string platform = ResolveCurrentPlatform();
 		string? dllPath = ResolveDllPath(libraryName, platform);
 
 		if (dllPath == null)

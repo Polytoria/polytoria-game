@@ -24,6 +24,8 @@ public partial class SelectionBox : Node
 			{
 				_target?.TransformChanged -= UpdateBox;
 				_target = value;
+				// When the target changes drop the cache so the new target recalculates it's bounds.
+				InvalidateBoundCache();
 				UpdateBox();
 				_target?.TransformChanged += UpdateBox;
 			}
@@ -59,6 +61,11 @@ public partial class SelectionBox : Node
 	{
 		_selectionBoxMesh?.QueueFree();
 		_selectionBoxXrayMesh?.QueueFree();
+
+		_selectionBox?.Dispose();
+		_selectionBoxXray?.Dispose();
+		_mat?.Dispose();
+		_matXray?.Dispose();
 		base._ExitTree();
 	}
 
@@ -105,6 +112,9 @@ public partial class SelectionBox : Node
 		};
 		stXray.SetMaterial(_matXray);
 		_selectionBoxXray = stXray.Commit();
+
+		st.Dispose();
+		stXray.Dispose();
 
 		_selectionBoxMesh = new MeshInstance3D { Mesh = _selectionBox };
 		Root.GDNode.AddChild(_selectionBoxMesh, @internal: Node.InternalMode.Back);

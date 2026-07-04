@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://b8idijqb8aw3a"]
 
-[ext_resource type="Script" uid="uid://deg0ht5fobrth" path="res://scripts/creator/properties/Vector3Property.cs" id="1_djbn4"]
+[ext_resource type="Script" uid="uid://bnb5r7y4plnl6" path="res://scripts/creator/properties/QuaternionProperty.cs" id="1_djbn4"]
 
 [sub_resource type="Theme" id="Theme_tpni3"]
 HBoxContainer/constants/separation = 0
@@ -33,7 +33,7 @@ size_flags_horizontal = 3
 focus_neighbor_right = NodePath("../Y")
 focus_next = NodePath("../Y")
 theme = SubResource("Theme_awot5")
-step = 0.001
+step = 0.00001
 allow_greater = true
 allow_lesser = true
 alignment = 1
@@ -49,7 +49,7 @@ focus_neighbor_right = NodePath("../Z")
 focus_next = NodePath("../Z")
 focus_previous = NodePath("../X")
 theme = SubResource("Theme_l07jw")
-step = 0.001
+step = 0.00001
 allow_greater = true
 allow_lesser = true
 alignment = 1
@@ -63,7 +63,7 @@ size_flags_horizontal = 3
 focus_neighbor_left = NodePath("../Y")
 focus_previous = NodePath("../Y")
 theme = SubResource("Theme_emhcw")
-step = 0.001
+step = 0.00001
 allow_greater = true
 allow_lesser = true
 alignment = 1
@@ -77,7 +77,7 @@ size_flags_horizontal = 3
 focus_neighbor_left = NodePath("../Y")
 focus_previous = NodePath("../Y")
 theme = SubResource("Theme_djbn4")
-step = 0.001
+step = 0.00001
 allow_greater = true
 allow_lesser = true
 alignment = 1

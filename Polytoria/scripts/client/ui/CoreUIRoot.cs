@@ -33,6 +33,7 @@ public partial class CoreUIRoot : CanvasLayer
 	[Export] public UIHealthbar HealthBar = null!;
 	[Export] public UILeaderboard Leaderboard = null!;
 	[Export] public UIInventory Inventory = null!;
+	[Export] public UIInventoryButton InventoryButton = null!;
 	[Export] public UIEmoteWheel EmoteWheel = null!;
 	[Export] public UINotification NotificationCenter = null!;
 	[Export] public UICapturePreview CapturePreview = null!;
@@ -58,6 +59,7 @@ public partial class CoreUIRoot : CanvasLayer
 		NotificationCenter.CoreUI = this;
 		CapturePreview.CoreUI = this;
 		Inventory.CoreUI = this;
+		InventoryButton.CoreUI = this;
 		Leaderboard.CoreUI = this;
 		Chat.CoreUI = this;
 		ChatButton.CoreUI = this;
@@ -91,10 +93,7 @@ public partial class CoreUIRoot : CanvasLayer
 
 	private void SyncCtrlLockCursor()
 	{
-		if (CtrlLockCursor != null)
-		{
-			CtrlLockCursor.Visible = Root?.Environment?.CurrentCamera?.CtrlLocked == true;
-		}
+		CtrlLockCursor?.Visible = Root?.Environment?.CurrentCamera?.CtrlLocked == true;
 	}
 
 	private void OnCtrlLockCursorChanged()

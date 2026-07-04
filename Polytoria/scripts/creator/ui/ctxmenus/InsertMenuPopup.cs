@@ -65,6 +65,7 @@ public partial class InsertMenuPopup : PopupPanel
 			"NumberValue",
 			"RangeValue",
 			"StringValue",
+			"VariantValue",
 			"Vector2Value",
 			"Vector3Value",
 			"QuaternionValue",
@@ -117,6 +118,7 @@ public partial class InsertMenuPopup : PopupPanel
 			"UICorner",
 			"UIStroke",
 			"UIShadow",
+			"UIAspectRatioRestraint",
 		},
 		[new() { Title = "Teams", RecommendOn = [typeof(Teams)] }] = new()
 		{
@@ -136,12 +138,14 @@ public partial class InsertMenuPopup : PopupPanel
 		{
 			"RigidBody",
 			"BodyPosition",
+			"BodyRotation",
 			"Grabbable",
 			"Weld",
 		},
 		[new() { Title = "Gizmos" }] = new()
 		{
 			"Marker3D",
+			"VoiceBox",
 		},
 	};
 

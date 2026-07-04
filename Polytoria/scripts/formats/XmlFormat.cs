@@ -34,7 +34,13 @@ public static class XmlFormat
 		ShapeEnum.Bevel,
 		ShapeEnum.Concave,
 		ShapeEnum.Cone,
-		ShapeEnum.Corner
+		ShapeEnum.Corner,
+		ShapeEnum.Torus,
+		ShapeEnum.Octant,
+		ShapeEnum.BeveledCorner,
+		ShapeEnum.ConcaveCorner,
+		ShapeEnum.TriangleCorner,
+		ShapeEnum.TriangleConcaveCorner
 	];
 
 	private static readonly PartMaterialEnum[] _partMaterials = [
@@ -246,6 +252,14 @@ public static class XmlFormat
 						_x = 0;
 						_y = 0;
 						_z = 0;
+					}
+					else if (name.SequenceEqual("quaternion"))
+					{
+						value = new Quaternion(_x, _y, _z, _w);
+						_x = 0;
+						_y = 0;
+						_z = 0;
+						_w = 1;
 					}
 					else if (name.SequenceEqual("color"))
 					{

@@ -214,7 +214,11 @@ public partial class CreatorSession : Node, IDisposable
 
 			PT.Print("Writing doc...");
 			File.WriteAllText(versionPath, Globals.AppVersion);
-			File.WriteAllText(luauRcPath, LuauRCContent);
+
+			if (!File.Exists(luauRcPath))
+			{
+				File.WriteAllText(luauRcPath, LuauRCContent);
+			}
 		}
 	}
 
@@ -520,6 +524,21 @@ return module";
 
 		Directory.CreateDirectory(globalized);
 		FileBrowserTab.AutoSelects.Add(atPath + "/");
+		RescanFolder();
+	}
+
+	public async Task CreateFile(string atPath)
+	{
+		atPath = atPath.SanitizePath();
+		string globalized = GlobalizePath(atPath);
+
+		if (File.Exists(globalized))
+		{
+			throw new Exception("File already exists");
+		}
+
+		await File.WriteAllBytesAsync(globalized, []);
+		FileBrowserTab.AutoSelects.Add(atPath);
 		RescanFolder();
 	}
 

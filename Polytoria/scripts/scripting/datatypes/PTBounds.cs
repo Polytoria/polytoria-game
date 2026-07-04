@@ -53,7 +53,7 @@ public class PTBounds : IScriptGDObject
 	public static string ToString(PTBounds? v)
 	{
 		if (v == null) return "<Bounds>";
-		return $"<Bounds:({v.Start}, {v.End}, {v.Size}>";
+		return $"<Bounds:({v.Start}, {v.End}, {v.Size})>";
 	}
 
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static Vector3 ClosestPoint(PTBounds bounds, PTVector3 point) => bounds.aabb.GetSupport(point.vector);
@@ -61,6 +61,7 @@ public class PTBounds : IScriptGDObject
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTBounds Encapsulate(PTBounds bounds, PTVector3 point) => FromGDClass(bounds.aabb.Expand(point.vector));
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTBounds Expand(PTBounds bounds, float amount) => FromGDClass(bounds.aabb.Grow(amount));
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static bool Intersects(PTBounds bounds, PTBounds other) => bounds.aabb.Intersects(other.aabb);
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTBounds Intersection(PTBounds bounds, PTBounds other) => FromGDClass(bounds.aabb.Intersection(other.aabb));
 
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)]
 	public static PTBounds SetMinMax(PTBounds bounds, PTVector3 min, PTVector3 max)

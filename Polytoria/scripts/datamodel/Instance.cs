@@ -292,6 +292,8 @@ public partial class Instance : NetworkedObject
 	[ScriptProperty] public PTSignal<Instance> ChildRemoved { get; private set; } = new();
 	[ScriptProperty] public PTSignal<Instance> ChildDeleting { get; private set; } = new();
 	[ScriptProperty] public PTSignal<Instance> ChildDeleted { get; private set; } = new();
+	[ScriptProperty] public PTSignal<string> TagAdded { get; private set; } = new();
+	[ScriptProperty] public PTSignal<string> TagRemoved { get; private set; } = new();
 
 	internal void AddLegacyNameToParent()
 	{
@@ -482,6 +484,24 @@ public partial class Instance : NetworkedObject
 		}
 
 		return null;
+	}
+
+	[ScriptMethod]
+	public Instance? FindDescendant(string path)
+	{
+		string[] separatedPath = path.Split('.');
+		Instance? inst = this;
+
+		foreach (string segment in separatedPath)
+		{
+			inst = inst.FindChild(segment);
+			if (inst == null)
+			{
+				return null;
+			}
+		}
+
+		return inst;
 	}
 
 	[ScriptMethod]
@@ -856,17 +876,25 @@ public partial class Instance : NetworkedObject
 	[ScriptMethod]
 	public void AddTag(string tag)
 	{
-		List<string> tags = [.. Tags];
-		tags.Add(tag);
-		Tags = [.. tags];
+		if (tag != null && !Tags.Contains(tag))
+		{
+			List<string> tags = [.. Tags];
+			tags.Add(tag);
+			Tags = [.. tags];
+			TagAdded.Invoke(tag);
+		}
 	}
 
 	[ScriptMethod]
 	public void RemoveTag(string tag)
 	{
 		List<string> tags = [.. Tags];
-		tags.Remove(tag);
+		bool removed = tags.Remove(tag);
 		Tags = [.. tags];
+		if (removed)
+		{
+			TagRemoved.Invoke(tag);
+		}
 	}
 
 	[ScriptMethod]

@@ -21,22 +21,29 @@ public sealed partial class Sound : Dynamic
 {
 	public const float SoundDistanceMultipler = 1.25f;
 	private const float MinPitch = 0.001f;
-	private AudioAsset? _asset;
+	private const float MaxVolume = 2f;
+	private static int _counter = 0;
 	private AudioStreamPlayer? _audioPlayer;
 	private AudioStreamPlayer3D? _audioPlayer3D;
 	private bool _playAfterLoad = false;
 	private bool _serverIsPlaying = false;
 	private Resource? _prevAsset;
+	private string _audioBusName = "Master";
+	private AudioEffectPanner? _efPanner;
+	private int _id = System.Threading.Interlocked.Increment(ref _counter);
 
+	private AudioAsset? _asset;
 	private int _soundID = 0;
 	private bool _autoplay = false;
-	private float _volume = 1;
-	private float _time = 0;
+	private float _volume = 1f;
+	private float _time = 0f;
 	private bool _loop = false;
+	private float _loopStart = 0f;
 	private bool _playInWorld = false;
 	private bool _paused = false;
 	private float _pitch = 1f;
 	private float _maxDistance = 60f;
+	private float _pan = 0f;
 
 	private AudioStream? _currentStream;
 
@@ -94,7 +101,7 @@ public sealed partial class Sound : Dynamic
 		get => _volume;
 		set
 		{
-			_volume = Mathf.Clamp(value, 0, 2);
+			_volume = Mathf.Clamp(value, 0, MaxVolume);
 			UpdateVolume();
 			OnPropertyChanged();
 		}
@@ -108,6 +115,18 @@ public sealed partial class Sound : Dynamic
 		{
 			_pitch = Mathf.Max(value, MinPitch);
 			UpdatePitch();
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float Pan
+	{
+		get => _pan;
+		set
+		{
+			_pan = Mathf.Clamp(value, -1f, 1f);
+			UpdatePan();
 			OnPropertyChanged();
 		}
 	}
@@ -131,19 +150,26 @@ public sealed partial class Sound : Dynamic
 		{
 			_loop = value;
 
-			switch (_currentStream)
+			SetStreamLoop(_currentStream, value);
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float LoopStart
+	{
+		get => _loopStart;
+		set
+		{
+			// unclamped value is reapplied and clamped when Sound is loaded
+			if (_currentStream != null)
 			{
-				case AudioStreamMP3 aStream:
-					aStream.LoopOffset = 0;
-					aStream.Loop = value;
-					break;
-				case AudioStreamOggVorbis aStream:
-					aStream.LoopOffset = 0;
-					aStream.Loop = value;
-					break;
-					// unused in Polytoria
-					//case AudioStreamWav aStream:
+				value = (float)Mathf.Clamp(value, 0, _currentStream.GetLength());
 			}
+
+			_loopStart = value;
+
+			SetStreamLoopStart(_currentStream, value);
 			OnPropertyChanged();
 		}
 	}
@@ -240,9 +266,7 @@ public sealed partial class Sound : Dynamic
 	[ScriptProperty] public bool Loading { get; private set; } = false;
 
 	[ScriptProperty]
-	public float Length => _audioPlayer != null
-				? (float)_audioPlayer.Stream.GetLength()
-				: _audioPlayer3D != null ? (float)_audioPlayer3D.Stream.GetLength() : 0;
+	public float Length => (_currentStream != null ? (float)_currentStream.GetLength() : 0);
 
 	[ScriptProperty] public PTSignal Loaded { get; private set; } = new();
 	[ScriptProperty] public PTSignal Finished { get; private set; } = new();
@@ -282,12 +306,21 @@ public sealed partial class Sound : Dynamic
 
 		if (!PlayInWorld)
 		{
+			_audioBusName = $"Sound_{_id}";
+			AudioServer.AddBus();
+			int idx = AudioServer.BusCount - 1;
+			AudioServer.SetBusName(idx, _audioBusName);
+			AudioServer.SetBusSend(idx, "Master");
+			_efPanner = new AudioEffectPanner();
+			AudioServer.AddBusEffect(idx, _efPanner);
+
 			_audioPlayer = new AudioStreamPlayer
 			{
 				Stream = _currentStream
 			};
 			GDNode.AddChild(_audioPlayer, @internal: Node.InternalMode.Back);
 			_audioPlayer.Finished += OnPlayerFinished;
+			_audioPlayer.Bus = _audioBusName;
 		}
 		else
 		{
@@ -300,7 +333,9 @@ public sealed partial class Sound : Dynamic
 			GDNode.AddChild(_audioPlayer3D, @internal: Node.InternalMode.Back);
 			_audioPlayer3D.Finished += OnPlayerFinished;
 		}
-		UpdateAudioPlayer();
+		UpdateMaxDistance();
+		UpdateVolume();
+		UpdatePitch();
 	}
 
 	private void CleanupAudioPlayer()
@@ -310,13 +345,15 @@ public sealed partial class Sound : Dynamic
 
 		_audioPlayer = null;
 		_audioPlayer3D = null;
-	}
 
-	private void UpdateAudioPlayer()
-	{
-		UpdateMaxDistance();
-		UpdateVolume();
-		UpdatePitch();
+		if (_audioBusName != "Master")
+		{
+			int idx = AudioServer.GetBusIndex(_audioBusName);
+
+			if (idx >= 0) AudioServer.RemoveBus(idx);
+
+			_efPanner = null;
+		}
 	}
 
 	private void UpdateMaxDistance()
@@ -334,6 +371,12 @@ public sealed partial class Sound : Dynamic
 	{
 		_audioPlayer?.PitchScale = _pitch;
 		_audioPlayer3D?.PitchScale = _pitch;
+	}
+
+	private void UpdatePan()
+	{
+		// Pan does not apply to in-world sounds
+		_efPanner?.Pan = _pan;
 	}
 
 	private void CreatePTAudioAsset()
@@ -377,6 +420,7 @@ public sealed partial class Sound : Dynamic
 	[ScriptMethod]
 	public void PlayOneShot(float volume = 1f)
 	{
+		// WARN: only add panning to oneshot after sorting extra complexity of audiobus and safety
 		InternalPlayOneShot(volume);
 
 		if (HasAuthority)
@@ -402,13 +446,23 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
+	[ScriptMethod]
+	public float GetPeakVolume()
+	{
+		int bus = AudioServer.GetBusIndex(_audioBusName);
+		if (bus < 0)
+			return 0f;
+
+		float left = AudioServer.GetBusPeakVolumeLeftDb(bus, 0);
+		float right = AudioServer.GetBusPeakVolumeRightDb(bus, 0);
+
+		return Mathf.DbToLinear(Mathf.Max(left, right));
+	}
+
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
 	private void NetPlayOneshot(float volume)
 	{
-		if (volume > 1)
-		{
-			volume = 1;
-		}
+		Mathf.Clamp(volume, 0f, 1f);
 
 		InternalPlayOneShot(volume);
 	}
@@ -473,6 +527,7 @@ public sealed partial class Sound : Dynamic
 
 			clone.Finished += f;
 
+			SetStreamLoop(clone.Stream, false);
 			clone.Play();
 		}
 
@@ -492,6 +547,7 @@ public sealed partial class Sound : Dynamic
 
 			clone3D.Finished += f;
 
+			SetStreamLoop(clone3D.Stream, false);
 			clone3D.Play();
 		}
 	}
@@ -522,7 +578,9 @@ public sealed partial class Sound : Dynamic
 		_currentStream = (AudioStream)audio;
 		_audioPlayer?.Stream = (AudioStream)audio;
 		_audioPlayer3D?.Stream = (AudioStream)audio;
-		Loop = _loop; // reapply to new stream
+		// reapply to new stream
+		LoopStart = _loopStart;
+		Loop = _loop;
 
 		Loaded.Invoke();
 
@@ -530,6 +588,36 @@ public sealed partial class Sound : Dynamic
 		{
 			_playAfterLoad = false;
 			InternalPlay();
+		}
+	}
+
+	private static void SetStreamLoop(AudioStream? stream, bool val)
+	{
+		switch (stream)
+		{
+			case AudioStreamMP3 aStream:
+				aStream.Loop = val;
+				break;
+			case AudioStreamOggVorbis aStream:
+				aStream.Loop = val;
+				break;
+				// unused in Polytoria
+				//case AudioStreamWav aStream:
+		}
+	}
+
+	private static void SetStreamLoopStart(AudioStream? stream, float val)
+	{
+		switch (stream)
+		{
+			case AudioStreamMP3 aStream:
+				aStream.LoopOffset = val;
+				break;
+			case AudioStreamOggVorbis aStream:
+				aStream.LoopOffset = val;
+				break;
+				// unused in Polytoria
+				//case AudioStreamWav aStream:
 		}
 	}
 }
