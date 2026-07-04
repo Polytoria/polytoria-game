@@ -179,7 +179,7 @@ public class LuaDefinitionGenerator
 			builder.AppendLine($"\t{p},");
 		}
 
-		Dictionary<string, List<string>> methodOverloads = [];
+		OrderedDictionary<string, List<string>> methodOverloads = [];
 		foreach (ScriptMethod m in c.Methods)
 		{
 			if (m.IsObsolete || !m.IsStatic || m.IsMetamethod) continue;
