@@ -62,8 +62,6 @@ public class PTBounds : IScriptGDObject
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTBounds Expand(PTBounds bounds, float amount) => FromGDClass(bounds.aabb.Grow(amount));
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static bool Intersects(PTBounds bounds, PTBounds other) => bounds.aabb.Intersects(other.aabb);
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTBounds Intersection(PTBounds bounds, PTBounds other) => FromGDClass(bounds.aabb.Intersection(other.aabb));
-	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float Distance(PTBounds bounds, PTVector3 point) => point.vector.DistanceTo(ClosestPoint(bounds, point).vector);
-	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float SqrDistance(PTBounds bounds, PTVector3 point) => point.vector.DistanceSquaredTo(ClosestPoint(bounds, point).vector);
 
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)]
 	public static PTBounds SetMinMax(PTBounds bounds, PTVector3 min, PTVector3 max)
@@ -73,4 +71,7 @@ public class PTBounds : IScriptGDObject
 		aabb.Size = max.vector - min.vector;
 		return FromGDClass(aabb);
 	}
+
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float Distance(PTBounds bounds, PTVector3 point) => point.vector.DistanceTo(ClosestPoint(bounds, point).vector);
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float SqrDistance(PTBounds bounds, PTVector3 point) => point.vector.DistanceSquaredTo(ClosestPoint(bounds, point).vector);
 }
