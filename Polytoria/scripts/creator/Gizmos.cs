@@ -62,12 +62,12 @@ public sealed partial class Gizmos : Node
 		game.Loaded.Once(() =>
 		{
 			_history = Root.CreatorContext.History;
+			_camera = Root.CreatorContext.Freelook.Camera3D;
 		});
 	}
 
 	public override void _Ready()
 	{
-		_camera = Root.CreatorContext.Freelook.Camera3D;
 		Move.RootGizmos = this;
 		Rotate.RootGizmos = this;
 		Scale.RootGizmos = this;
