@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/BoolValue.svg-0295c8c9b5909b9b841f8693ecbf9fd
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

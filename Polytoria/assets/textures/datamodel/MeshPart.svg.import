@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/MeshPart.svg-61fd047b4f047ffb1461bfaf92081925
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

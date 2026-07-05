@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/Team.svg-21e67d02808e3c75a17b5224a7d460be.dpi
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

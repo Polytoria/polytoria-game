@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/Accessory.svg-2add68d4aa19f95c4734641c0deb422
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

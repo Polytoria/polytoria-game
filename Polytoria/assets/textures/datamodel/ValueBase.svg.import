@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/ValueBase.svg-4ef409b580816e0575ea63b90b9b751
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

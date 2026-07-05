@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/PointLight.svg-3cc2c019082067bd1d21053f0e6253
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

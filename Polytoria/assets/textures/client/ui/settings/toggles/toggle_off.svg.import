@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/toggle_off.svg-d39c9bc482938ad9668b51f64fcea8
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

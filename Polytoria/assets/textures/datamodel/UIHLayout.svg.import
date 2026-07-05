@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/UIHLayout.svg-1bb4dd9e6d738ccd9739f25a522d796
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

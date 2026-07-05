@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/brick.svg-dfb1ba2091db14b663a2b81ebb47dbcd.dp
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

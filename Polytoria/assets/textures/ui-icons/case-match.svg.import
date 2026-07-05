@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/case-match.svg-c5fb33fb3bc65ddfb36970c9a020b5
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/Inventory.svg-81380c40da68d97d3efa182ccd98bfa
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

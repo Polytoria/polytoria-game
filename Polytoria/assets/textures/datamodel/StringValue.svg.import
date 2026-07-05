@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/StringValue.svg-bdef53c739090fa0e6c6f051c0343
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/ClientScript.svg-e69b80c687858884d1752491abca
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

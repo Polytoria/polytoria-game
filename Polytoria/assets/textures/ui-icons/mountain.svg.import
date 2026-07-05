@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/mountain.svg-44cd955a01142779846f51e0ae549e5f
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

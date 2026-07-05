@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/input-button.svg-cd4724e6981d7af7c115afc42f9a
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

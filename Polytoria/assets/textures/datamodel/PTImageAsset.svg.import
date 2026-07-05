@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/PTImageAsset.svg-9614f71b65298157d64b5687747c
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

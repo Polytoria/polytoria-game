@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/lua.svg-8867cce5247e3ed118238f4a80fa86d5.dpit
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/Seat.svg-51eb3ba59760ceccf7aea2ad1d506a1a.dpi
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true
