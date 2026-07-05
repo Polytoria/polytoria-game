@@ -34,11 +34,11 @@ public sealed partial class Gizmos : Node
 	public bool HoveringUIGizmo { get; set; }
 	public bool IsDraggingDynamic => _isDraggingDyn;
 
-	public static Color[] AxisColors { get; private set; } =
+	public static readonly Color[] AxisColors =
 	[
-			new(0.96f, 0.20f, 0.32f),
-			new(0.53f, 0.84f, 0.01f),
-			new(0.16f, 0.55f, 0.96f),
+		new(0.96f, 0.20f, 0.32f),
+		new(0.53f, 0.84f, 0.01f),
+		new(0.16f, 0.55f, 0.96f),
 	];
 
 	public MoveGizmo Move = new();
