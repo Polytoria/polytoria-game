@@ -8,8 +8,8 @@ using Polytoria.Scripting;
 
 namespace Polytoria.Datamodel.Services;
 
-[Static("Event")]
-public sealed partial class EventService : Instance
+[Static("Hooks")]
+public sealed partial class HookService : Instance
 {
 	[ScriptProperty]
 	public PTSignal<double> Updated { get; private set; } = new();

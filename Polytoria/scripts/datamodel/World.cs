@@ -58,7 +58,7 @@ public sealed partial class World : Instance
 
 	public PTSignal Loaded { get; private set; } = new();
 
-	[Attributes.Obsolete("Use 'Event.Updated' instead.")]
+	[Attributes.Obsolete("Use 'Hooks.Updated' instead.")]
 	[ScriptProperty]
 	public PTSignal<double> Rendered { get; private set; } = new();
 
@@ -125,7 +125,7 @@ public sealed partial class World : Instance
 	public IOService IO => FindChild<IOService>("IO")!;
 	public WorldsService Worlds => FindChild<WorldsService>("Worlds")!;
 	public SocialService Social => FindChild<SocialService>("Social")!;
-	public EventService Event => FindChild<EventService>("Event")!;
+	public HookService Hooks => FindChild<HookService>("Hooks")!;
 #if CREATOR
 	public CreatorContextService CreatorContext => FindChild<CreatorContextService>("CreatorContext")!;
 #endif
@@ -734,12 +734,12 @@ public sealed partial class World : Instance
 			tweenService.NetworkParent = this;
 		}
 
-		EventService? eventService = FindChild<EventService>("Event");
-		if (eventService == null)
+		HookService? hookService = FindChild<HookService>("Hooks");
+		if (hookService == null)
 		{
-			eventService = Globals.LoadInstance<EventService>(Root);
-			eventService.NameOverride = "Event";
-			eventService.NetworkParent = this;
+			hookService = Globals.LoadInstance<HookService>(Root);
+			hookService.NameOverride = "Hooks";
+			hookService.NetworkParent = this;
 		}
 
 		CaptureService? captureService = FindChild<CaptureService>("Capture");

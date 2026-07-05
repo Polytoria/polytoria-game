@@ -167,7 +167,7 @@ public sealed partial class ScriptService : Instance
 			{ "Presence", root.Presence },
 			{ "Preferences", root.Preferences },
 			{ "Worlds", root.Worlds },
-			{ "Event", root.Event }
+			{ "Hooks", root.Hooks }
 		};
 
 		if (script != null)

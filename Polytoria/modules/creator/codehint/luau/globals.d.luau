@@ -98,4 +98,4 @@ declare CreatorGUI: CreatorGUI
 
 declare Preferences: PreferencesService
 
-declare Event: EventService
+declare Hooks: HookService
