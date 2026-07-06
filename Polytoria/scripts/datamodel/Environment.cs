@@ -81,7 +81,7 @@ public sealed partial class Environment : Instance
 			float strengthSquared = _gravity.LengthSquared();
 			if (strengthSquared == 0)
 			{
-				PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.GravityOverrideMode, (long)PhysicsServer3D.AreaSpaceOverrideMode.Disabled);
+				PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.Gravity, 0);
 			}
 			else
 			{
