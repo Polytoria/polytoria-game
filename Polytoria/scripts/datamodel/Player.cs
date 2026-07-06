@@ -943,7 +943,7 @@ public sealed partial class Player : NPC
 		if (Root.Environment.SpawnPoints.Count > 0)
 		{
 			Entity spawnpoint = ArrayUtils.GetRandom(Root.Environment.SpawnPoints);
-			Position = spawnpoint.Position + new Vector3(0, spawnpoint.Size.Y + 2.0f, 0);
+			Position = spawnpoint.Position + new Vector3(0, spawnpoint.Size.Y + 2.0f, 0) * spawnpoint.Quaternion;
 			Rotation = new(0, spawnpoint.Rotation.Y, 0);
 		}
 		else
