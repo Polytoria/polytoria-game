@@ -21,7 +21,7 @@ public sealed partial class AssetsService : Instance
 		base.PreDelete();
 	}
 
-	[ScriptMethod, Obsolete("Use the .New static instead")]
+	[ScriptMethod, Obsolete("Use the class's corresponding .New static instead")]
 	public BaseAsset? NewAsset(string assetClassName)
 	{
 		NetworkedObject? obj = NewInternal(assetClassName, Root);

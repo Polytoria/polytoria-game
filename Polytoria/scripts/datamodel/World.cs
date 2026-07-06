@@ -58,7 +58,7 @@ public sealed partial class World : Instance
 
 	public PTSignal Loaded { get; private set; } = new();
 
-	[Attributes.Obsolete("Use 'Hooks.Updated' instead.")]
+	[Attributes.Obsolete(use: "Hooks.Updated")]
 	[ScriptProperty]
 	public PTSignal<double> Rendered { get; private set; } = new();
 
