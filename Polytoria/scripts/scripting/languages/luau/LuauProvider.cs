@@ -1002,7 +1002,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		{
 			string? errorMessage = thread.ToString(-1);
 			lua.PushBoolean(false);
-			lua.PushString(errorMessage ?? "unknown");
+			lua.PushString(errorMessage ?? "");
 
 			return 2;
 		}
@@ -1066,7 +1066,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 		else
 		{
-			return lua.Error(thread.ToString(-1) ?? "unknown");
+			return lua.Error(thread.ToString(-1) ?? "");
 		}
 	}
 
