@@ -24,6 +24,7 @@ public sealed partial class HookService : Instance
 	{
 		base.Init();
 		SetProcess(true);
+		SetPhysicsProcess(true);
 	}
 
 	public override void Ready()
