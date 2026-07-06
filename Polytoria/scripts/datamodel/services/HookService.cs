@@ -32,7 +32,7 @@ public sealed partial class HookService : Instance
 		base.Ready();
 		// NOTE: Godot doesn't pass deltatime to the frame_pre_draw or
 		// frame_post_draw signals, so we have to grab it manually using
-		// Node.GetProcessDeltaTime
+		// Node.GetProcessDeltaTime()
 		RenderingServer.Singleton.Connect(
 			RenderingServer.SignalName.FramePreDraw,
 			Callable.From(OnFramePreDraw)
