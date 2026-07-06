@@ -289,7 +289,7 @@ public class LuaMetatable : LuaObject
 
 			if (obsoleteAttribute != null)
 			{
-				PT.PrintWarn($"{prop.Name} is obsolete. {obsoleteAttribute.Message}");
+				PT.PrintWarn(obsoleteAttribute.GetWarning());
 			}
 
 			object? value = prop.GetValue(targetObject);
@@ -853,7 +853,7 @@ public class LuaMetatable : LuaObject
 
 		if (obsoleteAttribute != null)
 		{
-			PT.PrintWarn($"{targetMethod.Name} is obsolete. {obsoleteAttribute.Message}");
+			PT.PrintWarn(obsoleteAttribute.GetWarning());
 		}
 
 		// Prepare args array formatted for params

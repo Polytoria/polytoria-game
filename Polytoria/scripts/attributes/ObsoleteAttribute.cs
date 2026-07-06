@@ -3,17 +3,36 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using System;
+using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace Polytoria.Attributes;
 
 /// <summary>
-/// Mark this as obsolete. Maps to Luau's <c>@deprecated</c> attribute
+/// Mark this as obsolete. Maps to Luau's <c>@deprecated</c> attribute:
+/// <see href="https://rfcs.luau.org/syntax-attribute-functions-deprecated.html" />
 /// </summary>
 /// <param name="reason">The reason for obsoletion</param>
-/// <param name="use">The name of what should be used instead</param>
+/// <param name="use">What should be used instead</param>
 [AttributeUsage(AttributeTargets.All)]
-public sealed class ObsoleteAttribute(string? reason = null, string? use = null) : Attribute
+public sealed class ObsoleteAttribute(string? reason = null, string? use = null, [CallerMemberName] string? name = null) : Attribute
 {
+	public readonly string? Name = name;
 	public readonly string? Reason = reason;
 	public readonly string? UseInstead = use;
+
+	public string GetWarning()
+	{
+		StringBuilder builder = new($"'{Name}' is obsolete");
+		if (UseInstead != null)
+		{
+			builder.Append($", use '{UseInstead}' instead");
+		}
+		builder.Append('.');
+		if (Reason != null)
+		{
+			builder.Append(Reason);
+		}
+		return builder.ToString();
+	}
 }

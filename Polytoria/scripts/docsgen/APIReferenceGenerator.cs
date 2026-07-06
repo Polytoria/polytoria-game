@@ -13,6 +13,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -91,13 +92,15 @@ public class APIReferenceGenerator
 						missingEnums.Add(property.PropertyType);
 					}
 
+					Attributes.ObsoleteAttribute? obsoleteAttribute = property.GetCustomAttribute<Attributes.ObsoleteAttribute>();
 					propertiesDef.Add(new(
 						property.Name,
 						ProcessTypeName(property.PropertyType),
 						isEditable || isScriptProperty,
 						isScriptProperty && property.GetSetMethod(false) == null,
-						property.IsDefined(typeof(Attributes.ObsoleteAttribute)),
-						property.GetAccessors(true)[0].IsStatic
+						obsoleteAttribute != null,
+						property.GetGetMethod(true)?.IsStatic ?? false,
+						obsoleteAttribute != null ? new(obsoleteAttribute.Reason, obsoleteAttribute.UseInstead) : null
 					));
 				}
 			}
@@ -491,9 +494,9 @@ public class APIReferenceGenerator
 		public readonly string? Reason = reason;
 		public readonly string? UseInstead = use;
 
-		public readonly override string ToString()
+		public readonly string GetAttributeString()
 		{
-			List<string> parameters = [];
+			List<string> parameters = new(2);
 			if (Reason != null)
 			{
 				parameters.Add($"reason = \"{Reason}\"");
@@ -507,6 +510,21 @@ public class APIReferenceGenerator
 				return $"@[deprecated {{ {string.Join(", ", parameters)} }}]";
 			}
 			return "@deprecated";
+		}
+
+		public readonly string GetWarning()
+		{
+			StringBuilder builder = new("Obsolete");
+			if (UseInstead != null)
+			{
+				builder.Append($", use `{UseInstead}` instead");
+			}
+			builder.Append('.');
+			if (Reason != null)
+			{
+				builder.Append(Reason);
+			}
+			return builder.ToString();
 		}
 	}
 
@@ -524,7 +542,7 @@ public class APIReferenceGenerator
 		public readonly bool IsMetamethod => Name.StartsWith("__");
 	}
 
-	public readonly struct ScriptProperty(string name, string? type, bool isAccessibleByScripts, bool isReadOnly, bool isObsolete, bool isStatic)
+	public readonly struct ScriptProperty(string name, string? type, bool isAccessibleByScripts, bool isReadOnly, bool isObsolete, bool isStatic, ScriptObsoletionInfo? obsoletionInfo = null)
 	{
 		public readonly string Name = name;
 		public readonly string? Type = type;
@@ -532,6 +550,7 @@ public class APIReferenceGenerator
 		public readonly bool IsReadOnly = isReadOnly;
 		public readonly bool IsObsolete = isObsolete;
 		public readonly bool IsStatic = isStatic;
+		public readonly ScriptObsoletionInfo? ObsoletionInfo = obsoletionInfo;
 
 		public readonly override string ToString()
 		{
