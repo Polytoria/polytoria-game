@@ -78,15 +78,16 @@ public sealed partial class Environment : Instance
 			_gravity = value;
 
 			Rid space = Root.World3D.Space;
-			float gravityMagnitude = _gravity.Length();
-			if (gravityMagnitude == 0)
+			float strengthSquared = _gravity.LengthSquared();
+			if (strengthSquared == 0)
 			{
 				PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.GravityOverrideMode, (long)PhysicsServer3D.AreaSpaceOverrideMode.Disabled);
 			}
 			else
 			{
-				PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.Gravity, gravityMagnitude / -5f);
-				PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.GravityVector, _gravity / gravityMagnitude);
+				float strength = Mathf.Sqrt(strengthSquared);
+				PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.Gravity, strength / -5f);
+				PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.GravityVector, _gravity / strength);
 			}
 
 			OnPropertyChanged();
