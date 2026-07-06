@@ -78,8 +78,9 @@ public sealed partial class Environment : Instance
 			_gravity = value;
 
 			Rid space = Root.World3D.Space;
-			PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.Gravity, -(_gravity.Y / 5));
-			PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.GravityVector, _gravity.Normalized());
+			float gravityMagnitude = _gravity.Length();
+			PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.Gravity, gravityMagnitude / -5f);
+			PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.GravityVector, _gravity / gravityMagnitude);
 
 			OnPropertyChanged();
 		}
