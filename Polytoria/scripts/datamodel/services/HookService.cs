@@ -14,11 +14,11 @@ public sealed partial class HookService : Instance
 	[ScriptProperty]
 	public PTSignal<double> Updated { get; private set; } = new();
 	[ScriptProperty]
-	public PTSignal<double> PhysicsUpdated { get; private set; } = new();
-	[ScriptProperty]
 	public PTSignal<double> PreRendered { get; private set; } = new();
 	[ScriptProperty]
 	public PTSignal<double> PostRendered { get; private set; } = new();
+	[ScriptProperty]
+	public PTSignal<double> PhysicsUpdated { get; private set; } = new();
 
 	public override void Init()
 	{
