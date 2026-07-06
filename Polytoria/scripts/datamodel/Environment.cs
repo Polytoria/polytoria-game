@@ -283,7 +283,7 @@ public sealed partial class Environment : Instance
 		{
 			Vector3 hitPos = (Vector3)result["position"];
 			Vector3 normal = (Vector3)result["normal"];
-			Node collider = (Node)result["collider"];
+			Node collider = (Node)(GodotObject)result["collider"];
 
 			return new()
 			{
@@ -329,7 +329,7 @@ public sealed partial class Environment : Instance
 			Vector3 normal = (Vector3)result["normal"];
 			Rid colliderRid = (Rid)result["rid"];
 			ignoreRids.Add(colliderRid);
-			Node collider = (Node)result["collider"];
+			Node collider = (Node)(GodotObject)result["collider"];
 
 			rayResults.Add(new()
 			{
@@ -414,7 +414,7 @@ public sealed partial class Environment : Instance
 
 		foreach (Godot.Collections.Dictionary result in results)
 		{
-			Node collider = (Node)result["collider"];
+			Node collider = (Node)(GodotObject)result["collider"];
 			Instance? i = ColliderToInstance(collider);
 
 			if (i != null)
