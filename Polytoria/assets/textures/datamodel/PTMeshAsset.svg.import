@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/PTMeshAsset.svg-9af2e1599b9d389b79b426408327e
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

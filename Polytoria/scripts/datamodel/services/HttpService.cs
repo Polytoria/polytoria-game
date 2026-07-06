@@ -6,8 +6,10 @@ using Polytoria.Attributes;
 using Polytoria.Datamodel.Data;
 using Polytoria.Scripting;
 using Polytoria.Shared;
+using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -176,6 +178,12 @@ public sealed partial class HttpService : Instance
 			if (IPAddress.TryParse(host, out _))
 			{
 				throw new InvalidOperationException("Access to raw IP addresses is not allowed in production");
+			}
+
+			var addresses = Dns.GetHostAddresses(host);
+			if (addresses.Any(ip => ip.IsPrivate()))
+			{
+				throw new InvalidOperationException("Access to private IP addresses is not allowed in production");
 			}
 		}
 	}

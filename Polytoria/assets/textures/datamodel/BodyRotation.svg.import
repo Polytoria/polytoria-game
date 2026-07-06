@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/BodyRotation.svg-8e967828e53745cced01f6127069
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

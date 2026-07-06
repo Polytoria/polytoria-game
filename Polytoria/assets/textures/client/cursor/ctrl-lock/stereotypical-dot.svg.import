@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/stereotypical-dot.svg-b7d29674f3ae66286c2e2c9
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

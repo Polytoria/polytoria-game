@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/Animator.svg-9587b572190bb4eb7745a442f1323a67
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/move.svg-4cb9de9a2d461d56e0d19331c1f20d5c.dpi
 base_scale=2.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

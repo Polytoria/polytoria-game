@@ -10,6 +10,8 @@ public partial class UIInventoryButton : Button
 {
 	[Export] public UIInventory InventoryUI { get; set; } = null!;
 
+	public CoreUIRoot CoreUI = null!;
+
 	public override void _Ready()
 	{
 		Toggled += OnToggled;
@@ -17,6 +19,7 @@ public partial class UIInventoryButton : Button
 
 	internal void OnToggled(bool toggleOn)
 	{
+		if (!CoreUI.Service.UseBackpack) return;
 		if (toggleOn)
 		{
 			InventoryUI.OpenBackpack();
@@ -29,7 +32,7 @@ public partial class UIInventoryButton : Button
 
 	public override void _UnhandledInput(InputEvent @event)
 	{
-		if (@event.IsActionPressed("toggle_backpack"))
+		if (@event.IsActionPressed("toggle_backpack") && CoreUI.Service.UseBackpack)
 		{
 			SetPressedNoSignal(!ButtonPressed);
 		}

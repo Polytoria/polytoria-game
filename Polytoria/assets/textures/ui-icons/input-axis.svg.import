@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/input-axis.svg-2793b1e00d42c0c0d03dddcfb232eb
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

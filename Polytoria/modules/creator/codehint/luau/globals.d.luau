@@ -95,3 +95,5 @@ declare History: CreatorHistory
 declare CreatorGUI: CreatorGUI
 
 declare Preferences: PreferencesService
+
+declare Hooks: HookService

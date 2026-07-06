@@ -155,6 +155,24 @@ public static class CreatorSettingsRegistry
 				]
 			});
 
+		defs.Add(CreatorSettingKeys.CodeEditor.FormatOnSave,
+			new SettingDef<bool>
+			{
+				Key = CreatorSettingKeys.CodeEditor.FormatOnSave,
+				SectionKey = "code_editor",
+				Label = "Format on save",
+				Description = "When enabled, the editor will automatically format scripts on save.",
+				ValueKind = SettingValueKind.Bool,
+				ControlKind = SettingControlKind.Toggle,
+				DefaultValue = true,
+				Conditions = [
+					new SettingCondition<PreferredEditorEnum>() {
+						Target = CreatorSettingKeys.CodeEditor.PreferredEditor,
+						Predicate = x => x == PreferredEditorEnum.BuiltIn
+					}
+				]
+			});
+
 		// Popups
 		defs.Add(CreatorSettingKeys.Popups.CloseModelWarning,
 			new SettingDef<bool>

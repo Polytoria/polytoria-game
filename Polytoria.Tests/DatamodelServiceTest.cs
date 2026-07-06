@@ -26,9 +26,14 @@ public class DatamodelServiceTest
 		// Prevent access to non HTTP(S)
 		Assert.Throws<InvalidOperationException>(() => HttpService.CheckURLPass("file://hello.txt", false));
 		Assert.Throws<InvalidOperationException>(() => HttpService.CheckURLPass("ftp://127.0.0.1:6942", false));
+
+		// Prevent access to private address ranges
 		Assert.Throws<InvalidOperationException>(() => HttpService.CheckURLPass("http://localhost:8000", false));
 		Assert.Throws<InvalidOperationException>(() => HttpService.CheckURLPass("https://localhost:8000", false));
 		Assert.Throws<InvalidOperationException>(() => HttpService.CheckURLPass("https://127.0.0.1:8000", false));
+		Assert.Throws<InvalidOperationException>(() => HttpService.CheckURLPass("https://0.0.0.0:8000", false));
+		Assert.Throws<InvalidOperationException>(() => HttpService.CheckURLPass("https://127.0.0.1.nip.io:8000", false));
+		Assert.Throws<InvalidOperationException>(() => HttpService.CheckURLPass("https://0.0.0.0.nip.io:8000", false));
 
 		// Normal access should pass in production
 		HttpService.CheckURLPass("https://example.com", false);

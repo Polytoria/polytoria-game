@@ -37,6 +37,15 @@ public class LspInitializeParams
 
 	[JsonPropertyName("capabilities")]
 	public LspClientCapabilities? Capabilities { get; set; }
+
+	[JsonPropertyName("initializationOptions")]
+	public LspInitializationOptions? InitializationOptions { get; set; }
+}
+
+public class LspInitializationOptions
+{
+	[JsonPropertyName("respect_editor_formatting_options")]
+	public bool? RespectEditorFormattingOptions { get; set; } // Used by StyLua
 }
 
 public class LspClientCapabilities
@@ -69,6 +78,9 @@ public class LspCompletionItemCapability
 {
 	[JsonPropertyName("snippetSupport")]
 	public bool SnippetSupport { get; set; }
+
+	[JsonPropertyName("labelDetailsSupport")]
+	public bool? LabelDetailsSupport { get; set; }
 }
 
 public class LspHoverCapability
@@ -249,6 +261,44 @@ public class LspCompletionItemLabelDetails
 	public string? Description { get; set; }
 }
 
+public class LspDocumentFormattingParams
+{
+	[JsonPropertyName("textDocument")]
+	public LspTextDocumentIdentifier? TextDocument { get; set; }
+
+	[JsonPropertyName("options")]
+	public LspFormattingOptions? Options { get; set; }
+}
+
+public class LspFormattingOptions
+{
+	[JsonPropertyName("tabSize")]
+	public int TabSize { get; set; }
+
+	[JsonPropertyName("insertSpaces")]
+	public bool InsertSpaces { get; set; }
+
+	// Optionals:
+
+	[JsonPropertyName("trimTrailingWhitespace")]
+	public bool? TrimTrailingWhitespace { get; set; }
+
+	[JsonPropertyName("insertFinalNewline")]
+	public bool? InsertFinalNewline { get; set; }
+
+	[JsonPropertyName("trimFinalNewlines")]
+	public bool? TrimFinalNewlines { get; set; }
+}
+
+public class LspTextEdit
+{
+	[JsonPropertyName("range")]
+	public LspRange Range { get; set; } = new();
+
+	[JsonPropertyName("newText")]
+	public string? NewText { get; set; }
+}
+
 public class LspMarkupContent
 {
 	[JsonPropertyName("kind")]
@@ -377,6 +427,7 @@ public sealed class EmptyParams
 [JsonSerializable(typeof(EmptyParams))]
 [JsonSerializable(typeof(LspInitializeParams))]
 [JsonSerializable(typeof(LspInitializeResult))]
+[JsonSerializable(typeof(LspInitializationOptions))]
 [JsonSerializable(typeof(LspDidOpenParams))]
 [JsonSerializable(typeof(LspDidChangeParams))]
 [JsonSerializable(typeof(LspDidCloseParams))]
@@ -399,4 +450,8 @@ public sealed class EmptyParams
 [JsonSerializable(typeof(LspRange))]
 [JsonSerializable(typeof(LspLocation))]
 [JsonSerializable(typeof(LspCodeDescription))]
+[JsonSerializable(typeof(LspDocumentFormattingParams))]
+[JsonSerializable(typeof(LspFormattingOptions))]
+[JsonSerializable(typeof(LspTextEdit))]
+[JsonSerializable(typeof(List<LspTextEdit>))]
 internal partial class LspJsonContext : JsonSerializerContext { }

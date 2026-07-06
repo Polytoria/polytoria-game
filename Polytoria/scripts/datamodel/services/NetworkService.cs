@@ -1019,6 +1019,7 @@ public sealed partial class NetworkService : Instance
 	[JsonSerializable(typeof(Vector3))]
 	[JsonSerializable(typeof(Color))]
 
+	[JsonSerializable(typeof(VariantDto))]
 	[JsonSerializable(typeof(Vector2Dto))]
 	[JsonSerializable(typeof(Vector3Dto))]
 	[JsonSerializable(typeof(ColorDto))]

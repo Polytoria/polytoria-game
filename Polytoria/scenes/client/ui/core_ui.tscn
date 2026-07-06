@@ -274,7 +274,7 @@ corner_radius_top_right = 20
 corner_radius_bottom_right = 20
 corner_radius_bottom_left = 20
 
-[node name="CoreUI" type="CanvasLayer" unique_id=520186302 node_paths=PackedStringArray("GameMenu", "MenuButton", "UserCard", "Chat", "ChatButton", "HealthBar", "Leaderboard", "Inventory", "EmoteWheel", "NotificationCenter", "CapturePreview", "PurchasePrompt", "CtrlLockCursor", "DevWindow")]
+[node name="CoreUI" type="CanvasLayer" unique_id=520186302 node_paths=PackedStringArray("GameMenu", "MenuButton", "UserCard", "Chat", "ChatButton", "HealthBar", "Leaderboard", "Inventory", "InventoryButton", "EmoteWheel", "NotificationCenter", "CapturePreview", "PurchasePrompt", "CtrlLockCursor", "DevWindow")]
 layer = 100
 script = ExtResource("1_aji3h")
 GameMenu = NodePath("Control/GameMenu")
@@ -285,6 +285,7 @@ ChatButton = NodePath("Control/MenuButton/Chat")
 HealthBar = NodePath("Control/HealthBar")
 Leaderboard = NodePath("Control/Playerlist/Pivot/Pivot/Pivot/PlayerlistPivot/Container/Leaderboard")
 Inventory = NodePath("Control/Inventory")
+InventoryButton = NodePath("Control/MenuButton/Backpack")
 EmoteWheel = NodePath("Control/EmoteWheel")
 NotificationCenter = NodePath("Control/Notification")
 CapturePreview = NodePath("Control/Capture")

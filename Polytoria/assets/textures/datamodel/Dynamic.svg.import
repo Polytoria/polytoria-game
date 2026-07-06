@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/Dynamic.svg-51bc91d754f5fa656e3c51caf99e5466.
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

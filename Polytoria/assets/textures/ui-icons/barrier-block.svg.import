@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/barrier-block.svg-9a7601f9e0c3074aabc9af3c035
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

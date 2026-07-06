@@ -343,20 +343,21 @@ public sealed partial class InteractionPrompt : Physical
 					_animPlayer.Play("InputStart");
 				}
 				_timeSpentActivating += (float)delta;
-			}
-			if (_timeSpentActivating >= _activationTime)
-			{
-				_timeSpentActivating = 0.0f;
-				_animPlayer.Play("InputEnd");
-				Interacted.Invoke(Root.Players.LocalPlayer);
-				RpcId(1, nameof(TriggerInteracted));
-				if (_activationTime <= 0.1)
+
+				if (_timeSpentActivating >= _activationTime)
 				{
-					// Kind-of weird, silly solution, but this prevents the server from being spammed with requests from a client if the activation time is instant
-					// Hate it? Blame JewelEyed <3
-					if (Root.Players.LocalPlayer != null)
+					_timeSpentActivating = 0.0f;
+					_animPlayer.Play("InputEnd");
+					Interacted.Invoke(Root.Players.LocalPlayer);
+					RpcId(1, nameof(TriggerInteracted));
+					if (_activationTime <= 0.1)
 					{
-						_timeSpentActivating = -Math.Max((Root.Players.LocalPlayer.NetworkPing / 1000f), 0.1f);
+						// Kind-of weird, silly solution, but this prevents the server from being spammed with requests from a client if the activation time is instant
+						// Hate it? Blame JewelEyed <3
+						if (Root.Players.LocalPlayer != null)
+						{
+							_timeSpentActivating = -Math.Max((Root.Players.LocalPlayer.NetworkPing / 1000f), 0.1f);
+						}
 					}
 				}
 			}

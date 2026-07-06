@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/door-exit.svg-0f897615c43ee4afeda403cde79dddd
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

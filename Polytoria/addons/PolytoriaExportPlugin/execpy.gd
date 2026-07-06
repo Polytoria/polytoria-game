@@ -4,6 +4,7 @@ class_name PolytoriaExeCpyExportPlugin
 
 var exepaths = [
 	"res://native/luau-lsp/",
+	"res://native/stylua/",
 ]
 
 func _get_name() -> String:

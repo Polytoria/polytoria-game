@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/stop-filled.svg-2ddcfa5fb108e34826f6899a282c6
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

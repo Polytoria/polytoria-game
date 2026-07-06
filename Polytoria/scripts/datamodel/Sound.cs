@@ -446,6 +446,19 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
+	[ScriptMethod]
+	public float GetPeakVolume()
+	{
+		int bus = AudioServer.GetBusIndex(_audioBusName);
+		if (bus < 0)
+			return 0f;
+
+		float left = AudioServer.GetBusPeakVolumeLeftDb(bus, 0);
+		float right = AudioServer.GetBusPeakVolumeRightDb(bus, 0);
+
+		return Mathf.DbToLinear(Mathf.Max(left, right));
+	}
+
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
 	private void NetPlayOneshot(float volume)
 	{

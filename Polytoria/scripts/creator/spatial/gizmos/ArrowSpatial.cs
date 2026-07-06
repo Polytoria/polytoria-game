@@ -59,9 +59,7 @@ public partial class ArrowSpatial : Node3D
 		st.AddVertex(new Vector3(-1f, 0, 0));
 
 		// Y Axis
-		st.AddVertex(new Vector3(-1f, 0, 0));
-		st.AddVertex(new Vector3(0f, 0, 0));
-		st.AddVertex(new Vector3(0f, 0, 0));
+		st.AddVertex(new Vector3(0f, -1, 0));
 		st.AddVertex(new Vector3(0f, 1f, 0));
 		st.AddVertex(new Vector3(0f, 1f, 0));
 		st.AddVertex(new Vector3(0f, 1f, leng));
@@ -70,11 +68,11 @@ public partial class ArrowSpatial : Node3D
 		st.AddVertex(new Vector3(0f, 2f, leng));
 		st.AddVertex(new Vector3(0f, 0f, leng + 2));
 		st.AddVertex(new Vector3(0f, 0f, leng + 2));
+		st.AddVertex(new Vector3(0f, -2f, leng));
+		st.AddVertex(new Vector3(0f, -2f, leng));
 		st.AddVertex(new Vector3(0f, -1f, leng));
 		st.AddVertex(new Vector3(0f, -1f, leng));
-		st.AddVertex(new Vector3(0f, 0f, leng));
-		st.AddVertex(new Vector3(0f, 0f, leng));
-		st.AddVertex(new Vector3(0f, 0f, 0));
+		st.AddVertex(new Vector3(0f, -1f, 0));
 
 		StandardMaterial3D mat = new()
 		{

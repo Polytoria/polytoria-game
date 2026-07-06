@@ -41,6 +41,7 @@ public sealed partial class ScriptService : Instance
 		{ typeof(Color), typeof(PTColor) },
 		{ typeof(Quaternion), typeof(PTQuaternion) },
 		{ typeof(Aabb), typeof(PTBounds) },
+		{ typeof(Variant), typeof(PTVariant) },
 	};
 
 	// Dictionary of all data type exposed to scripting
@@ -50,6 +51,7 @@ public sealed partial class ScriptService : Instance
 		{ "Vector2", typeof(PTVector2) },
 		{ "Quaternion", typeof(PTQuaternion) },
 		{ "Color", typeof(PTColor) },
+		{ "Variant", typeof(PTVariant) },
 		{ "Bounds", typeof(PTBounds) },
 		{ "NetMessage", typeof(NetMessage) },
 		{ "HttpRequestData", typeof(HttpRequestData) },
@@ -167,6 +169,7 @@ public sealed partial class ScriptService : Instance
 			{ "Presence", root.Presence },
 			{ "Preferences", root.Preferences },
 			{ "Worlds", root.Worlds },
+			{ "Hooks", root.Hooks }
 		};
 
 		if (script != null)
@@ -349,10 +352,7 @@ public sealed partial class ScriptService : Instance
 		{
 			Type? elemType = targetType.GetElementType();
 			if (elemType == null) return false;
-			foreach (object? elem in objArr)
-				if (elem != null && !elemType.IsAssignableFrom(elem.GetType()))
-					return false;
-			return true;
+			return objArr.All((element) => IsObjectConvertible(element, elemType));
 		}
 
 		// Empty array to dictionary
@@ -380,14 +380,14 @@ public sealed partial class ScriptService : Instance
 			return true;
 		}
 
-		// IConvertible fallback
-		if (arg is IConvertible && typeof(IConvertible).IsAssignableFrom(underlying))
-			return true;
-
 		// string to double
 		if (arg is string s && (underlying == typeof(int) || underlying == typeof(long)
 			|| underlying == typeof(short) || underlying == typeof(float) || underlying == typeof(double)))
 			return double.TryParse(s, out _);
+
+		// IConvertible fallback
+		if (arg is IConvertible && typeof(IConvertible).IsAssignableFrom(underlying))
+			return true;
 
 		return false;
 	}
@@ -476,20 +476,8 @@ public sealed partial class ScriptService : Instance
 			if (targetElementType == null)
 				return null;
 
-			// Check if all elements are assignable to target element type
-			bool allCompatible = true;
-
-			for (int i = 0; i < objectArray.Length; i++)
-			{
-				if (objectArray[i] != null && !targetElementType.IsAssignableFrom(objectArray[i].GetType()))
-				{
-					allCompatible = false;
-					break;
-				}
-			}
-
 			// If all elements are compatible, create a typed array
-			if (allCompatible)
+			if (objectArray.All((element) => IsObjectConvertible(element, targetElementType)))
 			{
 				List<object> convertedList = [];
 				for (int i = 0; i < objectArray.Length; i++)
@@ -547,9 +535,9 @@ public sealed partial class ScriptService : Instance
 		if (method.ReturnType == typeof(Task)) return true;
 		Type attType = typeof(AsyncStateMachineAttribute);
 
-		// Obtain the custom attribute for the method. 
-		// The value returned contains the StateMachineType property. 
-		// Null is returned if the attribute isn't present for the method. 
+		// Obtain the custom attribute for the method.
+		// The value returned contains the StateMachineType property.
+		// Null is returned if the attribute isn't present for the method.
 		AsyncStateMachineAttribute? attrib = (AsyncStateMachineAttribute?)method.GetCustomAttribute(attType);
 
 		return attrib != null;
@@ -610,7 +598,7 @@ public sealed partial class ScriptService : Instance
 		return cacheData;
 	}
 
-	// --------------- HANDLE INSTANCE FOR TYPES --------------- 
+	// --------------- HANDLE INSTANCE FOR TYPES ---------------
 	internal static object CreateInstanceForType(Type targetType)
 	{
 		// Instance types

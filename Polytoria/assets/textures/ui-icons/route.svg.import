@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/route.svg-79cd6d4c4b31f5ddac00dda0e75b0142.dp
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

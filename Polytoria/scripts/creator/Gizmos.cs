@@ -27,7 +27,6 @@ public sealed partial class Gizmos : Node
 	private bool _isDragPending;
 	private Vector2 _dragStartPos;
 	private const float DragThreshold = 8f;
-	private Dynamic? _lastHovered;
 	private SelectionBox _paintBox = null!;
 	private SelectionBox _hoverBox = null!;
 
@@ -35,11 +34,11 @@ public sealed partial class Gizmos : Node
 	public bool HoveringUIGizmo { get; set; }
 	public bool IsDraggingDynamic => _isDraggingDyn;
 
-	public static Color[] AxisColors { get; private set; } =
+	public static readonly Color[] AxisColors =
 	[
-			new(0.96f, 0.20f, 0.32f),
-			new(0.53f, 0.84f, 0.01f),
-			new(0.16f, 0.55f, 0.96f),
+		new(0.96f, 0.20f, 0.32f),
+		new(0.53f, 0.84f, 0.01f),
+		new(0.16f, 0.55f, 0.96f),
 	];
 
 	public MoveGizmo Move = new();
@@ -63,12 +62,12 @@ public sealed partial class Gizmos : Node
 		game.Loaded.Once(() =>
 		{
 			_history = Root.CreatorContext.History;
+			_camera = Root.CreatorContext.Freelook.Camera3D;
 		});
 	}
 
 	public override void _Ready()
 	{
-		_camera = Root.CreatorContext.Freelook.Camera3D;
 		Move.RootGizmos = this;
 		Rotate.RootGizmos = this;
 		Scale.RootGizmos = this;
@@ -128,7 +127,6 @@ public sealed partial class Gizmos : Node
 
 		Vector3 oldScaleVector = _pivotStart.Basis[column];
 		Vector3 currentAxisVector = oldScaleVector * globalDirection;
-		int localDirection = rawMotion.Dot(currentAxisVector) > 0 ? 1 : -1;
 
 		Vector3 axisDir = currentAxisVector.Normalized();
 		float snappedDelta = Mathf.Snapped(rawMotion.Dot(axisDir), moveSnap);
@@ -157,7 +155,7 @@ public sealed partial class Gizmos : Node
 				newBasis[i] = newScaleVector;
 				if (!isAltPressed)
 				{
-					totalOriginOffset += (globalDirection * snappedDelta * _pivotStart.Basis[i].Normalized() / 2);
+					totalOriginOffset += globalDirection * snappedDelta * _pivotStart.Basis[i].Normalized() / 2;
 				}
 			}
 			else if (isShiftPressed)
@@ -437,15 +435,11 @@ public sealed partial class Gizmos : Node
 		Dynamic? hoveringOn = null;
 		if (intersection.Count > 0)
 		{
-			Node collider = (Node)intersection["collider"];
+			Node collider = (Node)(GodotObject)intersection["collider"];
 			hoveringOn = Dynamic.GetDynFromCreatorBounds(collider);
 			if (hoveringOn == null && collider is CollisionObject3D colObj)
 			{
-				hoveringOn = Physical.GetPhysicalFromBody(colObj);
-				if (hoveringOn == null)
-				{
-					hoveringOn = Physical.GetPhysicalFromCollider(collider);
-				}
+				hoveringOn = Physical.GetPhysicalFromBody(colObj) ?? Physical.GetPhysicalFromCollider(collider);
 			}
 		}
 
@@ -590,8 +584,6 @@ public sealed partial class Gizmos : Node
 				DragSelectedDynamics();
 			}
 		}
-
-		_lastHovered = hoveringOn;
 	}
 
 	private void RotateSelectedAround(float angle)
