@@ -239,6 +239,13 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		state.PushBoolean(true);
 		state.SetGlobal("_POLY_2");
 
+		// Globals to identify if script is running on server/client
+		bool isServer = script.Root.Network.IsServer;
+		state.PushBoolean(!isServer);
+		state.SetGlobal("_CLIENT");
+		state.PushBoolean(isServer);
+		state.SetGlobal("_SERVER");
+
 		Assembly assembly = Assembly.GetExecutingAssembly();
 #pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
 		Type[] types = assembly.GetTypes();
@@ -749,13 +756,6 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 		// Sandbox thread
 		co.SandboxGlobals();
-
-		// Global to identify if calling from server/client
-		bool isClient = script is ClientScript;
-		co.PushBoolean(isClient);
-		co.SetGlobal("_CLIENT");
-		co.PushBoolean(!isClient);
-		co.SetGlobal("_SERVER");
 
 		Exception? capturedException1 = null;
 
