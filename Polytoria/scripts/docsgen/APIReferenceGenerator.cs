@@ -484,7 +484,7 @@ public class APIReferenceGenerator
 
 		public readonly override string ToString()
 		{
-			string argType = Type != null ? $"{Type}{(IsOptional ? "?" : "")}" : "nil";
+			string argType = Type != null ? $"{Type}{(IsOptional ? '?' : null)}" : "nil";
 			return Name != null ? $"{Name}: {argType}" : argType;
 		}
 	}
