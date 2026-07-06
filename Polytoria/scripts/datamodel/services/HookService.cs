@@ -8,7 +8,7 @@ using Polytoria.Scripting;
 
 namespace Polytoria.Datamodel.Services;
 
-[Static("Hooks")]
+[Static("Hooks"), ExplorerExclude, SaveIgnore]
 public sealed partial class HookService : Instance
 {
 	[ScriptProperty]
