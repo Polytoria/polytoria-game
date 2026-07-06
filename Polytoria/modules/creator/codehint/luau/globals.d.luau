@@ -16,6 +16,10 @@ declare _POLY_2: boolean
 
 declare _LOCALTEST: boolean
 
+declare _CLIENT: boolean?
+
+declare _SERVER: boolean?
+
 declare function warn<T...>(...: T...)
 
 declare function wait(seconds: number?)
