@@ -41,7 +41,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	private const string WeakUserdataCache = "__UDCACHE";
 	private static readonly int ThreadDataKey = 0x1247;
 
-	private static readonly ConditionalWeakTable<object, string> _objectIDS = new();
+	private static readonly ConditionalWeakTable<object, string> _objectIDS = [];
 	private static long _nextObjectID;
 
 	private static int _allocsSinceLastGC = 0;
@@ -721,7 +721,6 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	{
 		LuaState state = LuaState.FromIntPtr(L);
 
-		Script script = GetScriptInstance(state);
 		object? obj = LuaToObject(state, 1);
 
 		ModuleScript? ms = null;
@@ -1001,9 +1000,9 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 		else
 		{
-			string errorMessage = thread.ToString(-1);
+			string? errorMessage = thread.ToString(-1);
 			lua.PushBoolean(false);
-			lua.PushString(errorMessage);
+			lua.PushString(errorMessage ?? "unknown");
 
 			return 2;
 		}
@@ -1067,7 +1066,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 		else
 		{
-			return lua.Error(thread.ToString(-1));
+			return lua.Error(thread.ToString(-1) ?? "unknown");
 		}
 	}
 
