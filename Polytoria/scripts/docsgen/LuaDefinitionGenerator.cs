@@ -200,7 +200,7 @@ public class LuaDefinitionGenerator
 			}
 			else
 			{
-				methodOverloads[m.Name] = [ def ];
+				methodOverloads[m.Name] = [def];
 			}
 		}
 		foreach ((string name, List<string> overloads) in methodOverloads)
