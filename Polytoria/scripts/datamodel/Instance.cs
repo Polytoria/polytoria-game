@@ -265,7 +265,19 @@ public partial class Instance : NetworkedObject
 				return;
 			}
 
+			string[] oldTags = _tags;
 			_tags = value;
+
+			foreach (string tag in value.Except(oldTags))
+			{
+				TagAdded.Invoke(tag);
+			}
+
+			foreach (string tag in oldTags.Except(value))
+			{
+				TagRemoved.Invoke(tag);
+			}
+
 			OnPropertyChanged();
 		}
 	}
@@ -881,7 +893,7 @@ public partial class Instance : NetworkedObject
 			List<string> tags = [.. Tags];
 			tags.Add(tag);
 			Tags = [.. tags];
-			TagAdded.Invoke(tag);
+			//TagAdded.Invoke(tag); // Notified in Tags setter so the client gets notified if the server adds the tag
 		}
 	}
 
@@ -891,10 +903,10 @@ public partial class Instance : NetworkedObject
 		List<string> tags = [.. Tags];
 		bool removed = tags.Remove(tag);
 		Tags = [.. tags];
-		if (removed)
-		{
-			TagRemoved.Invoke(tag);
-		}
+		//if (removed)
+		//{
+		//	TagRemoved.Invoke(tag); // Notified in Tags setter so the client gets notified if the server adds the tag
+		//}
 	}
 
 	[ScriptMethod]
