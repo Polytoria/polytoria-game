@@ -888,25 +888,21 @@ public partial class Instance : NetworkedObject
 	[ScriptMethod]
 	public void AddTag(string tag)
 	{
-		if (tag != null && !Tags.Contains(tag))
-		{
-			List<string> tags = [.. Tags];
-			tags.Add(tag);
-			Tags = [.. tags];
-			//TagAdded.Invoke(tag); // Notified in Tags setter so the client gets notified if the server adds the tag
-		}
+		if (string.IsNullOrEmpty(tag) || Tags.Contains(tag))
+			return;
+
+		Tags = [.. Tags, tag];
+		// Notified in Tags setter
 	}
 
 	[ScriptMethod]
 	public void RemoveTag(string tag)
 	{
-		List<string> tags = [.. Tags];
-		bool removed = tags.Remove(tag);
-		Tags = [.. tags];
-		//if (removed)
-		//{
-		//	TagRemoved.Invoke(tag); // Notified in Tags setter so the client gets notified if the server adds the tag
-		//}
+		if (string.IsNullOrEmpty(tag) || !Tags.Contains(tag))
+			return;
+
+		Tags = [.. Tags.Where(t => t != tag)];
+		// Notified in Tags setter
 	}
 
 	[ScriptMethod]
