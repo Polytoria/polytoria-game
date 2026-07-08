@@ -144,6 +144,7 @@ public partial class CoreUIRoot : CanvasLayer
 			{
 				cursorImage.ResourceLoaded -= apply;
 				CtrlLockCursor.Texture = (Texture2D)res;
+				CtrlLockCursor.OffsetTransformPosition = -cursorImage.CursorHotspot;
 			}
 
 			if (cursorImage.IsResourceLoaded && cursorImage.Resource != null)
