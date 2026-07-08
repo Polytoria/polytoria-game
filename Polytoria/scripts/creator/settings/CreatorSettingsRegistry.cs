@@ -155,10 +155,10 @@ public static class CreatorSettingsRegistry
 				]
 			});
 
-		defs.Add(CreatorSettingKeys.CodeEditor.FormatAtSave,
+		defs.Add(CreatorSettingKeys.CodeEditor.FormatSave,
 			new SettingDef<bool>
 			{
-				Key = CreatorSettingKeys.CodeEditor.FormatAtSave,
+				Key = CreatorSettingKeys.CodeEditor.FormatSave,
 				SectionKey = "code_editor",
 				Label = "Format on save",
 				Description = "When enabled, the editor will automatically format scripts on save.",
