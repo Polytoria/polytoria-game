@@ -99,7 +99,29 @@ public partial class CoreUIRoot : CanvasLayer
 
 	private void OnCtrlLockCursorChanged()
 	{
-		if (Service.CrosshairCursorOverride == null)
+		if (Service.CrosshairCursorOverride is PTCursorAsset cursorImage)
+		{
+			void apply(Resource? res)
+			{
+				if (res is Texture2D tex)
+				{
+					cursorImage.ResourceLoaded -= apply;
+					CtrlLockCursor.Texture = tex;
+					CtrlLockCursor.OffsetTransformPosition = -cursorImage.Hotspot * tex.GetSize();
+				}
+			}
+
+			if (cursorImage.IsResourceLoaded && cursorImage.Resource != null)
+			{
+				apply(cursorImage.Resource);
+			}
+			else
+			{
+				cursorImage.ResourceLoaded += apply;
+				cursorImage.QueueLoadResource();
+			}
+		}
+		else
 		{
 			string filename = "";
 			switch (Service.CtrlLockCursor)
@@ -137,25 +159,6 @@ public partial class CoreUIRoot : CanvasLayer
 			}
 			var dpiTexture = GD.Load<DpiTexture>(CtrlLockCursorsFilepath + "/" + filename);
 			CtrlLockCursor.Texture = dpiTexture;
-		}
-		else if (Service.CrosshairCursorOverride is PTCursorAsset cursorImage)
-		{
-			void apply(Resource? res)
-			{
-				cursorImage.ResourceLoaded -= apply;
-				CtrlLockCursor.Texture = (Texture2D)res;
-				CtrlLockCursor.OffsetTransformPosition = -cursorImage.CursorHotspot;
-			}
-
-			if (cursorImage.IsResourceLoaded && cursorImage.Resource != null)
-			{
-				apply(cursorImage.Resource);
-			}
-			else
-			{
-				cursorImage.ResourceLoaded += apply;
-				cursorImage.QueueLoadResource();
-			}
 		}
 	}
 

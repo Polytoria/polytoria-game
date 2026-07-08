@@ -11,21 +11,21 @@ namespace Polytoria.Datamodel.Resources;
 [Abstract]
 public partial class CursorAsset : ResourceAsset
 {
-	public Vector2 Hotspot { get; private set; } = new(0, 0);
-	public PTSignal CursorAdjustInternal { get; private set; } = new();
+	private Vector2 _hotspot = new(0, 0);
+	internal PTSignal CursorAdjustInternal { get; private set; } = new();
 
 	[Editable, ScriptProperty]
-	public Vector2 CursorHotspot
+	public Vector2 Hotspot
 	{
-		get => Hotspot;
+		get => _hotspot;
 		set
 		{
-			Hotspot = value;
+			_hotspot = value;
 			CursorAdjustInternal.Invoke();
 			OnPropertyChanged();
 		}
 	}
-	
+
 	public override void PreDelete()
 	{
 		CursorAdjustInternal.DisconnectAll();
