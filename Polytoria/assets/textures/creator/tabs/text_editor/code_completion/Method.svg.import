@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/Method.svg-a59d1b7d3656e5aada0bcc2e4255ebb0.d
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

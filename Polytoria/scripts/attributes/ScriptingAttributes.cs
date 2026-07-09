@@ -19,7 +19,7 @@ public sealed class ScriptPropertyAttribute : Attribute
 /// <summary>
 /// Mark this property as accessible by legacy scripts
 /// </summary>
-/// <param name="methodName">Name to be overrided in script</param>
+/// <param name="propName">Name to be overrided in script</param>
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class ScriptLegacyPropertyAttribute(string propName) : Attribute
 {

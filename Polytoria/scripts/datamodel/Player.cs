@@ -53,6 +53,7 @@ public sealed partial class Player : NPC
 	private bool _autoLoadAppearance = true;
 	private bool _allowAnimationWhileMoving = false;
 	private PlayerMovementModeEnum _movementMode = PlayerMovementModeEnum.Default;
+	private PlayerRotationModeEnum _rotationMode = PlayerRotationModeEnum.Automatic;
 	private Team? _team;
 	private Color _chatColorBeforeTeam;
 
@@ -296,6 +297,17 @@ public sealed partial class Player : NPC
 				_ => null,
 			};
 
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public PlayerRotationModeEnum RotationMode
+	{
+		get => _rotationMode;
+		set
+		{
+			_rotationMode = value;
 			OnPropertyChanged();
 		}
 	}
@@ -1136,5 +1148,14 @@ public sealed partial class Player : NPC
 	{
 		Default,
 		Scripted
+	}
+
+	[ScriptEnum]
+	public enum PlayerRotationModeEnum
+	{
+		Automatic, // Default value (works how it did before), automatically switches between rotating to movement or facing camera when Ctrl Locked or in First Person
+		CameraLocked,
+		Movement,
+		MovementCtrlLockOnly // separate version that still locks in First Person, will only rotate to movement when Ctrl Locked
 	}
 }

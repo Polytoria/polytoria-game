@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/Backpack.svg-92f91292317122141118e84503e548d5
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

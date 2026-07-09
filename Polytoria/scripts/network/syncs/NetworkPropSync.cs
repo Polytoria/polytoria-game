@@ -85,6 +85,7 @@ public sealed partial class NetworkPropSync : Instance
 		else if (propValue is NumberSeries ns) propValue = new NumberSeriesDto(ns);
 		else if (propValue is NumberRange nr) propValue = new NumberRangeDto(nr);
 		else if (propValue is UIScale us) propValue = new UIScaleDto(us);
+		else if (propValue is Variant v) propValue = new VariantDto(v);
 
 		Type propType = propValue.GetType();
 
@@ -165,6 +166,11 @@ public sealed partial class NetworkPropSync : Instance
 			UIScaleDto? dto = SerializeUtils.Deserialize<UIScaleDto?>(data);
 			if (dto != null) intermediateValue = dto.ToUIScale();
 		}
+		else if (targetType == typeof(Variant))
+		{
+			VariantDto? dto = SerializeUtils.Deserialize<VariantDto?>(data);
+			if (dto != null) intermediateValue = dto.ToVariant();
+		}
 		else
 		{
 			// Standard source-generated type info
@@ -213,6 +219,7 @@ public sealed partial class NetworkPropSync : Instance
 		else if (propValue is NumberSeries ns) propValue = new NumberSeriesDto(ns);
 		else if (propValue is NumberRange nr) propValue = new NumberRangeDto(nr);
 		else if (propValue is UIScale us) propValue = new UIScaleDto(us);
+		else if (propValue is Variant v) propValue = new VariantDto(v);
 		Type propType = propValue.GetType();
 
 		using var ms = new MemoryStream();
@@ -292,6 +299,11 @@ public sealed partial class NetworkPropSync : Instance
 		{
 			UIScaleDto? dto = await SerializeUtils.DeserializeAsync<UIScaleDto?>(mem);
 			if (dto != null) intermediateValue = dto.ToUIScale();
+		}
+		else if (targetType == typeof(Variant))
+		{
+			VariantDto? dto = await SerializeUtils.DeserializeAsync<VariantDto?>(mem);
+			if (dto != null) intermediateValue = dto.ToVariant();
 		}
 		else
 		{

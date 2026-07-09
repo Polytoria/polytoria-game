@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/ProceduralSky.svg-08a190bb17fdff34b8f47b053a8
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

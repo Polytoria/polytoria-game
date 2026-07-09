@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/UIField.svg-f492fad4c9aa1f6b9eef15f4c5b1423f.
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

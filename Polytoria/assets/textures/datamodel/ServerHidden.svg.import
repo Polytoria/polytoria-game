@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/ServerHidden.svg-9903264186aa99d77f604593035e
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

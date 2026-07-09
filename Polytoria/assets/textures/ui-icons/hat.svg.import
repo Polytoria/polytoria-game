@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/hat.svg-32b22ccca4c76558e448456c5680a8c4.dpit
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

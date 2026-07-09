@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/chat-send.svg-4e008fae55d90743ff36bd1489a9e79
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

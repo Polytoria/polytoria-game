@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/Weld.svg-96d09d6b6d05903a4795a9c5a6da835b.dpi
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

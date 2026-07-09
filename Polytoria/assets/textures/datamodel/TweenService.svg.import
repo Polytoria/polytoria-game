@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/TweenService.svg-1de05d6dc6ef22423db5af657639
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

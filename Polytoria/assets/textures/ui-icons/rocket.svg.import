@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/rocket.svg-299561943eca68ca0e31194aa4cb500d.d
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

@@ -51,7 +51,7 @@ public partial class TransformPayloadDto
 		}
 	}
 
-	// UnitQuaternionDto is suitable for most nethwork replication, however may be problematic at larger scales.
+	// UnitQuaternionDto is suitable for most network replication, however may be problematic at larger scales.
 	// UnitQuaternionDto has a ~0.137 degree step and uses 4 bytes,
 	// UnitQuaternionUInt64Dto has a ~0.003 497 degree step and uses 8 bytes.
 	// This is the the unimplemented TransformPayload logic for higher precision network replication of rotations.

@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/gitignore.svg-443de1a7b965c9f46dbdb575d17381f
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/CoreUIService.svg-c6e807940406d8d178def1de845
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

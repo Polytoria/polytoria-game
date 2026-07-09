@@ -231,7 +231,7 @@ public partial class UIField : Instance
 		IsParentedToCreatorGUI = IsDescendantOfClass<CreatorGUI>();
 		if (!IsParentedToCreatorGUI)
 		{
-			NodeControl.MouseFilter = Control.MouseFilterEnum.Pass;
+			NodeControl.MouseFilter = IgnoreMouse ? Control.MouseFilterEnum.Ignore : Control.MouseFilterEnum.Pass;
 			NodeControl.FocusMode = Control.FocusModeEnum.Click;
 		}
 #endif

@@ -11,6 +11,8 @@ namespace Polytoria.Shared;
 public static partial class NativeBinHelper
 {
 	public const string LuaLSEditorExecutablePath = "res://native/luau-lsp/";
+	public const string StyLuaEditorExecutablePath = "res://native/stylua/";
+
 	[LibraryImport("libc", SetLastError = true, StringMarshalling = StringMarshalling.Utf8)]
 	private static partial int chmod(string pathname, int mode);
 
@@ -23,25 +25,27 @@ public static partial class NativeBinHelper
 #endif
 	}
 
+	private static void SetExecutablePermission(string path, string label)
+	{
+		int ret = chmod(path, 0x755);
+		if (ret != 0)
+			throw new Exception($"{label} permission set failure: Code {ret}");
+	}
+
 	private static void InitLinuxCreator()
 	{
 #if CREATOR
-		int ret = chmod(ResolveLuauLspBinPath(), 0x755);
-		if (ret != 0)
-		{
-			throw new System.Exception("Linux permission set failure: Code " + ret);
-		}
+		SetExecutablePermission(ResolveLuauLspBinPath(), "Linux Luau LSP");
+		SetExecutablePermission(ResolveStyLuaBinPath(), "Linux StyLua");
+
 #endif
 	}
 
 	private static void InitMacOSCreator()
 	{
 #if CREATOR
-		int ret = chmod(ResolveLuauLspBinPath(), 0x755);
-		if (ret != 0)
-		{
-			throw new System.Exception("macOS permission set failure: Code " + ret);
-		}
+		SetExecutablePermission(ResolveLuauLspBinPath(), "macOS Luau LSP");
+		SetExecutablePermission(ResolveStyLuaBinPath(), "macOS StyLua");
 #endif
 	}
 
@@ -79,6 +83,46 @@ public static partial class NativeBinHelper
 		}
 
 		if (exeName == null) throw new Exception("Unsupported platform for luau-lsp");
+
+		string exePath = basePath.PathJoin(exeName);
+		string exePathGlobal = ProjectSettings.GlobalizePath(exePath).SanitizePath();
+		return exePathGlobal;
+	}
+
+	internal static string ResolveStyLuaBinPath()
+	{
+		string basePath;
+		string? exeName = null;
+
+		if (Globals.IsInGDEditor)
+		{
+			basePath = StyLuaEditorExecutablePath;
+		}
+		else
+		{
+			basePath = OS.GetExecutablePath().GetBaseDir();
+		}
+
+		if (OS.HasFeature("windows"))
+		{
+			exeName = "stylua.exe";
+			if (Globals.IsInGDEditor)
+				basePath = basePath.PathJoin("windows");
+		}
+		else if (OS.HasFeature("macos"))
+		{
+			exeName = "stylua";
+			if (Globals.IsInGDEditor)
+				basePath = basePath.PathJoin("macos");
+		}
+		else if (OS.HasFeature("linux"))
+		{
+			exeName = "stylua";
+			if (Globals.IsInGDEditor)
+				basePath = basePath.PathJoin("linux");
+		}
+
+		if (exeName == null) throw new Exception("Unsupported platform for stylua");
 
 		string exePath = basePath.PathJoin(exeName);
 		string exePathGlobal = ProjectSettings.GlobalizePath(exePath).SanitizePath();
