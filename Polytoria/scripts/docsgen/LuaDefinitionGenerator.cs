@@ -113,7 +113,7 @@ public class LuaDefinitionGenerator
 			// class properties cannot be marked @deprecated
 			if (p.ObsoletionInfo.HasValue)
 			{
-				builder.AppendLine($"\t--- {p.ObsoletionInfo.Value.GetWarning()}");
+				builder.AppendLine($"\t{p.ObsoletionInfo.Value.GetWarningComment()}");
 			}
 			builder.AppendLine($"\t{p}");
 		}
@@ -183,7 +183,7 @@ public class LuaDefinitionGenerator
 			// fields cannot be marked @deprecated
 			if (p.ObsoletionInfo.HasValue)
 			{
-				builder.AppendLine($"\t--- {p.ObsoletionInfo.Value.GetWarning()}");
+				builder.AppendLine($"\t{p.ObsoletionInfo.Value.GetWarningComment()}");
 			}
 			builder.AppendLine($"\t{p},");
 		}

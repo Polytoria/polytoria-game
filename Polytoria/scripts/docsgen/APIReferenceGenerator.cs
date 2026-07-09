@@ -514,7 +514,7 @@ public class APIReferenceGenerator
 			return "@deprecated";
 		}
 
-		public readonly string GetWarning()
+		public readonly string GetWarningString()
 		{
 			StringBuilder builder = new("Obsolete");
 			if (UseInstead != null)
@@ -528,6 +528,8 @@ public class APIReferenceGenerator
 			}
 			return builder.ToString();
 		}
+
+		public readonly string GetWarningComment() => $"--- {GetWarningString}";
 	}
 
 	public readonly struct ScriptMethod(string name, string? returnType, ScriptParameter[] parameters, bool isAsync = false, bool isObsolete = false, bool isStatic = false, bool isSemiStatic = false, ScriptObsoletionInfo? obsoletionInfo = null)
