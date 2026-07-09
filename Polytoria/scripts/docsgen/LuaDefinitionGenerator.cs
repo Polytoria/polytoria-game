@@ -120,7 +120,7 @@ public class LuaDefinitionGenerator
 
 		foreach (ScriptEvent e in c.Events)
 		{
-			builder.Append($"\t{e.Name}: PTSignal");
+			builder.Append($"\tread {e.Name}: PTSignal");
 			if (e.Parameters.Length > 0)
 			{
 				builder.Append($"<{string.Join(", ", e.Parameters.Select(p => p.Type ?? "nil"))}>");
@@ -205,7 +205,7 @@ public class LuaDefinitionGenerator
 		}
 		foreach ((string name, List<string> overloads) in methodOverloads)
 		{
-			builder.AppendLine($"\t{name}: {(overloads.Count > 1 ? $"({string.Join(") & (", overloads)})" : overloads[0])},");
+			builder.AppendLine($"\tread {name}: {(overloads.Count > 1 ? $"({string.Join(") & (", overloads)})" : overloads[0])},");
 		}
 
 		builder.AppendLine("}");

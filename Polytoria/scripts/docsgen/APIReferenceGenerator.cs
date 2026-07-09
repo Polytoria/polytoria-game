@@ -556,7 +556,8 @@ public class APIReferenceGenerator
 
 		public readonly override string ToString()
 		{
-			return $"{Name}: {Type ?? "nil"}";
+			string field = $"{Name}: {Type ?? "nil"}";
+			return IsReadOnly ? $"read {field}" : field;
 		}
 	}
 
