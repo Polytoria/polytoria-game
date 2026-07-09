@@ -724,6 +724,8 @@ public partial class NPC : Physical
 		UpdateVelocityInternal(CharacterVelocity);
 		CharBody3D.Velocity = Velocity;
 		CharBody3D.MoveAndSlide();
+		CharacterVelocity = CharBody3D.Velocity;
+		UpdateVelocityInternal(CharacterVelocity);
 	}
 
 	[ScriptMethod]

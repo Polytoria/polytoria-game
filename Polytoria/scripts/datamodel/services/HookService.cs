@@ -8,25 +8,31 @@ using Polytoria.Scripting;
 
 namespace Polytoria.Datamodel.Services;
 
-[Static("Hooks")]
+[Static("Hooks"), ExplorerExclude, SaveIgnore]
 public sealed partial class HookService : Instance
 {
 	[ScriptProperty]
 	public PTSignal<double> Updated { get; private set; } = new();
 	[ScriptProperty]
-	public PTSignal PreRendered { get; private set; } = new();
+	public PTSignal<double> PreRendered { get; private set; } = new();
 	[ScriptProperty]
-	public PTSignal PostRendered { get; private set; } = new();
+	public PTSignal<double> PostRendered { get; private set; } = new();
+	[ScriptProperty]
+	public PTSignal<double> PhysicsUpdated { get; private set; } = new();
 
 	public override void Init()
 	{
 		base.Init();
 		SetProcess(true);
+		SetPhysicsProcess(true);
 	}
 
 	public override void Ready()
 	{
 		base.Ready();
+		// NOTE: Godot doesn't pass deltatime to the frame_pre_draw or
+		// frame_post_draw signals, so we have to grab it manually using
+		// Node.GetProcessDeltaTime()
 		RenderingServer.Singleton.Connect(
 			RenderingServer.SignalName.FramePreDraw,
 			Callable.From(OnFramePreDraw)
@@ -43,13 +49,19 @@ public sealed partial class HookService : Instance
 		base.Process(delta);
 	}
 
+	public override void PhysicsProcess(double delta)
+	{
+		PhysicsUpdated.Invoke(delta);
+		base.Process(delta);
+	}
+
 	private void OnFramePreDraw()
 	{
-		PreRendered.Invoke();
+		PreRendered.Invoke(GDNode.GetProcessDeltaTime());
 	}
 
 	private void OnFramePostDraw()
 	{
-		PostRendered.Invoke();
+		PostRendered.Invoke(GDNode.GetProcessDeltaTime());
 	}
 }
