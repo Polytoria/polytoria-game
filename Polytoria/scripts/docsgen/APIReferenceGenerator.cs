@@ -418,7 +418,9 @@ public class APIReferenceGenerator
 
 		if (type == typeof(PTCallback) || type == typeof(PTFunction))
 		{
-			return "() -> ()";
+			// TODO: make PTFunction and PTCallback generic so this isn't a garbage
+			// type
+			return "(...any) -> ...any";
 		}
 
 		if (type == typeof(void) ||
