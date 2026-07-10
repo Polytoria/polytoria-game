@@ -534,7 +534,7 @@ public class APIReferenceGenerator
 			return builder.ToString();
 		}
 
-		public readonly string GetWarningComment() => $"--- {GetWarningString}";
+		public readonly string GetWarningComment() => $"--- {GetWarningString()}";
 	}
 
 	public readonly struct ScriptMethod(string name, string? returnType, ScriptParameter[] parameters, bool isAsync = false, bool isObsolete = false, bool isStatic = false, bool isSemiStatic = false, ScriptObsoletionInfo? obsoletionInfo = null)
@@ -563,8 +563,7 @@ public class APIReferenceGenerator
 
 		public readonly override string ToString()
 		{
-			string field = $"{Name}: {Type ?? "nil"}";
-			return IsReadOnly ? $"read {field}" : field;
+			return $"{Name}: {Type ?? "nil"}";
 		}
 	}
 
