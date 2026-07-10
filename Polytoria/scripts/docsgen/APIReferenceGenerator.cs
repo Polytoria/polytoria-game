@@ -484,10 +484,15 @@ public class APIReferenceGenerator
 		[JsonIgnore]
 		public readonly bool IsVarArg => Name == "...";
 
+		public readonly string GetTypeString()
+		{
+			return Type != null ? IsOptional ? Type + '?' : Type : "nil";
+		}
+
 		public readonly override string ToString()
 		{
-			string argType = Type != null ? $"{Type}{(IsOptional ? '?' : null)}" : "nil";
-			return Name != null ? $"{Name}: {argType}" : argType;
+			string typeString = GetTypeString();
+			return Name != null ? $"{Name}: {typeString}" : typeString;
 		}
 	}
 

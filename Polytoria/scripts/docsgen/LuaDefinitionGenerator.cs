@@ -128,6 +128,10 @@ public class LuaDefinitionGenerator
 			builder.AppendLine();
 		}
 
+		bool hasIndexer = false;
+		List<string> indexerIndexes = [];
+		List<string> indexerValues = [];
+
 		foreach (ScriptMethod m in c.Methods)
 		{
 			if (m.IsMetamethod)
@@ -137,6 +141,17 @@ public class LuaDefinitionGenerator
 				// we can skip explicit metamethod operator overloads since the type
 				// checker will blatantly assume that they already exist
 				if (m.IsStatic && (m.Parameters.Length == 0 || m.Parameters[0].Type != c.Name)) continue;
+				// the type checker will not consider a class's __index or
+				// __newindex metamethods when checking for keys, so they must be
+				// converted to a `[K]: V` field
+				bool isNewIndex = m.Name == "__newindex";
+				if (isNewIndex || m.Name == "__index")
+				{
+					indexerIndexes.Add(m.Parameters[m.IsStatic ? 1 : 0].GetTypeString());
+					indexerValues.Add(isNewIndex ? m.Parameters[m.IsStatic ? 2 : 1].GetTypeString() : (m.ReturnType ?? "nil"));
+					hasIndexer = true;
+					continue;
+				}
 			}
 			else if (m.IsStatic)
 			{
@@ -159,6 +174,11 @@ public class LuaDefinitionGenerator
 				builder.Append($": {m.ReturnType}");
 			}
 			builder.AppendLine();
+		}
+
+		if (hasIndexer)
+		{
+			builder.AppendLine($"\t[{string.Join(" | ", indexerIndexes.Distinct())}]: {string.Join(" | ", indexerValues.Distinct())}");
 		}
 
 		builder.AppendLine("end");
