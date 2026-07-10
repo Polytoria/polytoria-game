@@ -115,7 +115,12 @@ public class LuaDefinitionGenerator
 			{
 				builder.AppendLine($"\t{p.ObsoletionInfo.Value.GetWarningComment()}");
 			}
-			builder.AppendLine($"\t{p}");
+			builder.Append('\t');
+			if (p.IsReadOnly)
+			{
+				builder.Append("read ");
+			}
+			builder.AppendLine(p.ToString());
 		}
 
 		foreach (ScriptEvent e in c.Events)
@@ -225,7 +230,7 @@ public class LuaDefinitionGenerator
 		}
 		foreach ((string name, List<string> overloads) in methodOverloads)
 		{
-			builder.AppendLine($"\tread {name}: {(overloads.Count > 1 ? $"({string.Join(") & (", overloads)})" : overloads[0])},");
+			builder.AppendLine($"\t{name}: {(overloads.Count > 1 ? $"({string.Join(") & (", overloads)})" : overloads[0])},");
 		}
 
 		builder.AppendLine("}");
