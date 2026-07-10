@@ -144,7 +144,7 @@ public class LuaDefinitionGenerator
 				if (!m.IsSemiStatic) continue;
 			}
 			IEnumerable<string> iter = m.Parameters.Select(p => p.ToString());
-			if (m.IsMetamethod || m.IsSemiStatic)
+			if ((m.IsMetamethod && m.IsStatic) || m.IsSemiStatic)
 			{
 				// overwrite first parameter with self
 				iter = iter.Skip(1);

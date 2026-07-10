@@ -164,15 +164,15 @@ public class APIReferenceGenerator
 					"__index",
 					"any",
 					[
-						new("self", nameof(Instance)),
+						new("index", "any"),
 					]
 				));
 				methodsDef.Add(new(
 					"__newindex",
 					null,
 					[
-						new("self", nameof(Instance)),
-						new("val", "any"),
+						new("index", "any"),
+						new("value", "any"),
 					]
 				));
 			}
