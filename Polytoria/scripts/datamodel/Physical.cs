@@ -1149,8 +1149,8 @@ public partial class Physical : Dynamic
 		};
 
 		SetCollisionMask(2, true);
-		SetCollisionMask(3,true);
-		SetCollisionLayer(3,true);
+		SetCollisionMask(3, true);
+		SetCollisionLayer(3, true);
 
 		PhysicalArea.AreaEntered += AreaEntered;
 		PhysicalArea.AreaExited += AreaExited;
