@@ -670,15 +670,11 @@ public sealed partial class Player : NPC
 			Node collider = (Node)FootFwdRaycast.GetCollider();
 			if (collider != null && GetNetObjFromProxy(collider) is Truss truss)
 			{
-				if (!IsClimbing)
+				if (!IsClimbing && !ClimbDebounce && truss.Climbable)
 				{
-					if (!ClimbDebounce)
-					{
-						ClimbingTruss = truss;
-						IsClimbing = true;
-						Character?.PlayClimb();
-					}
-
+					ClimbingTruss = truss;
+					IsClimbing = true;
+					Character?.PlayClimb();
 				}
 			}
 			else
