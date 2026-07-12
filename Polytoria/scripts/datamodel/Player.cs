@@ -553,6 +553,8 @@ public sealed partial class Player : NPC
 		{
 			SetCollisionMask(2, false);
 		}
+		SetCollisionLayer(1,false);
+		//PT.Print(GetCollisionMask(1).ToString(), "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 	}
 
 	public override void Process(double delta)
