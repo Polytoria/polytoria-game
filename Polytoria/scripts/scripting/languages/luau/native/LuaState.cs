@@ -434,16 +434,16 @@ public partial class LuaState : IDisposable
 			NativeBindings.lua_pushboolean(_state, b ? 1 : 0);
 	}
 
-	public void PushCFunction(LuaFunction func, string? name = null, int n = 0)
+	public void PushCFunction(LuaFunction func, string? name = null, int n = 0, LuaContinuation? continuation = null)
 	{
 		IntPtr userdataPtr = NewUserDataDTor((UIntPtr)IntPtr.Size, FunctionGarbageCollect);
 
-		GCHandle handle = GCHandle.Alloc(func);
+		GCHandle handle = GCHandle.Alloc(new PinnedLuaFunction(func, continuation));
 		IntPtr handlePtr = GCHandle.ToIntPtr(handle);
 		Marshal.WriteIntPtr(userdataPtr, handlePtr);
 
 		lock (_lock)
-			NativeBindings.lua_pushcclosurek(_state, func, name, n + 1, null);
+			NativeBindings.lua_pushcclosurek(_state, func, name, n + 1, continuation);
 	}
 
 	private static void FunctionGarbageCollect(IntPtr ud)
@@ -506,11 +506,13 @@ public partial class LuaState : IDisposable
 			return (LuaType)NativeBindings.lua_getmetatable(_state, index);
 	}
 
-	public void Register(string name, LuaFunction func)
+	public void Register(string name, LuaFunction func, LuaContinuation? continuation = null)
 	{
-		PushCFunction(func, name);
+		PushCFunction(func, name, continuation: continuation);
 		SetGlobal(name);
 	}
+
+	private sealed record PinnedLuaFunction(LuaFunction Function, LuaContinuation? Continuation);
 
 	public void NewTable()
 	{

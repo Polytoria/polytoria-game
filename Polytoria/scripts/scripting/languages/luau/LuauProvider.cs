@@ -198,7 +198,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		state.Register("spawn", LuaSpawn);
 		state.Register("tick", LuaTick);
 		state.Register("time", LuaTime);
-		state.Register("require", LuaRequire);
+		state.Register("require", LuaRequire, LuaRequireContinuation);
 		state.Register("pcall", LuaPCall);
 
 #if DEBUG
@@ -543,7 +543,8 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 	}
 
-	public static async Task ResumeThread(LuaState thread, LuaState? from, int narg = 0, bool throwError = false, bool isMainThread = false)
+	public static async Task ResumeThread(LuaState thread, LuaState? from, int narg = 0, bool throwError = false,
+		bool isMainThread = false, LuaState? ownerThread = null)
 	{
 		Script script;
 		LogDispatcher logger;
@@ -582,7 +583,6 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 					break;
 				}
 				from = null;
-
 				if (!script.ShouldContinue) return;
 
 				if (status == LuaStatus.OK || status == LuaStatus.Break)
@@ -598,9 +598,14 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 					}
 					if (threadData.HasValue)
 					{
+						threadData.Value.YieldedSource?.TrySetResult(true);
 						// called via built-in function, wait
 						Task<int> tsk = threadData.Value.Task;
 						narg = await tsk;
+						if (ownerThread != null && ownerThread.Status() != LuaStatus.Yield)
+						{
+							return;
+						}
 						continue;
 					}
 					else
@@ -829,9 +834,10 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 				return state.Error("circular module dependency detected");
 			if (script is ModuleScript waitingModule) waitingModule.LuauWaitingFor = ms;
 			TaskCompletionSource<int> pendingTcs = NewCompletionSource();
-			SetYieldTask(state, pendingTcs.Task);
-			_ = HandlePendingRequireAsync(state, ms, script as ModuleScript, pendingTcs);
-			return state.Yield(1);
+			TaskCompletionSource<bool> pendingYielded = NewYieldedSource();
+			SetYieldTask(state, pendingTcs.Task, pendingYielded);
+			_ = HandlePendingRequireAsync(state, ms, script as ModuleScript, pendingYielded.Task, pendingTcs);
+			return state.Yield(0);
 		}
 
 		if (WouldCreateRequireCycle(script as ModuleScript, ms))
@@ -893,36 +899,38 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 
 		TaskCompletionSource<int> tcs = NewCompletionSource();
-		SetYieldTask(state, tcs.Task);
+		TaskCompletionSource<bool> yieldedSource = NewYieldedSource();
+		SetYieldTask(state, tcs.Task, yieldedSource);
 
-		_ = HandleRequireAsync(co, state, chunkName, script as ModuleScript, tcs, ms);
+		_ = HandleRequireAsync(co, state, chunkName, script as ModuleScript, yieldedSource.Task, tcs, ms);
 
-		return state.Yield(1);
+		return state.Yield(0);
 	}
 
-	private async Task HandleRequireAsync(LuaState co, LuaState state, string chunkName, ModuleScript? caller, TaskCompletionSource<int> tcs, ModuleScript ms)
+	private static int LuaRequireContinuation(IntPtr L, int status)
+	{
+		return 1;
+	}
+
+	private async Task HandleRequireAsync(LuaState co, LuaState state, string chunkName, ModuleScript? caller,
+		Task callerYielded, TaskCompletionSource<int> tcs, ModuleScript ms)
 	{
 		try
 		{
 			await ResumeThread(co, state, 0, true);
-			await Task.Yield();
+			await callerYielded;
 
 			if (co.GetTop() == 0 || co.IsNil(1))
 				throw new Exception("module must return a value");
 
-			const int resultCount = 1;
 			co.PushValue(1);
 			ms.CachedLuauResultRef = co.Ref();
+			co.PushValue(1);
+			co.XMove(state, 1);
 			ms.LuauLoadState = ModuleLoadState.Loaded;
-
-			bool delivered = state.TryAccessYielded(() =>
-			{
-				co.PushValue(1);
-				co.XMove(state, 1);
-			});
 			ms.LuauLoadCompletion?.TrySetResult(true);
 			ms.LuauLoadCompletion = null;
-			tcs.TrySetResult(delivered ? resultCount : 0);
+			tcs.TrySetResult(1);
 		}
 		catch (Exception ex)
 		{
@@ -935,12 +943,14 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 	}
 
-	private static async Task HandlePendingRequireAsync(LuaState state, ModuleScript module, ModuleScript? caller, TaskCompletionSource<int> tcs)
+	private static async Task HandlePendingRequireAsync(LuaState state, ModuleScript module, ModuleScript? caller,
+		Task callerYielded, TaskCompletionSource<int> tcs)
 	{
 		try
 		{
 			TaskCompletionSource<bool> completion = module.LuauLoadCompletion!;
 			await completion.Task;
+			await callerYielded;
 
 			if (module.LuauLoadState == ModuleLoadState.Loaded && module.CachedLuauResultRef.HasValue)
 			{
@@ -977,6 +987,11 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	}
 
 	private static TaskCompletionSource<int> NewCompletionSource()
+	{
+		return new(TaskCreationOptions.RunContinuationsAsynchronously);
+	}
+
+	private static TaskCompletionSource<bool> NewYieldedSource()
 	{
 		return new(TaskCreationOptions.RunContinuationsAsynchronously);
 	}
@@ -1075,19 +1090,21 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 
 		TaskCompletionSource<int> tcs = NewCompletionSource();
-		SetYieldTask(state, tcs.Task);
+		TaskCompletionSource<bool> yieldedSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		SetYieldTask(state, tcs.Task, yieldedSource);
 
-		_ = HandlePCallAsync(co, state, funcRef, coRef, nargs, tcs);
+		_ = HandlePCallAsync(co, state, funcRef, coRef, nargs, yieldedSource.Task, tcs);
 
-		return state.Yield(2);
+		return state.Yield(0);
 	}
 
-	private async Task HandlePCallAsync(LuaState co, LuaState state, int funcRef, int coRef, int nargs, TaskCompletionSource<int> tcs)
+	private async Task HandlePCallAsync(LuaState co, LuaState state, int funcRef, int coRef, int nargs,
+		Task callerYielded, TaskCompletionSource<int> tcs)
 	{
 		try
 		{
-			await ResumeThread(co, state, nargs, true);
-			await Task.Yield();
+			await ResumeThread(co, state, nargs, true, ownerThread: state);
+			await callerYielded;
 			int nresults = co.GetTop();
 			bool delivered = state.TryAccessYielded(() =>
 			{
@@ -1098,6 +1115,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 		catch (Exception ex)
 		{
+			await callerYielded;
 			bool delivered = state.TryAccessYielded(() =>
 			{
 				PushValueToLua(state, false);
@@ -1253,6 +1271,10 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			{
 				threadData = GetThreadData(thread);
 			}
+			if (threadData.HasValue)
+			{
+				threadData.Value.YieldedSource?.TrySetResult(true);
+			}
 		}
 		else
 		{
@@ -1284,10 +1306,11 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 #endif
 
-	public static void SetYieldTask(LuaState state, Task<int> tsk)
+	public static void SetYieldTask(LuaState state, Task<int> tsk, TaskCompletionSource<bool>? yieldedSource = null)
 	{
 		ThreadData thread = GetThreadData(state, true) ?? new();
 		thread.Task = tsk;
+		thread.YieldedSource = yieldedSource;
 		SetThreadData(state, thread);
 	}
 
@@ -1798,9 +1821,6 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			enumMeta.RegisterMetamethods();
 		}
 
-		lua.PushBoolean(false);
-		lua.SetField(-2, "__metatable");
-
 		lua.SetMetaTable(-2);
 	}
 
@@ -1900,9 +1920,6 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 			lua.PushString(ProcessTypeName(type));
 			lua.SetField(-2, "__type");
-
-			lua.PushBoolean(false);
-			lua.SetField(-2, "__metatable");
 
 			// Store in metatable cache
 			lua.PushValue(-1);
@@ -2067,6 +2084,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	{
 		public Task<int> Task { get; set; }
 		public TaskCompletionSource<int> TaskSource { get; set; }
+		public TaskCompletionSource<bool>? YieldedSource { get; set; }
 	}
 
 	private sealed class UpdateState
