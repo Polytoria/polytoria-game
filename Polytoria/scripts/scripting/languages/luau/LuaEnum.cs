@@ -8,8 +8,6 @@ namespace Polytoria.Scripting.Luau;
 
 public class LuaEnum : LuaMetatable
 {
-	public new Type TargetType = null!;
-
 	public override int Index(IntPtr L)
 	{
 		return 0;
@@ -29,9 +27,9 @@ public class LuaEnum : LuaMetatable
 
 			object? val = LangProvider.LuaToObject(state, 1);
 
-			if (val is int i)
+			if (val != null)
 			{
-				state.PushString(TargetType.Name + "." + (Enum.GetName(TargetType, i) ?? ""));
+				state.PushString(TargetType.Name + "." + (Enum.GetName(TargetType, val) ?? ""));
 			}
 			else
 			{

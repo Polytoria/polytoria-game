@@ -14,6 +14,7 @@ using Polytoria.Scripting.Luau;
 using Polytoria.Shared;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -28,10 +29,10 @@ public sealed partial class ScriptService : Instance
 {
 	private const DynamicallyAccessedMemberTypes DynamicallyAccessedTypes = DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicMethods;
 
-	private static readonly Dictionary<CacheKey, MethodsCacheData> _methodsCache = [];
-	private static readonly Dictionary<CacheKey, MethodInfo?> _methodCache = [];
-	private static readonly Dictionary<CacheKey, PropertyInfo?> _propertyCache = [];
-	private static readonly Dictionary<Type, (MethodInfo, ScriptMetamethodAttribute)[]> _metaMethodCache = [];
+	private static readonly ConcurrentDictionary<CacheKey, MethodsCacheData> _methodsCache = [];
+	private static readonly ConcurrentDictionary<CacheKey, MethodInfo?> _methodCache = [];
+	private static readonly ConcurrentDictionary<CacheKey, PropertyInfo?> _propertyCache = [];
+	private static readonly ConcurrentDictionary<Type, (MethodInfo, ScriptMetamethodAttribute)[]> _metaMethodCache = [];
 
 	// Dictionary of all proxies
 	public static readonly Dictionary<Type, Type> ProxyMap = new()

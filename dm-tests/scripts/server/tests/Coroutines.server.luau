@@ -92,4 +92,86 @@ function Entry()
 		wait()
 		assert(c2, "c2 is false")
 	end
+
+	do
+		local continued = false
+		local co = coroutine.create(function()
+			wait()
+			continued = true
+		end)
+
+		assert(coroutine.resume(co))
+		assert(coroutine.close(co))
+		wait()
+		wait()
+		assert(continued == false)
+	end
+
+	do
+		local completed = 0
+		for _ = 1, 25 do
+			coroutine.resume(coroutine.create(function()
+				wait()
+				completed += 1
+			end))
+		end
+
+		wait()
+		wait()
+		assert(completed == 25)
+	end
+
+	do
+		local co = coroutine.create(function(a, b)
+			local resumedWith = coroutine.yield(a + b, "yielded")
+			return resumedWith, "finished"
+		end)
+
+		local ok, sum, marker = coroutine.resume(co, 20, 22)
+		assert(ok and sum == 42 and marker == "yielded")
+
+		local finished, value, finalMarker = coroutine.resume(co, "resumed")
+		assert(finished and value == "resumed" and finalMarker == "finished")
+	end
+
+	do
+		local co = coroutine.create(function()
+			error("expected coroutine failure")
+		end)
+
+		local ok, message = coroutine.resume(co)
+		assert(ok == false)
+		assert(string.find(message, "expected coroutine failure") ~= nil)
+	end
+
+	do
+		local continued = false
+		local co = coroutine.create(function()
+			pcall(function()
+				wait()
+				continued = true
+			end)
+		end)
+
+		assert(coroutine.resume(co))
+		assert(coroutine.close(co))
+		wait()
+		wait()
+		assert(continued == false)
+	end
+
+	do
+		local completed = 0
+		for _ = 1, 50 do
+			spawn(function()
+				wait()
+				completed += 1
+			end)
+		end
+
+		while completed < 50 do
+			wait()
+		end
+		assert(completed == 50)
+	end
 end

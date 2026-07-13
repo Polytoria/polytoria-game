@@ -5,14 +5,15 @@
 using Polytoria.Attributes;
 using Polytoria.Scripting.Luau;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
+using Script = Polytoria.Datamodel.Script;
 namespace Polytoria.Scripting;
 
 public class PTFunction(Func<object?[], Task<object?[]>> target) : IScriptObject
 {
 	public Func<object?[], Task<object?[]>> _targetAction = target;
 	public IScriptLanguageProvider LangProvider = null!;
+	public Script? FromScript;
 
 	public async Task<object?[]> Call(params object?[]? args)
 	{
@@ -27,35 +28,42 @@ public class PTFunction(Func<object?[], Task<object?[]>> target) : IScriptObject
 	[ScriptMetamethod(ScriptObjectMetamethod.Call), HandlesLuaState]
 	public int LuaCall(LuaState state)
 	{
+		LuauProvider provider = (LuauProvider)LangProvider;
 		int top = state.GetTop();
-		List<object?> argList = [];
-		for (int i = 1; i <= top; i++)
+		object?[] args = new object?[Math.Max(0, top - 1)];
+		for (int i = 2; i <= top; i++)
 		{
-			argList.Add(LuauProvider.Singleton.LuaToObject(state, i + 1, getAsFunction: true));
+			args[i - 2] = provider.LuaToObject(state, i, getAsFunction: true);
 		}
-		object?[] args = [.. argList];
-		TaskCompletionSource<int> tcs = new();
+		TaskCompletionSource<int> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		LuauProvider.SetYieldTask(state, tcs.Task);
 
-		_ = HandleCallAsync(state, args, tcs);
+		_ = HandleCallAsync(provider, state, args, tcs);
 
 		return state.Yield(1);
 	}
 
-	private async Task HandleCallAsync(LuaState state, object?[] args, TaskCompletionSource<int> tcs)
+	private async Task HandleCallAsync(LuauProvider provider, LuaState state, object?[] args, TaskCompletionSource<int> tcs)
 	{
 		try
 		{
-			object?[] results = await Call(args ?? []);
-			foreach (object? item in results)
+			Task<object?[]> call = Call(args);
+			object?[] results = FromScript == null
+				? await call
+				: await call.WaitAsync(FromScript.LuauCancellation.Token);
+			await Task.Yield();
+			bool pushed = state.TryAccessYielded(() =>
 			{
-				LuauProvider.Singleton.PushValueToLua(state, item);
-			}
-			tcs.SetResult(results.Length);
+				foreach (object? item in results)
+				{
+					provider.PushValueToLua(state, item);
+				}
+			});
+			tcs.TrySetResult(pushed ? results.Length : 0);
 		}
 		catch (Exception ex)
 		{
-			tcs.SetException(ex);
+			tcs.TrySetException(ex);
 		}
 	}
 }

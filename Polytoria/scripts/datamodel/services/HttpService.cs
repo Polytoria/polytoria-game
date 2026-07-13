@@ -13,6 +13,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 
 namespace Polytoria.Datamodel.Services;
@@ -180,7 +181,16 @@ public sealed partial class HttpService : Instance
 				throw new InvalidOperationException("Access to raw IP addresses is not allowed in production");
 			}
 
-			var addresses = Dns.GetHostAddresses(host);
+			IPAddress[] addresses;
+			try
+			{
+				addresses = Dns.GetHostAddresses(host);
+			}
+			catch (SocketException ex)
+			{
+				throw new InvalidOperationException("Unable to resolve URL host", ex);
+			}
+
 			if (addresses.Any(ip => ip.IsPrivate()))
 			{
 				throw new InvalidOperationException("Access to private IP addresses is not allowed in production");

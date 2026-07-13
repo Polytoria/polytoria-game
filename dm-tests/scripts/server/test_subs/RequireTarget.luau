@@ -1,3 +1,5 @@
+wait()
+
 local module = {
 	a = 1,
 }

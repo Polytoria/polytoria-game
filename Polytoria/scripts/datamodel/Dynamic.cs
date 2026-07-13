@@ -260,11 +260,10 @@ public partial class Dynamic : Instance
 		if (_boundArea3D != null)
 		{
 			_creatorProxyToDyn.Remove(_boundArea3D);
-			if (Node.IsInstanceValid(_boundArea3D))
-			{
-				_boundArea3D.QueueFree();
-				_boundArea3D.Dispose();
-			}
+			ReleaseNode(_boundArea3D);
+			_boundArea3D = null!;
+			_boundCollider = null!;
+			_boundShape = null!;
 		}
 #endif
 		base.PreDelete();
@@ -487,9 +486,13 @@ public partial class Dynamic : Instance
 	// NOTE: Update operations needs transform to be force updated as godot does not update them instantly
 	protected void UpdateNetTransform()
 	{
-		if (Root == null || Root.Network == null) return;
+		if (!HasUsableNode() || Root == null || Root.Network == null) return;
+		UpdateNetTransformValidated();
+	}
 
-		ForceUpdateTransform();
+	protected void UpdateNetTransformValidated()
+	{
+		ForceUpdateTransformValidated();
 		Transform3D current = GetLocalTransform();
 
 		if (_lastSentTransform is Transform3D lastSent)
@@ -509,9 +512,9 @@ public partial class Dynamic : Instance
 
 	protected void UpdateNetTransformReliable()
 	{
-		if (Root == null || Root.Network == null) return;
+		if (!HasUsableNode() || Root == null || Root.Network == null) return;
 
-		ForceUpdateTransform();
+		ForceUpdateTransformValidated();
 		Transform3D current = GetLocalTransform();
 
 		// Only send if changed
@@ -529,7 +532,7 @@ public partial class Dynamic : Instance
 	{
 		if (Root == null || Root?.Network == null) { return; }
 
-		UpdateCurrentTransformCache();
+		UpdateCurrentTransformCacheValidated();
 
 		if (!Root.Network.IsServer)
 		{
@@ -548,7 +551,7 @@ public partial class Dynamic : Instance
 		if (Root == null || Root?.Network == null) return;
 		_lerpUnreliable = false;
 
-		UpdateCurrentTransformCache();
+		UpdateCurrentTransformCacheValidated();
 		ReliableTransformChanged?.Invoke();
 
 		if (Root.Network.IsServer)
@@ -564,8 +567,13 @@ public partial class Dynamic : Instance
 	/// </summary>
 	internal void UpdateCurrentTransformCache()
 	{
-		if (!GDNode3D.IsInsideTree()) return;
-		ForceUpdateTransform();
+		if (!HasUsableNode() || !GDNode3D.IsInsideTree()) return;
+		UpdateCurrentTransformCacheValidated();
+	}
+
+	private void UpdateCurrentTransformCacheValidated()
+	{
+		ForceUpdateTransformValidated();
 		Transform3D newt = GetLocalTransform();
 		if (newt != _currentTransform)
 		{
@@ -857,7 +865,7 @@ public partial class Dynamic : Instance
 
 	internal void SetGlobalTransformRaw(Transform3D to)
 	{
-		if (!GDNode3D.IsInsideTree()) return;
+		if (!HasUsableNode() || !GDNode3D.IsInsideTree()) return;
 		if (_oldGlobalTransformApplied == to) return;
 		_oldGlobalTransformApplied = to;
 
@@ -876,7 +884,7 @@ public partial class Dynamic : Instance
 
 	internal void SetLocalTransformRaw(Transform3D to)
 	{
-		if (!GDNode3D.IsInsideTree()) return;
+		if (!HasUsableNode() || !GDNode3D.IsInsideTree()) return;
 		if (_oldLocalTransformApplied == to) return;
 		_oldLocalTransformApplied = to;
 
@@ -913,8 +921,18 @@ public partial class Dynamic : Instance
 
 	internal void ForceUpdateTransform()
 	{
-		if (!GDNode3D.IsInsideTree()) return;
+		if (!HasUsableNode() || !GDNode3D.IsInsideTree()) return;
+		ForceUpdateTransformValidated();
+	}
+
+	private void ForceUpdateTransformValidated()
+	{
 		GDNode3D.ForceUpdateTransform();
+	}
+
+	protected bool HasUsableNode()
+	{
+		return !IsDeleted && GDNode3D != null && Node.IsInstanceValid(GDNode3D);
 	}
 
 	internal void CopyTransformTo(Dynamic target, bool asGlobal = false)

@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Polytoria.Attributes;
+using System.Threading.Tasks;
 
 namespace Polytoria.Datamodel;
 
@@ -10,6 +11,11 @@ namespace Polytoria.Datamodel;
 public sealed partial class ModuleScript : Script
 {
 	internal int? CachedLuauResultRef { get; set; } = null;
+	internal TaskCompletionSource<bool>? LuauLoadCompletion { get; set; }
+	internal string? LuauLoadError { get; set; }
+	internal ModuleLoadState LuauLoadState { get; set; }
+	internal ModuleScript? LuauWaitingFor { get; set; }
+	internal string? LuauLoadedSource { get; set; }
 
 	public override void EnterTree()
 	{
@@ -33,4 +39,11 @@ public sealed partial class ModuleScript : Script
 	{
 		Root.Network.ScriptSync.RequestSource(this);
 	}
+}
+
+internal enum ModuleLoadState
+{
+	NotLoaded,
+	Loading,
+	Loaded,
 }

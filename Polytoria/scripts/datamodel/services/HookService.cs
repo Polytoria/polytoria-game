@@ -33,14 +33,15 @@ public sealed partial class HookService : Instance
 		// NOTE: Godot doesn't pass deltatime to the frame_pre_draw or
 		// frame_post_draw signals, so we have to grab it manually using
 		// Node.GetProcessDeltaTime()
-		RenderingServer.Singleton.Connect(
-			RenderingServer.SignalName.FramePreDraw,
-			Callable.From(OnFramePreDraw)
-		);
-		RenderingServer.Singleton.Connect(
-			RenderingServer.SignalName.FramePostDraw,
-			Callable.From(OnFramePostDraw)
-		);
+		RenderingServer.FramePreDraw += OnFramePreDraw;
+		RenderingServer.FramePostDraw += OnFramePostDraw;
+	}
+
+	public override void PreDelete()
+	{
+		RenderingServer.FramePreDraw -= OnFramePreDraw;
+		RenderingServer.FramePostDraw -= OnFramePostDraw;
+		base.PreDelete();
 	}
 
 	public override void Process(double delta)
@@ -52,16 +53,18 @@ public sealed partial class HookService : Instance
 	public override void PhysicsProcess(double delta)
 	{
 		PhysicsUpdated.Invoke(delta);
-		base.Process(delta);
+		base.PhysicsProcess(delta);
 	}
 
 	private void OnFramePreDraw()
 	{
+		if (!GodotObject.IsInstanceValid(GDNode)) return;
 		PreRendered.Invoke(GDNode.GetProcessDeltaTime());
 	}
 
 	private void OnFramePostDraw()
 	{
+		if (!GodotObject.IsInstanceValid(GDNode)) return;
 		PostRendered.Invoke(GDNode.GetProcessDeltaTime());
 	}
 }

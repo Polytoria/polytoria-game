@@ -6,6 +6,7 @@ using Godot;
 using Polytoria.Attributes;
 using Polytoria.Datamodel.Services;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -24,8 +25,10 @@ public class PTSignal : IScriptObject
 	private readonly List<PTCallback> _ptCallbacks = [];
 
 	private readonly HashSet<PTCallback> _ptSet = [];
+	private readonly object _callbacksLock = new();
 
 	private static readonly Dictionary<Script, List<PTSignal>> _subscribedScripts = [];
+	private static readonly object _subscriptionsLock = new();
 
 	public void Invoke(params object?[]? args)
 	{
@@ -34,44 +37,81 @@ public class PTSignal : IScriptObject
 
 	public void InvokeDirect(object?[] args)
 	{
-		for (int i = _ptCallbacks.Count - 1; i >= 0; i--)
+		PTCallback[]? callbacks = null;
+		PTCallback? singleCallback = null;
+		int callbackCount;
+		lock (_callbacksLock)
 		{
-			PTCallback? cb = _ptCallbacks[i];
-			if (cb is null || cb.Disposed)
+			for (int i = _ptCallbacks.Count - 1; i >= 0; i--)
 			{
+				PTCallback cb = _ptCallbacks[i];
+				if (!cb.Disposed) continue;
 				_ptCallbacks.RemoveAt(i);
-				if (cb is not null) _ptSet.Remove(cb);
-				continue;
+				_ptSet.Remove(cb);
 			}
+			callbackCount = _ptCallbacks.Count;
+			if (callbackCount == 1)
+			{
+				singleCallback = _ptCallbacks[0];
+			}
+			else if (callbackCount > 1)
+			{
+				callbacks = ArrayPool<PTCallback>.Shared.Rent(callbackCount);
+				_ptCallbacks.CopyTo(callbacks);
+			}
+		}
 
-			try { cb.InvokeDirect(args); }
-			catch (Exception ex) { GD.PushError($"PTCallback Length: {args.Length} : " + ex.ToString()); }
+		if (singleCallback != null)
+		{
+			try { singleCallback.InvokeDirect(args); }
+			catch (Exception ex) { GD.PushError($"PTCallback Length: {args.Length} : " + ex); }
+			return;
+		}
+		if (callbacks == null) return;
+		try
+		{
+			for (int i = 0; i < callbackCount; i++)
+			{
+				try { callbacks[i].InvokeDirect(args); }
+				catch (Exception ex) { GD.PushError($"PTCallback Length: {args.Length} : " + ex.ToString()); }
+			}
+		}
+		finally
+		{
+			ArrayPool<PTCallback>.Shared.Return(callbacks, clearArray: true);
 		}
 	}
 
 	private static List<PTSignal> GetSignalListFromScript(Script s)
 	{
-		if (!_subscribedScripts.TryGetValue(s, out List<PTSignal>? signals))
+		lock (_subscriptionsLock)
 		{
-			signals = [];
-			_subscribedScripts[s] = signals;
+			if (!_subscribedScripts.TryGetValue(s, out List<PTSignal>? signals))
+			{
+				signals = [];
+				_subscribedScripts[s] = signals;
+			}
+			return signals;
 		}
-		return signals;
 	}
 
 	private void AddThisSignalToScript(Script s)
 	{
-		List<PTSignal> signals = GetSignalListFromScript(s);
-		if (!signals.Contains(this))
+		lock (_subscriptionsLock)
 		{
-			signals.Add(this);
+			List<PTSignal> signals = GetSignalListFromScript(s);
+			if (!signals.Contains(this)) signals.Add(this);
 		}
 	}
 
 	private void RemoveThisSignalFromScript(Script s)
 	{
-		List<PTSignal> signals = GetSignalListFromScript(s);
-		signals.Remove(this);
+		lock (_subscriptionsLock)
+		{
+			if (!_subscribedScripts.TryGetValue(s, out List<PTSignal>? signals)) return;
+			signals.Remove(this);
+			if (signals.Count == 0) _subscribedScripts.Remove(s);
+		}
 	}
 
 	[ScriptMethod]
@@ -79,8 +119,11 @@ public class PTSignal : IScriptObject
 	{
 		PTSignalConnection sc = new() { Callback = action, Signal = this };
 
-		if (!_ptSet.Add(action)) return sc;
-		_ptCallbacks.Add(action);
+		lock (_callbacksLock)
+		{
+			if (!_ptSet.Add(action)) return sc;
+			_ptCallbacks.Add(action);
+		}
 		if (action.FromScript != null)
 		{
 			AddThisSignalToScript(action.FromScript);
@@ -107,10 +150,13 @@ public class PTSignal : IScriptObject
 		if (del is Action a) { Connect(a); return; }
 		if (del is Action<object?[]> aArgs) { Connect(aArgs); return; }
 
-		if (_ptCallbacks.Any(c => c.OriginalDelegate == del))
+		lock (_callbacksLock)
 		{
-			GD.PushWarning("This delegate already exists");
-			return;
+			if (_ptCallbacks.Any(c => c.OriginalDelegate == del))
+			{
+				GD.PushWarning("This delegate already exists");
+				return;
+			}
 		}
 
 		int paramCount = del.Method.GetParameters().Length;
@@ -123,8 +169,11 @@ public class PTSignal : IScriptObject
 	[ScriptMethod]
 	public void Disconnect(PTCallback action)
 	{
-		if (!_ptSet.Remove(action)) return;
-		_ptCallbacks.Remove(action);
+		lock (_callbacksLock)
+		{
+			if (!_ptSet.Remove(action)) return;
+			_ptCallbacks.Remove(action);
+		}
 		ScriptService.FreePTCallback(action);
 
 		if (action.FromScript != null)
@@ -137,14 +186,16 @@ public class PTSignal : IScriptObject
 
 	public void Disconnect(Action action)
 	{
-		var cb = _ptCallbacks.FirstOrDefault(c => c.OriginalDelegate?.Equals(action) == true);
+		PTCallback? cb;
+		lock (_callbacksLock) cb = _ptCallbacks.FirstOrDefault(c => c.OriginalDelegate?.Equals(action) == true);
 		if (cb == null) return;
 		Disconnect(cb);
 	}
 
 	public void Disconnect(Action<object?[]> action)
 	{
-		var cb = _ptCallbacks.FirstOrDefault(c => c.OriginalDelegate?.Equals(action) == true);
+		PTCallback? cb;
+		lock (_callbacksLock) cb = _ptCallbacks.FirstOrDefault(c => c.OriginalDelegate?.Equals(action) == true);
 		if (cb == null) return;
 		Disconnect(cb);
 	}
@@ -154,7 +205,8 @@ public class PTSignal : IScriptObject
 		if (del is Action a) { Disconnect(a); return; }
 		if (del is Action<object?[]> aArgs) { Disconnect(aArgs); return; }
 
-		var cb = _ptCallbacks.FirstOrDefault(c => c.OriginalDelegate == del);
+		PTCallback? cb;
+		lock (_callbacksLock) cb = _ptCallbacks.FirstOrDefault(c => c.OriginalDelegate == del);
 		if (cb == null) return;
 		Disconnect(cb);
 	}
@@ -166,10 +218,23 @@ public class PTSignal : IScriptObject
 	}
 
 	[ScriptMethod]
-	public async Task<object?[]> Wait()
+	public async Task<object?[]> Wait([ScriptingCaller] Script? caller = null)
 	{
-		TaskCompletionSource<object?[]> tcs = new();
-		Once(args => tcs.TrySetResult(args ?? []));
+		TaskCompletionSource<object?[]> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		PTCallback? callback = null;
+		callback = new(args =>
+		{
+			Disconnect(callback!);
+			tcs.TrySetResult(args ?? []);
+		})
+		{ FromScript = caller };
+		Connect(callback);
+
+		using var registration = caller?.LuauCancellation.Token.Register(() =>
+		{
+			Disconnect(callback!);
+			tcs.TrySetCanceled(caller.LuauCancellation.Token);
+		});
 		return await tcs.Task;
 	}
 
@@ -232,30 +297,25 @@ public class PTSignal : IScriptObject
 
 	public void DisconnectAll()
 	{
-		List<Script> keys = [.. _subscribedScripts.Keys];
-		foreach (var key in keys)
+		lock (_subscriptionsLock)
 		{
-			if (_subscribedScripts.TryGetValue(key, out var list))
+			foreach (Script key in _subscribedScripts.Keys.ToArray())
 			{
+				List<PTSignal> list = _subscribedScripts[key];
 				list.Remove(this);
-				if (list.Count == 0)
-				{
-					_subscribedScripts.Remove(key);
-				}
+				if (list.Count == 0) _subscribedScripts.Remove(key);
 			}
 		}
 
-		// Free all Lua callbacks
-		foreach (var cb in _ptCallbacks)
+		PTCallback[] callbacks;
+		lock (_callbacksLock)
 		{
-			if (cb != null && !cb.Disposed)
-			{
-				ScriptService.FreePTCallback(cb);
-			}
+			callbacks = [.. _ptCallbacks];
+			_ptCallbacks.Clear();
+			_ptSet.Clear();
 		}
-
-		_ptCallbacks.Clear();
-		_ptSet.Clear();
+		foreach (PTCallback cb in callbacks)
+			if (!cb.Disposed) ScriptService.FreePTCallback(cb);
 	}
 
 	/// <summary>
@@ -264,14 +324,14 @@ public class PTSignal : IScriptObject
 	/// <param name="s"></param>
 	public void DisconnectFromScript(Script s)
 	{
-		for (int i = _ptCallbacks.Count - 1; i >= 0; i--)
+		lock (_callbacksLock)
 		{
-			PTCallback? cb = _ptCallbacks[i];
-			if (cb is null || cb.Disposed || cb.FromScript == s)
+			for (int i = _ptCallbacks.Count - 1; i >= 0; i--)
 			{
+				PTCallback cb = _ptCallbacks[i];
+				if (!cb.Disposed && cb.FromScript != s) continue;
 				_ptCallbacks.RemoveAt(i);
-				if (cb is not null) _ptSet.Remove(cb);
-				continue;
+				_ptSet.Remove(cb);
 			}
 		}
 	}
@@ -282,14 +342,14 @@ public class PTSignal : IScriptObject
 	/// <param name="s"></param>
 	public static void CleanupScript(Script s)
 	{
-		if (_subscribedScripts.TryGetValue(s, out List<PTSignal>? signals))
+		PTSignal[] signals;
+		lock (_subscriptionsLock)
 		{
-			foreach (PTSignal signal in signals.ToArray())
-			{
-				signal.DisconnectFromScript(s);
-			}
+			if (!_subscribedScripts.TryGetValue(s, out List<PTSignal>? subscribed)) return;
+			signals = [.. subscribed];
 			_subscribedScripts.Remove(s);
 		}
+		foreach (PTSignal signal in signals) signal.DisconnectFromScript(s);
 	}
 }
 

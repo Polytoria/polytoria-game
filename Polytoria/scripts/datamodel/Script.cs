@@ -9,6 +9,7 @@ using Polytoria.Datamodel.Services;
 using Polytoria.Scripting;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Polytoria.Datamodel;
 
@@ -23,9 +24,10 @@ public partial class Script : Instance
 	[CloneInclude]
 	public byte[]? Bytecode { get; internal set; }
 
-	internal readonly Dictionary<object, int> LuauUserdataCache = [];
-	internal readonly HashSet<Scripting.Luau.LuaObject> LuauObjectCache = [];
 	internal readonly HashSet<IntPtr> LuauFunctionPointers = [];
+	internal readonly HashSet<int> LuauFunctionRefs = [];
+	internal readonly object LuauReferencesLock = new();
+	internal CancellationTokenSource LuauCancellation = new();
 
 	private string? _source;
 	private FileLinkAsset? _linkedFile;
@@ -50,7 +52,9 @@ public partial class Script : Instance
 		}
 		set
 		{
+			if (_source == value) return;
 			_source = value;
+			InvalidateCompiledState();
 		}
 	}
 
@@ -81,12 +85,14 @@ public partial class Script : Instance
 		get => _linkedFile;
 		set
 		{
+			if (_linkedFile == value) return;
 			if (_linkedFile != null && _linkedFile != value)
 			{
 				_linkedFile.UnlinkFrom(this);
 			}
 			_linkedFile = value;
 			_linkedFile?.LinkTo(this);
+			InvalidateCompiledState();
 		}
 	}
 
@@ -96,7 +102,9 @@ public partial class Script : Instance
 		get => _compatibility;
 		set
 		{
+			if (_compatibility == value) return;
 			_compatibility = value;
+			InvalidateCompiledState();
 		}
 	}
 
@@ -188,20 +196,23 @@ public partial class Script : Instance
 	[ScriptMethod]
 	public void Call(string funcName, params object?[]? args)
 	{
-		try
-		{
-			CallAsync(funcName, args);
-		}
-		catch
-		{
-			throw;
-		}
+		CallAsync(funcName, args);
 	}
 
 	[ScriptMethod]
 	public async void CallAsync(string funcName, params object?[]? args)
 	{
-		await LanguageProvider.CallAsync(this, funcName, args);
+		try
+		{
+			await LanguageProvider.CallAsync(this, funcName, args);
+		}
+		catch (OperationCanceledException) when (LuauCancellation.IsCancellationRequested)
+		{
+		}
+		catch (Exception ex)
+		{
+			Root.ScriptService.Logger.LogError(this, ex.InnerException?.Message ?? ex.Message);
+		}
 	}
 
 	internal string CreateLuaFileName()
@@ -230,5 +241,14 @@ public partial class Script : Instance
 	{
 		if (Bytecode != null) return;
 		Root.ScriptService.CompileScript(this);
+	}
+
+	internal void InvalidateCompiledState()
+	{
+		Bytecode = null;
+		if (LuauState != null && LanguageProvider != null)
+		{
+			LanguageProvider.Close(this);
+		}
 	}
 }

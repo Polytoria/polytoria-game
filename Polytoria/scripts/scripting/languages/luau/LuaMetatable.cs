@@ -10,6 +10,7 @@ using Polytoria.Datamodel.Services;
 using Polytoria.Shared;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -22,7 +23,7 @@ namespace Polytoria.Scripting.Luau;
 
 public class LuaMetatable : LuaObject
 {
-	private static readonly Dictionary<OverloadKey, (MethodInfo? methodInfo, bool hasParams)> _overloadCache = [];
+	private static readonly ConcurrentDictionary<OverloadKey, (MethodInfo? methodInfo, bool hasParams)> _overloadCache = [];
 
 	public LuaState Lua = null!;
 	[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicMethods)]
@@ -33,106 +34,75 @@ public class LuaMetatable : LuaObject
 	public bool HasCustomNewIndex = false;
 	public bool HasToString = false;
 
-	private async void AsyncExec(object? targetObject, LuaState state, MethodInfo targetMethod, object?[] args, TaskCompletionSource<int> tcs)
+	private async Task AsyncExec(object? targetObject, LuaState state, MethodInfo targetMethod, object?[] args, TaskCompletionSource<int> tcs)
 	{
-		object invokeResult = targetMethod.Invoke(targetObject, args)!;
-
-		if (invokeResult is Task task)
+		try
 		{
-			if (!task.IsCompleted)
-			{
-				try
-				{
-					await task;
-				}
-				catch
-				{
-					tcs.SetException(task.Exception?.InnerException ?? task.Exception ?? new Exception("Something went wrong"));
-				}
-			}
-			if (task.IsFaulted)
-			{
-				tcs.SetException(task.Exception.InnerException ?? task.Exception);
-				return;
-			}
-			Type returnType = targetMethod.ReturnType;
+			object invokeResult = targetMethod.Invoke(targetObject, args)!;
 
-			if (returnType == typeof(Task))
+			if (invokeResult is Task task)
+			{
+				await task;
+				await Task.Yield();
+				Type returnType = targetMethod.ReturnType;
+
+				if (returnType == typeof(Task))
+				{
+					tcs.SetResult(0);
+					return;
+				}
+
+				if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
+				{
+					int resultCount = 0;
+					bool pushed = state.TryAccessYielded(() =>
+					{
+						if (task is Task<object?[]> objectArrayTask)
+						{
+							foreach (object? result in objectArrayTask.Result)
+							{
+								LangProvider.PushValueToLua(state, result);
+							}
+							resultCount = objectArrayTask.Result.Length;
+						}
+						else
+						{
+							LangProvider.PushValueToLua(state, GetTaskResult(task));
+							resultCount = 1;
+						}
+					});
+
+					tcs.SetResult(pushed ? resultCount : 0);
+					return;
+				}
+			}
+			else
 			{
 				tcs.SetResult(0);
-				return;
-			}
-
-			// --------------- HANDLE TASK ---------------
-			if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
-			{
-				try
-				{
-					if (task is Task<int> intTask)
-					{
-						LangProvider.PushValueToLua(state, intTask.Result);
-					}
-					else if (task is Task<string> stringTask)
-					{
-						LangProvider.PushValueToLua(state, stringTask.Result);
-					}
-					else if (task is Task<bool> boolTask)
-					{
-						LangProvider.PushValueToLua(state, boolTask.Result);
-					}
-					else if (task is Task<object> objectTask)
-					{
-						LangProvider.PushValueToLua(state, objectTask.Result);
-					}
-					else if (task is Task<Instance> instanceTask)
-					{
-						LangProvider.PushValueToLua(state, instanceTask.Result);
-					}
-					else if (task is Task<NetworkedObject> netObjTask)
-					{
-						LangProvider.PushValueToLua(state, netObjTask.Result);
-					}
-					else if (task is Task<Accessory> accessoryTask)
-					{
-						LangProvider.PushValueToLua(state, accessoryTask.Result);
-					}
-					else if (task is Task<Tool> toolTask)
-					{
-						LangProvider.PushValueToLua(state, toolTask.Result);
-					}
-					else if (task is Task<HttpResponseData> responseTask)
-					{
-						LangProvider.PushValueToLua(state, responseTask.Result);
-					}
-					else if (task is Task<byte[]> byteArrayTask)
-					{
-						LangProvider.PushValueToLua(state, byteArrayTask.Result);
-					}
-					else if (task is Task<object?[]> objectArrayTask)
-					{
-						foreach (object? r in objectArrayTask.Result)
-						{
-							LangProvider.PushValueToLua(state, r);
-						}
-						tcs.SetResult(objectArrayTask.Result.Length);
-						return;
-					}
-					else
-					{
-						throw new NotSupportedException($"INTERNAL BUG: Task type {task.GetType()} is not supported in AOT");
-					}
-					tcs.SetResult(1);
-				}
-				catch (Exception ex)
-				{
-					tcs.SetException(ex.InnerException ?? ex);
-				}
 			}
 		}
-		else
+		catch (Exception ex)
 		{
-			tcs.SetResult(0);
+			tcs.TrySetException(ex.InnerException ?? ex);
 		}
+	}
+
+	private static object? GetTaskResult(Task task)
+	{
+		return task switch
+		{
+			Task<int> result => result.Result,
+			Task<string> result => result.Result,
+			Task<bool> result => result.Result,
+			Task<object> result => result.Result,
+			Task<Instance> result => result.Result,
+			Task<NetworkedObject> result => result.Result,
+			Task<Accessory> result => result.Result,
+			Task<Tool> result => result.Result,
+			Task<HttpResponseData> result => result.Result,
+			Task<byte[]> result => result.Result,
+			_ => throw new NotSupportedException($"INTERNAL BUG: Task type {task.GetType()} is not supported in AOT")
+		};
 	}
 
 	public virtual int Index(IntPtr L)
@@ -444,11 +414,13 @@ public class LuaMetatable : LuaObject
 		Script script = LuauProvider.GetScriptInstance(state);
 
 		string? key = state.GetNameCallAtom();
+		int firstArgument = 2;
 
 		if (string.IsNullOrEmpty(key))
 		{
 			// Fallback for edge cases where __namecall is invoked manually
 			key = state.ToString(2);
+			firstArgument = 3;
 		}
 
 		if (key == null) { throw new InvalidOperationException($"namecall key is null"); }
@@ -478,9 +450,9 @@ public class LuaMetatable : LuaObject
 			argList.Add(LangProvider.LuaToObject(state, 1, methodInfos.ConvertParamsToGD, methodInfos.GetParamsAsFunction));
 		}
 
-		for (int i = 1; i < top; i++)
+		for (int i = firstArgument; i <= top; i++)
 		{
-			argList.Add(LangProvider.LuaToObject(state, i + 1, methodInfos.ConvertParamsToGD, methodInfos.GetParamsAsFunction));
+			argList.Add(LangProvider.LuaToObject(state, i, methodInfos.ConvertParamsToGD, methodInfos.GetParamsAsFunction));
 		}
 
 		return ProcessMethod(state, methodInfos, targetObject, key, argList);
@@ -856,68 +828,52 @@ public class LuaMetatable : LuaObject
 			PT.PrintWarn($"{targetMethod.Name} is obsolete. {obsoleteAttribute.Message}");
 		}
 
-		// Prepare args array formatted for params
 		ParameterInfo[] parametersFinal = targetMethod.GetParameters();
 		int callerParamIndex = Array.FindIndex(parametersFinal, p => p.IsDefined(typeof(ScriptingCallerAttribute)));
-
-		List<object?> finalArgs = [];
-
-		if (hasParams)
+		object?[] invokeArgs = new object?[parametersFinal.Length];
+		int argIndex = 0;
+		for (int i = 0; i < parametersFinal.Length; i++)
 		{
-			int fixedParamCount = parametersFinal.Length - 1;
-			int paramsCount = Math.Max(0, argsCount - fixedParamCount);
-			Type paramsElementType = parametersFinal[^1].ParameterType.GetElementType()!;
-
-			// Convert fixed args
-			for (int i = 0; i < fixedParamCount; i++)
-				finalArgs.Add(ScriptService.ConvertToPropertyType(args[i], parametersFinal[i].ParameterType));
-
-			// Convert params args
-			Array paramsArray = new object[paramsCount];
-			for (int i = 0; i < paramsCount; i++)
-				paramsArray.SetValue(ScriptService.ConvertToPropertyType(args[fixedParamCount + i], paramsElementType), i);
-
-			finalArgs.Add(paramsArray);
-		}
-		else
-		{
-			// No params, just convert normally
-			int argIndex = 0;
-			for (int i = 0; i < parametersFinal.Length; i++)
+			ParameterInfo parameter = parametersFinal[i];
+			if (i == callerParamIndex)
 			{
-				if (i == callerParamIndex)
-					continue; // Skip the caller parameter
+				invokeArgs[i] = script;
+				continue;
+			}
 
-				if (argIndex < argsCount)
+			if (hasParams && i == parametersFinal.Length - 1)
+			{
+				Type elementType = parameter.ParameterType.GetElementType()!;
+				int count = Math.Max(0, argsCount - argIndex);
+				Array values;
+				if (elementType == typeof(object))
 				{
-					finalArgs.Add(ScriptService.ConvertToPropertyType(args[argIndex], parametersFinal[i].ParameterType));
-					argIndex++;
+					values = new object?[count];
 				}
+				else
+				{
+#pragma warning disable IL3050
+					values = Array.CreateInstance(elementType, count);
+#pragma warning restore IL3050
+				}
+				for (int item = 0; item < count; item++)
+				{
+					values.SetValue(ScriptService.ConvertToPropertyType(args[argIndex++], elementType), item);
+				}
+				invokeArgs[i] = values;
+				continue;
 			}
 
-			// Fill remaining with default values
-			for (int i = argsCount; i < parametersFinal.Length; i++)
-			{
-				if (i == callerParamIndex)
-					continue; // Skip the caller parameter
-
-				int paramIndex = i + (callerParamIndex >= 0 && i >= callerParamIndex ? 1 : 0);
-				if (paramIndex < parametersFinal.Length)
-					finalArgs.Add(parametersFinal[paramIndex].HasDefaultValue ? parametersFinal[paramIndex].DefaultValue : null);
-			}
+			invokeArgs[i] = argIndex < argsCount
+				? ScriptService.ConvertToPropertyType(args[argIndex++], parameter.ParameterType)
+				: parameter.HasDefaultValue ? parameter.DefaultValue : null;
 		}
-
-		// Apply caller if ScriptingCallerAttribute is found
-		if (callerParamIndex >= 0)
-			finalArgs.Insert(callerParamIndex, script);
-
-		object?[] invokeArgs = [.. finalArgs];
 
 		if (ScriptService.IsAsyncMethod(targetMethod))
 		{
-			TaskCompletionSource<int> tcs = new();
+			TaskCompletionSource<int> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 			LuauProvider.SetYieldTask(state, tcs.Task);
-			AsyncExec(targetObject, state, targetMethod, invokeArgs, tcs);
+			_ = AsyncExec(targetObject, state, targetMethod, invokeArgs, tcs);
 			return state.Yield(1);
 		}
 		else

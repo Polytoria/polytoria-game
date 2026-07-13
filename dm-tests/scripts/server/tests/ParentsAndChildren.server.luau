@@ -1,4 +1,9 @@
 function Entry()
+	local children = getmetatable(Environment).__namecall(Environment, "GetChildren")
+	assert(type(children) == "table")
+	local root = getmetatable(Environment).__namecall(Environment, "FindChild", "ParentChildRoot")
+	assert(root == Environment.ParentChildRoot)
+
 	local Root = Environment.ParentChildRoot
 	assert(Root ~= nil)
 

@@ -18,6 +18,7 @@ public partial class LuaState : IDisposable
 {
 	private IntPtr _state;
 	private readonly LuaState? _parent;
+	private readonly bool _ownsState;
 	private bool _disposed;
 
 	public const int LUA_MULTRET = -1;
@@ -32,11 +33,12 @@ public partial class LuaState : IDisposable
 	public bool IsAlive => !_disposed && State != IntPtr.Zero && (Status() == LuaStatus.OK || Status() == LuaStatus.Yield);
 	public bool Loaded { get; set; } = false;
 
-	private static readonly Dictionary<LuaUserdataDestructor, GCHandle> _pinnedDestructors = [];
-	private static readonly Dictionary<IntPtr, LuaFunction> _pinnedFunctions = [];
+	private static readonly HashSet<LuaUserdataDestructor> _pinnedDestructors = [];
+	private static readonly LuaUserdataDestructor _objectGarbageCollect = ObjectGarbageCollect;
 
 	public LuaState()
 	{
+		_ownsState = true;
 		lock (_lock)
 		{
 			_state = NativeBindings.luaL_newstate();
@@ -48,6 +50,7 @@ public partial class LuaState : IDisposable
 	public LuaState(IntPtr state)
 	{
 		_state = state;
+		_ownsState = false;
 	}
 
 	public static LuaState FromIntPtr(IntPtr state)
@@ -108,6 +111,7 @@ public partial class LuaState : IDisposable
 	{
 		_state = thread;
 		_parent = parent;
+		_ownsState = false;
 	}
 
 	public void OpenLibs()
@@ -203,6 +207,18 @@ public partial class LuaState : IDisposable
 	{
 		lock (_lock)
 			NativeBindings.lua_unref(_state, reference);
+	}
+
+	public bool TryUnref(int reference)
+	{
+		lock (_lock)
+		{
+			if (_disposed || _state == IntPtr.Zero)
+				return false;
+
+			NativeBindings.lua_unref(_state, reference);
+			return true;
+		}
 	}
 
 	public int GarbageCollector(LuaGC what, int data)
@@ -426,8 +442,6 @@ public partial class LuaState : IDisposable
 		IntPtr handlePtr = GCHandle.ToIntPtr(handle);
 		Marshal.WriteIntPtr(userdataPtr, handlePtr);
 
-		_pinnedFunctions[handlePtr] = func;
-
 		lock (_lock)
 			NativeBindings.lua_pushcclosurek(_state, func, name, n + 1, null);
 	}
@@ -437,8 +451,6 @@ public partial class LuaState : IDisposable
 		IntPtr handlePtr = Marshal.ReadIntPtr(ud);
 		if (handlePtr == IntPtr.Zero) return;
 		GCHandle handle = GCHandle.FromIntPtr(handlePtr);
-		_pinnedFunctions.Remove(handlePtr);
-
 		if (handle.IsAllocated)
 		{
 			handle.Free();
@@ -533,17 +545,30 @@ public partial class LuaState : IDisposable
 		}
 
 		GCHandle handle = GCHandle.Alloc(obj);
-		PushLightUserData(GCHandle.ToIntPtr(handle));
+		IntPtr userdata = NewUserDataDTor((UIntPtr)IntPtr.Size, _objectGarbageCollect);
+		Marshal.WriteIntPtr(userdata, GCHandle.ToIntPtr(handle));
+	}
+
+	private static void ObjectGarbageCollect(IntPtr userdata)
+	{
+		IntPtr handlePtr = Marshal.ReadIntPtr(userdata);
+		if (handlePtr == IntPtr.Zero) return;
+
+		GCHandle handle = GCHandle.FromIntPtr(handlePtr);
+		if (handle.IsAllocated) handle.Free();
+		Marshal.WriteIntPtr(userdata, IntPtr.Zero);
 	}
 
 	public object? ToObject(int index)
 	{
-		if (IsNil(index) || !IsLightUserData(index))
+		if (IsNil(index) || (!IsLightUserData(index) && !IsUserData(index)))
 			return null;
 
 		IntPtr data = ToUserData(index);
 		if (data == IntPtr.Zero)
 			return null;
+		if (IsUserData(index)) data = Marshal.ReadIntPtr(data);
+		if (data == IntPtr.Zero) return null;
 
 		var handle = GCHandle.FromIntPtr(data);
 		if (!handle.IsAllocated)
@@ -552,14 +577,16 @@ public partial class LuaState : IDisposable
 		return handle.Target;
 	}
 
-	public T? ToObject<T>(int index, bool freeGCHandle = true)
+	public T? ToObject<T>(int index, bool freeGCHandle = false)
 	{
-		if (IsNil(index) || !IsLightUserData(index))
+		if (IsNil(index) || (!IsLightUserData(index) && !IsUserData(index)))
 			return default;
 
 		IntPtr data = ToUserData(index);
 		if (data == IntPtr.Zero)
 			return default;
+		if (IsUserData(index)) data = Marshal.ReadIntPtr(data);
+		if (data == IntPtr.Zero) return default;
 
 		var handle = GCHandle.FromIntPtr(data);
 		if (!handle.IsAllocated)
@@ -657,6 +684,45 @@ public partial class LuaState : IDisposable
 			return (LuaStatus)NativeBindings.lua_resume(_state, from?.State ?? IntPtr.Zero, narg);
 	}
 
+	public bool TryResume(LuaState? from, int narg, out LuaStatus status)
+	{
+		lock (_lock)
+		{
+			if (_disposed || _state == IntPtr.Zero)
+			{
+				status = LuaStatus.OK;
+				return false;
+			}
+
+			LuaStatus currentStatus = (LuaStatus)NativeBindings.lua_status(_state);
+			bool canResume = currentStatus == LuaStatus.Yield
+				|| (currentStatus == LuaStatus.OK && NativeBindings.lua_gettop(_state) > 0);
+			if (!canResume)
+			{
+				status = currentStatus;
+				return false;
+			}
+
+			status = (LuaStatus)NativeBindings.lua_resume(_state, from?.State ?? IntPtr.Zero, narg);
+			return true;
+		}
+	}
+
+	public bool TryAccessYielded(Action action)
+	{
+		lock (_lock)
+		{
+			if (_disposed || _state == IntPtr.Zero
+				|| (LuaStatus)NativeBindings.lua_status(_state) != LuaStatus.Yield)
+			{
+				return false;
+			}
+
+			action();
+			return true;
+		}
+	}
+
 	public LuaStatus Status()
 	{
 		lock (_lock)
@@ -692,10 +758,7 @@ public partial class LuaState : IDisposable
 	{
 		lock (_lock)
 		{
-			if (!_pinnedDestructors.ContainsKey(dtor))
-			{
-				_pinnedDestructors[dtor] = GCHandle.Alloc(dtor);
-			}
+			_pinnedDestructors.Add(dtor);
 			return NativeBindings.lua_newuserdatadtor(_state, size, dtor);
 		}
 	}
@@ -799,7 +862,10 @@ public partial class LuaState : IDisposable
 		{
 			if (!_disposed && _state != IntPtr.Zero)
 			{
-				NativeBindings.lua_close(_state);
+				if (_ownsState)
+				{
+					NativeBindings.lua_close(_state);
+				}
 				_state = IntPtr.Zero;
 				_disposed = true;
 			}

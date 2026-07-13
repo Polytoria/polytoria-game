@@ -217,10 +217,6 @@ internal partial class NativeBindings
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-	internal static partial int lua_resume(IntPtr L, int narg);
-
-	[LibraryImport(LuaLibraryName)]
-	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
 	internal static partial int lua_resume(IntPtr L, IntPtr from, int narg);
 
 	[LibraryImport(LuaLibraryName)]

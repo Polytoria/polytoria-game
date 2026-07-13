@@ -429,8 +429,10 @@ public partial class Physical : Dynamic
 	{
 		ClearCollisionBody();
 		Root?.Loaded.Disconnect(OnRootReady);
-		// _proxyToPhysical.Remove(PhysicalArea);
-		_proxyToPhysical.Remove(GDNode);
+		if (GDNode != null)
+		{
+			_proxyToPhysical.Remove(GDNode);
+		}
 
 		if (PhysicalArea != null)
 		{
@@ -580,13 +582,14 @@ public partial class Physical : Dynamic
 
 	public override void PhysicsProcess(double delta)
 	{
+		if (!HasUsableNode()) return;
 		UpdateTransformTick(delta);
 		if (Root == null || Root?.Network == null) { return; }
 
 		// Sync if has authority and not anchored, if so. sync in interval
 		if (NetTransformAuthority == Root.Network.LocalPeerID && !Anchored)
 		{
-			UpdateNetTransform();
+			UpdateNetTransformValidated();
 		}
 		base.PhysicsProcess(delta);
 	}

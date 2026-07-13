@@ -650,13 +650,12 @@ public partial class NetworkedObject : IScriptObject
 
 		if (_netObjToProxy.Remove(this, out var gdn))
 		{
-			// Delete Valid Root node only
-			if (Node.IsInstanceValid(gdn) && !DeletedAsChild)
-			{
-				gdn.QueueFree();
-				gdn.Dispose();
-			}
 			_proxyToNetObj.Remove(gdn, out _);
+			// Delete Valid Root node only
+			if (!DeletedAsChild)
+			{
+				ReleaseNode(gdn);
+			}
 		}
 	}
 
@@ -1907,13 +1906,24 @@ public partial class NetworkedObject : IScriptObject
 		{
 			_netObjToProxy.TryRemove(this, out _);
 			_proxyToNetObj.TryRemove(GDNode, out _);
-			GDNode.QueueFree();
+			ReleaseNode(GDNode);
 		}
 		GDNode = to;
 		SlotNode = to;
 		_netObjToProxy[this] = to;
 		_proxyToNetObj[to] = this;
 		InitGDNode();
+	}
+
+	protected static void ReleaseNode(Node? node)
+	{
+		if (node == null || !Node.IsInstanceValid(node) || node.IsQueuedForDeletion())
+			return;
+
+		if (node.IsInsideTree())
+			node.QueueFree();
+		else
+			node.Free();
 	}
 
 	public void SetProcess(bool enabled)
