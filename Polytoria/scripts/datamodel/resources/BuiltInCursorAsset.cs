@@ -53,7 +53,6 @@ public partial class BuiltInCursorAsset : CursorAsset
 	{
 		_cursorImage = GD.Load<Image>(Globals.BuiltInCursorLocation.PathJoin(CursorMapping[_cursorPreset]));
 		_cursorTex = (Texture2D)ImageTexture.CreateFromImage(_cursorImage);
-		GD.Print("Loading cursor asset");
 		InvokeResourceLoaded(_cursorTex);
 	}
 
