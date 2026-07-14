@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://dless56nncw63"
+path="res://.godot/imported/crosshair-diagonal-locked.png-0c023eeac7dbd93a8c56694af4102430.image"
+
+[deps]
+
+source_file="res://assets/textures/client/cursor/crosshair-diagonal-locked.png"
+dest_files=["res://.godot/imported/crosshair-diagonal-locked.png-0c023eeac7dbd93a8c56694af4102430.image"]
+
+[params]
+

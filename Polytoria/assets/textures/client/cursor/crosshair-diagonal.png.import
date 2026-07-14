@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://baar8u7rbdhqg"
+path="res://.godot/imported/crosshair-diagonal.png-3445a04ee2019ddab46108ed461fe22f.image"
+
+[deps]
+
+source_file="res://assets/textures/client/cursor/crosshair-diagonal.png"
+dest_files=["res://.godot/imported/crosshair-diagonal.png-3445a04ee2019ddab46108ed461fe22f.image"]
+
+[params]
+

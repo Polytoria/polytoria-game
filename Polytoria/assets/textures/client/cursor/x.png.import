@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://bc8qwh8hv05wi"
+path="res://.godot/imported/x.png-073059576b3699e49ad1c8a63b20dbd5.image"
+
+[deps]
+
+source_file="res://assets/textures/client/cursor/x.png"
+dest_files=["res://.godot/imported/x.png-073059576b3699e49ad1c8a63b20dbd5.image"]
+
+[params]
+

@@ -73,6 +73,7 @@ public sealed partial class Globals : Node
 
 	public const string BuiltInFontLocation = "res://assets/fonts/built-in";
 	public const string BuiltInAudioLocation = "res://assets/audio/built-in";
+	public const string BuiltInCursorLocation = "res://assets/textures/client/cursor";
 	public const float MobileScale = 2.5f;
 	public static string AppVersion { get; private set; } = "";
 	public static string MajorAppVersion { get; private set; } = "2";
@@ -134,10 +135,11 @@ public sealed partial class Globals : Node
 		// TODO: Maybe this could be automated via source generation?
 		PTImageAsset.RegisterAsset();
 		PTAudioAsset.RegisterAsset();
-		PTMeshAsset.RegisterAsset();
 		PTCursorAsset.RegisterAsset();
+		PTMeshAsset.RegisterAsset();
 		BuiltInAudioAsset.RegisterAsset();
 		BuiltInFontAsset.RegisterAsset();
+		BuiltInCursorAsset.RegisterAsset();
 		FileLinkAsset.RegisterAsset();
 		GradientImageAsset.RegisterAsset();
 		PTMeshAnimationAsset.RegisterAsset();

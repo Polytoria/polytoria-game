@@ -11,6 +11,8 @@ namespace Polytoria.Datamodel.Resources;
 [Abstract]
 public partial class CursorAsset : ResourceAsset
 {
+	const int MAX_CURSOR_SIZE = 128;
+
 	private Vector2 _hotspot = new(0, 0);
 	internal PTSignal CursorAdjustInternal { get; private set; } = new();
 

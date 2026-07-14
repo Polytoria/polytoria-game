@@ -8,15 +8,15 @@ using Polytoria.Datamodel.Resources;
 
 namespace Polytoria.Creator.Properties;
 
-public sealed partial class PTCursorAssetSubview : Control, IPropertySubview
+public sealed partial class CursorAssetSubview : Control, IPropertySubview
 {
 	public NetworkedObject TargetObject { get; set; } = null!;
-	private PTCursorAsset _baseAsset = null!;
+	private CursorAsset _baseAsset = null!;
 	private TextureRect _rect = null!;
 
 	public override void _Ready()
 	{
-		_baseAsset = (PTCursorAsset)TargetObject;
+		_baseAsset = (CursorAsset)TargetObject;
 		_rect = GetNode<TextureRect>("Alpha/Texture");
 
 		if (_baseAsset.Resource != null)
