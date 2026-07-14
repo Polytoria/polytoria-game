@@ -430,7 +430,16 @@ public partial class Physical : Dynamic
 		ClearCollisionBody();
 		Root?.Loaded.Disconnect(OnRootReady);
 		// _proxyToPhysical.Remove(PhysicalArea);
-		_proxyToPhysical.Remove(GDNode);
+		/* 
+		I don't know if GDNode should be null but I put 
+		a check in case it is cause it was failing my
+		dotnet test so sorry if it cause any issues later on :x
+		*/
+		
+		if (GDNode != null)
+		{
+			_proxyToPhysical.Remove(GDNode);
+		}
 
 		if (PhysicalArea != null)
 		{
