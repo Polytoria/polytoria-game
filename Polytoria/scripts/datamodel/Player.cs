@@ -40,6 +40,7 @@ public sealed partial class Player : NPC
 
 	private float _respawnTime = 5.0f;
 	private bool _canMove = true;
+	private bool _canJumpWhileClimbing = true;
 	private float _sprintSpeed;
 	private float _stamina = 0;
 	private float _maxStamina = 3;
@@ -675,6 +676,7 @@ public sealed partial class Player : NPC
 					if (!ClimbDebounce)
 					{
 						ClimbingTruss = truss;
+						_canJumpWhileClimbing = false;
 						IsClimbing = true;
 						Character?.PlayClimb();
 					}
@@ -803,6 +805,7 @@ public sealed partial class Player : NPC
 			// Ignore jump command if is custom
 			if (MovementMode == PlayerMovementModeEnum.Scripted) return;
 			if (!CanMove) return;
+			_canJumpWhileClimbing = true;
 			Jump();
 		}
 		else if (@event.IsActionPressed("toggle_sprint"))
@@ -917,10 +920,13 @@ public sealed partial class Player : NPC
 	public override void Jump()
 	{
 		base.Jump();
-		if (IsClimbing)
+		if (_canJumpWhileClimbing)
 		{
-			EndClimb();
-			ClimbDebounce = true;
+			if (IsClimbing)
+			{
+				EndClimb();
+				ClimbDebounce = true;
+			}
 		}
 	}
 
