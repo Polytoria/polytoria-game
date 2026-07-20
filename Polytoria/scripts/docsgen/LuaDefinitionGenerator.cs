@@ -15,7 +15,6 @@ namespace Polytoria.DocsGen;
 public class LuaDefinitionGenerator
 {
 	private const string CodeHintPath = "res://modules/creator/codehint/luau/";
-	private static readonly string[] SkippedMetamethods = ["__iter"];
 
 	public static void GenerateDocFiles(string atFolder)
 	{
@@ -140,7 +139,6 @@ public class LuaDefinitionGenerator
 		{
 			if (m.IsMetamethod)
 			{
-				if (SkippedMetamethods.Contains(m.Name)) continue;
 				// if static, the first parameter must be this class (self)
 				// we can skip explicit metamethod operator overloads since the type
 				// checker will blatantly assume that they already exist

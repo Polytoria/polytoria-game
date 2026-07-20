@@ -13,6 +13,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -440,14 +441,27 @@ public class APIReferenceGenerator
 
 		// --------------- //
 
+		if (type.IsAssignableTo(typeof(ITuple)))
+		{
+			return $"({string.Join(", ", type.GetGenericArguments().Select(arg => ProcessTypeName(arg) ?? "nil"))})";
+		}
+
 		if (type.IsAssignableTo(typeof(IScriptGDObject)))
 		{
 			return ProcessClassName(type);
 		}
 
-		if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Task<>))
+		if (type.IsGenericType)
 		{
-			return ProcessTypeName(type.GetGenericArguments()[0]);
+			Type genericType = type.GetGenericTypeDefinition();
+			if (genericType == typeof(Task<>))
+			{
+				return ProcessTypeName(type.GetGenericArguments()[0]);
+			}
+			if (genericType == typeof(IEnumerable<>))
+			{
+				return $"((any) -> {ProcessTypeName(type.GetGenericArguments()[0])}, nil, nil)";
+			}
 		}
 
 		if (type.IsArray)
@@ -458,10 +472,16 @@ public class APIReferenceGenerator
 		if (type.IsAssignableTo(typeof(IDictionary)))
 		{
 			Type[] args = type.GetGenericArguments();
-			string? indexType = ProcessTypeName(args[0]);
-			string? valueType = ProcessTypeName(args[1]);
-			if (indexType == null || valueType == null) return "{  }";
-			return $"{{ [{indexType}]: {valueType} }}";
+			if (args.Length == 2)
+			{
+				string? indexType = ProcessTypeName(args[0]);
+				string? valueType = ProcessTypeName(args[1]);
+				if (indexType != null && valueType != null)
+				{
+					return $"{{ [{indexType}]: {valueType} }}";
+				}
+			}
+			return "{  }";
 		}
 
 		if (type.IsEnum)
