@@ -44,7 +44,7 @@ public class LuaDefinitionGenerator
 		File.WriteAllText(atFolder.PathJoin("def.json"), JsonSerializer.Serialize(refer, APIRefGenerationContext.Default.APIReferenceRoot));
 
 		// Add PTSignal type definitions
-		builder.AppendLine("declare class PTSignalConnection");
+		builder.AppendLine("declare extern type PTSignalConnection with");
 		builder.AppendLine("\tfunction Disconnect(self)");
 		builder.AppendLine("end");
 		builder.AppendLine();
@@ -57,12 +57,12 @@ public class LuaDefinitionGenerator
 		builder.AppendLine("}");
 		builder.AppendLine();
 
-		builder.AppendLine("declare class Enum end");
+		builder.AppendLine("declare extern type Enum with end");
 
 		foreach (ScriptEnum e in refer.Enums)
 		{
-			builder.AppendLine($"declare class {e.Name} end");
-			builder.AppendLine($"declare class {e.InternalName} extends Enum");
+			builder.AppendLine($"declare extern type {e.Name} with end");
+			builder.AppendLine($"declare extern type {e.InternalName} extends Enum with");
 			foreach (string item in e.Options)
 			{
 				builder.AppendLine($"\t{item}: {e.Name}");
@@ -96,12 +96,12 @@ public class LuaDefinitionGenerator
 
 		bool hasStatic = false;
 
-		builder.Append($"declare class {c.Name}");
+		builder.Append($"declare extern type {c.Name}");
 		if (c.BaseType != null)
 		{
 			builder.Append($" extends {c.BaseType}");
 		}
-		builder.AppendLine();
+		builder.AppendLine(" with");
 
 		foreach (ScriptProperty p in c.Properties)
 		{
