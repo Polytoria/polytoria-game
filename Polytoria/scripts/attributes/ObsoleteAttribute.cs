@@ -4,7 +4,6 @@
 
 using System;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace Polytoria.Attributes;
 
@@ -15,24 +14,23 @@ namespace Polytoria.Attributes;
 /// <param name="reason">The reason for obsoletion</param>
 /// <param name="use">What should be used instead</param>
 [AttributeUsage(AttributeTargets.All)]
-public sealed class ObsoleteAttribute(string? reason = null, string? use = null, [CallerMemberName] string? name = null) : Attribute
+public sealed class ObsoleteAttribute(string? reason = null, string? use = null, [CallerMemberName] string name = "") : Attribute
 {
-	public readonly string? Name = name;
+	public readonly string Name = name;
 	public readonly string? Reason = reason;
 	public readonly string? UseInstead = use;
 
 	public string GetWarning()
 	{
-		StringBuilder builder = new($"'{Name}' is obsolete");
+		string result = $"'{Name}' is obsolete";
 		if (UseInstead != null)
 		{
-			builder.Append($", use '{UseInstead}' instead");
+			result += $", use '{UseInstead}' instead";
 		}
-		builder.Append('.');
 		if (Reason != null)
 		{
-			builder.Append(Reason);
+			result += $". {Reason}";
 		}
-		return builder.ToString();
+		return result;
 	}
 }

@@ -14,7 +14,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -521,40 +520,39 @@ public class APIReferenceGenerator
 		public readonly string? Reason = reason;
 		public readonly string? UseInstead = use;
 
-		public readonly string GetAttributeString()
+		public readonly string GetAttribute()
 		{
-			List<string> parameters = new(2);
+			List<string> args = [];
 			if (Reason != null)
 			{
-				parameters.Add($"reason = \"{Reason}\"");
+				args.Add($"reason = \"{Reason}\"");
 			}
 			if (UseInstead != null)
 			{
-				parameters.Add($"use = \"{UseInstead}\"");
+				args.Add($"use = \"{UseInstead}\"");
 			}
-			if (parameters.Count > 0)
+			if (args.Count > 0)
 			{
-				return $"@[deprecated {{ {string.Join(", ", parameters)} }}]";
+				return $"@[deprecated {{ {string.Join(", ", args)} }}]";
 			}
 			return "@deprecated";
 		}
 
-		public readonly string GetWarningString()
+		public readonly string GetWarning()
 		{
-			StringBuilder builder = new("Obsolete");
+			string result = "Obsolete";
 			if (UseInstead != null)
 			{
-				builder.Append($", use `{UseInstead}` instead");
+				result += $", use '{UseInstead}' instead";
 			}
-			builder.Append('.');
 			if (Reason != null)
 			{
-				builder.Append(Reason);
+				result += $". {Reason}";
 			}
-			return builder.ToString();
+			return result;
 		}
 
-		public readonly string GetWarningComment() => $"--- {GetWarningString()}";
+		public readonly string GetWarningComment() => $"--- {GetWarning()}";
 	}
 
 	public readonly struct ScriptMethod(string name, string? returnType, ScriptParameter[] parameters, bool isAsync = false, bool isObsolete = false, bool isStatic = false, bool isSemiStatic = false, ScriptObsoletionInfo? obsoletionInfo = null)
@@ -581,10 +579,7 @@ public class APIReferenceGenerator
 		public readonly bool IsStatic = isStatic;
 		public readonly ScriptObsoletionInfo? ObsoletionInfo = obsoletionInfo;
 
-		public readonly override string ToString()
-		{
-			return $"{Name}: {Type ?? "nil"}";
-		}
+		public readonly override string ToString() => $"{Name}: {Type ?? "nil"}";
 	}
 
 	public readonly struct ScriptEvent(string name, ScriptParameter[] parameters)

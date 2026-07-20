@@ -168,7 +168,7 @@ public class LuaDefinitionGenerator
 			}
 			if (m.ObsoletionInfo.HasValue)
 			{
-				builder.AppendLine($"\t{m.ObsoletionInfo.Value.GetAttributeString()}");
+				builder.AppendLine($"\t{m.ObsoletionInfo.Value.GetAttribute()}");
 			}
 			builder.Append($"\tfunction {m.Name}({string.Join(", ", iter.Prepend("self"))})");
 			if (m.ReturnType != null)
