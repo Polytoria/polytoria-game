@@ -500,18 +500,22 @@ public class APIReferenceGenerator
 		public readonly string? Type = type;
 		public readonly bool IsOptional = isOptional;
 		public readonly string? DefaultValue = defaultValue;
-		[JsonIgnore]
-		public readonly bool IsVarArg => Name == "...";
 
 		public readonly string GetTypeString()
 		{
 			return Type != null ? IsOptional ? Type + '?' : Type : "nil";
 		}
 
-		public readonly override string ToString()
+		public readonly string ToString(bool inFuncType = false)
 		{
 			string typeString = GetTypeString();
-			return Name != null ? $"{Name}: {typeString}" : typeString;
+			return Name switch
+			{
+				null => typeString,
+				// must use variadic type pack ('...' Type) in function types
+				"..." when inFuncType => $"...{typeString}",
+				_ => $"{Name}: {typeString}",
+			};
 		}
 	}
 

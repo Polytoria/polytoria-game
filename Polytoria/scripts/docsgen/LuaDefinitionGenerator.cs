@@ -108,7 +108,7 @@ public class LuaDefinitionGenerator
 				hasStatic = true;
 				continue;
 			}
-			// class properties cannot be marked @deprecated
+			// properties cannot be marked with attributes
 			if (p.ObsoletionInfo.HasValue)
 			{
 				builder.AppendLine($"\t{p.ObsoletionInfo.Value.GetWarningComment()}");
@@ -202,7 +202,7 @@ public class LuaDefinitionGenerator
 		foreach (ScriptProperty p in c.Properties)
 		{
 			if (!p.IsStatic) continue;
-			// fields cannot be marked @deprecated
+			// properties cannot be marked with attributes
 			if (p.ObsoletionInfo.HasValue)
 			{
 				builder.AppendLine($"\t{p.ObsoletionInfo.Value.GetWarningComment()}");
@@ -210,24 +210,17 @@ public class LuaDefinitionGenerator
 			builder.AppendLine($"\t{p},");
 		}
 
-		OrderedDictionary<string, List<string>> methodOverloads = [];
-		foreach (ScriptMethod m in c.Methods)
+		// function types cannot be marked with attributes nor documented
+
+		IEnumerable<IGrouping<string, string>> functionTypes = c.Methods
+			.Where(m => m.IsStatic && !(m.IsMetamethod || m.IsObsolete))
+			.GroupBy(
+				m => m.Name,
+				m => $"({string.Join(", ", m.Parameters.Select(p => p.ToString(true)))}) -> {m.ReturnType ?? "()"}"
+			);
+		foreach (IGrouping<string, string> g in functionTypes)
 		{
-			// overloads cannot be individually marked @deprecated nor documented
-			if (!m.IsStatic || m.IsMetamethod) continue;
-			string def = $"({string.Join(", ", m.Parameters.Select(p => p.ToString()))}) -> {m.ReturnType ?? "()"}";
-			if (methodOverloads.TryGetValue(m.Name, out List<string>? overloads))
-			{
-				overloads.Add(def);
-			}
-			else
-			{
-				methodOverloads[m.Name] = [def];
-			}
-		}
-		foreach ((string name, List<string> overloads) in methodOverloads)
-		{
-			builder.AppendLine($"\t{name}: {(overloads.Count > 1 ? $"({string.Join(") & (", overloads)})" : overloads[0])},");
+			builder.AppendLine($"\t{g.Key}: {(g.Count() > 1 ? $"({string.Join(") & (", g)})" : g.First())},");
 		}
 
 		builder.AppendLine("}");
