@@ -61,20 +61,19 @@ public class LuaDefinitionGenerator
 
 		foreach (ScriptEnum e in refer.Enums)
 		{
-			builder.AppendLine($"declare extern type {e.Name} with end");
-			builder.AppendLine($"declare extern type {e.InternalName} extends Enum with");
-			foreach (string item in e.Options)
-			{
-				builder.AppendLine($"\t{item}: {e.Name}");
-			}
-			builder.AppendLine("end");
-			builder.AppendLine();
+			builder.AppendLine($"declare extern type {e.Name} extends Enum with end");
 		}
+		builder.AppendLine();
 
 		builder.AppendLine("declare Enums: {");
 		foreach (ScriptEnum e in refer.Enums)
 		{
-			builder.AppendLine($"\t{e.Name}: {e.InternalName},");
+			builder.AppendLine($"\t{e.Name}: {{");
+			foreach (string item in e.Options)
+			{
+				builder.AppendLine($"\t\t{item}: {e.Name},");
+			}
+			builder.AppendLine("\t},");
 		}
 		builder.AppendLine("}");
 		builder.AppendLine();
