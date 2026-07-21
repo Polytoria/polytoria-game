@@ -45,9 +45,10 @@ public class APIReferenceGenerator
 			if (type.FullName.Contains("Polytoria.Scripting.Libraries")) continue;
 			if (type.IsGenericType) continue;
 
+			string name = ProcessClassName(type);
 			if (type.IsAssignableTo(typeof(Instance)))
 			{
-				instanceClasses.Add(ProcessClassName(type));
+				instanceClasses.Add(name);
 			}
 
 #pragma warning disable IL2075 // Datamodel types has the reflections needed
@@ -178,7 +179,7 @@ public class APIReferenceGenerator
 					]
 				));
 			}
-			string name = ProcessClassName(type);
+
 			bool isInstantiable = type.IsDefined(typeof(InstantiableAttribute), false);
 			if (isInstantiable)
 			{
@@ -193,7 +194,6 @@ public class APIReferenceGenerator
 			}
 
 			StaticAttribute? staticA = type.GetCustomAttribute<StaticAttribute>();
-
 			classMap[type] = new(
 				name,
 				((type.BaseType != null && type.BaseType.IsAssignableTo(typeof(Node))) || type.BaseType == typeof(object) || type.BaseType == typeof(ValueType)) ? null : type.BaseType?.Name,
