@@ -95,7 +95,6 @@ public class APIReferenceGenerator
 						typeName,
 						isEditable || isScriptProperty,
 						isScriptProperty && property.GetSetMethod(false) == null,
-						obsoleteAttribute != null,
 						property.GetGetMethod(true)?.IsStatic ?? false,
 						obsoleteAttribute != null ? new(obsoleteAttribute) : null
 					));
@@ -153,7 +152,6 @@ public class APIReferenceGenerator
 					ProcessOptionalTypeName(returnType),
 					[.. paramsDef],
 					asyncFunc,
-					obsoleteAttribute != null,
 					method.IsStatic,
 					method.IsStatic && (methodAttribute?.SemiStatic ?? false),
 					obsoleteAttribute != null ? new(obsoleteAttribute) : null
@@ -568,13 +566,12 @@ public class APIReferenceGenerator
 		public readonly string GetWarningComment() => $"--- {GetWarning()}";
 	}
 
-	public readonly struct ScriptMethod(string name, string? returnType, ScriptParameter[] parameters, bool isAsync = false, bool isObsolete = false, bool isStatic = false, bool isSemiStatic = false, ScriptObsoletionInfo? obsoletionInfo = null)
+	public readonly struct ScriptMethod(string name, string? returnType, ScriptParameter[] parameters, bool isAsync = false, bool isStatic = false, bool isSemiStatic = false, ScriptObsoletionInfo? obsoletionInfo = null)
 	{
 		public readonly string Name = name;
 		public readonly string? ReturnType = returnType;
 		public readonly ScriptParameter[] Parameters = parameters;
 		public readonly bool IsAsync = isAsync;
-		public readonly bool IsObsolete = isObsolete;
 		public readonly bool IsStatic = isStatic;
 		public readonly bool IsSemiStatic = isSemiStatic;
 		public readonly ScriptObsoletionInfo? ObsoletionInfo = obsoletionInfo;
@@ -582,13 +579,12 @@ public class APIReferenceGenerator
 		public readonly bool IsMetamethod => Name.StartsWith("__");
 	}
 
-	public readonly struct ScriptProperty(string name, string type, bool isAccessibleByScripts, bool isReadOnly, bool isObsolete, bool isStatic, ScriptObsoletionInfo? obsoletionInfo = null)
+	public readonly struct ScriptProperty(string name, string type, bool isAccessibleByScripts, bool isReadOnly, bool isStatic, ScriptObsoletionInfo? obsoletionInfo = null)
 	{
 		public readonly string Name = name;
 		public readonly string Type = type;
 		public readonly bool IsAccessibleByScripts = isAccessibleByScripts;
 		public readonly bool IsReadOnly = isReadOnly;
-		public readonly bool IsObsolete = isObsolete;
 		public readonly bool IsStatic = isStatic;
 		public readonly ScriptObsoletionInfo? ObsoletionInfo = obsoletionInfo;
 

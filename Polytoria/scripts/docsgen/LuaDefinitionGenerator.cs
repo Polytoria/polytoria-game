@@ -213,7 +213,7 @@ public class LuaDefinitionGenerator
 		// function types cannot be marked with attributes nor documented
 
 		IEnumerable<IGrouping<string, string>> functionTypes = c.Methods
-			.Where(m => m.IsStatic && !(m.IsMetamethod || m.IsObsolete))
+			.Where(m => m.IsStatic && !(m.IsMetamethod || m.ObsoletionInfo.HasValue))
 			.GroupBy(
 				m => m.Name,
 				m => $"({string.Join(", ", m.Parameters.Select(p => p.ToString(true)))}) -> {m.ReturnType ?? "()"}"
