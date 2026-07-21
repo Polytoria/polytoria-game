@@ -6,8 +6,8 @@ using Godot;
 using Polytoria.Attributes;
 #if CREATOR
 using Polytoria.Datamodel.Creator;
-using Polytoria.Datamodel.Services;
 #endif
+using Polytoria.Datamodel.Services;
 
 namespace Polytoria.Datamodel;
 
