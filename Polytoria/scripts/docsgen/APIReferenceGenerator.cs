@@ -66,36 +66,32 @@ public class APIReferenceGenerator
 
 				if (!isScriptProperty && !isEditable) continue;
 
-				if (property.PropertyType == typeof(PTSignal) ||
-					(property.PropertyType.IsGenericType &&
-					 property.PropertyType.GetGenericTypeDefinition().Name.StartsWith(nameof(PTSignal))))
+				Type propertyType = property.PropertyType;
+				if (propertyType == typeof(PTSignal) ||
+					(propertyType.IsGenericType &&
+					 propertyType.GetGenericTypeDefinition().Name.StartsWith(nameof(PTSignal))))
 				{
-					List<ScriptParameter> paramsDef = [];
-
-					Type propertyType = property.PropertyType;
-					if (propertyType.IsGenericType)
-					{
-						Type[] genericArgs = propertyType.GetGenericArguments();
-						for (int i = 0; i < genericArgs.Length; i++)
-						{
-							string tn = ProcessTypeName(genericArgs[i]) ?? "nil";
-							paramsDef.Add(new(null, tn));
-						}
-					}
-
-					eventsDef.Add(new(property.Name, [.. paramsDef]));
+					eventsDef.Add(new(
+						property.Name,
+						propertyType.IsGenericType
+							? [.. propertyType.GetGenericArguments().Select(a => new ScriptParameter(type: ProcessOptionalTypeName(a)))]
+							: []
+					));
 				}
 				else
 				{
-					if (property.PropertyType.IsEnum && !ScriptService.EnumMap.ContainsValue(property.PropertyType))
+					if (propertyType.IsEnum && !ScriptService.EnumMap.ContainsValue(propertyType))
 					{
-						missingEnums.Add(property.PropertyType);
+						missingEnums.Add(propertyType);
 					}
+
+					string? typeName = ProcessOptionalTypeName(propertyType);
+					if (typeName == null) continue;
 
 					Attributes.ObsoleteAttribute? obsoleteAttribute = property.GetCustomAttribute<Attributes.ObsoleteAttribute>();
 					propertiesDef.Add(new(
 						property.Name,
-						ProcessTypeName(property.PropertyType),
+						typeName,
 						isEditable || isScriptProperty,
 						isScriptProperty && property.GetSetMethod(false) == null,
 						obsoleteAttribute != null,
@@ -136,10 +132,16 @@ public class APIReferenceGenerator
 					if (item.IsDefined(typeof(ScriptingCallerAttribute))) continue;
 
 					bool isVarArg = item.IsDefined(typeof(ParamArrayAttribute));
+					Type? paramType = isVarArg ? item.ParameterType.GetElementType() : item.ParameterType;
+					if (paramType == null) continue;
+
+					Type? underlying = Nullable.GetUnderlyingType(paramType);
+					string? typeName = ProcessTypeName(underlying ?? paramType);
+					if (typeName == null) continue;
+
 					paramsDef.Add(new(
 						isVarArg ? "..." : item.Name,
-						ProcessTypeName(isVarArg ? item.ParameterType.GetElementType() : item.ParameterType),
-						item.HasDefaultValue,
+						underlying != null || item.HasDefaultValue ? typeName + '?' : typeName,
 						item.HasDefaultValue ? item.DefaultValue?.ToString() : null
 					));
 				}
@@ -147,7 +149,7 @@ public class APIReferenceGenerator
 				Attributes.ObsoleteAttribute? obsoleteAttribute = method.GetCustomAttribute<Attributes.ObsoleteAttribute>();
 				methodsDef.Add(new(
 					metaMethodAttribute != null ? GetMetamethodIndexer(metaMethodAttribute.Metamethod) : methodAttribute?.MethodName ?? method.Name,
-					ProcessTypeName(returnType),
+					ProcessOptionalTypeName(returnType),
 					[.. paramsDef],
 					asyncFunc,
 					obsoleteAttribute != null,
@@ -184,7 +186,7 @@ public class APIReferenceGenerator
 					"New",
 					name,
 					[
-						new("parent", nameof(NetworkedObject), true)
+						new("parent", nameof(NetworkedObject) + '?')
 					],
 					isStatic: true
 				));
@@ -378,8 +380,6 @@ public class APIReferenceGenerator
 	private static string? ProcessTypeName(Type? type)
 	{
 		if (type == null) return null;
-		if (Nullable.GetUnderlyingType(type) is Type underlying)
-			type = underlying;
 
 		if (type == typeof(byte) ||
 			type == typeof(sbyte) ||
@@ -442,7 +442,7 @@ public class APIReferenceGenerator
 
 		if (type.IsAssignableTo(typeof(ITuple)))
 		{
-			return $"({string.Join(", ", type.GetGenericArguments().Select(arg => ProcessTypeName(arg) ?? "nil"))})";
+			return $"({string.Join(", ", type.GetGenericArguments().Select(arg => ProcessOptionalTypeName(arg) ?? "nil"))})";
 		}
 
 		if (type.IsAssignableTo(typeof(IScriptGDObject)))
@@ -455,17 +455,17 @@ public class APIReferenceGenerator
 			Type genericType = type.GetGenericTypeDefinition();
 			if (genericType == typeof(Task<>))
 			{
-				return ProcessTypeName(type.GetGenericArguments()[0]);
+				return ProcessOptionalTypeName(type.GetGenericArguments()[0]);
 			}
 			if (genericType == typeof(IEnumerable<>))
 			{
-				return $"((any) -> {ProcessTypeName(type.GetGenericArguments()[0])}, nil, nil)";
+				return $"((any) -> {ProcessOptionalTypeName(type.GetGenericArguments()[0])}, nil, nil)";
 			}
 		}
 
 		if (type.IsArray)
 		{
-			return $"{{ {ProcessTypeName(type.GetElementType())} }}";
+			return $"{{ {ProcessOptionalTypeName(type.GetElementType())} }}";
 		}
 
 		if (type.IsAssignableTo(typeof(IDictionary)))
@@ -473,8 +473,8 @@ public class APIReferenceGenerator
 			Type[] args = type.GetGenericArguments();
 			if (args.Length == 2)
 			{
-				string? indexType = ProcessTypeName(args[0]);
-				string? valueType = ProcessTypeName(args[1]);
+				string? indexType = ProcessOptionalTypeName(args[0]);
+				string? valueType = ProcessOptionalTypeName(args[1]);
 				if (indexType != null && valueType != null)
 				{
 					return $"{{ [{indexType}]: {valueType} }}";
@@ -494,27 +494,34 @@ public class APIReferenceGenerator
 		return type.Name;
 	}
 
-	public readonly struct ScriptParameter(string? name, string? type = null, bool isOptional = false, string? defaultValue = null)
+	private static string? ProcessOptionalTypeName(Type? type)
+	{
+		if (type == null) return null;
+
+		Type? underlying = Nullable.GetUnderlyingType(type);
+		if (underlying != null)
+		{
+			string? typeName = ProcessTypeName(underlying);
+			return typeName != null ? typeName + '?' : typeName;
+		}
+
+		return ProcessTypeName(type);
+	}
+
+	public readonly struct ScriptParameter(string? name = null, string? type = null, string? defaultValue = null)
 	{
 		public readonly string? Name = name;
-		public readonly string? Type = type;
-		public readonly bool IsOptional = isOptional;
+		public readonly string Type = type ?? "nil";
 		public readonly string? DefaultValue = defaultValue;
-
-		public readonly string GetTypeString()
-		{
-			return Type != null ? IsOptional ? Type + '?' : Type : "nil";
-		}
 
 		public readonly string ToString(bool inFuncType = false)
 		{
-			string typeString = GetTypeString();
 			return Name switch
 			{
-				null => typeString,
+				null => Type,
 				// must use variadic type pack ('...' Type) in function types
-				"..." when inFuncType => $"...{typeString}",
-				_ => $"{Name}: {typeString}",
+				"..." when inFuncType => $"...{Type}",
+				_ => $"{Name}: {Type}",
 			};
 		}
 	}
@@ -573,17 +580,17 @@ public class APIReferenceGenerator
 		public readonly bool IsMetamethod => Name.StartsWith("__");
 	}
 
-	public readonly struct ScriptProperty(string name, string? type, bool isAccessibleByScripts, bool isReadOnly, bool isObsolete, bool isStatic, ScriptObsoletionInfo? obsoletionInfo = null)
+	public readonly struct ScriptProperty(string name, string type, bool isAccessibleByScripts, bool isReadOnly, bool isObsolete, bool isStatic, ScriptObsoletionInfo? obsoletionInfo = null)
 	{
 		public readonly string Name = name;
-		public readonly string? Type = type;
+		public readonly string Type = type;
 		public readonly bool IsAccessibleByScripts = isAccessibleByScripts;
 		public readonly bool IsReadOnly = isReadOnly;
 		public readonly bool IsObsolete = isObsolete;
 		public readonly bool IsStatic = isStatic;
 		public readonly ScriptObsoletionInfo? ObsoletionInfo = obsoletionInfo;
 
-		public readonly override string ToString() => $"{Name}: {Type ?? "nil"}";
+		public readonly override string ToString() => $"{Name}: {Type}";
 	}
 
 	public readonly struct ScriptEvent(string name, ScriptParameter[] parameters)

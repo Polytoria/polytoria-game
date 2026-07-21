@@ -126,7 +126,7 @@ public class LuaDefinitionGenerator
 			builder.Append($"\tread {e.Name}: PTSignal");
 			if (e.Parameters.Length > 0)
 			{
-				builder.Append($"<{string.Join(", ", e.Parameters.Select(p => p.Type ?? "nil"))}>");
+				builder.Append($"<{string.Join(", ", e.Parameters.Select(p => p.Type))}>");
 			}
 			builder.AppendLine();
 		}
@@ -149,8 +149,8 @@ public class LuaDefinitionGenerator
 				bool isNewIndex = m.Name == "__newindex";
 				if (isNewIndex || m.Name == "__index")
 				{
-					indexerIndexes.Add(m.Parameters[m.IsStatic ? 1 : 0].GetTypeString());
-					indexerValues.Add(isNewIndex ? m.Parameters[m.IsStatic ? 2 : 1].GetTypeString() : (m.ReturnType ?? "nil"));
+					indexerIndexes.Add(m.Parameters[m.IsStatic ? 1 : 0].Type);
+					indexerValues.Add(isNewIndex ? m.Parameters[m.IsStatic ? 2 : 1].Type : (m.ReturnType ?? "nil"));
 					hasIndexer = true;
 					continue;
 				}
