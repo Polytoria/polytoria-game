@@ -21,7 +21,7 @@ using static Polytoria.DocsGen.APIReferenceGenerator;
 
 namespace Polytoria.DocsGen;
 
-public class APIReferenceGenerator
+public static class APIReferenceGenerator
 {
 	public static APIReferenceRoot GenerateReferences()
 	{

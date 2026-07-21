@@ -101,3 +101,16 @@ declare CreatorGUI: CreatorGUI
 declare Preferences: PreferencesService
 
 declare Hooks: HookService
+
+declare extern type PTSignalConnection with
+	function Disconnect(self)
+end
+
+export type PTSignal<T... = ...any> = {
+	Connect: (self: PTSignal<T...>, callback: (T...) -> ()) -> PTSignalConnection,
+	Disconnect: (self: PTSignal<T...>, callback: (T...) -> ()) -> (),
+	Once: (self: PTSignal<T...>, callback: (T...) -> ()) -> PTSignalConnection,
+	Wait: (self: PTSignal<T...>) -> T...,
+}
+
+declare extern type Enum with end

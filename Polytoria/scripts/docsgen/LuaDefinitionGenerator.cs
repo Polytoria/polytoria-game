@@ -12,7 +12,7 @@ using static Polytoria.DocsGen.APIReferenceGenerator;
 
 namespace Polytoria.DocsGen;
 
-public class LuaDefinitionGenerator
+public static class LuaDefinitionGenerator
 {
 	private const string CodeHintPath = "res://modules/creator/codehint/luau/";
 
@@ -42,27 +42,11 @@ public class LuaDefinitionGenerator
 
 		File.WriteAllText(atFolder.PathJoin("def.json"), JsonSerializer.Serialize(refer, APIRefGenerationContext.Default.APIReferenceRoot));
 
-		// Add PTSignal type definitions
-		builder.AppendLine("declare extern type PTSignalConnection with");
-		builder.AppendLine("\tfunction Disconnect(self)");
-		builder.AppendLine("end");
-		builder.AppendLine();
-
-		builder.AppendLine("export type PTSignal<T... = ...any> = {");
-		builder.AppendLine("\tConnect: (self: PTSignal<T...>, callback: (T...) -> ()) -> PTSignalConnection,");
-		builder.AppendLine("\tDisconnect: (self: PTSignal<T...>, callback: (T...) -> ()) -> (),");
-		builder.AppendLine("\tOnce: (self: PTSignal<T...>, callback: (T...) -> ()) -> PTSignalConnection,");
-		builder.AppendLine("\tWait: (self: PTSignal<T...>) -> T...,");
-		builder.AppendLine("}");
-		builder.AppendLine();
-
-		builder.AppendLine("declare extern type Enum with end");
-
 		foreach (ScriptEnum e in refer.Enums)
 		{
 			builder.AppendLine($"declare extern type {e.Name} extends Enum with end");
+			builder.AppendLine();
 		}
-		builder.AppendLine();
 
 		builder.AppendLine("declare Enums: {");
 		foreach (ScriptEnum e in refer.Enums)
@@ -75,23 +59,23 @@ public class LuaDefinitionGenerator
 			builder.AppendLine("\t},");
 		}
 		builder.AppendLine("}");
-		builder.AppendLine();
 
-		foreach (ScriptClass item in refer.Classes)
+		for (int i = 0; i < refer.Classes.Length; i++)
 		{
+			ScriptClass c = refer.Classes[i];
 			// Ignore already declared types
-			if (item.Name == "PTSignal" || item.Name == "PTSignalConnection") continue;
+			if (c.Name == "PTSignal" || c.Name == "PTSignalConnection") continue;
 
-			builder.AppendLine(GenerateClass(item));
+			builder.AppendLine();
+			AppendClass(builder, c);
+			builder.AppendLine();
 		}
 
 		File.WriteAllText(atFolder.PathJoin("def.d.luau"), builder.ToString());
 	}
 
-	public static string GenerateClass(ScriptClass c)
+	private static void AppendClass(StringBuilder builder, ScriptClass c)
 	{
-		StringBuilder builder = new();
-
 		bool hasStatic = false;
 
 		builder.Append($"declare extern type {c.Name}");
@@ -183,20 +167,18 @@ public class LuaDefinitionGenerator
 			builder.AppendLine($"\t[{string.Join(" | ", indexerIndexes.Distinct())}]: {string.Join(" | ", indexerValues.Distinct())}");
 		}
 
-		builder.AppendLine("end");
+		builder.Append("end");
 
 		if (hasStatic)
 		{
-			builder.Append(GenerateStaticClass(c));
+			builder.AppendLine();
+			builder.AppendLine();
+			AppendStaticClass(builder, c);
 		}
-
-		return builder.ToString();
 	}
 
-	public static string GenerateStaticClass(ScriptClass c)
+	private static void AppendStaticClass(StringBuilder builder, ScriptClass c)
 	{
-		StringBuilder builder = new();
-
 		builder.AppendLine($"declare {c.Name}: {{");
 
 		foreach (ScriptProperty p in c.Properties)
@@ -223,8 +205,6 @@ public class LuaDefinitionGenerator
 			builder.AppendLine($"\t{g.Key}: {(g.Count() > 1 ? $"({string.Join(") & (", g)})" : g.First())},");
 		}
 
-		builder.AppendLine("}");
-
-		return builder.ToString();
+		builder.Append('}');
 	}
 }
