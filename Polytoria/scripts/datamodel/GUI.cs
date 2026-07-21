@@ -16,6 +16,10 @@ public partial class GUI : Instance
 	private Control _control = null!;
 	private bool _visible = true;
 	private int _zIndex = 0;
+	private bool _avoidCoreUI = false;
+
+	[ScriptProperty]
+	public static float CoreUIInset { get; } = 80;
 
 	[Editable, ScriptProperty]
 	public bool Visible
@@ -38,6 +42,21 @@ public partial class GUI : Instance
 		{
 			_zIndex = value;
 			_control.ZIndex = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool AvoidCoreUI
+	{
+		get => _avoidCoreUI;
+		set
+		{
+			_avoidCoreUI = value;
+			if (Root.SessionType != World.SessionTypeEnum.Creator)
+			{
+				_control.OffsetTop = value ? CoreUIInset : 0;
+			}
 			OnPropertyChanged();
 		}
 	}
