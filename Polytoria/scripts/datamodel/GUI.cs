@@ -6,6 +6,7 @@ using Godot;
 using Polytoria.Attributes;
 #if CREATOR
 using Polytoria.Datamodel.Creator;
+using Polytoria.Datamodel.Services;
 #endif
 
 namespace Polytoria.Datamodel;
@@ -17,9 +18,6 @@ public partial class GUI : Instance
 	private bool _visible = true;
 	private int _zIndex = 0;
 	private bool _avoidCoreUI = false;
-
-	[ScriptProperty]
-	public static float CoreUIInset { get; } = 80;
 
 	[Editable, ScriptProperty]
 	public bool Visible
@@ -55,7 +53,7 @@ public partial class GUI : Instance
 			_avoidCoreUI = value;
 			if (Root.SessionType != World.SessionTypeEnum.Creator)
 			{
-				_control.OffsetTop = value ? CoreUIInset : 0;
+				_control.OffsetTop = value ? CoreUIService.TopInset : 0;
 			}
 			OnPropertyChanged();
 		}
