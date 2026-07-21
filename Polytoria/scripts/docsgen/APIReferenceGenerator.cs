@@ -97,7 +97,7 @@ public class APIReferenceGenerator
 						isScriptProperty && property.GetSetMethod(false) == null,
 						obsoleteAttribute != null,
 						property.GetGetMethod(true)?.IsStatic ?? false,
-						obsoleteAttribute != null ? new(obsoleteAttribute.Reason, obsoleteAttribute.UseInstead) : null
+						obsoleteAttribute != null ? new(obsoleteAttribute) : null
 					));
 				}
 			}
@@ -156,7 +156,7 @@ public class APIReferenceGenerator
 					obsoleteAttribute != null,
 					method.IsStatic,
 					method.IsStatic && (methodAttribute?.SemiStatic ?? false),
-					obsoleteAttribute != null ? new(obsoleteAttribute.Reason, obsoleteAttribute.UseInstead) : null
+					obsoleteAttribute != null ? new(obsoleteAttribute) : null
 				));
 			}
 
@@ -530,6 +530,8 @@ public class APIReferenceGenerator
 	{
 		public readonly string? Reason = reason;
 		public readonly string? UseInstead = use;
+
+		public ScriptObsoletionInfo(Attributes.ObsoleteAttribute obsoleteAttribute) : this(obsoleteAttribute.Reason, obsoleteAttribute.UseInstead) { }
 
 		public readonly string GetAttribute()
 		{
