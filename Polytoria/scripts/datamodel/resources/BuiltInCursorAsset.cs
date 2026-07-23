@@ -51,9 +51,8 @@ public partial class BuiltInCursorAsset : CursorAsset
 
 	public override void LoadResource()
 	{
-		_cursorImage = GD.Load<Image>(Globals.BuiltInCursorLocation.PathJoin(CursorMapping[_cursorPreset]));
-		_cursorTex = (Texture2D)ImageTexture.CreateFromImage(_cursorImage);
-		InvokeResourceLoaded(_cursorTex);
+		InvokeResourceLoaded(GD.Load<Image>(Globals.BuiltInCursorLocation.PathJoin(CursorMapping[_cursorPreset])));
+		CursorImage = ApplyCursorScale();
 	}
 
 	[ScriptEnum]

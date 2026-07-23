@@ -47,22 +47,16 @@ public partial class PTCursorAsset : CursorAsset
 	private void OnResourceLoaded(CacheItem cacheItem)
 	{
 		DirectImageURL = cacheItem.DirectURL;
-		
+
 		// Resize loaded image if texture is too large.
 		if (cacheItem.Resource is Texture2D tex)
 		{
-			Image img = tex.GetImage();
-			Vector2 imgSize = tex.GetSize();
-			float largestBound = Math.Max(imgSize.X, imgSize.Y);
-			if (largestBound > MAX_CURSOR_SIZE)
-			{
-				imgSize = (imgSize / largestBound) * MAX_CURSOR_SIZE;
-				img.Resize((int)imgSize.X, (int)imgSize.Y);
-				InvokeResourceLoaded((Resource)ImageTexture.CreateFromImage(img));
-				return;
-			}
+			InvokeResourceLoaded((Resource)tex.GetImage());
+			CursorImage = ApplyCursorScale();
 		}
-
-		InvokeResourceLoaded(cacheItem.Resource);
+		else
+		{
+			InvokeResourceLoaded(cacheItem.Resource);
+		}
 	}
 }

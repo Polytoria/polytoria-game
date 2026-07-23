@@ -307,19 +307,15 @@ public sealed partial class CoreUIService : Instance
 
 		if (cursor != null)
 		{
-			void apply(Resource? res)
+			void apply(Resource _ = null)
 			{
 				cursor.ResourceLoaded -= apply;
-
-				if (res is Texture2D tex)
-				{
-					Input.SetCustomMouseCursor(tex, shape, cursor.Hotspot * tex.GetSize());
-				}
+				Input.SetCustomMouseCursor(cursor.CursorImage, shape, cursor.Hotspot * cursor.CursorImage.GetSize());
 			}
 
-			if (cursor.IsResourceLoaded && cursor.Resource != null)
+			if (cursor.IsResourceLoaded && cursor.CursorImage != null)
 			{
-				apply(cursor.Resource);
+				apply();
 			}
 			else
 			{

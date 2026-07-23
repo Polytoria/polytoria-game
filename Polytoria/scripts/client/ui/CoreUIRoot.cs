@@ -99,26 +99,23 @@ public partial class CoreUIRoot : CanvasLayer
 
 	private void OnCtrlLockCursorChanged()
 	{
-		if (Service.CrosshairCursorOverride is PTCursorAsset cursorImage)
+		if (Service.CrosshairCursorOverride is CursorAsset c)
 		{
-			void apply(Resource? res)
+			void apply(Resource _ = null)
 			{
-				if (res is Texture2D tex)
-				{
-					cursorImage.ResourceLoaded -= apply;
-					CtrlLockCursor.Texture = tex;
-					CtrlLockCursor.OffsetTransformPosition = -cursorImage.Hotspot * tex.GetSize();
-				}
+				c.ResourceLoaded -= apply;
+				CtrlLockCursor.Texture = ImageTexture.CreateFromImage(c.CursorImage);
+				CtrlLockCursor.OffsetTransformPosition = -c.Hotspot * CtrlLockCursor.Texture.GetSize();
 			}
 
-			if (cursorImage.IsResourceLoaded && cursorImage.Resource != null)
+			if (c.IsResourceLoaded && c.CursorImage != null)
 			{
-				apply(cursorImage.Resource);
+				apply();
 			}
 			else
 			{
-				cursorImage.ResourceLoaded += apply;
-				cursorImage.QueueLoadResource();
+				c.ResourceLoaded += apply;
+				c.QueueLoadResource();
 			}
 		}
 		else
