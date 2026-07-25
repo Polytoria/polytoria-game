@@ -662,20 +662,11 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		logger.LogWarning(script, logInfo);
 		return 0;
 	}
-	public int LuaWait(IntPtr L)
+	public static int LuaWait(IntPtr L)
 	{
 		LuaState lua = LuaState.FromIntPtr(L);
 
-		double n;
-
-		if (lua.IsNumber(1))
-		{
-			n = lua.ToNumber(1);
-		}
-		else
-		{
-			n = 0;
-		}
+		double n = lua.IsNumber(1) ? lua.ToNumber(1) : 0;
 
 		TaskCompletionSource<int> tcs = new();
 
@@ -683,18 +674,12 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 		async void RunAsync()
 		{
-			Stopwatch stopwatch = Stopwatch.StartNew();
-			if (n != 0)
-			{
-				await Globals.Singleton.WaitAsync((float)n);
-			}
-			else
-			{
-				await Globals.Singleton.WaitPhysicsFrame();
-			}
-			stopwatch.Stop();
+			Task task = n > 0 ? Globals.Singleton.WaitAsync((float)n) : Globals.Singleton.WaitPhysicsFrame();
+			Stopwatch sw = Stopwatch.StartNew();
+			await task;
+			sw.Stop();
 
-			lua.PushNumber(stopwatch.Elapsed.TotalSeconds);
+			lua.PushNumber(sw.Elapsed.TotalSeconds);
 			tcs.SetResult(1);
 		}
 
