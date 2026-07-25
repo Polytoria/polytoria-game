@@ -30,18 +30,18 @@ public partial class BuiltInCursorAsset : CursorAsset
 
 	private readonly Dictionary<BuiltInCursorPresetEnum, string> CursorMapping = new()
 	{
-		{ BuiltInCursorPresetEnum.Arrow, "arrow.png" },
-		{ BuiltInCursorPresetEnum.Pointer, "click.png" },
-		{ BuiltInCursorPresetEnum.Hand, "grab.png" },
-		{ BuiltInCursorPresetEnum.Holding, "grabbing.png" },
-		{ BuiltInCursorPresetEnum.Chevron, "chevron.png" },
-		{ BuiltInCursorPresetEnum.Dot, "dot.png" },
-		{ BuiltInCursorPresetEnum.Plus, "plus.png" },
-		{ BuiltInCursorPresetEnum.VerticalCross, "crosshair-vertical.png" },
-		{ BuiltInCursorPresetEnum.TacticalVerticalCross, "crosshair-vertical-locked.png" },
-		{ BuiltInCursorPresetEnum.DiagonalCross, "crosshair-diagonal.png" },
-		{ BuiltInCursorPresetEnum.TacticalDiagonalCross, "crosshair-diagonal-locked.png" },
-		{ BuiltInCursorPresetEnum.X, "x.png" },
+		{ BuiltInCursorPresetEnum.Arrow, "arrow.svg" },
+		{ BuiltInCursorPresetEnum.Pointer, "click.svg" },
+		{ BuiltInCursorPresetEnum.Hand, "grab.svg" },
+		{ BuiltInCursorPresetEnum.Holding, "grabbing.svg" },
+		{ BuiltInCursorPresetEnum.Chevron, "chevron.svg" },
+		{ BuiltInCursorPresetEnum.Dot, "dot.svg" },
+		{ BuiltInCursorPresetEnum.Plus, "plus.svg" },
+		{ BuiltInCursorPresetEnum.VerticalCross, "crosshair-vertical.svg" },
+		{ BuiltInCursorPresetEnum.TacticalVerticalCross, "crosshair-vertical-dot.svg" },
+		{ BuiltInCursorPresetEnum.DiagonalCross, "crosshair-tactical.svg" },
+		{ BuiltInCursorPresetEnum.TacticalDiagonalCross, "crosshair-tactical-dot.svg" },
+		{ BuiltInCursorPresetEnum.X, "x.svg" },
 	};
 
 	public static void RegisterAsset()
@@ -51,8 +51,8 @@ public partial class BuiltInCursorAsset : CursorAsset
 
 	public override void LoadResource()
 	{
-		InvokeResourceLoaded(GD.Load<Image>(Globals.BuiltInCursorLocation.PathJoin(CursorMapping[_cursorPreset])));
-		CursorImage = ApplyCursorScale();
+		InvokeResourceLoaded(GD.Load<DpiTexture>(Globals.BuiltInCursorLocation.PathJoin(CursorMapping[_cursorPreset])));
+		ReloadImage();
 	}
 
 	[ScriptEnum]

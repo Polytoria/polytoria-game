@@ -51,8 +51,8 @@ public partial class PTCursorAsset : CursorAsset
 		// Resize loaded image if texture is too large.
 		if (cacheItem.Resource is Texture2D tex)
 		{
-			InvokeResourceLoaded((Resource)tex.GetImage());
-			CursorImage = ApplyCursorScale();
+			InvokeResourceLoaded(tex);
+			ReloadImage();
 		}
 		else
 		{

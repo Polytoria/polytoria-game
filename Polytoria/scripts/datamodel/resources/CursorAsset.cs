@@ -21,7 +21,7 @@ public partial class CursorAsset : ResourceAsset
 
 	// Cursor image with applied scale!
 	// Use this to load instead of Resource!
-	public Image? CursorImage { get; protected set; } = null;
+	public Image? CursorImage { get; private set; } = null;
 
 	[Editable, ScriptProperty]
 	public Vector2 Hotspot
@@ -54,11 +54,23 @@ public partial class CursorAsset : ResourceAsset
 		base.PreDelete();
 	}
 
-	public Image? ApplyCursorScale()
+	protected void ReloadImage()
 	{
-		if (Resource is Image img)
+		if (Resource is DpiTexture dpiTex)
 		{
-			Image scaledImage = (Image)img.Duplicate();
+			DpiTexture scaledTex = (DpiTexture)dpiTex.Duplicate();
+			float largestBound = Math.Max(scaledTex.GetWidth(), scaledTex.GetHeight());
+
+			if (Scale > 0)
+				scaledTex.BaseScale = Scale / largestBound;
+			else if (largestBound > MAX_CURSOR_SIZE)
+				scaledTex.BaseScale = MAX_CURSOR_SIZE / largestBound;
+
+			CursorImage = scaledTex.GetImage();
+		}
+		else if (Resource is Texture2D tex)
+		{
+			Image scaledImage = tex.GetImage();
 			Vector2 imgSize = new(scaledImage.GetWidth(), scaledImage.GetHeight());
 			float largestBound = Math.Max(imgSize.X, imgSize.Y);
 
@@ -73,15 +85,11 @@ public partial class CursorAsset : ResourceAsset
 				scaledImage.Resize((int)imgSize.X, (int)imgSize.Y);
 			}
 
-			return scaledImage;
+			CursorImage = scaledImage;
 		}
-
-		return null;
-	}
-
-	public void ReloadImage()
-	{
-		if (!IsResourceLoaded || CursorImage == null) return;
-		CursorImage = ApplyCursorScale();
+		else
+		{
+			CursorImage = null;
+		}
 	}
 }

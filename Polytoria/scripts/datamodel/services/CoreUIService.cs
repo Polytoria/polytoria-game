@@ -328,12 +328,12 @@ public sealed partial class CoreUIService : Instance
 
 		// Load default cursors if no custom cursor is provided.
 		// Default to loading the arrow cursor.
-		Image defaultCursorImage = shape switch
+		DpiTexture defaultCursorImage = shape switch
 		{
-			Input.CursorShape.PointingHand => GD.Load<Image>("res://assets/textures/client/cursor/click.png"),
-			Input.CursorShape.Drag => GD.Load<Image>("res://assets/textures/client/cursor/grab.png"),
-			Input.CursorShape.CanDrop => GD.Load<Image>("res://assets/textures/client/cursor/grabbing.png"),
-			_ => GD.Load<Image>("res://assets/textures/client/cursor/arrow.png"),
+			Input.CursorShape.PointingHand => GD.Load<DpiTexture>("res://assets/textures/client/cursor/click.svg"),
+			Input.CursorShape.Drag => GD.Load<DpiTexture>("res://assets/textures/client/cursor/grab.svg"),
+			Input.CursorShape.CanDrop => GD.Load<DpiTexture>("res://assets/textures/client/cursor/grabbing.svg"),
+			_ => GD.Load<DpiTexture>("res://assets/textures/client/cursor/arrow.svg"),
 		};
 
 		Input.SetCustomMouseCursor(defaultCursorImage, shape);
