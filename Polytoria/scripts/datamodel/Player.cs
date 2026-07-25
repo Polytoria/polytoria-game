@@ -932,8 +932,7 @@ public sealed partial class Player : NPC
 			if (pushDir.HasValue && pushDir.Value.LengthSquared() > 0.0001f)
 			{
 				Vector3 dir = pushDir.Value.Normalized();
-				CharacterVelocity.X = dir.X * ClimbPushSpeed;
-				CharacterVelocity.Z = dir.Z * ClimbPushSpeed;
+				EjectMomentum = new Vector3(dir.X * ClimbPushSpeed, EjectMomentum.Y, dir.Z * ClimbPushSpeed);
 			}
 		}
 	}

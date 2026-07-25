@@ -28,9 +28,14 @@ public partial class NPC : Physical
 
 	public CharacterBody3D CharBody3D = null!;
 	public const float ForwardRaycastRange = 1;
+	const float EjectMomentumScale = 0.35f;
+	const float SeatExceptionReleaseDelay = 0.3f;
 	private Vector3 _seatOffset = new(0, 1.7f, 0);
-	private Vector3 _lastSeatFollowPosition;
+	private Vector3 _lastWrittenSeatPosition;
 	private bool _hasWrittenSeatPosition = false;
+	private readonly List<CollisionObject3D> _seatCollisionExceptions = [];
+	private float _seatExceptionReleaseTimer = 0f;
+	internal Vector3 EjectMomentum = Vector3.Zero;
 	private float _health = 100;
 	private RemoteTransform3D? _toolRemoteTransform;
 	private float _maxHealth = 100;
@@ -666,6 +671,14 @@ public partial class NPC : Physical
 		_nametag.Position = NametagOffset + _fixedNametagOffset;
 	}
 
+	internal void ConsumeEjectMomentum(float delta)
+	{
+		if (EjectMomentum.LengthSquared() <= 0.0001f) return;
+		CharacterVelocity.X += EjectMomentum.X;
+		CharacterVelocity.Z += EjectMomentum.Z;
+		EjectMomentum = EjectMomentum.Lerp(Vector3.Zero, MathUtils.ExpDecay(delta, 2f));
+	}
+
 	public override void PhysicsProcess(double delta)
 	{
 		base.PhysicsProcess(delta);
@@ -687,31 +700,25 @@ public partial class NPC : Physical
 		{
 			if (!Root.Network.IsServer && SittingIn != null)
 			{
-				if (_hasWrittenSeatPosition && !Position.IsEqualApprox(_lastSeatFollowPosition))
+				if (_hasWrittenSeatPosition && !Position.IsEqualApprox(_lastWrittenSeatPosition))
 				{
-					// Player's position was overriden by a script, unsit them
 					Unsit(false);
 				}
 				else
 				{
 					Velocity = Vector3.Zero;
 					Position = SittingIn.Position + SeatOffset.Y * Up;
-					_lastSeatFollowPosition = Position;
+					_lastWrittenSeatPosition = Position;
 					_hasWrittenSeatPosition = true;
-
-					if (!SittingIn.SitDirectionLocked)
-					{
-						Rotation = new Vector3(SittingIn.Rotation.X, Rotation.Y, SittingIn.Rotation.Z);
-					}
-					else
-					{
-						Rotation = SittingIn.Rotation;
-					}
+					Rotation = SittingIn.SitDirectionLocked ? SittingIn.Rotation : new Vector3(SittingIn.Rotation.X, Rotation.Y, SittingIn.Rotation.Z);
 					Character?.PlayIdle();
 				}
 			}
 			if (IsSitting) return;
 		}
+
+		// Ragdoll bones fully own movement while active
+		if (Character is PolytorianModel ptRagdoll && ptRagdoll.Ragdolling) return;
 
 		if (this is Player plr)
 		{
@@ -811,6 +818,8 @@ public partial class NPC : Physical
 			UpdateVelocityInternal(CharacterVelocity);
 			if (this is not Player)
 			{
+				ConsumeEjectMomentum((float)delta);
+
 				Vector3 fullVelocity = CharacterVelocity;
 
 				CharBody3D.Velocity = new Vector3(fullVelocity.X, 0f, fullVelocity.Z);
@@ -840,16 +849,29 @@ public partial class NPC : Physical
 				{
 					_coyoteUsed = false;
 					Landed.Invoke();
-					if (IsPanicFalling && LandSound != null && !LandSound.Playing)
-					{
-						LandSound.Play();
-					}
 				}
 			}
 
 			if (ClimbJumpCooldownRemaining > 0f)
 			{
 				ClimbJumpCooldownRemaining -= (float)delta;
+			}
+
+			// Stop ignoring vehicle's collision
+			if (_seatExceptionReleaseTimer > 0f)
+			{
+				_seatExceptionReleaseTimer -= (float)delta;
+				if (_seatExceptionReleaseTimer <= 0f)
+				{
+					foreach (CollisionObject3D body in _seatCollisionExceptions)
+					{
+						if (GodotObject.IsInstanceValid(body))
+						{
+							CharBody3D.RemoveCollisionExceptionWith(body);
+						}
+					}
+					_seatCollisionExceptions.Clear();
+				}
 			}
 		}
 	}
@@ -882,20 +904,23 @@ public partial class NPC : Physical
 	{
 		if (IsDead) return;
 		if (Root.SessionType != World.SessionTypeEnum.Client) return;
+
+		bool wasSitting = IsSitting;
+		IsDead = true;
 		Anchored = true;
 		OverrideCanCollide = true;
 		OverrideCanCollideTo = false;
 		Unsit(false);
 		UpdateCollision();
+		EjectMomentum = Vector3.Zero;
 
 		Character?.Animator?.StopAnimation();
 		Character?.Animator?.StopOneShotAnimation();
 
 		if (Character is PolytorianModel ptmodel)
 		{
-			ptmodel.StartRagdoll(Velocity);
+			ptmodel.StartRagdoll(wasSitting ? Vector3.Zero : CharacterVelocity);
 		}
-		IsDead = true;
 		Died.Invoke();
 	}
 
@@ -905,6 +930,7 @@ public partial class NPC : Physical
 		if (CharBody3D == null || !CharBody3D.IsOnFloor()) return false;
 
 		int slideCount = CharBody3D.GetSlideCollisionCount();
+
 		if (slideCount <= 0)
 		{
 			return false;
@@ -1006,10 +1032,18 @@ public partial class NPC : Physical
 
 	internal void TickPanicFall(bool isOnFloor, float delta)
 	{
-		if (isOnFloor || IsClimbing || IsDead || IsSitting || CharacterVelocity.Y >= 0f)
+		bool grounded = isOnFloor || CharacterVelocity.Y >= 0f;
+		if (grounded || IsClimbing || IsDead || IsSitting)
 		{
+			if (IsPanicFalling)
+			{
+				FallSound?.Stop();
+				if (grounded && LandSound != null && !LandSound.Playing)
+				{
+					LandSound.Play();
+				}
+			}
 			_fallTimer = 0f;
-			if (IsPanicFalling) FallSound?.Stop();
 			IsPanicFalling = false;
 			return;
 		}
@@ -1150,8 +1184,6 @@ public partial class NPC : Physical
 	[ScriptMethod]
 	public void Unsit(bool addForce = true)
 	{
-		Rpc(nameof(NetJumpFromSeat));
-
 		// Reset rotation
 		Rotation = new(0, Rotation.Y, 0);
 
@@ -1159,6 +1191,8 @@ public partial class NPC : Physical
 		{
 			Position += SeatOffset * 2;
 		}
+
+		Rpc(nameof(NetJumpFromSeat));
 	}
 
 	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Reliable, CallLocal = true)]
@@ -1176,17 +1210,42 @@ public partial class NPC : Physical
 	{
 		IsSitting = true;
 		_hasWrittenSeatPosition = false;
+		_seatExceptionReleaseTimer = 0f;
 		OverrideNetworkTransform = true;
 		SittingIn = seat;
 		seat.Occupant = this;
 		seat.InvokeSat(this);
 		Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.Sitting, 1);
 
-		// Disable collision synchronously, before the seat's first position write
-		// otherwise the hitbox overlaps the body of it's seat for at least one tick.
-		OverrideCanCollide = true;
-		OverrideCanCollideTo = false;
-		UpdateCollision();
+		// Exclude vehicles from collision
+		if (seat.Parent is Physical vehicle)
+		{
+			if (vehicle.GetCollisionBody() is CollisionObject3D rootBody)
+			{
+				CharBody3D.AddCollisionExceptionWith(rootBody);
+				_seatCollisionExceptions.Add(rootBody);
+			}
+
+			foreach (Instance descendant in vehicle.GetDescendants())
+			{
+				if (descendant is not Physical physical) continue;
+
+				CollisionObject3D? body = physical.GetCollisionBody();
+				if (body == null) continue;
+
+				CharBody3D.AddCollisionExceptionWith(body);
+				_seatCollisionExceptions.Add(body);
+			}
+		}
+		else
+		{
+			CollisionObject3D? body = seat.GetCollisionBody();
+			if (body != null)
+			{
+				CharBody3D.AddCollisionExceptionWith(body);
+				_seatCollisionExceptions.Add(body);
+			}
+		}
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable, CallLocal = true)]
@@ -1194,11 +1253,15 @@ public partial class NPC : Physical
 	{
 		if (IsSitting)
 		{
-			Vector3 inherited = SittingIn?.Velocity ?? Vector3.Zero;
+			Vector3 inherited = Vector3.Zero;
+			if (SittingIn != null)
+			{
+				Physical? vehicleRoot = SittingIn.PhysicalRoot;
+				inherited = vehicleRoot?.Velocity ?? SittingIn.Velocity;
+			}
 
 			// Unsit the NPC
 			IsSitting = false;
-			_hasWrittenSeatPosition = false;
 			OverrideNetworkTransform = false;
 
 			if (SittingIn != null)
@@ -1210,19 +1273,14 @@ public partial class NPC : Physical
 
 			Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.Sitting, 0);
 
-			if (this is Player plrEject)
-			{
-				plrEject.ExternalVelocity = inherited with { Y = 0 };
-				CharacterVelocity.Y = inherited.Y;
-			}
-			else
-			{
-				CharacterVelocity = inherited;
-			}
+			// Extend vehicle exception slightly to avoid
+			_seatExceptionReleaseTimer = SeatExceptionReleaseDelay;
 
-			// Don't restore collision if death already claimed the override (ragdoll)
 			if (!IsDead)
 			{
+				EjectMomentum = (inherited with { Y = 0 }) * EjectMomentumScale;
+
+				// Don't restore collision if death already claimed the override (ragdoll)
 				OverrideCanCollide = false;
 				UpdateCollision();
 			}
@@ -1405,6 +1463,7 @@ public partial class NPC : Physical
 		Health = MaxHealth;
 		Anchored = false;
 		IsDead = false;
+		EjectMomentum = Vector3.Zero;
 
 		Character?.Animator?.StopAnimation();
 		Character?.Animator?.StopOneShotAnimation();
@@ -1414,6 +1473,12 @@ public partial class NPC : Physical
 			ptmodel.StopRagdoll();
 		}
 		CharacterVelocity = Vector3.Zero;
+
+		if (this is Player plr)
+		{
+			plr.LastVelocity = Vector3.Zero;
+			plr.ExternalVelocity = Vector3.Zero;
+		}
 
 		OverrideCanCollide = false;
 		UpdateCollision();

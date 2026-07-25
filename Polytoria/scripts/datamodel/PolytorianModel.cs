@@ -611,28 +611,33 @@ public sealed partial class PolytorianModel : CharacterModel
 	}
 
 	[NetRpc(AuthorityMode.Authority, CallLocal = true, TransferMode = TransferMode.Reliable)]
-	private async void NetStartRagdoll(Vector3 force)
+	private void NetStartRagdoll(Vector3 force)
 	{
 		if (_lastPhysicalBoneSim != null) return;
 
 		// need duplicates cuz godot won't adapt dynamically to bones
 		PhysicalBoneSimulator3D s = (PhysicalBoneSimulator3D)_ragdollBoneSim.Duplicate();
-
 		VelocityPhysicalBone = s.GetNode<PhysicalBone3D>("Physical Bone UpperTorso");
-
 		Skeleton.AddChild(s);
 
-		// Copy player's current collision onto ragdoll
-		if (Parent is Physical parentPhysical)
+		CollisionObject3D? vehicleException = null;
+
+		if (Parent is NPC npcStart)
 		{
+			// Copy character's current collision onto the ragdoll bones
 			foreach (Node child in s.GetChildren())
 			{
 				if (child is PhysicalBone3D bone)
 				{
-					bone.CollisionLayer = parentPhysical.CollisionLayers;
-					bone.CollisionMask = parentPhysical.CollisionMask;
+					bone.CollisionLayer = npcStart.CollisionLayers;
+					bone.CollisionMask = npcStart.CollisionMask;
 				}
 			}
+
+			// Disable the character's own (frozen) collider while ragdolling
+			npcStart.OverrideCanCollide = true;
+			npcStart.OverrideCanCollideTo = false;
+			npcStart.UpdateCollision();
 		}
 
 		s.Active = true;
@@ -650,10 +655,23 @@ public sealed partial class PolytorianModel : CharacterModel
 	{
 		if (_lastPhysicalBoneSim == null) return;
 
+		// Best-effort resync, otherwise the capsule snaps back
+		// to wherever it was frozen when ragdoll started.
+		if (Parent is NPC npcStop && VelocityPhysicalBone != null)
+		{
+			npcStop.Position = VelocityPhysicalBone.GlobalPosition;
+		}
+
 		_lastPhysicalBoneSim.PhysicalBonesStopSimulation();
 		_lastPhysicalBoneSim.Active = false;
 		_lastPhysicalBoneSim.QueueFree();
 		_lastPhysicalBoneSim = null;
+
+		if (Parent is NPC npcStop2 && !npcStop2.IsDead)
+		{
+			npcStop2.OverrideCanCollide = false;
+			npcStop2.UpdateCollision();
+		}
 
 		Ragdolling = false;
 		RagdollStopped.Invoke();

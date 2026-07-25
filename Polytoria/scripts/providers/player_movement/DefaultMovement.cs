@@ -10,6 +10,12 @@ public class DefaultMovement : IPlayerMovement
 
 	public World Root { get; set; } = null!;
 
+	private const float ClimbStuckDelay = 0.15f;
+	private const float ClimbStuckPositionEpsilon = 0.02f;
+	private bool _wasClimbing = false;
+	private Vector3 _lastClimbCheckPosition;
+	private float _climbStuckTimer = 0f;
+
 	public InputSnapshot SampleInput(double delta)
 	{
 		Camera? cam = Root.Environment.CurrentCamera;
@@ -121,6 +127,13 @@ public class DefaultMovement : IPlayerMovement
 
 			if (Target.IsClimbing)
 			{
+				if (!_wasClimbing)
+				{
+					_lastClimbCheckPosition = Target.GetGlobalPosition();
+					_climbStuckTimer = 0f;
+				}
+				_wasClimbing = true;
+
 				// Reset all vectors, lock to Y only
 				Target.CharacterVelocity.X = 0;
 				Target.CharacterVelocity.Z = 0;
@@ -131,14 +144,26 @@ public class DefaultMovement : IPlayerMovement
 				Target.CharacterVelocity.Y = climbSpeed;
 
 				finalState = CharacterModel.CharacterModelStateEnum.Climbing;
-				//Target.Character?.SetAnimSpeed(climbSpeed / 8);
 				Target.Character?.SetAnimSpeed(1);
-				Target.Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.ClimbSpeed, climbSpeed / 8);
+
+				// If the player ain't actually moving (stuck), pause the climb animation.
+				Vector3 currentPos = Target.GetGlobalPosition();
+				if (currentPos.DistanceTo(_lastClimbCheckPosition) < ClimbStuckPositionEpsilon)
+				{
+					_climbStuckTimer += (float)delta;
+				}
+				else
+				{
+					_climbStuckTimer = 0f;
+					_lastClimbCheckPosition = currentPos;
+				}
+				bool stuck = _climbStuckTimer >= ClimbStuckDelay;
+				Target.Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.ClimbSpeed, stuck ? 0f : climbSpeed / 8);
 			}
 			else if (Target.JustFinishedClimbing)
 			{
+				_wasClimbing = false;
 				Target.JustFinishedClimbing = false;
-				Target.CharacterVelocity.Y = 0;
 			}
 
 			// Always rotate in first person
@@ -160,6 +185,10 @@ public class DefaultMovement : IPlayerMovement
 
 				Vector3 localMove = moveDirection.Rotated(Vector3.Up, -Mathf.DegToRad(Target.Rotation.Y));
 				float strafeX = Mathf.Clamp(localMove.X, -1f, 1f);
+				if (forwardInput < 0f) // Flips input so backwardsLeft/backwardsRight displays correctly
+				{
+					strafeX = -strafeX;
+				}
 				Target.Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.StrafeX, strafeX);
 				float strafeY = snapshot.CamLocked ? Mathf.Clamp(forwardInput, -1f, 1f) : 1f;
 				Target.Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.StrafeY, strafeY);
@@ -225,6 +254,7 @@ public class DefaultMovement : IPlayerMovement
 		}
 
 		Target.ApplyInternalVelocity(Target.CharacterVelocity);
+		Target.ConsumeEjectMomentum((float)delta);
 
 		// Split velocity into horizontal/vertical components and merge them
 		// after MoveAndSlide, otherwise gravity fights StepUp.
