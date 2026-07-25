@@ -30,7 +30,7 @@ public sealed partial class CoreUIService : Instance
 	private bool _useEmoteWheel = true;
 	private bool _canRespawn = true;
 
-	private CtrlLockCursorEnum _ctrlLockCursor = CtrlLockCursorEnum.Chevron;
+	private CtrlLockCursorEnum _ctrlLockCursor = CtrlLockCursorEnum.None;
 	public PTSignal CtrlLockCursorChanged { get; private set; } = new();
 
 	private Dictionary<Input.CursorShape, CursorAsset?> _cursorOverrides = new() {
@@ -40,11 +40,11 @@ public sealed partial class CoreUIService : Instance
 		{Input.CursorShape.CanDrop, null},
 	};
 	private Dictionary<CursorAsset, Action> _cursorCallbacks = new() {};
-	private CursorAsset? _crosshairCursorOverride;
+	private CursorAsset? _crosshairOverride;
 
 	public CoreUIRoot CoreUI = null!;
 
-	[Editable, ScriptProperty]
+	[Editable, ScriptProperty, Attributes.Obsolete("Use CrosshairOverride instead.")]
 	public CtrlLockCursorEnum CtrlLockCursor
 	{
 		get => _ctrlLockCursor;
@@ -102,32 +102,32 @@ public sealed partial class CoreUIService : Instance
 	}
 
 	[Editable, ScriptProperty]
-	public CursorAsset? CrosshairCursorOverride
+	public CursorAsset? CrosshairOverride
 	{
-		get { return _crosshairCursorOverride; }
+		get { return _crosshairOverride; }
 		set
 		{
-			if (_crosshairCursorOverride == value) return;
+			if (_crosshairOverride == value) return;
 
-			if (_crosshairCursorOverride != null)
+			if (_crosshairOverride != null)
 			{
-				if (_cursorCallbacks.TryGetValue(_crosshairCursorOverride, out Action callback))
-					_crosshairCursorOverride.CursorAdjustInternal.Disconnect(callback);
+				if (_cursorCallbacks.TryGetValue(_crosshairOverride, out Action callback))
+					_crosshairOverride.CursorAdjustInternal.Disconnect(callback);
 
-				_crosshairCursorOverride.UnlinkFrom(this);
+				_crosshairOverride.UnlinkFrom(this);
 			}
 
-			_crosshairCursorOverride = value;
+			_crosshairOverride = value;
 
 			if (value != null)
 			{
 				Action onAdjust = () => CtrlLockCursorChanged.Invoke();
-				_crosshairCursorOverride.CursorAdjustInternal.Connect(onAdjust);
-				_cursorCallbacks.Add(_crosshairCursorOverride, onAdjust);
+				_crosshairOverride.CursorAdjustInternal.Connect(onAdjust);
+				_cursorCallbacks.Add(_crosshairOverride, onAdjust);
 
-				_crosshairCursorOverride.LinkTo(this);
-				if (!_crosshairCursorOverride.IsResourceLoaded)
-					_crosshairCursorOverride.QueueLoadResource();
+				_crosshairOverride.LinkTo(this);
+				if (!_crosshairOverride.IsResourceLoaded)
+					_crosshairOverride.QueueLoadResource();
 			}
 
 			CtrlLockCursorChanged.Invoke();

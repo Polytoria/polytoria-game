@@ -99,7 +99,7 @@ public partial class CoreUIRoot : CanvasLayer
 
 	private void OnCtrlLockCursorChanged()
 	{
-		if (Service.CrosshairCursorOverride is CursorAsset c)
+		if (Service.CrosshairOverride is CursorAsset c)
 		{
 			void apply(Resource _ = null)
 			{
@@ -120,42 +120,26 @@ public partial class CoreUIRoot : CanvasLayer
 		}
 		else
 		{
-			string filename = "";
-			switch (Service.CtrlLockCursor)
-			{
-				case CoreUIService.CtrlLockCursorEnum.StereotypicalDot:
-					filename = "stereotypical-dot.svg";
-					break;
-				case CoreUIService.CtrlLockCursorEnum.Stereotypical:
-					filename = "stereotypical.svg";
-					break;
-				case CoreUIService.CtrlLockCursorEnum.Tactical:
-					filename = "tactical.svg";
-					break;
-				case CoreUIService.CtrlLockCursorEnum.TacticalDot:
-					filename = "tactical-dot.svg";
-					break;
-				case CoreUIService.CtrlLockCursorEnum.Dot:
-					filename = "dot.svg";
-					break;
-				case CoreUIService.CtrlLockCursorEnum.Plus:
-					filename = "plus.svg";
-					break;
-				case CoreUIService.CtrlLockCursorEnum.X:
-					filename = "plus.svg";
-					break;
-				case CoreUIService.CtrlLockCursorEnum.Chevron:
-					filename = "chevron.svg";
-					break;
-			}
-
 			if (Service.CtrlLockCursor == CoreUIService.CtrlLockCursorEnum.None)
 			{
 				CtrlLockCursor.Texture = null;
 				return;
 			}
-			var dpiTexture = GD.Load<DpiTexture>(CtrlLockCursorsFilepath + "/" + filename);
-			CtrlLockCursor.Texture = dpiTexture;
+
+			string filename = Service.CtrlLockCursor switch
+			{
+				CoreUIService.CtrlLockCursorEnum.StereotypicalDot => "crosshair-vertical-dot.svg",
+				CoreUIService.CtrlLockCursorEnum.Stereotypical => "crosshair-vertical.svg",
+				CoreUIService.CtrlLockCursorEnum.Tactical => "crosshair-tactical.svg",
+				CoreUIService.CtrlLockCursorEnum.TacticalDot => "crosshair-tactical-dot.svg",
+				CoreUIService.CtrlLockCursorEnum.Dot => "dot.svg",
+				CoreUIService.CtrlLockCursorEnum.Plus => "plus.svg",
+				CoreUIService.CtrlLockCursorEnum.X => "x.svg",
+				CoreUIService.CtrlLockCursorEnum.Chevron => "chevron.svg",
+				_ => "",
+			};
+			DpiTexture tex = GD.Load<DpiTexture>(Globals.BuiltInCursorLocation.PathJoin(filename));
+			CtrlLockCursor.Texture = tex;
 		}
 	}
 
