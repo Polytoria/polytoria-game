@@ -1071,7 +1071,7 @@ public partial class NetworkedObject : IScriptObject
 		return IsA(XmlFormat.ConvertClassName(className));
 	}
 
-	protected void OnPropertyChanged([CallerMemberName] string propertyName = "", bool syncToNet = true)
+	protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = "", bool syncToNet = true)
 	{
 		PropertyChanged.Invoke(propertyName);
 		if (syncToNet)

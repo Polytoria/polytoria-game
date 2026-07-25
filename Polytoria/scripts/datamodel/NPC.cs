@@ -12,6 +12,7 @@ using Polytoria.Scripting;
 using Polytoria.Shared;
 using Polytoria.Utils;
 using Polytoria.Datamodel.Resources;
+using System.Runtime.CompilerServices;
 
 namespace Polytoria.Datamodel;
 
@@ -31,8 +32,7 @@ public partial class NPC : Physical
 	const float EjectMomentumScale = 0.35f;
 	const float SeatExceptionReleaseDelay = 0.3f;
 	private Vector3 _seatOffset = new(0, 1.7f, 0);
-	private Vector3 _lastWrittenSeatPosition;
-	private bool _hasWrittenSeatPosition = false;
+	private bool _writingSeat = false;
 	private readonly List<CollisionObject3D> _seatCollisionExceptions = [];
 	private float _seatExceptionReleaseTimer = 0f;
 	internal Vector3 EjectMomentum = Vector3.Zero;
@@ -679,6 +679,15 @@ public partial class NPC : Physical
 		EjectMomentum = EjectMomentum.Lerp(Vector3.Zero, MathUtils.ExpDecay(delta, 2f));
 	}
 
+	protected override void OnPropertyChanged([CallerMemberName] string propertyName = "", bool syncToNet = true)
+	{
+		base.OnPropertyChanged(propertyName, syncToNet);
+		if (syncToNet && IsSitting && !_writingSeat && propertyName is nameof(Position) or nameof(Rotation) or nameof(LocalPosition) or nameof(LocalRotation) or nameof(Quaternion) or nameof(LocalQuaternion))
+		{
+			Unsit(false);
+		}
+	}
+
 	public override void PhysicsProcess(double delta)
 	{
 		base.PhysicsProcess(delta);
@@ -700,19 +709,12 @@ public partial class NPC : Physical
 		{
 			if (!Root.Network.IsServer && SittingIn != null)
 			{
-				if (_hasWrittenSeatPosition && !Position.IsEqualApprox(_lastWrittenSeatPosition))
-				{
-					Unsit(false);
-				}
-				else
-				{
-					Velocity = Vector3.Zero;
-					Position = SittingIn.Position + SeatOffset.Y * Up;
-					_lastWrittenSeatPosition = Position;
-					_hasWrittenSeatPosition = true;
-					Rotation = SittingIn.SitDirectionLocked ? SittingIn.Rotation : new Vector3(SittingIn.Rotation.X, Rotation.Y, SittingIn.Rotation.Z);
-					Character?.PlayIdle();
-				}
+				Velocity = Vector3.Zero;
+				_writingSeat = true;
+				Position = SittingIn.Position + SeatOffset.Y * Up;
+				Rotation = SittingIn.SitDirectionLocked ? SittingIn.Rotation : new Vector3(SittingIn.Rotation.X, Rotation.Y, SittingIn.Rotation.Z);
+				_writingSeat = false;
+				Character?.PlayIdle();
 			}
 			if (IsSitting) return;
 		}
@@ -1185,12 +1187,14 @@ public partial class NPC : Physical
 	public void Unsit(bool addForce = true)
 	{
 		// Reset rotation
+		_writingSeat = true;
 		Rotation = new(0, Rotation.Y, 0);
 
 		if (addForce)
 		{
 			Position += SeatOffset * 2;
 		}
+		_writingSeat = false;
 
 		Rpc(nameof(NetJumpFromSeat));
 	}
@@ -1209,7 +1213,6 @@ public partial class NPC : Physical
 	private void InternalSit(Seat seat)
 	{
 		IsSitting = true;
-		_hasWrittenSeatPosition = false;
 		_seatExceptionReleaseTimer = 0f;
 		OverrideNetworkTransform = true;
 		SittingIn = seat;
