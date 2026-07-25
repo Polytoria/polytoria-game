@@ -991,8 +991,8 @@ public partial class Physical : Dynamic
 	internal void ApplyForceFromPlayer(Vector3 force)
 	{
 		if (Anchored) return;
-		if (this is not Entity) return;
-		((RigidBody3D)GDNode).ApplyCentralImpulse(force);
+		if (this is not Entity e) return;
+		e.ApplyAddForce(force);
 	}
 
 	private void AreaEntered(Area3D area)
