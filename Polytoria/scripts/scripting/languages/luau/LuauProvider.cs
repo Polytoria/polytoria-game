@@ -677,7 +677,6 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			Task task = n > 0 ? Globals.Singleton.WaitAsync((float)n) : Globals.Singleton.WaitPhysicsFrame();
 			Stopwatch sw = Stopwatch.StartNew();
 			await task;
-			sw.Stop();
 
 			lua.PushNumber(sw.Elapsed.TotalSeconds);
 			tcs.SetResult(1);
