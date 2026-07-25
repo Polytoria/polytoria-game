@@ -26,6 +26,7 @@ using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Script = Polytoria.Datamodel.Script;
+using System.Diagnostics;
 
 namespace Polytoria.Scripting.Luau;
 
@@ -682,6 +683,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 		async void RunAsync()
 		{
+			Stopwatch stopwatch = Stopwatch.StartNew();
 			if (n != 0)
 			{
 				await Globals.Singleton.WaitAsync((float)n);
@@ -690,8 +692,9 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			{
 				await Globals.Singleton.WaitPhysicsFrame();
 			}
+			stopwatch.Stop();
 
-			PushValueToLua(lua, true);
+			lua.PushNumber(stopwatch.Elapsed.TotalSeconds);
 			tcs.SetResult(1);
 		}
 
