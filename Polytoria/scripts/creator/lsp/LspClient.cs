@@ -7,7 +7,6 @@ using Polytoria.Shared;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,12 +15,22 @@ namespace Polytoria.Creator.LSP;
 
 public class LspClient(Stream input, Stream output) : LspClientBase(input, output)
 {
+	private static readonly string[] PluginPaths =
+	[
+		"./.poly/luau/polytoria-require.luau",
+		"./.poly/luau/polytoria-module-types.luau"
+	];
+
+	private string _definitionFilePath = "";
+
 	public readonly Dictionary<string, string> LspPathToFull = new(StringComparer.OrdinalIgnoreCase);
 	public readonly Dictionary<string, string> FullToLspPath = new(StringComparer.OrdinalIgnoreCase);
 	public event Action<LspPublishDiagnosticsParams>? PublishDiagnostics;
 
 	public async Task InitializeAsync(string workspacePath)
 	{
+		_definitionFilePath = Path.GetFullPath(Path.Join(workspacePath, ".poly", "luau", "def.d.luau"));
+
 		LspInitializeParams initParams = new()
 		{
 			RootUri = LspHelper.PathToUri(workspacePath),
@@ -67,14 +76,15 @@ public class LspClient(Stream input, Stream output) : LspClientBase(input, outpu
 
 	public Task DidOpenAsync(string path, string languageId, string text)
 	{
-		string p = LspHelper.PathToUri(path);
-		LspPathToFull[p] = path;
-		FullToLspPath[path] = p;
+		string uri = LspHelper.PathToUri(path);
+		LspPathToFull[uri] = path;
+		FullToLspPath[path] = uri;
+
 		return SendNotificationAsync("textDocument/didOpen", new LspDidOpenParams
 		{
 			TextDocument = new LspTextDocumentItem
 			{
-				Uri = p,
+				Uri = uri,
 				LanguageId = languageId,
 				Version = 1,
 				Text = text
@@ -84,7 +94,11 @@ public class LspClient(Stream input, Stream output) : LspClientBase(input, outpu
 
 	public Task DidCloseAsync(string path)
 	{
-		if (FullToLspPath.Remove(path, out string? p)) LspPathToFull.Remove(p);
+		if (FullToLspPath.Remove(path, out string? uri))
+		{
+			LspPathToFull.Remove(uri);
+		}
+
 		return SendNotificationAsync("textDocument/didClose", new LspDidCloseParams
 		{
 			TextDocument = new() { Uri = LspHelper.PathToUri(path) }
@@ -113,7 +127,19 @@ public class LspClient(Stream input, Stream output) : LspClientBase(input, outpu
 			Context = new() { TriggerKind = 1 }
 		}, cancellationToken);
 
-		return rawResult.Deserialize(LspJsonContext.Default.LspCompletionItemArray);
+		if (rawResult.ValueKind == JsonValueKind.Array)
+		{
+			return rawResult.Deserialize(LspJsonContext.Default.LspCompletionItemArray);
+		}
+
+		if (rawResult.ValueKind == JsonValueKind.Object &&
+			rawResult.TryGetProperty("items", out JsonElement items) &&
+			items.ValueKind == JsonValueKind.Array)
+		{
+			return items.Deserialize(LspJsonContext.Default.LspCompletionItemArray);
+		}
+
+		return null;
 	}
 
 	protected override void HandleServerNotification(string method, JsonElement param)
@@ -127,39 +153,91 @@ public class LspClient(Stream input, Stream output) : LspClientBase(input, outpu
 
 			if (data != null)
 			{
-				// Fix : on windows
 				data.Uri = data.Uri.Replace("%3A", ":");
 				PublishDiagnostics?.Invoke(data);
 			}
 		}
+		else if ((method == "window/logMessage" || method == "window/showMessage") &&
+			param.ValueKind == JsonValueKind.Object &&
+			param.TryGetProperty("message", out JsonElement message))
+		{
+			PT.Print("Luau LSP: ", message.GetString() ?? "");
+		}
 	}
 
-	protected override async void HandleServerRequest(string method, JsonElement id)
+	private Dictionary<string, object> CreateLuauConfiguration()
+	{
+		return new()
+		{
+			["platform"] = new Dictionary<string, object>
+			{
+				["type"] = "standard"
+			},
+			["types"] = new Dictionary<string, object>
+			{
+				// workspace/configuration may be requested for both the global scope and
+				// the workspace folder. Use an absolute path so either configuration loads
+				// the generated Polytoria API definitions from the correct project.
+				["definitionFiles"] = new Dictionary<string, object>
+				{
+					["@poly"] = _definitionFilePath
+				}
+			},
+			["completion"] = new Dictionary<string, object>
+			{
+				// Fragment autocomplete reuses the previous dependency graph. A source
+				// transform can change the require target after an Instance move, so the
+				// full completion typecheck is required to rebuild that graph correctly.
+				["enableFragmentAutocomplete"] = false
+			},
+			["plugins"] = new Dictionary<string, object>
+			{
+				["enabled"] = true,
+				["paths"] = PluginPaths,
+				["fileSystem"] = new Dictionary<string, object>
+				{
+					["enabled"] = true
+				}
+			}
+		};
+	}
+
+	protected override async void HandleServerRequest(string method, JsonElement id, JsonElement? param)
 	{
 		try
 		{
-			// Handle workspace/configuration request
 			if (method == "workspace/configuration")
 			{
-				// Return empty configuration
-				LspResponse response = new()
+				int configurationCount = 1;
+				if (param.HasValue &&
+					param.Value.ValueKind == JsonValueKind.Object &&
+					param.Value.TryGetProperty("items", out JsonElement items) &&
+					items.ValueKind == JsonValueKind.Array)
+				{
+					configurationCount = items.GetArrayLength();
+				}
+
+				object[] configurations = new object[configurationCount];
+				for (int index = 0; index < configurations.Length; index++)
+				{
+					configurations[index] = CreateLuauConfiguration();
+				}
+
+				PT.Print("Luau LSP requested ", configurationCount, " configuration entries; enabling ", PluginPaths.Length, " Polytoria plugins and definitions");
+
+				await WriteMessageAsync(new LspResponse
 				{
 					Id = id.Clone(),
-					Result = new object[] { new(), new() }
-				};
-
-				await WriteMessageAsync(response, CancellationToken.None);
+					Result = configurations
+				}, CancellationToken.None);
 			}
 			else
 			{
-				// For other, send empty result
-				LspResponse response = new()
+				await WriteMessageAsync(new LspResponse
 				{
 					Id = id.Clone(),
 					Result = new EmptyParams()
-				};
-
-				await WriteMessageAsync(response, CancellationToken.None);
+				}, CancellationToken.None);
 			}
 		}
 		catch (Exception ex)

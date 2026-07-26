@@ -81,12 +81,18 @@ public partial class Script : Instance
 		get => _linkedFile;
 		set
 		{
-			if (_linkedFile != null && _linkedFile != value)
+			if (ReferenceEquals(_linkedFile, value))
+			{
+				return;
+			}
+
+			if (_linkedFile != null)
 			{
 				_linkedFile.UnlinkFrom(this);
 			}
 			_linkedFile = value;
 			_linkedFile?.LinkTo(this);
+			OnPropertyChanged(nameof(LinkedScript), syncToNet: false);
 		}
 	}
 

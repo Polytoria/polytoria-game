@@ -1,0 +1,235 @@
+local MAP_FILE_NAME = "polytoria-module-map.tsv"
+local TOOLBOX_FOLDER_NAME = "toolbox"
+
+local function normalizePath(path: string): string
+	local normalized = string.gsub(path, "\\", "/")
+	normalized = string.gsub(normalized, "^/+", "")
+	normalized = string.gsub(normalized, "/+$", "")
+	return normalized
+end
+
+local function getProjectRelativePath(context: PluginContext): string?
+	local rootPath = normalizePath(lsp.workspace.getRootUri().fsPath)
+	local filePath = normalizePath(context.filePath)
+	local prefix = rootPath .. "/"
+
+	if string.lower(string.sub(filePath, 1, #prefix)) ~= string.lower(prefix) then
+		return nil
+	end
+
+	return string.sub(filePath, #prefix + 1)
+end
+
+local function hasExplicitLanguageMode(source: string): boolean
+	local firstLineEnd = string.find(source, "\n", 1, true)
+	local firstLine = firstLineEnd == nil and source or string.sub(source, 1, firstLineEnd - 1)
+
+	-- Strip an optional UTF-8 byte order mark before checking the hot comment.
+	if string.sub(firstLine, 1, 3) == "\239\187\191" then
+		firstLine = string.sub(firstLine, 4)
+	end
+
+	local trimmed = string.match(firstLine, "^%s*(.-)%s*$") or firstLine
+	return trimmed == "--!strict"
+		or trimmed == "--!nonstrict"
+		or trimmed == "--!nocheck"
+end
+
+local function isToolboxSource(context: PluginContext): boolean
+	local sourceFile = getProjectRelativePath(context)
+	if sourceFile == nil then
+		return false
+	end
+
+	local sourceKey = string.lower(normalizePath(sourceFile))
+	local toolboxKey = string.lower(TOOLBOX_FOLDER_NAME)
+	return sourceKey == toolboxKey or string.sub(sourceKey, 1, #toolboxKey + 1) == toolboxKey .. "/"
+end
+
+local function isMappedModule(context: PluginContext): boolean
+	local sourceFile = getProjectRelativePath(context)
+	if sourceFile == nil then
+		return false
+	end
+
+	local rootUri = lsp.workspace.getRootUri()
+	local mapUri = rootUri:joinPath(".poly", "luau", MAP_FILE_NAME)
+	local ok, mapContent = pcall(function()
+		return lsp.fs.readFile(mapUri)
+	end)
+
+	if not ok or type(mapContent) ~= "string" then
+		return false
+	end
+
+	local sourceKey = string.lower(normalizePath(sourceFile))
+	for line in string.gmatch(mapContent, "[^\r\n]+") do
+		local moduleFile = string.match(line, "^M\t[^\t]*\t[^\t]*\t([^\t]*)$")
+		if moduleFile ~= nil and string.lower(normalizePath(moduleFile)) == sourceKey then
+			return true
+		end
+	end
+
+	return false
+end
+
+local function getSourceEndPosition(source: string): (number, number)
+	local endLine = 1
+	local lastNewline = 0
+	local searchFrom = 1
+
+	while true do
+		local newline = string.find(source, "\n", searchFrom, true)
+		if newline == nil then
+			break
+		end
+
+		endLine += 1
+		lastNewline = newline
+		searchFrom = newline + 1
+	end
+
+	local lastLine = string.sub(source, lastNewline + 1)
+	if string.sub(lastLine, -1) == "\r" then
+		lastLine = string.sub(lastLine, 1, -2)
+	end
+
+	return endLine, #lastLine + 1
+end
+
+local function buildToolboxExportStub(source: string): string?
+	local declarations: { [string]: boolean } = {}
+	local returnedName: string? = nil
+	local sourceLines = {}
+
+	for line in string.gmatch(source .. "\n", "(.-)\n") do
+		if string.sub(line, -1) == "\r" then
+			line = string.sub(line, 1, -2)
+		end
+
+		table.insert(sourceLines, line)
+
+		local declarationName = string.match(line, "^%s*local%s+([%a_][%w_]*)%s*=%s*{}")
+		if declarationName ~= nil then
+			declarations[declarationName] = true
+		end
+
+		local returnName = string.match(line, "^%s*return%s+([%a_][%w_]*)")
+		if returnName ~= nil then
+			returnedName = returnName
+		end
+	end
+
+	if returnedName == nil or not declarations[returnedName] then
+		return nil
+	end
+
+	local members = {}
+	local memberKinds: { [string]: string } = {}
+	local function addMember(name: string, kind: string)
+		if memberKinds[name] == nil then
+			table.insert(members, name)
+		end
+
+		-- A function declaration is more useful than an earlier generic assignment.
+		if memberKinds[name] == nil or kind == "function" then
+			memberKinds[name] = kind
+		end
+	end
+
+	local escapedName = string.gsub(returnedName, "([^%w_])", "%%%1")
+	for _, line in sourceLines do
+		local functionMember = string.match(line, "^%s*function%s+" .. escapedName .. "[%.:]([%a_][%w_]*)%s*%(")
+		if functionMember ~= nil then
+			addMember(functionMember, "function")
+		else
+			local assignmentMember, assignmentValue = string.match(
+				line,
+				"^%s*" .. escapedName .. "%.([%a_][%w_]*)%s*=%s*(.*)$"
+			)
+			if assignmentMember ~= nil then
+				local kind = string.match(assignmentValue, "^function[%s%(]") ~= nil and "function" or "value"
+				addMember(assignmentMember, kind)
+			else
+				local bracketMember, bracketValue = string.match(
+					line,
+					"^%s*" .. escapedName .. "%[%s*[\"']([%a_][%w_]*)[\"']%s*%]%s*=%s*(.*)$"
+				)
+				if bracketMember ~= nil then
+					local kind = string.match(bracketValue, "^function[%s%(]") ~= nil and "function" or "value"
+					addMember(bracketMember, kind)
+				end
+			end
+		end
+	end
+
+	if #members == 0 then
+		return nil
+	end
+
+	local stubLines = {
+		"--!nonstrict",
+		"-- Generated by Polytoria for toolbox ModuleScript IntelliSense.",
+		"-- The runtime still executes the original source.",
+		"local " .. returnedName .. " = {}",
+	}
+
+	for _, member in members do
+		if memberKinds[member] == "function" then
+			table.insert(stubLines, "function " .. returnedName .. "." .. member .. "(...: any): any")
+			table.insert(stubLines, "\treturn nil :: any")
+			table.insert(stubLines, "end")
+		else
+			table.insert(stubLines, returnedName .. "." .. member .. " = nil :: any")
+		end
+	end
+
+	table.insert(stubLines, "return " .. returnedName)
+	return table.concat(stubLines, "\n") .. "\n"
+end
+
+return {
+	transformSource = function(source: string, context: PluginContext): { TextEdit }?
+		if hasExplicitLanguageMode(source) then
+			return nil
+		end
+
+		if isToolboxSource(context) then
+			-- Large third-party modules can become expensive to typecheck once the full
+			-- Polytoria native definition set is loaded. Consumers only need the returned
+			-- table's public shape, so analyze a lightweight export stub instead of the
+			-- implementation body. This keeps native globals and toolbox IntelliSense
+			-- available at the same time without changing runtime source.
+			local stub = buildToolboxExportStub(source)
+			if stub ~= nil then
+				local endLine, endColumn = getSourceEndPosition(source)
+				return {
+					{
+						startLine = 1,
+						startColumn = 1,
+						endLine = endLine,
+						endColumn = endColumn,
+						newText = stub,
+					},
+				}
+			end
+		end
+
+		if not isMappedModule(context) then
+			return nil
+		end
+
+		-- Creator projects currently default to nocheck, which disables Luau's type
+		-- inference engine. Analyze ordinary ModuleScripts as nonstrict so their returned
+		-- table shape is available to require() autocomplete without changing runtime code.
+		return {
+			{
+				startLine = 1,
+				startColumn = 1,
+				endLine = 1,
+				endColumn = 1,
+				newText = "--!nonstrict\n",
+			},
+		}
+	end,
+} :: PluginApi

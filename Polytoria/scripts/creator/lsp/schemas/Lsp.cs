@@ -1,7 +1,3 @@
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -46,6 +42,9 @@ public class LspInitializationOptions
 {
 	[JsonPropertyName("respect_editor_formatting_options")]
 	public bool? RespectEditorFormattingOptions { get; set; } // Used by StyLua
+
+	[JsonPropertyName("changeConfiguration")]
+	public bool? ChangeConfiguration { get; set; }
 }
 
 public class LspClientCapabilities

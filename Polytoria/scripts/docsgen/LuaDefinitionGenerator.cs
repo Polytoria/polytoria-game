@@ -15,6 +15,11 @@ namespace Polytoria.DocsGen;
 public class LuaDefinitionGenerator
 {
 	private const string CodeHintPath = "res://modules/creator/codehint/luau/";
+	private static readonly HashSet<string> PluginFileNames =
+	[
+		"polytoria-require.luau",
+		"polytoria-module-types.luau"
+	];
 	private static readonly string[] SkippedMetamethods = ["__iter"];
 
 	public static void GenerateDocFiles(string atFolder)
@@ -37,6 +42,15 @@ public class LuaDefinitionGenerator
 			if (pathTo.EndsWith(".luau"))
 			{
 				string content = Godot.FileAccess.GetFileAsString(pathTo);
+
+				// Source-transformation plugins are copied alongside the generated
+				// definitions, but must not be appended to def.d.luau.
+				if (PluginFileNames.Contains(item))
+				{
+					File.WriteAllText(atFolder.PathJoin(item), content);
+					continue;
+				}
+
 				builder.AppendLine(content);
 			}
 		}
@@ -44,7 +58,7 @@ public class LuaDefinitionGenerator
 		File.WriteAllText(atFolder.PathJoin("def.json"), JsonSerializer.Serialize(refer, APIRefGenerationContext.Default.APIReferenceRoot));
 
 		// Add PTSignal type definitions
-		builder.AppendLine("declare class PTSignalConnection");
+		builder.AppendLine("declare extern type PTSignalConnection with");
 		builder.AppendLine("\tfunction Disconnect(self): ()");
 		builder.AppendLine("end");
 		builder.AppendLine();
@@ -57,26 +71,26 @@ public class LuaDefinitionGenerator
 		builder.AppendLine("}");
 		builder.AppendLine();
 
-		builder.AppendLine($"declare class Enum end");
+		builder.AppendLine("declare extern type Enum with end");
 
 		foreach (ScriptEnum e in refer.Enums)
 		{
-			builder.AppendLine($"declare class {e.Name} end");
-			builder.AppendLine($"declare class {e.InternalName} extends Enum");
+			builder.AppendLine($"declare extern type {e.Name} with end");
+			builder.AppendLine($"declare extern type {e.InternalName} extends Enum with");
 			foreach (string item in e.Options)
 			{
 				builder.AppendLine($"\t{item}:{e.Name}");
 			}
-			builder.AppendLine($"end");
+			builder.AppendLine("end");
 		}
 
-		builder.AppendLine($"type ENUM_LIST = {{");
+		builder.AppendLine("type ENUM_LIST = {");
 		foreach (ScriptEnum e in refer.Enums)
 		{
 			builder.AppendLine($"\t{e.Name}:{e.InternalName},");
 		}
-		builder.AppendLine($"}} & {{ }}");
-		builder.AppendLine($"declare Enums: ENUM_LIST");
+		builder.AppendLine("} & { }");
+		builder.AppendLine("declare Enums: ENUM_LIST");
 
 		foreach (ScriptClass item in refer.Classes)
 		{
@@ -115,7 +129,7 @@ public class LuaDefinitionGenerator
 		bool hasStatic = false;
 
 		string baseType = c.BaseType != null ? $" extends {c.BaseType}" : "";
-		builder.AppendLine($"declare class {c.Name}{baseType}");
+		builder.AppendLine($"declare extern type {c.Name}{baseType} with");
 
 		foreach (ScriptProperty p in c.Properties)
 		{
@@ -160,7 +174,7 @@ public class LuaDefinitionGenerator
 			builder.AppendLine($"\tfunction {m.Name}({string.Join(", ", args)}): {ProcessType(m.ReturnType ?? "")}");
 		}
 
-		builder.AppendLine($"end");
+		builder.AppendLine("end");
 
 		if (hasStatic)
 		{
@@ -182,24 +196,41 @@ public class LuaDefinitionGenerator
 			builder.AppendLine($"\t{p.Name} : {ProcessType(p.Type ?? "nil")},");
 		}
 
-		foreach (ScriptMethod m in c.Methods)
-		{
-			if (m.IsObsolete) continue;
-			if (!m.IsStatic) continue;
-			// Ignore metamethods
-			if (m.Name.StartsWith("__")) continue;
-			List<string> args = [];
+		IEnumerable<IGrouping<string, ScriptMethod>> methodGroups = c.Methods
+			.Where(method => !method.IsObsolete && method.IsStatic && !method.Name.StartsWith("__"))
+			.GroupBy(method => method.Name);
 
-			foreach (ScriptParameter param in m.Parameters)
+		foreach (IGrouping<string, ScriptMethod> methodGroup in methodGroups)
+		{
+			List<string> overloads = [];
+
+			foreach (ScriptMethod method in methodGroup)
 			{
-				if (param.Type == null) continue;
-				args.Add($"{ProcessType(param.Type) + (param.IsOptional ? "?" : "")}");
+				List<string> args = [];
+
+				foreach (ScriptParameter parameter in method.Parameters)
+				{
+					if (parameter.Type == null) continue;
+					args.Add(ProcessType(parameter.Type) + (parameter.IsOptional ? "?" : ""));
+				}
+
+				string signature = $"({string.Join(", ", args)}) -> ({ProcessType(method.ReturnType ?? "")})";
+				if (!overloads.Contains(signature))
+				{
+					overloads.Add(signature);
+				}
 			}
 
-			builder.AppendLine($"{m.Name}: ({string.Join(", ", args)}) -> ({ProcessType(m.ReturnType ?? "")}),");
+			if (overloads.Count == 0) continue;
+
+			string methodType = overloads.Count == 1
+				? overloads[0]
+				: string.Join(" & ", overloads.Select(overload => $"({overload})"));
+
+			builder.AppendLine($"\t{methodGroup.Key}: {methodType},");
 		}
 
-		builder.AppendLine($"}}");
+		builder.AppendLine("}");
 
 		return builder.ToString();
 	}

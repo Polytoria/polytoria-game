@@ -19,6 +19,7 @@ public abstract class LspClientBase : IDisposable
 	private int _requestId;
 	private readonly Task? _readerTask;
 	private readonly CancellationTokenSource _cts = new();
+	private int _disposed;
 
 	protected LspClientBase(Stream input, Stream output)
 	{
@@ -82,10 +83,11 @@ public abstract class LspClientBase : IDisposable
 	{
 		byte[] headerBuffer = new byte[1024];
 		byte[] contentBuffer = new byte[65536];
+		CancellationToken cancellationToken = _cts.Token;
 
 		try
 		{
-			while (!_cts.Token.IsCancellationRequested)
+			while (!cancellationToken.IsCancellationRequested)
 			{
 				int contentLength = await ReadHeaderAsync(headerBuffer);
 				if (contentLength <= 0) break;
@@ -96,7 +98,7 @@ public abstract class LspClientBase : IDisposable
 				int bytesRead = 0;
 				while (bytesRead < contentLength)
 				{
-					int read = await _input.ReadAsync(contentBuffer.AsMemory(bytesRead, contentLength - bytesRead), _cts.Token);
+					int read = await _input.ReadAsync(contentBuffer.AsMemory(bytesRead, contentLength - bytesRead), cancellationToken);
 					if (read == 0) return;
 					bytesRead += read;
 				}
@@ -104,6 +106,18 @@ public abstract class LspClientBase : IDisposable
 				string json = Encoding.UTF8.GetString(contentBuffer, 0, contentLength);
 				ProcessMessage(json);
 			}
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			// Expected during normal client shutdown.
+		}
+		catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested)
+		{
+			// The process stream or cancellation source closed during normal shutdown.
+		}
+		catch (IOException) when (cancellationToken.IsCancellationRequested)
+		{
+			// The language-server process closed its pipe during normal shutdown.
 		}
 		catch (Exception ex)
 		{
@@ -149,7 +163,10 @@ public abstract class LspClientBase : IDisposable
 			if (root.TryGetProperty("method", out JsonElement methodReqProp) &&
 				root.TryGetProperty("id", out JsonElement serverRequestId))
 			{
-				HandleServerRequest(methodReqProp.GetString() ?? "", serverRequestId);
+				JsonElement? requestParams = root.TryGetProperty("params", out JsonElement paramsProp)
+					? paramsProp.Clone()
+					: null;
+				HandleServerRequest(methodReqProp.GetString() ?? "", serverRequestId.Clone(), requestParams);
 				return;
 			}
 
@@ -186,10 +203,15 @@ public abstract class LspClientBase : IDisposable
 
 	// Virtual hooks that derived lsp clients can override
 	protected virtual void HandleServerNotification(string method, JsonElement param) { }
-	protected virtual void HandleServerRequest(string method, JsonElement id) { }
+	protected virtual void HandleServerRequest(string method, JsonElement id, JsonElement? param) { }
 
 	public virtual void Dispose()
 	{
+		if (Interlocked.Exchange(ref _disposed, 1) != 0)
+		{
+			return;
+		}
+
 		_cts.Cancel();
 		_readerTask?.Wait(TimeSpan.FromSeconds(1));
 		_cts.Dispose();

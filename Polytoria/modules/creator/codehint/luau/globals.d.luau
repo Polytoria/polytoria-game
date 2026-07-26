@@ -26,7 +26,9 @@ declare function tick(): number
 
 declare function time(): number
 
-declare function require(moduleScript: (ModuleScript)): any
+-- Keep Luau LSP's built-in require binding intact. Creator's source
+-- transformation plugin rewrites ModuleScript requires to string paths before
+-- analysis, allowing the built-in require resolver to infer module return types.
 
 declare function pcall(f: (...any) -> (boolean, any))
 
