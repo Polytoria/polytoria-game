@@ -260,19 +260,9 @@ public partial class Part : Entity
 	internal override void AttachToAssembly(WeldAssembly ass, RigidBody root, Transform3D localTrans)
 	{
 		base.AttachToAssembly(ass, root, localTrans);
-		OverrideNoMultiMesh = true;
-		Root?.Bridge?.RemovePart(this);
-		CreateSeparateMesh();
+		AttachVisualToAssembly(root, localTrans);
 
 		Node3D rootBody = root.GDNode3D;
-
-		if (_mesh != null)
-		{
-			_originalMeshParent ??= _mesh.GetParent();
-			_mesh.Reparent(rootBody, keepGlobalTransform: true);
-			_mesh.Transform = localTrans;
-			_mesh.Scale = NodeSize;
-		}
 
 		if (_nRemoteAt != null)
 		{
@@ -286,7 +276,36 @@ public partial class Part : Entity
 	internal override void DetachFromAssembly()
 	{
 		base.DetachFromAssembly();
+		DetachVisualFromAssembly();
 
+		if (_nRemoteAt != null && _originalRemoteParent != null && Node.IsInstanceValid(_originalRemoteParent))
+		{
+			_nRemoteAt.Reparent(_originalRemoteParent, keepGlobalTransform: true);
+			_nRemoteAt.Position = Vector3.Zero;
+			_nRemoteAt.Rotation = Vector3.Zero;
+			_nRemoteAt.Scale = NodeSize;
+		}
+	}
+
+	internal void AttachVisualToAssembly(RigidBody root, Transform3D localTrans)
+	{
+		OverrideNoMultiMesh = true;
+		Root?.Bridge?.RemovePart(this);
+		CreateSeparateMesh();
+
+		Node3D rootBody = root.GDNode3D;
+
+		if (_mesh != null)
+		{
+			_originalMeshParent ??= _mesh.GetParent();
+			_mesh.Reparent(rootBody, keepGlobalTransform: true);
+			_mesh.Transform = localTrans;
+			_mesh.Scale = NodeSize;
+		}
+	}
+
+	internal void DetachVisualFromAssembly()
+	{
 		if (_mesh != null && _originalMeshParent != null && Node.IsInstanceValid(_originalMeshParent))
 		{
 			_mesh.Reparent(_originalMeshParent, keepGlobalTransform: true);
@@ -298,14 +317,6 @@ public partial class Part : Entity
 
 		OverrideNoMultiMesh = false;
 		Root?.Bridge?.AddPart(this);
-
-		if (_nRemoteAt != null && _originalRemoteParent != null && Node.IsInstanceValid(_originalRemoteParent))
-		{
-			_nRemoteAt.Reparent(_originalRemoteParent, keepGlobalTransform: true);
-			_nRemoteAt.Position = Vector3.Zero;
-			_nRemoteAt.Rotation = Vector3.Zero;
-			_nRemoteAt.Scale = NodeSize;
-		}
 	}
 
 	public override Aabb GetSelfBound()

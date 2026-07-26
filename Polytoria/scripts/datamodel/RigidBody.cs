@@ -400,6 +400,14 @@ public partial class RigidBody : Physical
 
 		Node3D rootBody = root.GDNode3D;
 
+		foreach (Instance desc in GetDescendants())
+		{
+			if (desc is Part p)
+			{
+				p.AttachVisualToAssembly(root, localTrans * p.GDNode3D.Transform);
+			}
+		}
+
 		UpdateFreeze();
 	}
 
@@ -433,6 +441,14 @@ public partial class RigidBody : Physical
 
 		UpdateFreeze();
 		UpdateCollision();
+
+		foreach (Instance desc in GetDescendants())
+		{
+			if (desc is Part p)
+			{
+				p.DetachVisualFromAssembly();
+			}
+		}
 	}
 
 	internal bool TryGetAssemblyTransform(out Transform3D trans)
