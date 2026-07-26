@@ -27,7 +27,6 @@ public partial class RigidBody : Physical
 	protected internal WeldAssembly? Assembly { get; protected set; }
 	internal Transform3D AssemblyLocalTransform = Transform3D.Identity;
 
-	protected Node3D _nRemoteAt = null!; // Remote collider proxy
 	protected Node? _originalRemoteParent;
 
 	[Editable, ScriptProperty, SyncVar(Unreliable = true, AllowAuthorWrite = true)]
@@ -392,6 +391,7 @@ public partial class RigidBody : Physical
 			SetPhysicsProcess(false);
 			OverrideNetworkTransform = true;
 			AutoUpdateNetTransform = false;
+			SetAssemblyCollisionRoot(root);
 
 			GDRigidBody.Freeze = true;
 			GDRigidBody.Sleeping = true;
@@ -400,18 +400,7 @@ public partial class RigidBody : Physical
 
 		Node3D rootBody = root.GDNode3D;
 
-		if (_nRemoteAt != null)
-		{
-			_originalRemoteParent ??= _nRemoteAt.GetParent();
-			_nRemoteAt.Reparent(rootBody, keepGlobalTransform: true);
-			_nRemoteAt.Transform = localTrans;
-			_nRemoteAt.Scale = NodeSize;
-		}
-
-		if (this != root)
-		{
-			SetAssemblyCollisionRoot(root);
-		}
+		UpdateFreeze();
 	}
 
 	internal virtual void DetachFromAssembly()
@@ -430,14 +419,6 @@ public partial class RigidBody : Physical
 		GDNode.Reparent(Parent.GDNode, keepGlobalTransform: true);
 		ForceUpdateTransform();
 		UpdateCurrentTransformCache();
-
-		if (_nRemoteAt != null && _originalRemoteParent != null && Node.IsInstanceValid(_originalRemoteParent))
-		{
-			_nRemoteAt.Reparent(_originalRemoteParent, keepGlobalTransform: true);
-			_nRemoteAt.Position = Vector3.Zero;
-			_nRemoteAt.Rotation = Vector3.Zero;
-			_nRemoteAt.Scale = NodeSize;
-		}
 
 		SetAssemblyCollisionRoot(null);
 

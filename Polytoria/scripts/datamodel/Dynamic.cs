@@ -845,7 +845,7 @@ public partial class Dynamic : Instance
 
 	internal Transform3D GetGlobalTransform()
 	{
-		if (this is Part part && part.TryGetAssemblyTransform(out Transform3D trans))
+		if (this is RigidBody part && part.TryGetAssemblyTransform(out Transform3D trans))
 		{
 			return trans;
 		}
@@ -862,7 +862,7 @@ public partial class Dynamic : Instance
 
 	internal Transform3D GetReplicationLocalTransform()
 	{
-		if (this is Part part && part.TryGetAssemblyTransform(out Transform3D aTrans))
+		if (this is RigidBody part && part.TryGetAssemblyTransform(out Transform3D aTrans))
 		{
 			return GlobalToLocalTransform(aTrans);
 		}

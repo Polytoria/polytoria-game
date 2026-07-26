@@ -27,6 +27,7 @@ public partial class Part : Entity
 	public int BridgeID = -1;
 
 	private Node? _originalMeshParent;
+	protected Node3D _nRemoteAt = null!; // Remote collider proxy
 
 	public override void EnterTree()
 	{
@@ -272,6 +273,14 @@ public partial class Part : Entity
 			_mesh.Transform = localTrans;
 			_mesh.Scale = NodeSize;
 		}
+
+		if (_nRemoteAt != null)
+		{
+			_originalRemoteParent ??= _nRemoteAt.GetParent();
+			_nRemoteAt.Reparent(rootBody, keepGlobalTransform: true);
+			_nRemoteAt.Transform = localTrans;
+			_nRemoteAt.Scale = NodeSize;
+		}
 	}
 
 	internal override void DetachFromAssembly()
@@ -289,6 +298,14 @@ public partial class Part : Entity
 
 		OverrideNoMultiMesh = false;
 		Root?.Bridge?.AddPart(this);
+
+		if (_nRemoteAt != null && _originalRemoteParent != null && Node.IsInstanceValid(_originalRemoteParent))
+		{
+			_nRemoteAt.Reparent(_originalRemoteParent, keepGlobalTransform: true);
+			_nRemoteAt.Position = Vector3.Zero;
+			_nRemoteAt.Rotation = Vector3.Zero;
+			_nRemoteAt.Scale = NodeSize;
+		}
 	}
 
 	public override Aabb GetSelfBound()

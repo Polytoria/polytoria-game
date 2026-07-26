@@ -187,7 +187,7 @@ public partial class Physical : Dynamic
 	{
 		bool finalVal = _anchored;
 
-		if (this is Part part && part.Assembly != null)
+		if (this is RigidBody part && part.Assembly != null)
 		{
 			if (part.Assembly.Root == part)
 			{
