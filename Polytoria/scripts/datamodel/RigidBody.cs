@@ -395,6 +395,7 @@ public partial class RigidBody : Physical
 
 			GDRigidBody.Freeze = true;
 			GDRigidBody.Sleeping = true;
+			GDNode.Reparent(root.GDNode, keepGlobalTransform: true);
 		}
 
 		Node3D rootBody = root.GDNode3D;
@@ -426,6 +427,7 @@ public partial class RigidBody : Physical
 		}
 
 		GDNode3D.GlobalTransform = currentTrans;
+		GDNode.Reparent(Parent.GDNode, keepGlobalTransform: true);
 		ForceUpdateTransform();
 		UpdateCurrentTransformCache();
 

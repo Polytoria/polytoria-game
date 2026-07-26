@@ -110,6 +110,11 @@ public partial class DatamodelBridge : Node3D
 		return mat;
 	}
 
+	public override void _PhysicsProcess(double delta)
+	{
+		_Process(delta);
+	}
+
 	public override void _Process(double delta)
 	{
 		if (!isGameReady) return;
