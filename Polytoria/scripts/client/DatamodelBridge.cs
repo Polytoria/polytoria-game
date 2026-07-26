@@ -23,6 +23,7 @@ public partial class DatamodelBridge : Node3D
 	private readonly HashSet<Part> _dirty = [];
 	private Rid _scenario;
 
+	// (material, isTransparent)
 	private readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materials = [];
 
 	private bool isGameReady = false;

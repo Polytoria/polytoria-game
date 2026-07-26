@@ -199,7 +199,7 @@ public partial class Part : Entity
 		}
 	}
 
-	// Override this to be excluded from MutliMesh
+	// Override this to be excluded from MultiMesh
 	internal bool OverrideNoMultiMesh = false;
 
 	internal void UpdateShape()
@@ -256,7 +256,7 @@ public partial class Part : Entity
 		}
 	}
 
-	internal new void AttachToAssembly(WeldAssembly ass, RigidBody root, Transform3D localTrans)
+	internal override void AttachToAssembly(WeldAssembly ass, RigidBody root, Transform3D localTrans)
 	{
 		Assembly = ass;
 		AssemblyLocalTransform = localTrans;
@@ -299,7 +299,7 @@ public partial class Part : Entity
 		}
 	}
 
-	internal new void DetachFromAssembly()
+	internal override void DetachFromAssembly()
 	{
 		Transform3D currentTrans;
 		if (Assembly == null)

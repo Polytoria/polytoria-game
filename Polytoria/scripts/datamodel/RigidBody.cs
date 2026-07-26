@@ -372,7 +372,7 @@ public partial class RigidBody : Physical
 		base.ApplyFreeze(to);
 	}
 
-	internal void AttachToAssembly(WeldAssembly ass, RigidBody root, Transform3D localTrans)
+	internal virtual void AttachToAssembly(WeldAssembly ass, RigidBody root, Transform3D localTrans)
 	{
 		Assembly = ass;
 		AssemblyLocalTransform = localTrans;
@@ -404,7 +404,7 @@ public partial class RigidBody : Physical
 		}
 	}
 
-	internal void DetachFromAssembly()
+	internal virtual void DetachFromAssembly()
 	{
 		Transform3D currentTrans;
 		if (Assembly == null)
