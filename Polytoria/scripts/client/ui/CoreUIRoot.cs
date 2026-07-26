@@ -10,6 +10,7 @@ using Polytoria.Client.UI.Purchases;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Resources;
 using Polytoria.Datamodel.Services;
+using Polytoria.Shared;
 
 #if DEBUG && !EXPORTDEBUG
 using Polytoria.Shared;
