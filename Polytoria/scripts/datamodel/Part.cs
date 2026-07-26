@@ -258,22 +258,10 @@ public partial class Part : Entity
 
 	internal override void AttachToAssembly(WeldAssembly ass, RigidBody root, Transform3D localTrans)
 	{
-		Assembly = ass;
-		AssemblyLocalTransform = localTrans;
+		base.AttachToAssembly(ass, root, localTrans);
 		OverrideNoMultiMesh = true;
 		Root?.Bridge?.RemovePart(this);
 		CreateSeparateMesh();
-
-		if (this != root)
-		{
-			OverridePhysicsProcess = true;
-			SetPhysicsProcess(false);
-			OverrideNetworkTransform = true;
-			AutoUpdateNetTransform = false;
-
-			GDRigidBody.Freeze = true;
-			GDRigidBody.Sleeping = true;
-		}
 
 		Node3D rootBody = root.GDNode3D;
 
@@ -284,36 +272,11 @@ public partial class Part : Entity
 			_mesh.Transform = localTrans;
 			_mesh.Scale = NodeSize;
 		}
-
-		if (_nRemoteAt != null)
-		{
-			_originalRemoteParent ??= _nRemoteAt.GetParent();
-			_nRemoteAt.Reparent(rootBody, keepGlobalTransform: true);
-			_nRemoteAt.Transform = localTrans;
-			_nRemoteAt.Scale = NodeSize;
-		}
-
-		if (this != root)
-		{
-			SetAssemblyCollisionRoot(root);
-		}
 	}
 
 	internal override void DetachFromAssembly()
 	{
-		Transform3D currentTrans;
-		if (Assembly == null)
-		{
-			currentTrans = GDNode3D.GlobalTransform;
-		}
-		else
-		{
-			currentTrans = Assembly.Root.GDNode3D.GlobalTransform * AssemblyLocalTransform;
-		}
-
-		GDNode3D.GlobalTransform = currentTrans;
-		ForceUpdateTransform();
-		UpdateCurrentTransformCache();
+		base.DetachFromAssembly();
 
 		if (_mesh != null && _originalMeshParent != null && Node.IsInstanceValid(_originalMeshParent))
 		{
@@ -322,31 +285,10 @@ public partial class Part : Entity
 			_mesh.Scale = NodeSize;
 		}
 
-		if (_nRemoteAt != null && _originalRemoteParent != null && Node.IsInstanceValid(_originalRemoteParent))
-		{
-			_nRemoteAt.Reparent(_originalRemoteParent, keepGlobalTransform: true);
-			_nRemoteAt.Position = Vector3.Zero;
-			_nRemoteAt.Rotation = Vector3.Zero;
-			_nRemoteAt.Scale = NodeSize;
-		}
-
-		SetAssemblyCollisionRoot(null);
-
-		OverridePhysicsProcess = false;
-		OverrideNetworkTransform = false;
-		AutoUpdateNetTransform = true;
-
-		Assembly = null;
-		AssemblyLocalTransform = Transform3D.Identity;
-
 		_originalMeshParent = null;
-		_originalRemoteParent = null;
 
 		OverrideNoMultiMesh = false;
 		Root?.Bridge?.AddPart(this);
-
-		UpdateFreeze();
-		UpdateCollision();
 	}
 
 	public override Aabb GetSelfBound()

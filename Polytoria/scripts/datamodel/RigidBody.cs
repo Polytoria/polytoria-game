@@ -197,6 +197,9 @@ public partial class RigidBody : Physical
 		}
 	}
 
+	[ScriptProperty]
+	public RigidBody AssemblyRoot => Assembly is null ? this : Assembly.Root;
+
 	public override Node CreateGDNode()
 	{
 		return new RigidBody3D();
@@ -222,7 +225,7 @@ public partial class RigidBody : Physical
 	{
 		if (Assembly is not null && Assembly.Root != this)
 		{
-			Assembly.Root.ApplyAddForce(force, mode);
+			Assembly.Root.ApplyAddForceAtPosition(force, Position, mode);
 			return;
 		}
 		if (mode == ForceModeEnum.Force)
@@ -364,6 +367,12 @@ public partial class RigidBody : Physical
 		{
 			throw new NotImplementedException(mode + " not implemented");
 		}
+	}
+
+	internal override void ApplyAddRelativeForceAtPosition(Vector3 force, Vector3 position, ForceModeEnum mode = ForceModeEnum.Force)
+	{
+		Vector3 worldForce = GDRigidBody.GlobalTransform.Basis * force;
+		ApplyAddForceAtPosition(worldForce, position, mode);
 	}
 
 	protected override void ApplyFreeze(bool to)
