@@ -40,11 +40,8 @@ public partial class CoreUIRoot : CanvasLayer
 	[Export] public UINotification NotificationCenter = null!;
 	[Export] public UICapturePreview CapturePreview = null!;
 	[Export] public UIPurchasePrompt PurchasePrompt = null!;
-	[Export] public TextureRect CtrlLockCursor = null!;
+	[Export] public TextureRect Crosshair = null!;
 	[Export] public DevConsoleWindow DevWindow = null!;
-
-	[ExportSubgroup("Filepaths")]
-	[Export] public string CtrlLockCursorsFilepath = null!;
 
 	/// <summary>
 	/// Determine if CoreUI has active popup, this overrides Input.IsGameFocused
@@ -75,38 +72,41 @@ public partial class CoreUIRoot : CanvasLayer
 		}
 #endif
 
-		Service.CtrlLockCursorChanged.Connect(OnCtrlLockCursorChanged);
+		Service.CrosshairChanged.Connect(OnCrosshairChanged);
 
 		base._EnterTree();
-		OnCtrlLockCursorChanged();
+		OnCrosshairChanged();
 	}
 
 	public override void _ExitTree()
 	{
-		Service.CtrlLockCursorChanged.Disconnect(OnCtrlLockCursorChanged);
+		Service.CrosshairChanged.Disconnect(OnCrosshairChanged);
 		base._ExitTree();
 	}
 
 	public override void _Process(double delta)
 	{
-		SyncCtrlLockCursor();
+		SyncCrosshair();
 		base._Process(delta);
 	}
 
-	private void SyncCtrlLockCursor()
+	private void SyncCrosshair()
 	{
-		CtrlLockCursor?.Visible = Root?.Environment?.CurrentCamera?.CtrlLocked == true;
+		Crosshair?.Visible = Root?.Environment?.CurrentCamera?.CtrlLocked == true;
 	}
 
-	private void OnCtrlLockCursorChanged()
+	private void OnCrosshairChanged()
 	{
 		if (Service.CrosshairOverride is CursorAsset c)
 		{
 			void apply(Resource _ = null)
 			{
 				c.ResourceLoaded -= apply;
-				CtrlLockCursor.Texture = ImageTexture.CreateFromImage(c.CursorImage);
-				CtrlLockCursor.OffsetTransformPosition = -c.Hotspot * CtrlLockCursor.Texture.GetSize();
+				ImageTexture tex = ImageTexture.CreateFromImage(c.CursorImage);
+				Vector2 texSize = tex.GetSize();
+				Crosshair.Texture = tex;
+				Crosshair.Size = texSize;
+				Crosshair.OffsetTransformPosition = -c.Hotspot * texSize;
 			}
 
 			if (c.IsResourceLoaded && c.CursorImage != null)
@@ -123,7 +123,7 @@ public partial class CoreUIRoot : CanvasLayer
 		{
 			if (Service.CtrlLockCursor == CoreUIService.CtrlLockCursorEnum.None)
 			{
-				CtrlLockCursor.Texture = null;
+				Crosshair.Texture = null;
 				return;
 			}
 
@@ -139,8 +139,7 @@ public partial class CoreUIRoot : CanvasLayer
 				CoreUIService.CtrlLockCursorEnum.Chevron => "chevron.svg",
 				_ => "",
 			};
-			DpiTexture tex = GD.Load<DpiTexture>(Globals.BuiltInCursorLocation.PathJoin(filename));
-			CtrlLockCursor.Texture = tex;
+			Crosshair.Texture = GD.Load<DpiTexture>(Globals.BuiltInCursorLocation.PathJoin(filename));
 		}
 	}
 

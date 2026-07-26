@@ -31,7 +31,7 @@ public sealed partial class CoreUIService : Instance
 	private bool _canRespawn = true;
 
 	private CtrlLockCursorEnum _ctrlLockCursor = CtrlLockCursorEnum.None;
-	public PTSignal CtrlLockCursorChanged { get; private set; } = new();
+	public PTSignal CrosshairChanged { get; private set; } = new();
 
 	private Dictionary<Input.CursorShape, CursorAsset?> _cursorOverrides = new() {
 		{Input.CursorShape.Arrow, null},
@@ -53,7 +53,7 @@ public sealed partial class CoreUIService : Instance
 			_ctrlLockCursor = value;
 			RefreshCoreUIsVisibility();
 			OnPropertyChanged();
-			CtrlLockCursorChanged.Invoke();
+			CrosshairChanged.Invoke();
 		}
 	}
 
@@ -121,7 +121,7 @@ public sealed partial class CoreUIService : Instance
 
 			if (value != null)
 			{
-				Action onAdjust = () => CtrlLockCursorChanged.Invoke();
+				Action onAdjust = () => CrosshairChanged.Invoke();
 				_crosshairOverride.CursorAdjustInternal.Connect(onAdjust);
 				_cursorCallbacks.Add(_crosshairOverride, onAdjust);
 
@@ -130,7 +130,7 @@ public sealed partial class CoreUIService : Instance
 					_crosshairOverride.QueueLoadResource();
 			}
 
-			CtrlLockCursorChanged.Invoke();
+			CrosshairChanged.Invoke();
 			OnPropertyChanged();
 		}
 	}
