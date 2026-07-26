@@ -477,7 +477,7 @@ public partial class NPC : Instance
 
 
 	[ScriptMethod, Attributes.Obsolete("Use Character.Respawn() instead")]
-	public void Respawn()
+	public virtual void Respawn()
 	{
 		Character?.Respawn();
 	}

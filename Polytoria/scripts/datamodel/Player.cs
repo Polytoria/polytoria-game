@@ -585,7 +585,7 @@ public sealed partial class Player : NPC
 	}
 
 	[ScriptMethod]
-	public new void Respawn()
+	public override void Respawn()
 	{
 		CharacterModel? oldChar = Character;
 		InternalSpawn();
