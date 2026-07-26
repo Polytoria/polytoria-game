@@ -275,9 +275,6 @@ public partial class Part : Entity
 
 	internal override void DetachFromAssembly()
 	{
-		base.DetachFromAssembly();
-		DetachVisualFromAssembly();
-
 		if (_nRemoteAt != null && _originalRemoteParent != null && Node.IsInstanceValid(_originalRemoteParent))
 		{
 			_nRemoteAt.Reparent(_originalRemoteParent, keepGlobalTransform: true);
@@ -285,6 +282,9 @@ public partial class Part : Entity
 			_nRemoteAt.Rotation = Vector3.Zero;
 			_nRemoteAt.Scale = NodeSize;
 		}
+
+		base.DetachFromAssembly();
+		DetachVisualFromAssembly();
 	}
 
 	internal void AttachVisualToAssembly(RigidBody root, Transform3D localTrans)

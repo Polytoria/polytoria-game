@@ -413,6 +413,14 @@ public partial class RigidBody : Physical
 
 	internal virtual void DetachFromAssembly()
 	{
+		foreach (Instance desc in GetDescendants())
+		{
+			if (desc is Part p)
+			{
+				p.DetachVisualFromAssembly();
+			}
+		}
+
 		Transform3D currentTrans;
 		if (Assembly == null)
 		{
@@ -441,14 +449,6 @@ public partial class RigidBody : Physical
 
 		UpdateFreeze();
 		UpdateCollision();
-
-		foreach (Instance desc in GetDescendants())
-		{
-			if (desc is Part p)
-			{
-				p.DetachVisualFromAssembly();
-			}
-		}
 	}
 
 	internal bool TryGetAssemblyTransform(out Transform3D trans)
