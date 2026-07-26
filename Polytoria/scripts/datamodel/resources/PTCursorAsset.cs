@@ -33,7 +33,7 @@ public partial class PTCursorAsset : CursorAsset
 	{
 		RegisterType<PTCursorAsset>();
 	}
-	
+
 	public override void LoadResource()
 	{
 		if (ImageID == 0) { return; }

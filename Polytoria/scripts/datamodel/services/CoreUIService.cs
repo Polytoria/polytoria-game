@@ -39,7 +39,7 @@ public sealed partial class CoreUIService : Instance
 		{Input.CursorShape.Drag, null},
 		{Input.CursorShape.CanDrop, null},
 	};
-	private Dictionary<CursorAsset, Action> _cursorCallbacks = new() {};
+	private Dictionary<CursorAsset, Action> _cursorCallbacks = new() { };
 	private CursorAsset? _crosshairOverride;
 
 	public CoreUIRoot CoreUI = null!;
