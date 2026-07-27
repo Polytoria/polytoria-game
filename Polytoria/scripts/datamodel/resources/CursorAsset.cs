@@ -14,14 +14,14 @@ public partial class CursorAsset : ResourceAsset
 {
 	const int MAX_CURSOR_SIZE = 128;
 
+	// Cursor image with applied scale!
+	// Use this to load instead of Resource!
+	public Image? CursorImage { get; private set; } = null;
+	public event Action<Image?>? CursorLoaded;
 	private Vector2 _hotspot = new(0, 0);
 	private int _scale = 0;
 	private Input.CursorShape? _cursorTarget = null;
 	internal PTSignal CursorAdjustInternal { get; private set; } = new();
-
-	// Cursor image with applied scale!
-	// Use this to load instead of Resource!
-	public Image? CursorImage { get; private set; } = null;
 
 	[Editable, ScriptProperty]
 	public Vector2 Hotspot
@@ -91,5 +91,7 @@ public partial class CursorAsset : ResourceAsset
 		{
 			CursorImage = null;
 		}
+
+		CursorLoaded?.Invoke(CursorImage);
 	}
 }

@@ -47,16 +47,7 @@ public partial class PTCursorAsset : CursorAsset
 	private void OnResourceLoaded(CacheItem cacheItem)
 	{
 		DirectImageURL = cacheItem.DirectURL;
-
-		// Resize loaded image if texture is too large.
-		if (cacheItem.Resource is Texture2D tex)
-		{
-			InvokeResourceLoaded(tex);
-			ReloadImage();
-		}
-		else
-		{
-			InvokeResourceLoaded(cacheItem.Resource);
-		}
+		InvokeResourceLoaded(cacheItem.Resource);
+		ReloadImage();
 	}
 }

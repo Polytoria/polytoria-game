@@ -99,23 +99,30 @@ public partial class CoreUIRoot : CanvasLayer
 	{
 		if (Service.CrosshairOverride is CursorAsset c)
 		{
-			void apply(Resource _ = null)
+			void apply(Image? img)
 			{
-				c.ResourceLoaded -= apply;
-				ImageTexture tex = ImageTexture.CreateFromImage(c.CursorImage);
-				Vector2 texSize = tex.GetSize();
-				Crosshair.Texture = tex;
-				Crosshair.Size = texSize;
-				Crosshair.OffsetTransformPosition = -c.Hotspot * texSize;
+				c.CursorLoaded -= apply;
+				if (img != null)
+				{
+					ImageTexture tex = ImageTexture.CreateFromImage(img);
+					Vector2 texSize = tex.GetSize();
+					Crosshair.Texture = tex;
+					Crosshair.Size = texSize;
+					Crosshair.OffsetTransformPosition = -c.Hotspot * texSize;
+				}
+				else
+				{
+					Crosshair.Texture = null;
+				}
 			}
 
-			if (c.IsResourceLoaded && c.CursorImage != null)
+			if (c.IsResourceLoaded)
 			{
-				apply();
+				apply(c.CursorImage);
 			}
 			else
 			{
-				c.ResourceLoaded += apply;
+				c.CursorLoaded += apply;
 				c.QueueLoadResource();
 			}
 		}

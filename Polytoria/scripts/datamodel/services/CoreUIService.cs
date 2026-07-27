@@ -307,19 +307,20 @@ public sealed partial class CoreUIService : Instance
 
 		if (cursor != null)
 		{
-			void apply(Resource _ = null)
+			void apply(Image? img)
 			{
-				cursor.ResourceLoaded -= apply;
-				Input.SetCustomMouseCursor(cursor.CursorImage, shape, cursor.Hotspot * cursor.CursorImage.GetSize());
+				cursor.CursorLoaded -= apply;
+				if (img != null)
+					Input.SetCustomMouseCursor(img, shape, cursor.Hotspot * img.GetSize());
 			}
 
-			if (cursor.IsResourceLoaded && cursor.CursorImage != null)
+			if (cursor.IsResourceLoaded)
 			{
-				apply();
+				apply(cursor.CursorImage);
 			}
 			else
 			{
-				cursor.ResourceLoaded += apply;
+				cursor.CursorLoaded += apply;
 				cursor.QueueLoadResource();
 			}
 
