@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/Physical.svg-8b510572b7e145122e2d8a66ec27dccd
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/HttpService.svg-f01b56a47f2be1ebb749a0eeaf3d2
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

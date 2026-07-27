@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/respawn.svg-d7f536e4ce84b585039dff21464d12dd.
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

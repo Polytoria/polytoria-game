@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/Lighting.svg-4c1ab6d77d5f7c649552a4f6b562eca9
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/PlayerDefaults.svg-2f9cecb2f4152f3e7cdce752be
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

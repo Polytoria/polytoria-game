@@ -749,9 +749,9 @@ public partial class Dynamic : Instance
 		}
 
 		// Destroy entity/rigidbodies under part destroy height
-		if (Root != null && Root.Environment != null && this is Entity or RigidBody)
+		if (Root != null && Root.Environment != null && this is Physical physical)
 		{
-			if (Position.Y <= Root.Environment.PartDestroyHeight)
+			if (Position.Y <= Root.Environment.PartDestroyHeight && !physical.Anchored)
 			{
 				// If not client, ignore PartDestroyHeight rule
 				if (Root.SessionType != World.SessionTypeEnum.Client) return;

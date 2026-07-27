@@ -44,6 +44,7 @@ public partial class TextEditorRoot : Node
 	private CodeHighlighter _highlighter = null!;
 	private LuaCompletionService? _completion = null!;
 
+
 	private Godot.Timer _autoCompleteTimer = null!;
 	private CancellationTokenSource? _diagCts;
 
@@ -52,6 +53,8 @@ public partial class TextEditorRoot : Node
 		_finder.Root = this;
 		base._EnterTree();
 	}
+
+	private const int FormatMenuId = 10010;
 
 	public override async void _ExitTree()
 	{
@@ -85,6 +88,10 @@ public partial class TextEditorRoot : Node
 		CodeEditor.TextChanged += OnCodeEditTextChanged;
 		InitSyntaxHighlighter(Container.CodeCompletion);
 
+		// testing for now:
+		CodeEditor.GetMenu().AddItem("Format Script", id: FormatMenuId);
+		CodeEditor.GetMenu().IdPressed += OnContextMenuIdPressed;
+
 		CreatorSettingsService.Instance.Changed += OnCreatorSettingChanged;
 		ApplyIndentSettings();
 
@@ -109,6 +116,19 @@ public partial class TextEditorRoot : Node
 		}
 
 		UpdateStatusBar();
+	}
+
+	private async void OnContextMenuIdPressed(long id)
+	{
+		switch (id)
+		{
+			case FormatMenuId:
+				{
+					CodeEditor.Text = await LuaFormatService.FormatScriptAsync(Container.TargetFilePathAbsolute, CodeEditor.Text);
+					OnCodeEditTextChanged();
+					break;
+				}
+		}
 	}
 
 	private void OnCreatorSettingChanged(SettingChangedEvent e)
@@ -198,9 +218,10 @@ public partial class TextEditorRoot : Node
 		if (@event.IsActionPressed("save"))
 		{
 			CodeEditor.AcceptEvent();
-			Save();
+			await Save();
 			Saved = true;
 			SavedChanged?.Invoke(true);
+
 			CreatorService.Interface.StatusBar?.SetStatus("Text file saved to " + Container.TargetFilePath + " at " + DateTime.Now.ToString("HH:mm:ss"));
 		}
 		else if (@event.IsActionPressed("textedit_find") || @event.IsActionPressed("textedit_replace"))
@@ -261,8 +282,14 @@ public partial class TextEditorRoot : Node
 		}
 	}
 
-	public void Save()
+	public async Task Save()
 	{
+		bool formatOnSave = CreatorSettingsService.Instance.Get<bool>(CreatorSettingKeys.CodeEditor.FormatOnSave);
+		if (formatOnSave)
+		{
+			CodeEditor.Text = await LuaFormatService.FormatScriptAsync(Container.TargetFilePathAbsolute, CodeEditor.Text);
+		}
+
 		File.WriteAllText(Container.TargetFilePathAbsolute, CodeEditor.Text);
 	}
 

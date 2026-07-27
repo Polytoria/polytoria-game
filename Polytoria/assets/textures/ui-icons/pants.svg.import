@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/pants.svg-bdc9569f5b34735c92828a89829e97c8.dp
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

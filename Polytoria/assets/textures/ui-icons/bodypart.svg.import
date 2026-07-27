@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/bodypart.svg-c2b109364485a382f579bacc5ce612cb
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/ScriptService.svg-e9cf640c43c02ffa5bf6a3f0700
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

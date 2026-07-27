@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/AudioAsset.svg-b273c390624460c4e428fb28d62a73
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/NetworkedObject.svg-940340b52a88eb58a229d2515
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

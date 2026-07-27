@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/BindableEvent.svg-e5b14a345a5d2160ba361bfc62a
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true
