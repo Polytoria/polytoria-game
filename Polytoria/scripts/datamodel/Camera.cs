@@ -454,11 +454,11 @@ public sealed partial class Camera : Dynamic
 			{
 				if (Input.IsActionPressed("zoom_in"))
 				{
-					_targetZoom = _distance - (ScrollSensitivity / 5);
+					_targetZoom -= ScrollSensitivity / 5;
 				}
 				if (Input.IsActionPressed("zoom_out"))
 				{
-					_targetZoom = _distance + (ScrollSensitivity / 5);
+					_targetZoom += ScrollSensitivity / 5;
 				}
 
 				// Handle Controller Right stick input
@@ -533,13 +533,7 @@ public sealed partial class Camera : Dynamic
 					Vector3 hitPoint = (Vector3)result["position"];
 
 					float hitDist = origin.DistanceTo(hitPoint) - ClipSafeMargin;
-					finalizedZoom = Mathf.Min(_distance, hitDist);
-
-					// Prevent zooming after zero
-					if (finalizedZoom < 0)
-					{
-						finalizedZoom = 0;
-					}
+					finalizedZoom = Mathf.Max(0, hitDist);
 				}
 			}
 
