@@ -641,6 +641,24 @@ public sealed partial class Gizmos : Node
 		{
 			_dragStartOrigin = (Vector3)intersection["position"];
 			_dragStartNormal = (Vector3)intersection["normal"];
+			{
+				Transform3D trans = ((Node3D)intersection["collider"]).GlobalTransform;
+				Vector3 dragCenter = trans.Origin;
+				Quaternion dragRotation = trans.Basis.GetRotationQuaternion();
+				Vector3 posdiff = (_dragStartOrigin - dragCenter);
+				Vector3 surfaceSnap = posdiff.Dot(_dragStartNormal) * _dragStartNormal;
+				Quaternion verticalize = new Quaternion(_dragStartNormal * dragRotation, Vector3.Up);
+				Vector3 plane = verticalize * ((posdiff - surfaceSnap) * dragRotation);
+				float snapAmount = CreatorService.Interface.MoveSnapping;
+				float halfsnap = snapAmount * 0.5f;
+				Vector3 snapped = new Vector3(
+					Mathf.Snapped(plane.X + halfsnap, snapAmount) - halfsnap,
+					0,
+					Mathf.Snapped(plane.Z + halfsnap, snapAmount) - halfsnap
+				);
+				Vector3 rotatedSnappedPlane = dragRotation * (snapped * verticalize);
+				_dragStartOrigin = surfaceSnap + rotatedSnappedPlane + dragCenter;
+			}
 		}
 	}
 
