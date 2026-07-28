@@ -252,7 +252,8 @@ public sealed partial class PlayerDefaults : HiddenBase
 	public bool UseFirstPersonViewmodel
 	{
 		get => _useFirstPersonViewmodel;
-		set {
+		set
+		{
 			_useFirstPersonViewmodel = value;
 			OnPropertyChanged();
 		}
