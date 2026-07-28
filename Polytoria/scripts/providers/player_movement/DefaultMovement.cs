@@ -180,8 +180,12 @@ public class DefaultMovement : IPlayerMovement
 			{
 				Target.IsMoving = true;
 
-				Target.CharacterVelocity.X = (moveDirection.X * gdWalkSpeed) + pushVelocity.X;
-				Target.CharacterVelocity.Z = (moveDirection.Z * gdWalkSpeed) + pushVelocity.Z;
+				float targetVelX = (moveDirection.X * gdWalkSpeed) + pushVelocity.X;
+				float targetVelZ = (moveDirection.Z * gdWalkSpeed) + pushVelocity.Z;
+				float acel = isOnFloor ? Target.GroundControl : Target.AirControl;
+				Target.CharacterVelocity.X = Mathf.Lerp(Target.CharacterVelocity.X, targetVelX, acel);
+				Target.CharacterVelocity.Z = Mathf.Lerp(Target.CharacterVelocity.Z, targetVelZ, acel);
+
 
 				Vector3 localMove = moveDirection.Rotated(Vector3.Up, -Mathf.DegToRad(Target.Rotation.Y));
 				float strafeX = Mathf.Clamp(localMove.X, -1f, 1f);
@@ -215,8 +219,9 @@ public class DefaultMovement : IPlayerMovement
 				else
 				{
 					// Stop horizontal movement when no input
-					Target.CharacterVelocity.X = Mathf.MoveToward(Target.CharacterVelocity.X, 0, gdWalkSpeed);
-					Target.CharacterVelocity.Z = Mathf.MoveToward(Target.CharacterVelocity.Z, 0, gdWalkSpeed);
+					float decel = (isOnFloor ? Target.GroundFriction : Target.AirFriction) * (float)delta;
+					Target.CharacterVelocity.X = Mathf.MoveToward(Target.CharacterVelocity.X, 0, decel);
+					Target.CharacterVelocity.Z = Mathf.MoveToward(Target.CharacterVelocity.Z, 0, decel);
 				}
 				Target.Character?.SetAnimSpeed(1);
 			}
@@ -254,7 +259,6 @@ public class DefaultMovement : IPlayerMovement
 		}
 
 		Target.ApplyInternalVelocity(Target.CharacterVelocity);
-		Target.ConsumeEjectMomentum((float)delta);
 
 		// Split velocity into horizontal/vertical components and merge them
 		// after MoveAndSlide, otherwise gravity fights StepUp.

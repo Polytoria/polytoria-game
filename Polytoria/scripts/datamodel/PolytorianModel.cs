@@ -24,6 +24,7 @@ public sealed partial class PolytorianModel : CharacterModel
 	private double _lastNetUpdateTime = 0.0;
 
 	private static readonly CapsuleShape3D _collisionCapsule = new() { Radius = 0.75f, Height = 5.8f };
+	private static readonly BoxShape3D _collisionBox = new() { Size = new(2f, 5.8f, 1f) };
 	internal Node3D? CollisionPivot;
 	internal CollisionShape3D? CollisionShape;
 	private Physical? _oldPhyParent;
@@ -50,8 +51,14 @@ public sealed partial class PolytorianModel : CharacterModel
 	internal Skeleton3D Skeleton = null!;
 	internal AnimationTree AnimTree = null!;
 
-	private bool _charIKInit = false;
+	internal const int ViewmodelArmsLayerBit = 19;
+	internal const int ViewmodelBodyLayerBit = 20;
+	public bool IsViewmodelActive { get; private set; } = false;
+
+	private bool _plrIKInit = false;
+	private bool _plrVmInit = false;
 	private CharacterIKModifier? _charIK;
+	private CharacterViewmodelRig? _viewmodelRig;
 	private float _targetStrafeX = 0f;
 	private float _targetStrafeY = 0f;
 	private float _currentStrafeX = 0f;
@@ -246,6 +253,29 @@ public sealed partial class PolytorianModel : CharacterModel
 	[ScriptProperty] public Vector3 RagdollPosition => VelocityPhysicalBone == null ? Vector3.Zero : VelocityPhysicalBone.GlobalPosition;
 	[ScriptProperty] public Vector3 RagdollRotation => VelocityPhysicalBone == null ? Vector3.Zero : VelocityPhysicalBone.GlobalRotationDegrees.FlipEuler();
 
+	internal void SetViewmodelActive(bool active)
+	{
+		IsViewmodelActive = active;
+		_viewmodelRig?.SetActive(active);
+		if (Parent is NPC npc) npc.HoldingTool?.RefreshViewmodelLayer();
+
+		HeadMeshInstance.Visible = !active;
+
+		LeftArmMeshInstance.SetLayerMaskValue(1, !active);
+		RightArmMeshInstance.SetLayerMaskValue(1, !active);
+		LeftArmMeshInstance.SetLayerMaskValue(ViewmodelArmsLayerBit, active);
+		RightArmMeshInstance.SetLayerMaskValue(ViewmodelArmsLayerBit, active);
+
+		TorsoMeshInstance.SetLayerMaskValue(1, !active);
+		LeftLegMeshInstance.SetLayerMaskValue(1, !active);
+		RightLegMeshInstance.SetLayerMaskValue(1, !active);
+		TorsoMeshInstance.SetLayerMaskValue(ViewmodelBodyLayerBit, active);
+		LeftLegMeshInstance.SetLayerMaskValue(ViewmodelBodyLayerBit, active);
+		RightLegMeshInstance.SetLayerMaskValue(ViewmodelBodyLayerBit, active);
+
+		if (_viewmodelRig != null) _viewmodelRig.IsActive = active;
+	}
+
 	// These two's not reliable yet, as it doesn't wait for mesh to load. TODO: Come back and fix
 	public bool IsAvatarLoaded { get; private set; } = false;
 	public event Action? AvatarLoaded;
@@ -318,7 +348,7 @@ public sealed partial class PolytorianModel : CharacterModel
 			};
 			CollisionShape = new()
 			{
-				Shape = _collisionCapsule
+				Shape = (phy is Player player && player.CollisionShape == Player.PlayerCollisionShapeEnum.Box) ? _collisionBox : _collisionCapsule
 			};
 			Physical.SetRemoteLinkOffset(CollisionShape, new(0, 3f - 0.1f, 0));
 			Physical.SetRemoteLinkTarget(CollisionShape, CollisionPivot);
@@ -425,42 +455,67 @@ public sealed partial class PolytorianModel : CharacterModel
 			_helper.Idle3 = triggerVariant && roll >= IdleVariantWeight;
 		}
 
-		if (!_charIKInit && Parent is Player plr && plr.IsLocal)
+		if (Parent is Player plr && plr.IsLocal)
 		{
-			_charIKInit = true;
-			_charIK = new()
+			if (!_plrIKInit)
 			{
-				UpperLegBoneL = GDNode.GetNode<BoneAttachment3D>("Character/Poly/Skeleton3D/O_UpperLeg_L").BoneName,
-				UpperLegBoneR = GDNode.GetNode<BoneAttachment3D>("Character/Poly/Skeleton3D/O_UpperLeg_R").BoneName,
-				LowerLegBoneL = GDNode.GetNode<BoneAttachment3D>("Character/Poly/Skeleton3D/O_LowerLeg_L").BoneName,
-				LowerLegBoneR = GDNode.GetNode<BoneAttachment3D>("Character/Poly/Skeleton3D/O_LowerLeg_R").BoneName,
-				FootOffsetL = GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_LowerLeg_L/LeftFootAttachment").Position.Length(),
-				FootOffsetR = GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_LowerLeg_R/RightFootAttachment").Position.Length(),
-				SelfExclude = plr.CharBody3D.GetRid()
-			};
-			Skeleton.AddChild(_charIK);
-		}
+				_plrIKInit = true;
+				_charIK = new()
+				{
+					UpperLegBoneL = GDNode.GetNode<BoneAttachment3D>("Character/Poly/Skeleton3D/O_UpperLeg_L").BoneName,
+					UpperLegBoneR = GDNode.GetNode<BoneAttachment3D>("Character/Poly/Skeleton3D/O_UpperLeg_R").BoneName,
+					LowerLegBoneL = GDNode.GetNode<BoneAttachment3D>("Character/Poly/Skeleton3D/O_LowerLeg_L").BoneName,
+					LowerLegBoneR = GDNode.GetNode<BoneAttachment3D>("Character/Poly/Skeleton3D/O_LowerLeg_R").BoneName,
+					FootOffsetL = GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_LowerLeg_L/LeftFootAttachment").Position.Length(),
+					FootOffsetR = GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_LowerLeg_R/RightFootAttachment").Position.Length(),
+					SelfExclude = plr.CharBody3D.GetRid()
+				};
+				Skeleton.AddChild(_charIK);
+			}
 
-		if (_charIK != null && Parent is NPC npc)
-		{
-			_charIK.CurrentHorizontalSpeed = new Vector2(npc.CharacterVelocity.X, npc.CharacterVelocity.Z).Length();
-			_charIK.IsActive = npc.IsOnGround && !npc.IsDead && !npc.IsSitting && !(npc is Player plrForFootIk && plrForFootIk.IsClimbing);
-		}
+			if (_charIK != null && plr.UseFootplanting)
+			{
+				_charIK.CurrentHorizontalSpeed = new Vector2(plr.CharacterVelocity.X, plr.CharacterVelocity.Z).Length();
+				_charIK.IsActive = plr.IsOnGround && !plr.IsDead && !plr.IsSitting && !(plr.IsClimbing);
+			}
 
-		if (_updateClothDirty)
-		{
-			_updateClothDirty = false;
-			UpdateClothMaterials();
-		}
+			if (!_plrVmInit && plr.UseFirstPersonViewmodel)
+			{
+				_plrVmInit = true;
+				_viewmodelRig = new()
+				{
+					UpperArmBoneL = GDNode.GetNode<BoneAttachment3D>("Character/Poly/Skeleton3D/O_UpperArm_L").BoneName,
+					UpperArmBoneR = GDNode.GetNode<BoneAttachment3D>("Character/Poly/Skeleton3D/O_UpperArm_R").BoneName,
+					HeadBoneName = GDNode.GetNode<BoneAttachment3D>("Character/Poly/Skeleton3D/O_Head").BoneName
+				};
+				Skeleton.AddChild(_viewmodelRig);
 
-		if (Parent is Player)
-		{
+				LeftArmMeshInstance.SetLayerMaskValue(ViewmodelArmsLayerBit, true);
+				RightArmMeshInstance.SetLayerMaskValue(ViewmodelArmsLayerBit, true);
+			}
+
+			if (_viewmodelRig != null)
+			{
+				Camera3D? mainCam = Root.Environment.CurrentCamera?.Camera3D;
+				if (mainCam != null)
+				{
+					_viewmodelRig.SyncToCamera(mainCam);
+					_viewmodelRig.CameraPitchDegrees = Mathf.RadToDeg(mainCam.GlobalRotation.X);
+				}
+			}
+
 			_currentStrafeX = Mathf.Lerp(_currentStrafeX, _targetStrafeX, MathUtils.ExpDecay((float)delta, DirectionalBlendSpeed));
 			_currentStrafeY = Mathf.Lerp(_currentStrafeY, _targetStrafeY, MathUtils.ExpDecay((float)delta, DirectionalBlendSpeed));
 
 			Vector2 blendPos = new(_currentStrafeX, _currentStrafeY);
 			AnimTree?.Set("parameters/StateMachine/WalkRun/Walk/blend_position", blendPos);
 			AnimTree?.Set("parameters/StateMachine/WalkRun/Run/blend_position", blendPos);
+		}
+
+		if (_updateClothDirty)
+		{
+			_updateClothDirty = false;
+			UpdateClothMaterials();
 		}
 
 		foreach (KeyValuePair<string, float> kvp in _blendTargets)

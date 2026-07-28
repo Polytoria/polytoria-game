@@ -205,6 +205,14 @@ public sealed partial class Tool : RigidBody
 		{
 			Holder.Character.SetBlendValue(CharacterModel.CharacterModelBlendEnum.ToolHoldRight, _hasDynChild ? 1 : 0);
 		}
+		RefreshViewmodelLayer();
+	}
+
+	internal void RefreshViewmodelLayer()
+	{
+		bool show = Holder is Player plr && plr.IsLocal && Holder.Character is PolytorianModel pt && pt.IsViewmodelActive;
+		SetVisualMaskLayer(1, !show);
+		SetVisualMaskLayer(PolytorianModel.ViewmodelArmsLayerBit, show);
 	}
 
 	public override void PreDelete()

@@ -31,7 +31,7 @@ public sealed partial class Player : NPC
 	public const string BadgeImageDirPath = "res://assets/textures/client/ui/playerlist/badges/";
 	private static readonly Dictionary<string, string> _badgePathCache = [];
 	private bool _isReady = false;
-	private static float ClimbPushSpeed = 75.0f;
+	private static float ClimbPushSpeed = 25.0f;
 	private static float ClimbJumpCooldown = 0.6f;
 	internal bool JustFinishedClimbing = false;
 	internal bool IsMoving = false;
@@ -39,24 +39,34 @@ public sealed partial class Player : NPC
 	internal Vector3 LastVelocity;
 	internal Vector3 ExternalVelocity;
 
-	private float _respawnTime = 5.0f;
-	private bool _canMove = true;
-	private float _sprintSpeed;
-	private float _stamina = 0;
-	private float _maxStamina = 3;
-	private bool _useStamina = true;
-	private float _staminaRegen = 1.2f;
-	private float _staminaBurn = 1.2f;
-	private bool _keepInventory = false;
-	private bool _useHeadTurning = false;
 	private int _userID;
-	private bool _useBubbleChat = true;
-	private bool _autoLoadAppearance = true;
 	private bool _allowAnimationWhileMoving = false;
-	private PlayerMovementModeEnum _movementMode = PlayerMovementModeEnum.Default;
 	private PlayerRotationModeEnum _rotationMode = PlayerRotationModeEnum.Automatic;
 	private Team? _team;
 	private Color _chatColorBeforeTeam;
+	private float _stamina = 0;
+
+	private float _respawnTime;
+	private float _sprintSpeed;
+	private bool _useStamina;
+	private float _maxStamina;
+	private float _staminaBurn;
+	private float _staminaRegen;
+	private bool _canMove;
+	private bool _canRespawn;
+	private float _airControl;
+	private float _airFriction;
+	private float _groundControl;
+	private float _groundFriction;
+	private bool _useHeadTurning;
+	private bool _useFootplanting;
+	private bool _useBuiltInSounds;
+	private bool _useFirstPersonViewmodel;
+	private bool _autoLoadAppearance;
+	private bool _keepInventory;
+	private bool _useBubbleChat;
+	private PlayerMovementModeEnum _movementMode;
+	private PlayerCollisionShapeEnum _collisionShape;
 
 	internal bool SprintOverride = false;
 	private float _pingStartTime = 0;
@@ -117,145 +127,23 @@ public sealed partial class Player : NPC
 	}
 
 	[Editable, ScriptProperty]
-	public bool CanMove
-	{
-		get => _canMove;
-		set
-		{
-			_canMove = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
-	public float SprintSpeed
-	{
-		get => _sprintSpeed;
-		set
-		{
-			_sprintSpeed = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty, SyncVar(Unreliable = true, AllowAuthorWrite = true)]
-	public float Stamina
-	{
-		get => _stamina;
-		set
-		{
-			_stamina = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
-	public float MaxStamina
-	{
-		get => _maxStamina;
-		set
-		{
-			_maxStamina = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty, ScriptLegacyProperty("StaminaEnabled")]
-	public bool UseStamina
-	{
-		get => _useStamina;
-		set
-		{
-			_useStamina = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
-	public float StaminaRegen
-	{
-		get => _staminaRegen;
-		set
-		{
-			_staminaRegen = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
-	public float StaminaBurn
-	{
-		get => _staminaBurn;
-		set
-		{
-			_staminaBurn = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
-	public float RespawnTime
-	{
-		get => _respawnTime;
-		set
-		{
-			_respawnTime = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
-	public bool KeepInventory
-	{
-		get => _keepInventory;
-		set
-		{
-			_keepInventory = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
-	public bool UseHeadTurning
-	{
-		get => _useHeadTurning;
-		set
-		{
-			_useHeadTurning = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
-	public bool UseBubbleChat
-	{
-		get => _useBubbleChat;
-		set
-		{
-			_useBubbleChat = value;
-			_bubbleChat?.Visible = _useBubbleChat;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
-	public bool AutoLoadAppearance
-	{
-		get => _autoLoadAppearance;
-		set
-		{
-			_autoLoadAppearance = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
 	public bool AllowAnimationWhileMoving
 	{
 		get => _allowAnimationWhileMoving;
 		set
 		{
 			_allowAnimationWhileMoving = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public PlayerRotationModeEnum RotationMode
+	{
+		get => _rotationMode;
+		set
+		{
+			_rotationMode = value;
 			OnPropertyChanged();
 		}
 	}
@@ -285,6 +173,238 @@ public sealed partial class Player : NPC
 	}
 
 	[Editable, ScriptProperty]
+	public float RespawnTime
+	{
+		get => _respawnTime;
+		set
+		{
+			_respawnTime = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float SprintSpeed
+	{
+		get => _sprintSpeed;
+		set
+		{
+			_sprintSpeed = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, ScriptLegacyProperty("StaminaEnabled")]
+	public bool UseStamina
+	{
+		get => _useStamina;
+		set
+		{
+			_useStamina = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, SyncVar(Unreliable = true, AllowAuthorWrite = true)]
+	public float Stamina
+	{
+		get => _stamina;
+		set
+		{
+			_stamina = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float MaxStamina
+	{
+		get => _maxStamina;
+		set
+		{
+			_maxStamina = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float StaminaBurn
+	{
+		get => _staminaBurn;
+		set
+		{
+			_staminaBurn = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float StaminaRegen
+	{
+		get => _staminaRegen;
+		set
+		{
+			_staminaRegen = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool CanMove
+	{
+		get => _canMove;
+		set
+		{
+			_canMove = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool CanRespawn
+	{
+		get => _canRespawn;
+		set
+		{
+			_canRespawn = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float AirControl
+	{
+		get => _airControl;
+		set
+		{
+			_airControl = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float AirFriction
+	{
+		get => _airFriction;
+		set
+		{
+			_airFriction = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float GroundControl
+	{
+		get => _groundControl;
+		set
+		{
+			_groundControl = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float GroundFriction
+	{
+		get => _groundFriction;
+		set
+		{
+			_groundFriction = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool UseHeadTurning
+	{
+		get => _useHeadTurning;
+		set
+		{
+			_useHeadTurning = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool UseFootplanting
+	{
+		get => _useFootplanting;
+		set
+		{
+			_useFootplanting = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool UseBuiltInSounds
+	{
+		get => _useBuiltInSounds;
+		set
+		{
+			_useBuiltInSounds = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool UseFirstPersonViewmodel
+	{
+		get => _useFirstPersonViewmodel;
+		set
+		{
+			_useFirstPersonViewmodel = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool AutoLoadAppearance
+	{
+		get => _autoLoadAppearance;
+		set
+		{
+			_autoLoadAppearance = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool KeepInventory
+	{
+		get => _keepInventory;
+		set
+		{
+			_keepInventory = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool UseBubbleChat
+	{
+		get => _useBubbleChat;
+		set
+		{
+			_useBubbleChat = value;
+			_bubbleChat?.Visible = _useBubbleChat;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public PlayerCollisionShapeEnum CollisionShape
+	{
+		get => _collisionShape;
+		set
+		{
+			_collisionShape = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
 	public PlayerMovementModeEnum MovementMode
 	{
 		get => _movementMode;
@@ -298,17 +418,6 @@ public sealed partial class Player : NPC
 				_ => null,
 			};
 
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
-	public PlayerRotationModeEnum RotationMode
-	{
-		get => _rotationMode;
-		set
-		{
-			_rotationMode = value;
 			OnPropertyChanged();
 		}
 	}
@@ -932,7 +1041,7 @@ public sealed partial class Player : NPC
 			if (pushDir.HasValue && pushDir.Value.LengthSquared() > 0.0001f)
 			{
 				Vector3 dir = pushDir.Value.Normalized();
-				EjectMomentum = new Vector3(dir.X * ClimbPushSpeed, EjectMomentum.Y, dir.Z * ClimbPushSpeed);
+				ExternalVelocity = new Vector3(dir.X * ClimbPushSpeed, ExternalVelocity.Y, dir.Z * ClimbPushSpeed);
 			}
 		}
 	}
@@ -940,15 +1049,15 @@ public sealed partial class Player : NPC
 	private void OnFirstPersonEntered()
 	{
 		if (Character == null) return;
-		Character.GDNode3D.Visible = false;
 		_bubbleChat.Visible = false;
+		(Character as PolytorianModel)?.SetViewmodelActive(true);
 	}
 
 	private void OnFirstPersonExited()
 	{
 		if (Character == null) return;
-		Character.GDNode3D.Visible = true;
 		_bubbleChat.Visible = true;
+		(Character as PolytorianModel)?.SetViewmodelActive(false);
 	}
 
 	public void WrapToSpawnPoint()
@@ -1047,20 +1156,30 @@ public sealed partial class Player : NPC
 		CopyInventory();
 
 		// Apply playerdefaults
+		RespawnTime = Root.PlayerDefaults.RespawnTime;
 		MaxHealth = Root.PlayerDefaults.MaxHealth;
+		JumpPower = Root.PlayerDefaults.JumpPower;
+		CoyoteTime = Root.PlayerDefaults.CoyoteTime;
 		WalkSpeed = Root.PlayerDefaults.WalkSpeed;
 		SprintSpeed = Root.PlayerDefaults.SprintSpeed;
 		UseStamina = Root.PlayerDefaults.UseStamina;
-		Stamina = Root.PlayerDefaults.Stamina;
 		MaxStamina = Root.PlayerDefaults.MaxStamina;
-		StaminaRegen = Root.PlayerDefaults.StaminaRegen;
 		StaminaBurn = Root.PlayerDefaults.StaminaBurn;
-		JumpPower = Root.PlayerDefaults.JumpPower;
-		RespawnTime = Root.PlayerDefaults.RespawnTime;
-		KeepInventory = Root.PlayerDefaults.KeepInventory;
+		StaminaRegen = Root.PlayerDefaults.StaminaRegen;
+		CanMove = Root.PlayerDefaults.CanMove;
+		CanRespawn = Root.PlayerDefaults.CanRespawn;
+		AirControl = Root.PlayerDefaults.AirControl;
+		AirFriction = Root.PlayerDefaults.AirFriction;
+		GroundControl = Root.PlayerDefaults.GroundControl;
+		GroundFriction = Root.PlayerDefaults.GroundFriction;
 		UseHeadTurning = Root.PlayerDefaults.UseHeadTurning;
-		UseBubbleChat = Root.PlayerDefaults.UseBubbleChat;
+		UseFootplanting = Root.PlayerDefaults.UseFootplanting;
+		UseBuiltInSounds = Root.PlayerDefaults.UseBuiltInSounds;
+		UseFirstPersonViewmodel = Root.PlayerDefaults.UseFirstPersonViewmodel;
 		AutoLoadAppearance = Root.PlayerDefaults.AutoLoadAppearance;
+		KeepInventory = Root.PlayerDefaults.KeepInventory;
+		UseBubbleChat = Root.PlayerDefaults.UseBubbleChat;
+		CollisionShape = Root.PlayerDefaults.CollisionShape;
 		MovementMode = Root.PlayerDefaults.MovementMode;
 
 		Character?.Animator?.StopAnimation();
@@ -1076,6 +1195,7 @@ public sealed partial class Player : NPC
 		WrapToSpawnPoint();
 
 		Health = MaxHealth;
+		Stamina = MaxStamina;
 		Anchored = false;
 
 		Rpc(nameof(NetRespawned));
@@ -1157,6 +1277,13 @@ public sealed partial class Player : NPC
 		{
 			Kick("You have been kicked by game administrator.");
 		}
+	}
+
+	[ScriptEnum]
+	public enum PlayerCollisionShapeEnum
+	{
+		Capsule,
+		Box
 	}
 
 	[ScriptEnum]

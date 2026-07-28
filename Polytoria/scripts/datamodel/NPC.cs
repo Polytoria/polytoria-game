@@ -29,20 +29,22 @@ public partial class NPC : Physical
 
 	public CharacterBody3D CharBody3D = null!;
 	public const float ForwardRaycastRange = 1;
-	const float EjectMomentumScale = 0.35f;
+	const float SeatEjectMomentumScale = 1.5f;
 	const float SeatExceptionReleaseDelay = 0.3f;
 	private Vector3 _seatOffset = new(0, 1.7f, 0);
 	private bool _writingSeat = false;
 	private readonly List<CollisionObject3D> _seatCollisionExceptions = [];
 	private float _seatExceptionReleaseTimer = 0f;
-	internal Vector3 EjectMomentum = Vector3.Zero;
-	private float _health = 100;
 	private RemoteTransform3D? _toolRemoteTransform;
+
+	private string _displayName = "";
+	private float _health = 100;
+
 	private float _maxHealth = 100;
 	private float _jumpPower = 36;
-	private float _walkSpeed = 16;
 	private float _coyoteTime = 0.15f;
-	private string _displayName = "";
+	private float _walkSpeed = 16;
+
 	protected RayCast3D FootFwdRaycast = null!;
 	private Sound? _jumpSound;
 	private Sound? _fallSound;
@@ -305,23 +307,23 @@ public partial class NPC : Physical
 	}
 
 	[Editable, ScriptProperty]
-	public float CoyoteTime
-	{
-		get => _coyoteTime;
-		set
-		{
-			_coyoteTime = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
 	public float JumpPower
 	{
 		get => _jumpPower;
 		set
 		{
 			_jumpPower = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float CoyoteTime
+	{
+		get => _coyoteTime;
+		set
+		{
+			_coyoteTime = value;
 			OnPropertyChanged();
 		}
 	}
@@ -671,14 +673,6 @@ public partial class NPC : Physical
 		_nametag.Position = NametagOffset + _fixedNametagOffset;
 	}
 
-	internal void ConsumeEjectMomentum(float delta)
-	{
-		if (EjectMomentum.LengthSquared() <= 0.0001f) return;
-		CharacterVelocity.X += EjectMomentum.X;
-		CharacterVelocity.Z += EjectMomentum.Z;
-		EjectMomentum = EjectMomentum.Lerp(Vector3.Zero, MathUtils.ExpDecay(delta, 2f));
-	}
-
 	protected override void OnPropertyChanged([CallerMemberName] string propertyName = "", bool syncToNet = true)
 	{
 		base.OnPropertyChanged(propertyName, syncToNet);
@@ -820,8 +814,6 @@ public partial class NPC : Physical
 			UpdateVelocityInternal(CharacterVelocity);
 			if (this is not Player)
 			{
-				ConsumeEjectMomentum((float)delta);
-
 				Vector3 fullVelocity = CharacterVelocity;
 
 				CharBody3D.Velocity = new Vector3(fullVelocity.X, 0f, fullVelocity.Z);
@@ -914,7 +906,6 @@ public partial class NPC : Physical
 		OverrideCanCollideTo = false;
 		Unsit(false);
 		UpdateCollision();
-		EjectMomentum = Vector3.Zero;
 
 		Character?.Animator?.StopAnimation();
 		Character?.Animator?.StopOneShotAnimation();
@@ -1039,12 +1030,12 @@ public partial class NPC : Physical
 		{
 			if (IsPanicFalling)
 			{
-				FallSound?.Stop();
-				if (grounded && LandSound != null && !LandSound.Playing)
+				if (grounded && !IsClimbing && LandSound != null && !LandSound.Playing)
 				{
 					LandSound.Play();
 				}
 			}
+			FallSound?.Stop();
 			_fallTimer = 0f;
 			IsPanicFalling = false;
 			return;
@@ -1055,6 +1046,12 @@ public partial class NPC : Physical
 		{
 			IsPanicFalling = false;
 			return;
+		}
+
+		if (FallSound != null && !FallSound.Playing)
+		{
+			FallSound.Loop = true;
+			FallSound.Play();
 		}
 
 		if (!IsPanicFalling)
@@ -1281,7 +1278,15 @@ public partial class NPC : Physical
 
 			if (!IsDead)
 			{
-				EjectMomentum = (inherited with { Y = 0 }) * EjectMomentumScale;
+				if (this is Player plrEject)
+				{
+					plrEject.ExternalVelocity = (inherited with { Y = 0 }) * SeatEjectMomentumScale;
+				}
+				else
+				{
+					CharacterVelocity = CharacterVelocity with { X = inherited.X * SeatEjectMomentumScale, Z = inherited.Z * SeatEjectMomentumScale };
+				}
+				CharacterVelocity.Y = inherited.Y;
 
 				// Don't restore collision if death already claimed the override (ragdoll)
 				OverrideCanCollide = false;
@@ -1466,7 +1471,6 @@ public partial class NPC : Physical
 		Health = MaxHealth;
 		Anchored = false;
 		IsDead = false;
-		EjectMomentum = Vector3.Zero;
 
 		Character?.Animator?.StopAnimation();
 		Character?.Animator?.StopOneShotAnimation();
