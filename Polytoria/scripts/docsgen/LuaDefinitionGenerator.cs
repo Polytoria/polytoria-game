@@ -19,11 +19,7 @@ public static class LuaDefinitionGenerator
 	public static void GenerateDocFiles(string atFolder)
 	{
 		// Clear old lua folder
-		string[] files = Directory.GetFiles(atFolder);
-
-		APIReferenceRoot refer = GenerateReferences();
-
-		foreach (string file in files)
+		foreach (string file in Directory.GetFiles(atFolder))
 		{
 			File.Delete(file);
 		}
@@ -35,10 +31,11 @@ public static class LuaDefinitionGenerator
 			string pathTo = CodeHintPath.PathJoin(item);
 			if (pathTo.EndsWith(".luau"))
 			{
-				string content = Godot.FileAccess.GetFileAsString(pathTo);
-				builder.AppendLine(content);
+				builder.AppendLine(Godot.FileAccess.GetFileAsString(pathTo));
 			}
 		}
+
+		APIReferenceRoot refer = GenerateReferences();
 
 		File.WriteAllText(atFolder.PathJoin("def.json"), JsonSerializer.Serialize(refer, APIRefGenerationContext.Default.APIReferenceRoot));
 
@@ -60,9 +57,8 @@ public static class LuaDefinitionGenerator
 		}
 		builder.AppendLine("}");
 
-		for (int i = 0; i < refer.Classes.Length; i++)
+		foreach (ScriptClass c in refer.Classes)
 		{
-			ScriptClass c = refer.Classes[i];
 			// Ignore already declared types
 			if (c.Name == "PTSignal" || c.Name == "PTSignalConnection") continue;
 
@@ -74,7 +70,7 @@ public static class LuaDefinitionGenerator
 		File.WriteAllText(atFolder.PathJoin("def.d.luau"), builder.ToString());
 	}
 
-	private static void AppendClass(StringBuilder builder, ScriptClass c)
+	private static void AppendClass(StringBuilder builder, in ScriptClass c)
 	{
 		bool hasStatic = false;
 
@@ -92,11 +88,13 @@ public static class LuaDefinitionGenerator
 				hasStatic = true;
 				continue;
 			}
+
 			// properties cannot be marked with attributes
 			if (p.ObsoletionInfo.HasValue)
 			{
 				builder.AppendLine($"\t{p.ObsoletionInfo.Value.GetWarningComment()}");
 			}
+
 			builder.Append('\t');
 			if (p.IsReadOnly)
 			{
@@ -127,6 +125,7 @@ public static class LuaDefinitionGenerator
 				// we can skip explicit metamethod operator overloads since the type
 				// checker will blatantly assume that they already exist
 				if (m.IsStatic && (m.Parameters.Length == 0 || m.Parameters[0].Type != c.Name)) continue;
+
 				// the type checker will not consider a class's __index or
 				// __newindex metamethods when checking for keys, so they must be
 				// converted to a `[K]: V` field
@@ -144,21 +143,24 @@ public static class LuaDefinitionGenerator
 				hasStatic = true;
 				if (!m.IsSemiStatic) continue;
 			}
+
+			if (m.ObsoletionInfo.HasValue)
+			{
+				builder.AppendLine($"\t{m.ObsoletionInfo.Value.GetAttribute()}");
+			}
+
 			IEnumerable<string> iter = m.Parameters.Select(p => p.ToString());
 			if ((m.IsMetamethod && m.IsStatic) || m.IsSemiStatic)
 			{
 				// overwrite first parameter with self
 				iter = iter.Skip(1);
 			}
-			if (m.ObsoletionInfo.HasValue)
-			{
-				builder.AppendLine($"\t{m.ObsoletionInfo.Value.GetAttribute()}");
-			}
 			builder.Append($"\tfunction {m.Name}({string.Join(", ", iter.Prepend("self"))})");
 			if (m.ReturnType != null)
 			{
 				builder.Append($": {m.ReturnType}");
 			}
+
 			builder.AppendLine();
 		}
 
@@ -177,30 +179,35 @@ public static class LuaDefinitionGenerator
 		}
 	}
 
-	private static void AppendStaticClass(StringBuilder builder, ScriptClass c)
+	private static void AppendStaticClass(StringBuilder builder, in ScriptClass c)
 	{
 		builder.AppendLine($"declare {c.Name}: {{");
 
 		foreach (ScriptProperty p in c.Properties)
 		{
 			if (!p.IsStatic) continue;
-			// properties cannot be marked with attributes
+
 			if (p.ObsoletionInfo.HasValue)
 			{
+				// properties cannot be marked with attributes
 				builder.AppendLine($"\t{p.ObsoletionInfo.Value.GetWarningComment()}");
+			}
+			if (p.IsReadOnly)
+			{
+				// properties cannot be marked with 'read' in the old type solver
+				// https://eryn.io/moonwave/docs/TagList/#readonly
+				builder.AppendLine("\t--- @readonly");
 			}
 			builder.AppendLine($"\t{p},");
 		}
 
 		// function types cannot be marked with attributes nor documented
-
-		IEnumerable<IGrouping<string, string>> functionTypes = c.Methods
-			.Where(m => m.IsStatic && !(m.IsMetamethod || m.ObsoletionInfo.HasValue))
+		foreach (IGrouping<string, string> g in c.Methods
+			.Where(m => m.IsStatic && !m.IsMetamethod && !m.ObsoletionInfo.HasValue)
 			.GroupBy(
 				m => m.Name,
 				m => $"({string.Join(", ", m.Parameters.Select(p => p.ToString(true)))}) -> {m.ReturnType ?? "()"}"
-			);
-		foreach (IGrouping<string, string> g in functionTypes)
+			))
 		{
 			builder.AppendLine($"\t{g.Key}: {(g.Count() > 1 ? $"({string.Join(") & (", g)})" : g.First())},");
 		}

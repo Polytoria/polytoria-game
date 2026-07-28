@@ -270,9 +270,9 @@ public static class APIReferenceGenerator
 
 			// Find the actual base type
 			while (baseType != null &&
-				   baseType != typeof(object) &&
-				   baseType != typeof(ValueType) &&
-				   !baseType.IsAssignableTo(typeof(Node)))
+					baseType != typeof(object) &&
+					baseType != typeof(ValueType) &&
+					!baseType.IsAssignableTo(typeof(Node)))
 			{
 				if (classMap.ContainsKey(baseType))
 				{
@@ -298,9 +298,9 @@ public static class APIReferenceGenerator
 			// Ensure parent is added
 			Type? baseType = type.BaseType;
 			while (baseType != null &&
-				   baseType != typeof(object) &&
-				   baseType != typeof(ValueType) &&
-				   !baseType.IsAssignableTo(typeof(Node)))
+					baseType != typeof(object) &&
+					baseType != typeof(ValueType) &&
+					!baseType.IsAssignableTo(typeof(Node)))
 			{
 				if (classMap.ContainsKey(baseType) && !processed.Contains(baseType))
 				{
@@ -331,9 +331,9 @@ public static class APIReferenceGenerator
 			bool hasParentInSet = false;
 
 			while (baseType != null &&
-				   baseType != typeof(object) &&
-				   baseType != typeof(ValueType) &&
-				   !baseType.IsAssignableTo(typeof(Node)))
+					baseType != typeof(object) &&
+					baseType != typeof(ValueType) &&
+					!baseType.IsAssignableTo(typeof(Node)))
 			{
 				if (classMap.ContainsKey(baseType))
 				{
@@ -531,6 +531,20 @@ public static class APIReferenceGenerator
 
 		public ScriptObsoletionInfo(Attributes.ObsoleteAttribute obsoleteAttribute) : this(obsoleteAttribute.Reason, obsoleteAttribute.UseInstead) { }
 
+		public override readonly string ToString()
+		{
+			if (UseInstead != null)
+			{
+				string result = $"Use `{UseInstead}` instead";
+				return Reason != null ? $"{result}. {Reason}" : result;
+			}
+			return Reason ?? "";
+		}
+
+		/// <summary>
+		/// Generates a Luau <c>@deprecated</c> attribute for functions:
+		/// <see href="https://rfcs.luau.org/syntax-attribute-functions-deprecated.html" />
+		/// </summary>
 		public readonly string GetAttribute()
 		{
 			List<string> args = [];
@@ -549,21 +563,15 @@ public static class APIReferenceGenerator
 			return "@deprecated";
 		}
 
-		public readonly string GetWarning()
+		/// <summary>
+		/// Generates a moonwave <c>@deprecated</c> comment for non-functions:
+		/// <see href="https://eryn.io/moonwave/docs/TagList/#deprecated" />
+		/// </summary>
+		public readonly string GetWarningComment()
 		{
-			string result = "Obsolete";
-			if (UseInstead != null)
-			{
-				result += $", use '{UseInstead}' instead";
-			}
-			if (Reason != null)
-			{
-				result += $". {Reason}";
-			}
-			return result;
+			string content = ToString();
+			return content.Length != 0 ? $"--- @deprecated -- {content}" : "--- @deprecated";
 		}
-
-		public readonly string GetWarningComment() => $"--- {GetWarning()}";
 	}
 
 	public readonly struct ScriptMethod(string name, string? returnType, ScriptParameter[] parameters, bool isAsync = false, bool isStatic = false, bool isSemiStatic = false, ScriptObsoletionInfo? obsoletionInfo = null)
@@ -575,6 +583,7 @@ public static class APIReferenceGenerator
 		public readonly bool IsStatic = isStatic;
 		public readonly bool IsSemiStatic = isSemiStatic;
 		public readonly ScriptObsoletionInfo? ObsoletionInfo = obsoletionInfo;
+
 		[JsonIgnore]
 		public readonly bool IsMetamethod => Name.StartsWith("__");
 	}
