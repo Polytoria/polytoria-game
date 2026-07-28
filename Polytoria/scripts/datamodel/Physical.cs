@@ -488,6 +488,8 @@ public partial class Physical : Dynamic
 		return GDNode as CollisionObject3D;
 	}
 
+	internal CollisionObject3D? GetCollisionBody() => GetCollisionObject();
+
 	private void RefreshCollisionBody()
 	{
 		CollisionObject3D? body = GetCollisionObject();

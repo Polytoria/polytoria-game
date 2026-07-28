@@ -35,6 +35,9 @@ public partial class CharacterModel : Dynamic
 		ToolHoldRight,
 		LookX,
 		LookY,
+		StrafeX,
+		StrafeY,
+		ClimbSpeed
 	}
 
 	[ScriptProperty, SyncVar(AllowAuthorWrite = true)]

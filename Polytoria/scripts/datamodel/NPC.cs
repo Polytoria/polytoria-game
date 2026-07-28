@@ -4,19 +4,21 @@
 
 using Godot;
 using Godot.Collections;
+using System.Collections.Generic;
 using Polytoria.Attributes;
 using Polytoria.Client;
 using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
 using Polytoria.Utils;
+using Polytoria.Datamodel.Resources;
+using System.Runtime.CompilerServices;
 
 namespace Polytoria.Datamodel;
 
 [Instantiable]
 public partial class NPC : Physical
 {
-	private const float CoyoteTime = 0.15f;
 	private const float NavigationDistance = 2f;
 	public const float BodyRotateLerp = 10f;
 	private const float StepHeight = 1.5f;
@@ -27,22 +29,67 @@ public partial class NPC : Physical
 
 	public CharacterBody3D CharBody3D = null!;
 	public const float ForwardRaycastRange = 1;
-	public const float StairForwardRaycastRange = 4;
-	public const float NameTagHeightMinus = 3f;
+	const float SeatEjectMomentumScale = 1.5f;
+	const float SeatExceptionReleaseDelay = 0.3f;
 	private Vector3 _seatOffset = new(0, 1.7f, 0);
-	private float _health = 100;
+	private bool _writingSeat = false;
+	private readonly List<CollisionObject3D> _seatCollisionExceptions = [];
+	private float _seatExceptionReleaseTimer = 0f;
 	private RemoteTransform3D? _toolRemoteTransform;
+
+	private string _displayName = "";
+	private float _health = 100;
+
 	private float _maxHealth = 100;
 	private float _jumpPower = 36;
+	private float _coyoteTime = 0.15f;
 	private float _walkSpeed = 16;
-	private string _displayName = "";
+
 	protected RayCast3D FootFwdRaycast = null!;
 	private Sound? _jumpSound;
+	private Sound? _fallSound;
+	private Sound? _landSound;
+	private Sound? _walkSound;
 	private bool _lastOnFloorState = false;
 	private float _timeSinceGrounded = 0f;
 	private bool _coyoteUsed = false;
 	private Node3D? _navAgentContainer;
 	private NavigationAgent3D? _navAgent;
+	internal float ClimbJumpCooldownRemaining = 0f;
+
+	private const float StepDistance = 5.5f;
+	private const float FootstepBasePitch = 1f;
+	private const float FootstepPitchVariance = 0.25f;
+	private static readonly System.Collections.Generic.Dictionary<string, BuiltInAudioAsset.BuiltInAudioPresetEnum> _materialSounds = new()
+	{
+		{ "Plastic", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepPlastic },
+		{ "Brick", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepStone },
+		{ "Concrete", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepStone },
+		{ "Dirt", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepDirt },
+		{ "Fabric", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepFabric },
+		{ "Grass", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepGrass },
+		{ "Ice", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepIce },
+		{ "Metal", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepMetal },
+		{ "MetalGrid", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepPlate },
+		{ "MetalPlate", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepPlate },
+		{ "Planks", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepPlanks },
+		{ "Plywood", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepWood },
+		{ "RustyIron", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepMetal },
+		{ "Sand", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepSand },
+		{ "Sandstone", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepStone },
+		{ "Snow", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepSand },
+		{ "Stone", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepStone },
+		{ "Wood", BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepWood }
+	};
+	private readonly System.Collections.Generic.Dictionary<BuiltInAudioAsset.BuiltInAudioPresetEnum, BuiltInAudioAsset> _footstepAudioCache = [];
+	private float _distanceSinceStep = 0f;
+	private float _lastFootstepPitch = FootstepBasePitch;
+	private bool _lastStepWasLeft = false;
+	private BuiltInAudioAsset.BuiltInAudioPresetEnum _currentFootstepPreset = BuiltInAudioAsset.BuiltInAudioPresetEnum.FootstepPlastic;
+
+	private const float PanicFallDelay = 0.5f;
+	private const float PanicFallHeight = 75f;
+	private float _fallTimer = 0f;
 
 	private Vector3 _nametagOffset = Vector3.Zero;
 	private Vector3 _fixedNametagOffset = new(0, 3, 0);
@@ -61,6 +108,10 @@ public partial class NPC : Physical
 
 	protected override float PositionSyncThreshold => 0.1f;
 	protected override float RotationSyncThreshold => 1f;
+
+	public bool IsPanicFalling { get; private set; } = false;
+	internal bool JustJumped { get; private set; } = false;
+	internal bool IsClimbing => this is Player plr && plr.IsClimbing;
 
 	[Editable, ScriptProperty, SyncVar(Unreliable = true, AllowAuthorWrite = true)]
 	public override Vector3 Velocity
@@ -267,6 +318,17 @@ public partial class NPC : Physical
 	}
 
 	[Editable, ScriptProperty]
+	public float CoyoteTime
+	{
+		get => _coyoteTime;
+		set
+		{
+			_coyoteTime = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
 	public float WalkSpeed
 	{
 		get => _walkSpeed;
@@ -331,6 +393,39 @@ public partial class NPC : Physical
 		set
 		{
 			_jumpSound = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public Sound? FallSound
+	{
+		get => _fallSound;
+		set
+		{
+			_fallSound = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public Sound? LandSound
+	{
+		get => _landSound;
+		set
+		{
+			_landSound = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public Sound? WalkSound
+	{
+		get => _walkSound;
+		set
+		{
+			_walkSound = value;
 			OnPropertyChanged();
 		}
 	}
@@ -423,7 +518,12 @@ public partial class NPC : Physical
 
 	public override Node CreateGDNode()
 	{
-		return new CharacterBody3D() { FloorMaxAngle = Mathf.DegToRad(80f) };
+		return new CharacterBody3D()
+		{
+			FloorMaxAngle = Mathf.DegToRad(80f),
+			FloorSnapLength = StepHeight + 0.05f,
+			FloorStopOnSlope = true
+		};
 	}
 
 	public override void InitGDNode()
@@ -437,6 +537,14 @@ public partial class NPC : Physical
 		base.Init();
 		EnsureTouchArea();
 		OverridePhysicsProcess = true;
+
+		HashSet<BuiltInAudioAsset.BuiltInAudioPresetEnum> uniquePresets = new(_materialSounds.Values);
+		foreach (var preset in uniquePresets)
+		{
+			var audio = New<BuiltInAudioAsset>();
+			audio.AudioPreset = preset;
+			_footstepAudioCache[preset] = audio;
+		}
 
 		// Create nametag
 		_nametag = new()
@@ -565,6 +673,15 @@ public partial class NPC : Physical
 		_nametag.Position = NametagOffset + _fixedNametagOffset;
 	}
 
+	protected override void OnPropertyChanged([CallerMemberName] string propertyName = "", bool syncToNet = true)
+	{
+		base.OnPropertyChanged(propertyName, syncToNet);
+		if (syncToNet && IsSitting && !_writingSeat && propertyName is nameof(Position) or nameof(Rotation) or nameof(LocalPosition) or nameof(LocalRotation) or nameof(Quaternion) or nameof(LocalQuaternion))
+		{
+			Unsit(false);
+		}
+	}
+
 	public override void PhysicsProcess(double delta)
 	{
 		base.PhysicsProcess(delta);
@@ -587,19 +704,17 @@ public partial class NPC : Physical
 			if (!Root.Network.IsServer && SittingIn != null)
 			{
 				Velocity = Vector3.Zero;
+				_writingSeat = true;
 				Position = SittingIn.Position + SeatOffset.Y * Up;
-				if (!SittingIn.SitDirectionLocked)
-				{
-					Rotation = new Vector3(SittingIn.Rotation.X, Rotation.Y, SittingIn.Rotation.Z);
-				}
-				else
-				{
-					Rotation = SittingIn.Rotation;
-				}
+				Rotation = SittingIn.SitDirectionLocked ? SittingIn.Rotation : new Vector3(SittingIn.Rotation.X, Rotation.Y, SittingIn.Rotation.Z);
+				_writingSeat = false;
 				Character?.PlayIdle();
 			}
-			return;
+			if (IsSitting) return;
 		}
+
+		// Ragdoll bones fully own movement while active
+		if (Character is PolytorianModel ptRagdoll && ptRagdoll.Ragdolling) return;
 
 		if (this is Player plr)
 		{
@@ -622,6 +737,7 @@ public partial class NPC : Physical
 			if (isOnFloor)
 			{
 				_timeSinceGrounded = 0f;
+				JustJumped = false;
 			}
 			else
 			{
@@ -660,7 +776,6 @@ public partial class NPC : Physical
 				{
 					finalState = CharacterModel.CharacterModelStateEnum.Walking;
 					animSpeed = WalkSpeed / 8;
-					TryStepUp();
 				}
 			}
 			else if (this is not Player || playerNPCOverride)
@@ -699,8 +814,24 @@ public partial class NPC : Physical
 			UpdateVelocityInternal(CharacterVelocity);
 			if (this is not Player)
 			{
-				CharBody3D.Velocity = Velocity;
+				Vector3 fullVelocity = CharacterVelocity;
+
+				CharBody3D.Velocity = new Vector3(fullVelocity.X, 0f, fullVelocity.Z);
 				CharBody3D.MoveAndSlide();
+				Vector3 afterHorizontal = CharBody3D.Velocity;
+
+				float snapLength = CharBody3D.FloorSnapLength;
+				if (walkTarget.HasValue && CharBody3D.IsOnFloor())
+				{
+					CharBody3D.FloorSnapLength = 0f;
+					TryStepUp();
+					CharBody3D.FloorSnapLength = snapLength;
+				}
+
+				CharBody3D.Velocity = new Vector3(0f, fullVelocity.Y, 0f);
+				CharBody3D.MoveAndSlide();
+
+				CharacterVelocity = new Vector3(afterHorizontal.X, CharBody3D.Velocity.Y, afterHorizontal.Z);
 			}
 
 			if (isOnFloor != _lastOnFloorState)
@@ -712,6 +843,28 @@ public partial class NPC : Physical
 				{
 					_coyoteUsed = false;
 					Landed.Invoke();
+				}
+			}
+
+			if (ClimbJumpCooldownRemaining > 0f)
+			{
+				ClimbJumpCooldownRemaining -= (float)delta;
+			}
+
+			// Stop ignoring vehicle's collision
+			if (_seatExceptionReleaseTimer > 0f)
+			{
+				_seatExceptionReleaseTimer -= (float)delta;
+				if (_seatExceptionReleaseTimer <= 0f)
+				{
+					foreach (CollisionObject3D body in _seatCollisionExceptions)
+					{
+						if (GodotObject.IsInstanceValid(body))
+						{
+							CharBody3D.RemoveCollisionExceptionWith(body);
+						}
+					}
+					_seatCollisionExceptions.Clear();
 				}
 			}
 		}
@@ -745,6 +898,9 @@ public partial class NPC : Physical
 	{
 		if (IsDead) return;
 		if (Root.SessionType != World.SessionTypeEnum.Client) return;
+
+		bool wasSitting = IsSitting;
+		IsDead = true;
 		Anchored = true;
 		OverrideCanCollide = true;
 		OverrideCanCollideTo = false;
@@ -756,24 +912,15 @@ public partial class NPC : Physical
 
 		if (Character is PolytorianModel ptmodel)
 		{
-			ptmodel.StartRagdoll(Velocity);
+			ptmodel.StartRagdoll(wasSitting ? Vector3.Zero : CharacterVelocity);
 		}
-		IsDead = true;
 		Died.Invoke();
 	}
 
 	[ScriptMethod]
 	public bool TryStepUp()
 	{
-		if (CharBody3D == null)
-		{
-			return false;
-		}
-
-		if (!CharBody3D.IsOnFloor())
-		{
-			return false;
-		}
+		if (CharBody3D == null || !CharBody3D.IsOnFloor()) return false;
 
 		int slideCount = CharBody3D.GetSlideCollisionCount();
 
@@ -782,71 +929,93 @@ public partial class NPC : Physical
 			return false;
 		}
 
-		Vector3 desiredVelocity = Velocity;
-		Vector3 desiredXZ = new(desiredVelocity.X, 0f, desiredVelocity.Z);
-		if (desiredXZ.LengthSquared() < 0.0001f)
+		// Use pre-slide velocity so a wall that stops XZ speed doesn't suppress stepping
+		if (new Vector3(CharacterVelocity.X, 0f, CharacterVelocity.Z).LengthSquared() < 0.0001f)
 		{
 			return false;
 		}
 
-		float groundY;
+		var groundHit = new KinematicCollision3D();
+		if (!CharBody3D.TestMove(CharBody3D.GlobalTransform, Vector3.Down * (StepHeight + 0.05f), groundHit))
 		{
-			var downHit = new KinematicCollision3D();
-			bool hasGround = CharBody3D.TestMove(CharBody3D.GlobalTransform, Vector3.Down * (StepHeight + 0.05f), downHit, 0.001f, true);
-			if (!hasGround)
-			{
-				return false;
-			}
-
-			groundY = downHit.GetPosition().Y;
+			return false;
 		}
-
-		const float stepSearchOvershoot = 0.05f;
-
-		var spaceState = World.Current!.World3D.DirectSpaceState;
+		float groundY = groundHit.GetPosition().Y;
+		float centerToGround = CharBody3D.GlobalPosition.Y - groundY;
 
 		for (int i = 0; i < slideCount; i++)
 		{
-			KinematicCollision3D stepTest = CharBody3D.GetSlideCollision(i);
-			Vector3 n = stepTest.GetNormal();
-			Vector3 p = stepTest.GetPosition();
+			KinematicCollision3D col = CharBody3D.GetSlideCollision(i);
 
-			if (Mathf.Abs(n.Y) >= 0.01f)
+			if (GetNetObjFromProxy((Node)col.GetCollider()) is Truss)
 			{
 				continue;
 			}
 
-			if (!(p.Y - groundY < StepHeight))
+			Vector3 wallNormal = col.GetNormal() * new Vector3(1, 0, 1);
+			if (wallNormal.LengthSquared() < 0.01f)
+			{
+				continue;
+			}
+			wallNormal = wallNormal.Normalized();
+
+			// Skip walkable surfaces, only walls need stepping
+			if (col.GetNormal().AngleTo(Vector3.Up) <= CharBody3D.FloorMaxAngle)
 			{
 				continue;
 			}
 
-			float stepHeight = p.Y + StepHeight + 0.0001f;
-			Vector3 stepTestInvDir = new Vector3(-n.X, 0, -n.Z).Normalized();
-			Vector3 origin = new Vector3(p.X, stepHeight, p.Z) + (stepTestInvDir * stepSearchOvershoot);
-			Vector3 direction = Vector3.Down * StepHeight;
+			Vector3 motion = -wallNormal * 0.05f;
+			Transform3D lifted = CharBody3D.GlobalTransform.Translated(Vector3.Up * StepHeight);
+			var fwdHit = new KinematicCollision3D();
+			Transform3D fwdTransform;
 
-			Dictionary result = spaceState.IntersectRay(new PhysicsRayQueryParameters3D()
+			if (!CharBody3D.TestMove(lifted, motion, fwdHit))
 			{
-				From = origin,
-				To = origin + direction,
-				Exclude = [CharBody3D.GetRid()],
-				CollideWithAreas = false,
-				CollideWithBodies = true,
-			});
+				fwdTransform = lifted.Translated(motion);
+			}
+			else
+			{
+				// Blocked above, try sliding around a second wall (e.g. inside corners)
+				Vector3 secondNormal = fwdHit.GetNormal() * new Vector3(1, 0, 1);
+				if (secondNormal.IsEqualApprox(wallNormal))
+				{
+					continue;
+				}
 
-			if (result.Count == 0)
+				motion = motion.Slide(secondNormal).Normalized() * 0.05f;
+
+				if (CharBody3D.TestMove(lifted, motion, new KinematicCollision3D()))
+				{
+					continue;
+				}
+
+				fwdTransform = lifted.Translated(motion);
+			}
+
+			var downHit = new KinematicCollision3D();
+			if (!CharBody3D.TestMove(fwdTransform, Vector3.Down * StepHeight, downHit))
 			{
 				continue;
 			}
 
-			Vector3 hitPos = result["position"].AsVector3();
+			float stepTopY = downHit.GetPosition().Y;
+			float rise = stepTopY - groundY;
 
-			Vector3 stepUpPoint = new Vector3(p.X, hitPos.Y + 0.01f, p.Z) + (stepTestInvDir * stepSearchOvershoot);
-			Vector3 stepUpPointOffset = stepUpPoint - new Vector3(p.X, groundY, p.Z);
+			if (rise <= 0.01f || rise > StepHeight)
+			{
+				continue;
+			}
 
-			CharBody3D.GlobalPosition += stepUpPointOffset;
-			CharBody3D.Velocity = desiredVelocity;
+			if (downHit.GetNormal().AngleTo(Vector3.Up) > CharBody3D.FloorMaxAngle)
+			{
+				continue;
+			}
+
+			// Only Y changes, MoveAndSlide owns XZ.
+			CharBody3D.GlobalPosition = new Vector3(CharBody3D.GlobalPosition.X, stepTopY + centerToGround, CharBody3D.GlobalPosition.Z) + (-wallNormal * 0.013f);
+			CharBody3D.Velocity = CharacterVelocity;
+			CharBody3D.ApplyFloorSnap();
 
 			return true;
 		}
@@ -854,16 +1023,145 @@ public partial class NPC : Physical
 		return false;
 	}
 
+	internal void TickPanicFall(bool isOnFloor, float delta)
+	{
+		bool grounded = isOnFloor || CharacterVelocity.Y >= 0f;
+		if (grounded || IsClimbing || IsDead || IsSitting)
+		{
+			if (IsPanicFalling)
+			{
+				if (grounded && !IsClimbing && LandSound != null && !LandSound.Playing)
+				{
+					LandSound.Play();
+				}
+			}
+			FallSound?.Stop();
+			_fallTimer = 0f;
+			IsPanicFalling = false;
+			return;
+		}
+
+		_fallTimer += delta;
+		if (_fallTimer < PanicFallDelay)
+		{
+			IsPanicFalling = false;
+			return;
+		}
+
+		if (FallSound != null && !FallSound.Playing)
+		{
+			FallSound.Loop = true;
+			FallSound.Play();
+		}
+
+		if (!IsPanicFalling)
+		{
+			var result = World.Current?.World3D.DirectSpaceState?.IntersectRay(new PhysicsRayQueryParameters3D
+			{
+				From = CharBody3D.GlobalPosition,
+				To = CharBody3D.GlobalPosition + Vector3.Down * PanicFallHeight,
+				CollideWithBodies = true,
+				CollideWithAreas = false,
+				Exclude = [CharBody3D.GetRid()]
+			});
+			bool nowFalling = result == null || result.Count == 0;
+			if (nowFalling)
+			{
+				FallSound?.Loop = true;
+				if (FallSound != null && !FallSound.Playing)
+				{
+					FallSound.Play();
+				}
+			}
+			IsPanicFalling = nowFalling;
+		}
+	}
+
+	internal void TickFootsteps(bool isOnFloor, float delta)
+	{
+		if (WalkSound == null || IsDead)
+		{
+			_distanceSinceStep = 0f;
+			return;
+		}
+
+		bool climbing = IsClimbing;
+		float speed = climbing ? Mathf.Abs(CharacterVelocity.Y) : new Vector2(CharacterVelocity.X, CharacterVelocity.Z).Length();
+		if ((!climbing && !isOnFloor) || speed < 0.5f)
+		{
+			_distanceSinceStep = 0f;
+			return;
+		}
+
+		_distanceSinceStep += speed * delta;
+		while (_distanceSinceStep >= StepDistance)
+		{
+			_distanceSinceStep -= StepDistance;
+			_lastStepWasLeft = !_lastStepWasLeft;
+			PlayFootstep(_lastStepWasLeft, climbing ? 1.5f : 1f);
+		}
+	}
+
+	internal void PlayFootstep(bool left, float pitchMultiplier = 1f)
+	{
+		if (WalkSound == null || CharBody3D == null || IsDead) return;
+		if (!IsClimbing && !IsOnGround) return;
+
+		var spaceState = CharBody3D.GetWorld3D().DirectSpaceState;
+		var result = spaceState.IntersectRay(new PhysicsRayQueryParameters3D
+		{
+			From = CharBody3D.GlobalPosition + Vector3.Up * 0.3f,
+			To = CharBody3D.GlobalPosition + Vector3.Down * 5f,
+			CollideWithBodies = true,
+			CollideWithAreas = false,
+			Exclude = [CharBody3D.GetRid()]
+		});
+
+		string matName = "Plastic";
+		if (result.Count > 0 && result.TryGetValue("collider", out var colliderObj))
+		{
+			if (colliderObj.AsGodotObject() is Node colliderNode && GetNetObjFromProxy(colliderNode) is Part part)
+			{
+				string name = part.Material.ToString();
+				if (!string.IsNullOrEmpty(name) && _materialSounds.ContainsKey(name))
+				{
+					matName = name;
+				}
+			}
+		}
+
+		var preset = _materialSounds[matName];
+		if (preset != _currentFootstepPreset)
+		{
+			_currentFootstepPreset = preset;
+			WalkSound.Audio = _footstepAudioCache[preset];
+		}
+
+		float speed = IsClimbing ? Mathf.Abs(CharacterVelocity.Y) : new Vector2(CharacterVelocity.X, CharacterVelocity.Z).Length();
+		float speedRatio = speed / _walkSpeed;
+		float pitch;
+		do
+		{
+			pitch = pitchMultiplier * speedRatio * (FootstepBasePitch + (float)GD.RandRange(-FootstepPitchVariance, FootstepPitchVariance));
+		}
+		while (Mathf.Abs(pitch - _lastFootstepPitch) < FootstepPitchVariance * 0.5f);
+
+		_lastFootstepPitch = pitch;
+		WalkSound.Pitch = pitch;
+		WalkSound.Play();
+	}
+
 	[ScriptMethod]
 	public virtual void Jump()
 	{
-		bool canJump = (CharBody3D.IsOnFloor() || (!_coyoteUsed && _timeSinceGrounded <= CoyoteTime)) && JumpPower > 0;
+		bool canJump = (CharBody3D.IsOnFloor() || IsClimbing || (!_coyoteUsed && _timeSinceGrounded <= CoyoteTime)) && JumpPower > 0;
 		bool playJumpSound = false;
 		if (canJump)
 		{
 			_coyoteUsed = true;
 			CharacterVelocity.Y = JumpPower;
 			playJumpSound = true;
+			JustJumped = true;
 		}
 		if (IsSitting)
 		{
@@ -885,15 +1183,17 @@ public partial class NPC : Physical
 	[ScriptMethod]
 	public void Unsit(bool addForce = true)
 	{
-		Rpc(nameof(NetJumpFromSeat));
-
 		// Reset rotation
+		_writingSeat = true;
 		Rotation = new(0, Rotation.Y, 0);
 
 		if (addForce)
 		{
 			Position += SeatOffset * 2;
 		}
+		_writingSeat = false;
+
+		Rpc(nameof(NetJumpFromSeat));
 	}
 
 	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Reliable, CallLocal = true)]
@@ -910,11 +1210,42 @@ public partial class NPC : Physical
 	private void InternalSit(Seat seat)
 	{
 		IsSitting = true;
+		_seatExceptionReleaseTimer = 0f;
 		OverrideNetworkTransform = true;
 		SittingIn = seat;
 		seat.Occupant = this;
 		seat.InvokeSat(this);
 		Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.Sitting, 1);
+
+		// Exclude vehicles from collision
+		if (seat.Parent is Physical vehicle)
+		{
+			if (vehicle.GetCollisionBody() is CollisionObject3D rootBody)
+			{
+				CharBody3D.AddCollisionExceptionWith(rootBody);
+				_seatCollisionExceptions.Add(rootBody);
+			}
+
+			foreach (Instance descendant in vehicle.GetDescendants())
+			{
+				if (descendant is not Physical physical) continue;
+
+				CollisionObject3D? body = physical.GetCollisionBody();
+				if (body == null) continue;
+
+				CharBody3D.AddCollisionExceptionWith(body);
+				_seatCollisionExceptions.Add(body);
+			}
+		}
+		else
+		{
+			CollisionObject3D? body = seat.GetCollisionBody();
+			if (body != null)
+			{
+				CharBody3D.AddCollisionExceptionWith(body);
+				_seatCollisionExceptions.Add(body);
+			}
+		}
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable, CallLocal = true)]
@@ -922,6 +1253,13 @@ public partial class NPC : Physical
 	{
 		if (IsSitting)
 		{
+			Vector3 inherited = Vector3.Zero;
+			if (SittingIn != null)
+			{
+				Physical? vehicleRoot = SittingIn.PhysicalRoot;
+				inherited = vehicleRoot?.Velocity ?? SittingIn.Velocity;
+			}
+
 			// Unsit the NPC
 			IsSitting = false;
 			OverrideNetworkTransform = false;
@@ -934,6 +1272,26 @@ public partial class NPC : Physical
 			}
 
 			Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.Sitting, 0);
+
+			// Extend vehicle exception slightly to avoid
+			_seatExceptionReleaseTimer = SeatExceptionReleaseDelay;
+
+			if (!IsDead)
+			{
+				if (this is Player plrEject)
+				{
+					plrEject.ExternalVelocity = (inherited with { Y = 0 }) * SeatEjectMomentumScale;
+				}
+				else
+				{
+					CharacterVelocity = CharacterVelocity with { X = inherited.X * SeatEjectMomentumScale, Z = inherited.Z * SeatEjectMomentumScale };
+				}
+				CharacterVelocity.Y = inherited.Y;
+
+				// Don't restore collision if death already claimed the override (ragdoll)
+				OverrideCanCollide = false;
+				UpdateCollision();
+			}
 		}
 	}
 
@@ -1114,11 +1472,20 @@ public partial class NPC : Physical
 		Anchored = false;
 		IsDead = false;
 
+		Character?.Animator?.StopAnimation();
+		Character?.Animator?.StopOneShotAnimation();
+
 		if (Character is PolytorianModel ptmodel)
 		{
 			ptmodel.StopRagdoll();
 		}
 		CharacterVelocity = Vector3.Zero;
+
+		if (this is Player plr)
+		{
+			plr.LastVelocity = Vector3.Zero;
+			plr.ExternalVelocity = Vector3.Zero;
+		}
 
 		OverrideCanCollide = false;
 		UpdateCollision();

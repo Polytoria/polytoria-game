@@ -10,6 +10,12 @@ public class DefaultMovement : IPlayerMovement
 
 	public World Root { get; set; } = null!;
 
+	private const float ClimbStuckDelay = 0.15f;
+	private const float ClimbStuckPositionEpsilon = 0.02f;
+	private bool _wasClimbing = false;
+	private Vector3 _lastClimbCheckPosition;
+	private float _climbStuckTimer = 0f;
+
 	public InputSnapshot SampleInput(double delta)
 	{
 		Camera? cam = Root.Environment.CurrentCamera;
@@ -84,20 +90,20 @@ public class DefaultMovement : IPlayerMovement
 
 		Vector3 externalVelocity = Target.ExternalVelocity;
 		bool hasExternalVelocity = externalVelocity.X != 0 || externalVelocity.Z != 0;
+		bool shouldDrainStamina = false;
+
+		float gdWalkSpeed = Target.WalkSpeed;
+		bool sprinting = false;
+		Vector3 moveDirection = Vector3.Zero;
+		float forwardInput = 0f;
 
 		if (Target.CanMove && !Target.IsDead)
 		{
-			float gdWalkSpeed = Target.WalkSpeed;
-			bool sprinting = snapshot.Sprint;
+			gdWalkSpeed = Target.WalkSpeed;
+			sprinting = snapshot.Sprint;
 
-			Vector3 moveDirection = snapshot.MoveDirection;
-			float forwardInput = snapshot.ForwardInput;
-
-			// Handle jump
-			if (snapshot.Jump)
-			{
-				Target.Jump();
-			}
+			moveDirection = snapshot.MoveDirection;
+			forwardInput = snapshot.ForwardInput;
 
 			// Sprint/Stamina
 			if (sprinting && moveDirection != Vector3.Zero)
@@ -112,7 +118,7 @@ public class DefaultMovement : IPlayerMovement
 					Target.SprintHoldAgain = true;
 				}
 
-				Target.RemoveStaminaTick(delta);
+				shouldDrainStamina = true;
 			}
 			else
 			{
@@ -121,6 +127,13 @@ public class DefaultMovement : IPlayerMovement
 
 			if (Target.IsClimbing)
 			{
+				if (!_wasClimbing)
+				{
+					_lastClimbCheckPosition = Target.GetGlobalPosition();
+					_climbStuckTimer = 0f;
+				}
+				_wasClimbing = true;
+
 				// Reset all vectors, lock to Y only
 				Target.CharacterVelocity.X = 0;
 				Target.CharacterVelocity.Z = 0;
@@ -131,12 +144,26 @@ public class DefaultMovement : IPlayerMovement
 				Target.CharacterVelocity.Y = climbSpeed;
 
 				finalState = CharacterModel.CharacterModelStateEnum.Climbing;
-				Target.Character?.SetAnimSpeed(climbSpeed / 8);
+				Target.Character?.SetAnimSpeed(1);
+
+				// If the player ain't actually moving (stuck), pause the climb animation.
+				Vector3 currentPos = Target.GetGlobalPosition();
+				if (currentPos.DistanceTo(_lastClimbCheckPosition) < ClimbStuckPositionEpsilon)
+				{
+					_climbStuckTimer += (float)delta;
+				}
+				else
+				{
+					_climbStuckTimer = 0f;
+					_lastClimbCheckPosition = currentPos;
+				}
+				bool stuck = _climbStuckTimer >= ClimbStuckDelay;
+				Target.Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.ClimbSpeed, stuck ? 0f : climbSpeed / 8);
 			}
 			else if (Target.JustFinishedClimbing)
 			{
+				_wasClimbing = false;
 				Target.JustFinishedClimbing = false;
-				Target.CharacterVelocity.Y = 0;
 			}
 
 			// Always rotate in first person
@@ -153,8 +180,22 @@ public class DefaultMovement : IPlayerMovement
 			{
 				Target.IsMoving = true;
 
-				Target.CharacterVelocity.X = (moveDirection.X * gdWalkSpeed) + pushVelocity.X;
-				Target.CharacterVelocity.Z = (moveDirection.Z * gdWalkSpeed) + pushVelocity.Z;
+				float targetVelX = (moveDirection.X * gdWalkSpeed) + pushVelocity.X;
+				float targetVelZ = (moveDirection.Z * gdWalkSpeed) + pushVelocity.Z;
+				float acel = isOnFloor ? Target.GroundControl : Target.AirControl;
+				Target.CharacterVelocity.X = Mathf.Lerp(Target.CharacterVelocity.X, targetVelX, acel);
+				Target.CharacterVelocity.Z = Mathf.Lerp(Target.CharacterVelocity.Z, targetVelZ, acel);
+
+
+				Vector3 localMove = moveDirection.Rotated(Vector3.Up, -Mathf.DegToRad(Target.Rotation.Y));
+				float strafeX = Mathf.Clamp(localMove.X, -1f, 1f);
+				if (forwardInput < 0f) // Flips input so backwardsLeft/backwardsRight displays correctly
+				{
+					strafeX = -strafeX;
+				}
+				Target.Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.StrafeX, strafeX);
+				float strafeY = snapshot.CamLocked ? Mathf.Clamp(forwardInput, -1f, 1f) : 1f;
+				Target.Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.StrafeY, strafeY);
 
 				if (!snapshot.CamLocked)
 				{
@@ -164,23 +205,11 @@ public class DefaultMovement : IPlayerMovement
 						Y = Mathf.RadToDeg(Mathf.LerpAngle(Mathf.DegToRad(Target.Rotation.Y), Mathf.Atan2(Target.CharacterVelocity.X, Target.CharacterVelocity.Z), MathUtils.ExpDecay((float)delta, NPC.BodyRotateLerp)))
 					};
 				}
-
-
-				float animMoveAmount = Mathf.Max(Mathf.Clamp(moveDirection.Length(), 0f, 1f), 0.15f);
-				if (sprinting && Target.SprintSpeed != Target.WalkSpeed)
-				{
-					finalState = CharacterModel.CharacterModelStateEnum.Running;
-					Target.Character?.SetAnimSpeed(gdWalkSpeed / 20 * animMoveAmount);
-				}
-				else
-				{
-					finalState = CharacterModel.CharacterModelStateEnum.Walking;
-					Target.Character?.SetAnimSpeed(gdWalkSpeed / 8 * animMoveAmount);
-				}
 			}
 			else if (!Target.IsClimbing)
 			{
 				Target.IsMoving = false;
+				Target.Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.StrafeX, 0f);
 
 				if (hasExternalVelocity)
 				{
@@ -190,8 +219,9 @@ public class DefaultMovement : IPlayerMovement
 				else
 				{
 					// Stop horizontal movement when no input
-					Target.CharacterVelocity.X = Mathf.MoveToward(Target.CharacterVelocity.X, 0, gdWalkSpeed);
-					Target.CharacterVelocity.Z = Mathf.MoveToward(Target.CharacterVelocity.Z, 0, gdWalkSpeed);
+					float decel = (isOnFloor ? Target.GroundFriction : Target.AirFriction) * (float)delta;
+					Target.CharacterVelocity.X = Mathf.MoveToward(Target.CharacterVelocity.X, 0, decel);
+					Target.CharacterVelocity.Z = Mathf.MoveToward(Target.CharacterVelocity.Z, 0, decel);
 				}
 				Target.Character?.SetAnimSpeed(1);
 			}
@@ -202,23 +232,21 @@ public class DefaultMovement : IPlayerMovement
 				finalState = CharacterModel.CharacterModelStateEnum.Jumping;
 			}
 
-			// Remove debounce if touched the ground
-			if (Target.ClimbDebounce && isOnFloor)
-			{
-				Target.ClimbDebounce = false;
-			}
-
 			if (Target.IsClimbing && isOnFloor)
 			{
 				Target.EndClimb();
+			}
+
+			// Handle jump
+			if (snapshot.Jump)
+			{
+				Target.Jump();
 			}
 		}
 		else
 		{
 			Target.CharacterVelocity = new Vector3(0, Target.CharacterVelocity.Y, 0);
 		}
-
-		Target.Character?.SetState(finalState);
 
 		if (hasExternalVelocity)
 		{
@@ -231,12 +259,59 @@ public class DefaultMovement : IPlayerMovement
 		}
 
 		Target.ApplyInternalVelocity(Target.CharacterVelocity);
-		Target.CharBody3D.Velocity = Target.CharacterVelocity;
+
+		// Split velocity into horizontal/vertical components and merge them
+		// after MoveAndSlide, otherwise gravity fights StepUp.
+		Vector3 fullVelocity = Target.CharacterVelocity;
+
+		Target.CharBody3D.Velocity = new Vector3(fullVelocity.X, 0f, fullVelocity.Z);
 		Target.CharBody3D.MoveAndSlide();
 
+		Vector3 afterHorizontal = Target.CharBody3D.Velocity;
+
+		const float StoppedSpeedThreshold = 0.05f;
+		float actualSpeed = new Vector2(afterHorizontal.X, afterHorizontal.Z).Length();
+		if (moveDirection != Vector3.Zero && !Target.IsClimbing && isOnFloor && actualSpeed > StoppedSpeedThreshold)
+		{
+			float animMoveAmount = Mathf.Max(Mathf.Clamp(moveDirection.Length(), 0f, 1f), 0.15f);
+			bool suppressRunBackward = snapshot.CamLocked && forwardInput < 0;
+
+			if (sprinting && Target.SprintSpeed != Target.WalkSpeed && !suppressRunBackward)
+			{
+				finalState = CharacterModel.CharacterModelStateEnum.Running;
+				Target.Character?.SetAnimSpeed(gdWalkSpeed / 20 * animMoveAmount);
+			}
+			else
+			{
+				finalState = CharacterModel.CharacterModelStateEnum.Walking;
+				Target.Character?.SetAnimSpeed(gdWalkSpeed / 8 * animMoveAmount);
+			}
+		}
+
+		if (shouldDrainStamina && actualSpeed > StoppedSpeedThreshold)
+		{
+			Target.RemoveStaminaTick(delta);
+		}
+		else if (shouldDrainStamina)
+		{
+			Target.AddStaminaTick(delta);
+		}
+
+		Target.Character?.SetState(finalState);
+
+		float snapLength = Target.CharBody3D.FloorSnapLength;
 		if (isOnFloor && Target.IsMoving && !Target.IsClimbing && !Target.IsSitting)
 		{
+			Target.CharBody3D.FloorSnapLength = 0f;
 			Target.TryStepUp();
+			Target.CharBody3D.FloorSnapLength = snapLength;
 		}
+
+		Target.CharBody3D.Velocity = new Vector3(0f, fullVelocity.Y, 0f);
+		Target.CharBody3D.MoveAndSlide();
+
+		Target.CharacterVelocity = new Vector3(afterHorizontal.X, Target.CharBody3D.Velocity.Y, afterHorizontal.Z);
+		Target.TickPanicFall(isOnFloor, (float)delta);
+		Target.TickFootsteps(isOnFloor, (float)delta);
 	}
 }

@@ -28,8 +28,24 @@ public partial class BuiltInAudioAsset : AudioAsset
 
 	private readonly Dictionary<BuiltInAudioPresetEnum, string> AudioMapping = new()
 	{
-		{ BuiltInAudioPresetEnum.Jump, "jump.ogg" },
 		{ BuiltInAudioPresetEnum.Explosion, "explosion.ogg" },
+
+		{ BuiltInAudioPresetEnum.Jump, "jump.ogg" },
+		{ BuiltInAudioPresetEnum.Fall, "fall.ogg" },
+		{ BuiltInAudioPresetEnum.Land, "land.ogg" },
+
+		{ BuiltInAudioPresetEnum.FootstepPlastic, "footsteps/plastic.ogg" },
+		{ BuiltInAudioPresetEnum.FootstepGrass, "footsteps/grass.ogg" },
+		{ BuiltInAudioPresetEnum.FootstepWood, "footsteps/wood.ogg" },
+		{ BuiltInAudioPresetEnum.FootstepPlanks, "footsteps/planks.ogg" },
+		{ BuiltInAudioPresetEnum.FootstepMetal, "footsteps/metal.ogg" },
+		{ BuiltInAudioPresetEnum.FootstepPlate, "footsteps/plate.ogg" },
+		{ BuiltInAudioPresetEnum.FootstepStone, "footsteps/stone.ogg" },
+		{ BuiltInAudioPresetEnum.FootstepDirt, "footsteps/dirt.ogg" },
+		{ BuiltInAudioPresetEnum.FootstepFabric, "footsteps/fabric.ogg" },
+		{ BuiltInAudioPresetEnum.FootstepIce, "footsteps/ice.ogg" },
+		{ BuiltInAudioPresetEnum.FootstepSand, "footsteps/sand.ogg" }
+
 	};
 
 	public static void RegisterAsset()
@@ -43,5 +59,5 @@ public partial class BuiltInAudioAsset : AudioAsset
 	}
 
 	[ScriptEnum]
-	public enum BuiltInAudioPresetEnum { Jump, Explosion };
+	public enum BuiltInAudioPresetEnum { Explosion, Jump, Fall, Land, FootstepPlastic, FootstepGrass, FootstepWood, FootstepPlanks, FootstepMetal, FootstepPlate, FootstepStone, FootstepDirt, FootstepFabric, FootstepIce, FootstepSand };
 }

@@ -410,6 +410,9 @@ public sealed partial class Camera : Dynamic
 
 		GDNode3D.AddChild(Camera3D = new());
 
+		Camera3D.CullMask &= ~(1u << (PolytorianModel.ViewmodelArmsLayerBit - 1));
+		Camera3D.CullMask &= ~(1u << (PolytorianModel.ViewmodelBodyLayerBit - 1));
+
 		_turnX = new Node3D();
 		_turnY = new Node3D();
 		_turnY2 = new Node3D();

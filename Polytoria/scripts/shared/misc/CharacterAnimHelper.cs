@@ -20,4 +20,30 @@ public partial class CharacterAnimHelper : Node
 	public bool StateRunning => Target.CurrentState == CharacterModelStateEnum.Running;
 	public bool StateJumping => Target.CurrentState == CharacterModelStateEnum.Jumping;
 	public bool StateClimbing => Target.CurrentState == CharacterModelStateEnum.Climbing;
+
+	private bool _idle2;
+	private bool _idle3;
+
+	public bool Idle2
+	{
+		get => _idle2;
+		set
+		{
+			_idle2 = value;
+			if (value) _idle3 = false;
+		}
+	}
+
+	public bool Idle3
+	{
+		get => _idle3;
+		set
+		{
+			_idle3 = value;
+			if (value) _idle2 = false;
+		}
+	}
+
+	public bool PanicFall = false;
+	public bool JustJumped = false;
 }
