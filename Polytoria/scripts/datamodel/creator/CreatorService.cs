@@ -136,6 +136,7 @@ public sealed partial class CreatorService : Node, IScriptObject
 				{
 					LocalTestProcesses.Remove(procID);
 				}
+
 			}
 
 			if (LocalTestProcesses.Count == 0)
@@ -144,6 +145,7 @@ public sealed partial class CreatorService : Node, IScriptObject
 				LocalTestStopped.Invoke();
 			}
 		}
+
 		base._Process(delta);
 	}
 
@@ -605,6 +607,12 @@ public sealed partial class CreatorService : Node, IScriptObject
 		LocalTestWorlds.Add(placeFilePath);
 
 		int procID = OS.CreateProcess(exePath, [.. args]);
+		if (procID == -1)
+		{
+			PT.Print("Starting local test server failed.");
+			return;
+		}
+
 		PT.Print("Starting server with args: ", string.Join(" ", args));
 
 		LocalTestProcesses.Add(procID);
@@ -617,7 +625,12 @@ public sealed partial class CreatorService : Node, IScriptObject
 		{
 			OS.Kill(item);
 		}
+		
 		DebugServer.SendTerminateProgram();
+		LocalTestProcesses.Clear();
+
+		CleanupLocalTest();
+		LocalTestStopped.Invoke();
 	}
 
 	public static void MigrateCoordinates(World root)

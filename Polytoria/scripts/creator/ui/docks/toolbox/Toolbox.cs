@@ -31,6 +31,7 @@ public sealed partial class Toolbox : Control
 
 	public override void _Ready()
 	{
+		return; // so annoying oh my god
 		base._Ready();
 
 		_searchEdit.TextSubmitted += (_) => OnSearch();
