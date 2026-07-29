@@ -259,7 +259,7 @@ public sealed partial class HttpService : Instance
 	}
 
 
-	[ScriptMethod, Attributes.Obsolete("Use GetAsync instead")]
+	[ScriptMethod, Attributes.Obsolete("Use 'GetAsync' instead.")]
 	public void Get(string url, PTCallback? callback = null, Dictionary<string, string>? headers = null)
 	{
 		ServerGuard();
@@ -269,7 +269,7 @@ public sealed partial class HttpService : Instance
 		}
 	}
 
-	[ScriptMethod, Attributes.Obsolete("Use PostAsync instead")]
+	[ScriptMethod, Attributes.Obsolete("Use 'PostAsync' instead.")]
 	public void Post(string url, string body, PTCallback? callback = null, Dictionary<string, string>? headers = null)
 	{
 		ServerGuard();
@@ -279,7 +279,7 @@ public sealed partial class HttpService : Instance
 		}
 	}
 
-	[ScriptMethod, Attributes.Obsolete("Use PutAsync instead")]
+	[ScriptMethod, Attributes.Obsolete("Use 'PutAsync' instead.")]
 	public void Put(string url, string body, PTCallback? callback = null, Dictionary<string, string>? headers = null)
 	{
 		ServerGuard();
@@ -289,7 +289,7 @@ public sealed partial class HttpService : Instance
 		}
 	}
 
-	[ScriptMethod, Attributes.Obsolete("Use DeleteAsync instead")]
+	[ScriptMethod, Attributes.Obsolete("Use 'DeleteAsync' instead.")]
 	public void Delete(string url, string body, PTCallback? callback = null, Dictionary<string, string>? headers = null)
 	{
 		ServerGuard();
@@ -299,7 +299,7 @@ public sealed partial class HttpService : Instance
 		}
 	}
 
-	[ScriptMethod, Attributes.Obsolete("Use PatchAsync instead")]
+	[ScriptMethod, Attributes.Obsolete("Use 'PatchAsync' instead.")]
 	public void Patch(string url, string body, PTCallback? callback = null, Dictionary<string, string>? headers = null)
 	{
 		ServerGuard();

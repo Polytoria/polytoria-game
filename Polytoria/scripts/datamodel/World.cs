@@ -61,7 +61,7 @@ public sealed partial class World : Instance
 	[ScriptProperty, Attributes.Obsolete("Use 'Hooks.Updated' instead.")]
 	public PTSignal<double> Rendered { get; private set; } = new();
 
-	[ScriptProperty, Attributes.Obsolete("Use 'Hooks.IsLocalTest' instead.")]
+	[ScriptProperty, Attributes.Obsolete("Use 'ScriptService.IsLocalTest' instead.")]
 	public bool IsLocalTest => _worldID == 0;
 
 	public SessionTypeEnum SessionType { get; set; } = SessionTypeEnum.Client;
