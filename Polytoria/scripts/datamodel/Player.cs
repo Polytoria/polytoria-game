@@ -671,16 +671,12 @@ public sealed partial class Player : NPC
 			Node collider = (Node)FootFwdRaycast.GetCollider();
 			if (collider != null && GetNetObjFromProxy(collider) is Truss truss)
 			{
-				if (!IsClimbing)
+				if (!IsClimbing && !ClimbDebounce && truss.Climbable)
 				{
-					if (!ClimbDebounce)
-					{
-						ClimbingTruss = truss;
-						_canJumpWhileClimbing = false;
-						IsClimbing = true;
-						Character?.PlayClimb();
-					}
-
+					ClimbingTruss = truss;
+					_canJumpWhileClimbing = false;
+					IsClimbing = true;
+					Character?.PlayClimb();
 				}
 			}
 			else
@@ -944,12 +940,12 @@ public sealed partial class Player : NPC
 		_bubbleChat.Visible = true;
 	}
 
-	public void WrapToSpawnPoint()
+	public void WarpToSpawnPoint()
 	{
 		if (Root.Environment.SpawnPoints.Count > 0)
 		{
 			Entity spawnpoint = ArrayUtils.GetRandom(Root.Environment.SpawnPoints);
-			Position = spawnpoint.Position + new Vector3(0, spawnpoint.Size.Y + 2.0f, 0);
+			Position = spawnpoint.Position + spawnpoint.Up * (spawnpoint.Size.Y / 2 + 3.0f);
 			Rotation = new(0, spawnpoint.Rotation.Y, 0);
 		}
 		else
@@ -1063,7 +1059,7 @@ public sealed partial class Player : NPC
 		Velocity = Vector3.Zero;
 
 		ResetAppearance();
-		WrapToSpawnPoint();
+		WarpToSpawnPoint();
 
 		Health = MaxHealth;
 		Anchored = false;

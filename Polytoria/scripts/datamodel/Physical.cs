@@ -359,23 +359,18 @@ public partial class Physical : Dynamic
 		PhysicalRoot = null;
 		Instance? current = Parent;
 
-		// Find physical until parent is not physical (top physical as root)
+		// Find topmost physical among ancestors (top physical as root)
 		while (current != null)
 		{
-			Type ct = current.GetType();
 
 			if (current is Physical pr)
 			{
 				PhysicalRoot = pr;
-			}
-			else
-			{
-				break;
-			}
-
-			if (ct.IsDefined(typeof(PhysicalRootStopAttribute), false))
-			{
-				break;
+				Type ct = current.GetType();
+				if (ct.IsDefined(typeof(PhysicalRootStopAttribute), false))
+				{
+					break;
+				}
 			}
 
 			current = current.Parent;
@@ -642,7 +637,10 @@ public partial class Physical : Dynamic
 	internal void PostCollisionShapeUpdate(CollisionShape3D collisionShape)
 	{
 		RemoveCollisionShape(collisionShape, false);
-		AddCollisionShape(collisionShape);
+		if (CanCollide)
+		{
+			AddCollisionShape(collisionShape);
+		}
 	}
 
 	/// <summary>
