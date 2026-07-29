@@ -85,7 +85,7 @@ public sealed partial class Environment : Instance
 			else
 			{
 				float strength = _gravity.Length();
-				PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.Gravity, strength / -5f);
+				PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.Gravity, strength / 5f);
 				PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.GravityVector, _gravity / strength);
 			}
 
