@@ -457,7 +457,7 @@ public enum KeyCodeEnum
 	/// <summary>
 	/// <para>Left bracket (<c>[lb]</c>) key.</para>
 	/// </summary>
-	BracketLeft = 91,
+	Bracketleft = 91,
 	/// <summary>
 	/// <para>Backslash (<c>\</c>) key.</para>
 	/// </summary>
@@ -465,7 +465,7 @@ public enum KeyCodeEnum
 	/// <summary>
 	/// <para>Right bracket (<c>[rb]</c>) key.</para>
 	/// </summary>
-	BracketRight = 93,
+	Bracketright = 93,
 	/// <summary>
 	/// <para>Caret (<c>^</c>) key.</para>
 	/// </summary>
@@ -477,7 +477,7 @@ public enum KeyCodeEnum
 	/// <summary>
 	/// <para>Backtick (<c>`</c>) key.</para>
 	/// </summary>
-	QuoteLeft = 96,
+	Quoteleft = 96,
 	/// <summary>
 	/// <para>Left brace (<c>{</c>) key.</para>
 	/// </summary>
