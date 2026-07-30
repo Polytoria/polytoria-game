@@ -410,7 +410,7 @@ public partial class TextEditorRoot : Node
 	public async Task Save()
 	{
 		bool formatOnSave = CreatorSettingsService.Instance.Get<bool>(CreatorSettingKeys.CodeEditor.FormatOnSave);
-		if (formatOnSave)
+		if (formatOnSave && Container.CodeCompletion == FileTypeEnum.Lua)
 		{
 			CodeEditor.Text = await LuaFormatService.FormatScriptAsync(Container.TargetFilePathAbsolute, CodeEditor.Text);
 		}

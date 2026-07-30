@@ -92,6 +92,10 @@ public class LuaMetatable : LuaObject
 					{
 						LangProvider.PushValueToLua(state, netObjTask.Result);
 					}
+					else if (task is Task<Clothing> clothingTask)
+					{
+						LangProvider.PushValueToLua(state, clothingTask.Result);
+					}
 					else if (task is Task<Accessory> accessoryTask)
 					{
 						LangProvider.PushValueToLua(state, accessoryTask.Result);

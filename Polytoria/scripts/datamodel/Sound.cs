@@ -22,7 +22,6 @@ public sealed partial class Sound : Dynamic
 	public const float SoundDistanceMultipler = 1.25f;
 	private const float MinPitch = 0.001f;
 	private const float MaxVolume = 2f;
-	private static int _counter = 0;
 	private AudioStreamPlayer? _audioPlayer;
 	private AudioStreamPlayer3D? _audioPlayer3D;
 	private bool _playAfterLoad = false;
@@ -30,7 +29,6 @@ public sealed partial class Sound : Dynamic
 	private Resource? _prevAsset;
 	private string _audioBusName = "Master";
 	private AudioEffectPanner? _efPanner;
-	private int _id = System.Threading.Interlocked.Increment(ref _counter);
 
 	private AudioAsset? _asset;
 	private int _soundID = 0;
@@ -306,7 +304,7 @@ public sealed partial class Sound : Dynamic
 
 		if (!PlayInWorld)
 		{
-			_audioBusName = $"Sound_{_id}";
+			_audioBusName = "Sound_" + ObjectID;
 			AudioServer.AddBus();
 			int idx = AudioServer.BusCount - 1;
 			AudioServer.SetBusName(idx, _audioBusName);
