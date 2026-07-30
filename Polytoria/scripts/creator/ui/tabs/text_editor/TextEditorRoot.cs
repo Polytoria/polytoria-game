@@ -104,7 +104,7 @@ public partial class TextEditorRoot : Node
 		CodeEditor.TextChanged += OnCodeEditTextChanged;
 		InitSyntaxHighlighter(Container.CodeCompletion);
 
-		PopulateStandardMenu(CodeEditor);
+		PopulateStandardMenu(CodeEditor, Container.CodeCompletion == FileTypeEnum.Lua);
 		CodeEditor.GetMenu().IdPressed += OnContextMenuIdPressed;
 
 		CreatorSettingsService.Instance.Changed += OnCreatorSettingChanged;
@@ -145,17 +145,20 @@ public partial class TextEditorRoot : Node
 
 	private async void OnContextMenuIdPressed(long id)
 	{
-		await HandleStandardMenuId(id, CodeEditor, _finder, Container.TargetFilePathAbsolute, OnCodeEditTextChanged);
+		await HandleStandardMenuId(id, CodeEditor, _finder, Container.TargetFilePathAbsolute, OnCodeEditTextChanged, Container.CodeCompletion == FileTypeEnum.Lua);
 	}
 
-	public static async Task HandleStandardMenuId(long id, CodeEdit codeEdit, TextEditorFind finder, string formatPath, Action onTextChanged)
+	public static async Task HandleStandardMenuId(long id, CodeEdit codeEdit, TextEditorFind finder, string formatPath, Action onTextChanged, bool canFormat)
 	{
 		switch (id)
 		{
 			case FormatMenuId:
 				{
-					codeEdit.Text = await LuaFormatService.FormatScriptAsync(formatPath, codeEdit.Text);
-					onTextChanged();
+					if (canFormat)
+					{
+						codeEdit.Text = await LuaFormatService.FormatScriptAsync(formatPath, codeEdit.Text);
+						onTextChanged();
+					}
 					break;
 				}
 			case FindMenuId:
@@ -191,11 +194,12 @@ public partial class TextEditorRoot : Node
 		}
 	}
 
-	public static void PopulateStandardMenu(CodeEdit codeEdit)
+	public static void PopulateStandardMenu(CodeEdit codeEdit, bool canFormat)
 	{
 		PopupMenu menu = codeEdit.GetMenu();
 		menu.AddSeparator();
 		menu.AddItem("Format Script", id: FormatMenuId);
+		menu.SetItemDisabled(menu.GetItemIndex(FormatMenuId), !canFormat);
 		menu.AddItem("Find / Replace", id: FindMenuId);
 		menu.AddSeparator();
 		menu.AddItem("Zoom In", id: ZoomInMenuId);
