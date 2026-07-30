@@ -128,7 +128,7 @@ public class DebugServer
 				{
 					CreatorService.Singleton.LocalTestProcesses.Add(data.ProcessID);
 				});
-				
+
 			}
 		}
 		else if (msg is MessageLogDispatch log)

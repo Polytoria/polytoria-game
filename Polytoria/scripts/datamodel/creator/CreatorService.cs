@@ -625,7 +625,7 @@ public sealed partial class CreatorService : Node, IScriptObject
 		{
 			OS.Kill(item);
 		}
-		
+
 		DebugServer.SendTerminateProgram();
 		LocalTestProcesses.Clear();
 
