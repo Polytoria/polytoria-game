@@ -68,7 +68,7 @@ public partial class ConsoleCommandLine : Control
 		TextEditorRoot.ApplyLuaStringDelimiters(_codeEdit);
 
 		_finder.TargetCodeEdit = _codeEdit;
-		TextEditorRoot.PopulateStandardMenu(_codeEdit);
+		TextEditorRoot.PopulateStandardMenu(_codeEdit, canFormat: true);
 		_codeEdit.GetMenu().IdPressed += OnContextMenuIdPressed;
 
 		_lineHeight = _codeEdit.GetLineHeight();
@@ -176,7 +176,7 @@ public partial class ConsoleCommandLine : Control
 
 	private async void OnContextMenuIdPressed(long id)
 	{
-		await TextEditorRoot.HandleStandardMenuId(id, _codeEdit, _finder, _temporaryFile, OnTextChanged);
+		await TextEditorRoot.HandleStandardMenuId(id, _codeEdit, _finder, _temporaryFile, OnTextChanged, canFormat: true);
 	}
 
 	private void NavigateHistory(bool older)
