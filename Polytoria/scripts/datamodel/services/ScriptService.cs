@@ -104,7 +104,10 @@ public sealed partial class ScriptService : Instance
 
 	public void Run(Script script)
 	{
-		PT.Print("Running script: ", script.LuaPath);
+		if (script.LuaPath != "world.Temporary.Instance")
+		{
+			PT.Print("Running script: ", script.LuaPath);
+		}
 
 		if (!_languageProviders.TryGetValue(script.ChosenLanguage, out var provider))
 		{

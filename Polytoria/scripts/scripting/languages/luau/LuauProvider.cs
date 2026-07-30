@@ -148,7 +148,10 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 	public void Run(Script script)
 	{
-		PT.Print("Running script: ", script.LuaPath);
+		if (script.LuaPath != "world.Temporary.Instance")
+		{
+			PT.Print("Running script: ", script.LuaPath);
+		}
 		LuaState state = InitalizeScript(script);
 
 		// Try compile

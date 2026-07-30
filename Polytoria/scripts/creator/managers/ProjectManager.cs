@@ -24,16 +24,15 @@ namespace Polytoria.Creator.Managers;
 
 public static class ProjectManager
 {
-	private const string RecentsPath = "user://creator/recents";
+	private static readonly string RecentsPath = Path.Combine(CreatorService.DocumentsRootPath, ".recents");
 	private const string ProjectTemplatesPath = "res://modules/creator/world-templates/";
 	private const string GitIgnoreContent = "# Polytoria specific ignores\n.poly/\n";
 
 	public static async Task<RecentData[]> GetRecents(bool loadData = true)
 	{
-		string recentsPath = ProjectSettings.GlobalizePath(RecentsPath);
-		if (File.Exists(recentsPath))
+		if (File.Exists(RecentsPath))
 		{
-			string raw = File.ReadAllText(recentsPath);
+			string raw = File.ReadAllText(RecentsPath);
 			RecentData[] data = JsonSerializer.Deserialize(raw, RecentsFileGenerationContext.Default.RecentDataArray) ?? [];
 
 			List<RecentData> finalData = [];
@@ -90,7 +89,6 @@ public static class ProjectManager
 
 	public static async Task AddToRecents(string folderPath)
 	{
-		string recentsPath = ProjectSettings.GlobalizePath(RecentsPath);
 		List<RecentData> existing = [.. await GetRecents(false)];
 
 		existing.RemoveAll(x => x.FolderPath == folderPath);
@@ -101,16 +99,25 @@ public static class ProjectManager
 			LastOpened = DateTime.Now,
 		});
 
-		File.WriteAllText(recentsPath, JsonSerializer.Serialize([.. existing], RecentsFileGenerationContext.Default.RecentDataArray));
+		WriteRecentsFile(existing);
 	}
 
 	public static async Task RemoveFromRecents(string folderPath)
 	{
-		string recentsPath = ProjectSettings.GlobalizePath(RecentsPath);
 		List<RecentData> existing = [.. await GetRecents(false)];
 
 		existing.RemoveAll(x => x.FolderPath == folderPath);
-		File.WriteAllText(recentsPath, JsonSerializer.Serialize([.. existing], RecentsFileGenerationContext.Default.RecentDataArray));
+		WriteRecentsFile(existing);
+	}
+
+	private static void WriteRecentsFile(List<RecentData> data)
+	{
+		File.WriteAllText(RecentsPath, JsonSerializer.Serialize([.. data], RecentsFileGenerationContext.Default.RecentDataArray));
+
+		if (OS.HasFeature("windows"))
+		{
+			File.SetAttributes(RecentsPath, File.GetAttributes(RecentsPath) | FileAttributes.Hidden);
+		}
 	}
 
 	public static async Task NewProject(string destFolder, CreatorProjectMetadata metadata, bool createFromTemplate = false)

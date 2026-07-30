@@ -7,6 +7,7 @@ using Polytoria.Datamodel;
 using Polytoria.Formats;
 using Polytoria.Scripting;
 using Polytoria.Shared;
+using Polytoria.Datamodel.Creator;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,24 +25,20 @@ public sealed partial class AddonsManager : Node
 {
 	private const ScriptPermissionFlags AddonDefaultPermissionFlags =
 		ScriptPermissionFlags.CreatorAccess | ScriptPermissionFlags.ContextAccess;
-	public const string UserAddonFolder = "user://creator/addons";
-	public const string AddonPermissionsFile = "user://creator/addon_perms";
+	public static readonly string UserAddonFolder = Path.Combine(CreatorService.DocumentsRootPath, "Addons");
+	public static readonly string AddonPermissionsFile = Path.Combine(CreatorService.DocumentsRootPath, "addon_perms");
 
 	private static readonly Dictionary<string, List<AddonSession>> _pathToAddons = [];
 	private static readonly Dictionary<Script, string> _scriptToPath = [];
 	private static readonly HashSet<World> _registeredRoots = [];
 
-	private static readonly string _addonsAbsolutePath = "";
-	private static readonly string _permissionsAbsolutePath = "";
 	private static AddonPermissionPair _permissions = [];
 
 	static AddonsManager()
 	{
-		_addonsAbsolutePath = ProjectSettings.GlobalizePath(UserAddonFolder);
-		_permissionsAbsolutePath = ProjectSettings.GlobalizePath(AddonPermissionsFile);
-		if (!Directory.Exists(_addonsAbsolutePath))
+		if (!Directory.Exists(UserAddonFolder))
 		{
-			Directory.CreateDirectory(_addonsAbsolutePath);
+			Directory.CreateDirectory(UserAddonFolder);
 		}
 		LoadPermissionsData();
 	}
@@ -71,7 +68,7 @@ public sealed partial class AddonsManager : Node
 	{
 		RegisterRoot(root);
 
-		foreach (string f in Directory.GetFiles(_addonsAbsolutePath))
+		foreach (string f in Directory.GetFiles(UserAddonFolder))
 		{
 			try
 			{
@@ -88,7 +85,7 @@ public sealed partial class AddonsManager : Node
 	{
 		string addonName = s.Name;
 		string addonFileName = addonName + ".ptaddon";
-		string addonPath = Path.GetFullPath(Path.Join(_addonsAbsolutePath, addonFileName));
+		string addonPath = Path.GetFullPath(Path.Join(UserAddonFolder, addonFileName));
 		PT.Print("Installing addon ", addonName, " to ", addonPath);
 		await PackedFormat.PackAddonToFile(s, addonPath, new() { Name = s.Name });
 		PT.Print("Addon Installed!");
@@ -275,14 +272,14 @@ public sealed partial class AddonsManager : Node
 
 	private static void LoadPermissionsData()
 	{
-		if (!File.Exists(_permissionsAbsolutePath)) return;
-		string f = File.ReadAllText(_permissionsAbsolutePath);
+		if (!File.Exists(AddonPermissionsFile)) return;
+		string f = File.ReadAllText(AddonPermissionsFile);
 		_permissions = JsonSerializer.Deserialize(f, AddonJSONGenerationContext.Default.AddonPermissionPair) ?? [];
 	}
 
 	private static void SavePermissionsData()
 	{
-		File.WriteAllText(_permissionsAbsolutePath, JsonSerializer.Serialize(_permissions, AddonJSONGenerationContext.Default.AddonPermissionPair));
+		File.WriteAllText(AddonPermissionsFile, JsonSerializer.Serialize(_permissions, AddonJSONGenerationContext.Default.AddonPermissionPair));
 	}
 
 	public struct AddonMetadata

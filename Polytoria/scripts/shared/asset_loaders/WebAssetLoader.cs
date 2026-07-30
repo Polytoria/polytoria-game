@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Polytoria.Shared;
 
 namespace Polytoria.Shared.AssetLoaders;
 
@@ -53,7 +54,10 @@ public partial class WebAssetLoader : Node
 					}
 					catch (Exception exception)
 					{
-						PT.PrintErr("Failed to load resource (Type: " + item.Type + ", URL: " + item.URL + "): " + exception.Message);
+						if (!Globals.IsInGDEditor)
+						{
+							PT.PrintErr("Failed to load resource (Type: " + item.Type + ", URL: " + item.URL + "): " + exception.Message);
+						}
 					}
 				}
 			}));

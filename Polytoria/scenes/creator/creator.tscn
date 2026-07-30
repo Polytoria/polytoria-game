@@ -38,10 +38,13 @@
 [ext_resource type="Script" uid="uid://c5celm4bxr4vy" path="res://scripts/creator/ui/docks/bottombar/console/DebugConsole.cs" id="30_bc04q"]
 [ext_resource type="PackedScene" uid="uid://msq1k3h4a75p" path="res://scenes/creator/wizard/new_project/new_project.tscn" id="31_87ukk"]
 [ext_resource type="PackedScene" uid="uid://cvxoyotxeotax" path="res://scenes/creator/docks/explorer/explorer.tscn" id="32_4fw2t"]
+[ext_resource type="Script" uid="uid://b77lltdi1as4p" path="res://scripts/creator/ui/docks/bottombar/console/ConsoleCommandLine.cs" id="33_5ay1h"]
 [ext_resource type="PackedScene" uid="uid://duq8icfg2fwo0" path="res://scenes/creator/docks/properties/properties.tscn" id="34_bc04q"]
+[ext_resource type="Texture2D" uid="uid://deii1n7ji6sj0" path="res://assets/textures/ui-icons/play.svg" id="36_2ib2a"]
 [ext_resource type="PackedScene" uid="uid://dccewf7osrg82" path="res://scenes/creator/popups/search/search.tscn" id="38_ce354"]
 [ext_resource type="PackedScene" uid="uid://dauvdi8d2yqpy" path="res://scenes/creator/wizard/introduction_wizard.tscn" id="39_dfqoe"]
 [ext_resource type="PackedScene" uid="uid://b7voaj38vy8xd" path="res://scenes/creator/docks/bottombar/console_filters.tscn" id="40_console_filters"]
+[ext_resource type="PackedScene" uid="uid://bimokjkrp24ow" path="res://scenes/creator/tabs/text_editor/finder.tscn" id="40_ll2un"]
 
 [sub_resource type="FontVariation" id="FontVariation_khfyn"]
 variation_opentype = {
@@ -349,6 +352,13 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5xx7o"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.49803922)
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_y8rg4"]
 resource_name = "FooterTheme"
 content_margin_left = 5.0
@@ -625,7 +635,6 @@ button_pressed = true
 action_mode = 0
 button_group = SubResource("ButtonGroup_v0rtd")
 script = ExtResource("8_c8w7j")
-ToolMode = null
 
 [node name="Icon" type="TextureRect" parent="GUI/Ribbon/Buttons/Select" unique_id=75873074]
 layout_mode = 1
@@ -994,10 +1003,6 @@ anchor_top = 1.0
 anchor_bottom = 1.0
 grow_vertical = 0
 
-[node name="Separator3" type="VSeparator" parent="GUI/Ribbon/Buttons" unique_id=1661999198]
-layout_mode = 2
-mouse_filter = 2
-
 [node name="Insert" type="Button" parent="GUI/Ribbon/Buttons" unique_id=462576719]
 custom_minimum_size = Vector2(62, 0)
 layout_mode = 2
@@ -1025,6 +1030,10 @@ grow_vertical = 0
 text = "Insert"
 horizontal_alignment = 1
 vertical_alignment = 2
+
+[node name="Separator3" type="VSeparator" parent="GUI/Ribbon/Buttons" unique_id=1661999198]
+layout_mode = 2
+mouse_filter = 2
 
 [node name="Splitter" type="HSplitContainer" parent="GUI" unique_id=1718208415]
 layout_mode = 1
@@ -1165,6 +1174,28 @@ metadata/_tab_index = 0
 [node name="VBoxContainer" type="VBoxContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console" unique_id=681967966]
 layout_mode = 2
 
+[node name="SearchBar" type="HBoxContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer" unique_id=1369015190]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ClearBtn" type="Button" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/SearchBar" unique_id=276167707]
+custom_minimum_size = Vector2(28, 0)
+layout_mode = 2
+icon = ExtResource("22_i1txp")
+expand_icon = true
+
+[node name="FilterBtn" type="Button" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/SearchBar" unique_id=1370024557]
+custom_minimum_size = Vector2(32, 0)
+layout_mode = 2
+tooltip_text = "Filter console output"
+icon = ExtResource("29_4fw2t")
+
+[node name="LineEdit" type="LineEdit" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/SearchBar" unique_id=767147599]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Search..."
+
 [node name="RichTextLabel" type="RichTextLabel" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer" unique_id=1372579414]
 layout_mode = 2
 size_flags_vertical = 3
@@ -1183,30 +1214,56 @@ scroll_following = true
 vertical_alignment = 2
 selection_enabled = true
 
-[node name="SearchBar" type="HBoxContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer" unique_id=1369015190]
+[node name="CommandBar" type="HBoxContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer" unique_id=2033668591 node_paths=PackedStringArray("_diagLabel", "_codeEdit", "_runButton", "_finder")]
 custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 theme_override_constants/separation = 8
+script = ExtResource("33_5ay1h")
+_diagLabel = NodePath("../DiagLabel")
+_codeEdit = NodePath("CodeEdit")
+_runButton = NodePath("Layout/RunBtn")
+_finder = NodePath("../../Finder")
 
-[node name="FilterBtn" type="Button" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/SearchBar" unique_id=1370024557]
-custom_minimum_size = Vector2(32, 0)
-layout_mode = 2
-tooltip_text = "Filter console output"
-icon = ExtResource("29_4fw2t")
-
-[node name="LineEdit" type="LineEdit" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/SearchBar" unique_id=767147599]
+[node name="CodeEdit" type="CodeEdit" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/CommandBar" unique_id=20449168]
 layout_mode = 2
 size_flags_horizontal = 3
-placeholder_text = "Search..."
+theme_override_colors/selection_color = Color(0.5, 0.5, 0.5, 0.30588236)
+theme_override_colors/word_highlighted_color = Color(0.80099994, 0.9, 0.9, 0.08627451)
+placeholder_text = "Type a command (Use 'Ctrl' + '↑/↓' to navigate recents)."
+caret_blink = true
+highlight_all_occurrences = true
+line_folding = true
+gutters_draw_line_numbers = true
+delimiter_strings = Array[String]([])
+code_completion_enabled = true
+indent_automatic = true
+auto_brace_completion_enabled = true
+auto_brace_completion_highlight_matching = true
 
-[node name="ClearBtn" type="Button" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/SearchBar" unique_id=276167707]
-custom_minimum_size = Vector2(28, 0)
+[node name="Layout" type="HBoxContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/CommandBar" unique_id=1808549576]
 layout_mode = 2
-icon = ExtResource("22_i1txp")
-expand_icon = true
+
+[node name="RunBtn" type="Button" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/CommandBar/Layout" unique_id=835670722]
+custom_minimum_size = Vector2(32, 32)
+custom_maximum_size = Vector2(-1, 32)
+layout_mode = 2
+tooltip_text = "Filter console output"
+icon = ExtResource("36_2ib2a")
+
+[node name="DiagLabel" type="Label" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer" unique_id=569876121]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8666667, 0.33333334, 0.33333334, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxFlat_5xx7o")
+autowrap_mode = 3
 
 [node name="ConsoleFilters" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console" unique_id=1370024561 instance=ExtResource("40_console_filters")]
 visible = false
+
+[node name="Finder" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console" unique_id=495200113 instance=ExtResource("40_ll2un")]
+visible = false
+layout_mode = 2
 
 [node name="Right" type="PanelContainer" parent="GUI/Splitter" unique_id=528512110]
 custom_minimum_size = Vector2(320, 0)
