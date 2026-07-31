@@ -128,7 +128,7 @@ public partial class NetworkTransformSync : Instance
 		if (!CheckDynAuthor(dyn, NetService.LocalPeerID)) return;
 
 		Transform3D transform = dyn.GetLocalTransform();
-		TransformPayloadDto payload = isReliable ? TransformPayloadDto.FromTransformUInt64(transform) : TransformPayloadDto.FromTransform(transform);
+		TransformPayloadDto payload = isReliable ? TransformPayloadDto.FromGDTransformUInt64(transform) : TransformPayloadDto.FromGDTransform(transform);
 		string objID = dyn.NetworkedObjectID;
 
 		if (sendTo != 0)
@@ -210,7 +210,7 @@ public partial class NetworkTransformSync : Instance
 		// Check authority
 		if (!CheckDynAuthor(dyn, NetService.LocalPeerID)) return;
 
-		TransformPayloadDto payload = TransformPayloadDto.FromTransform(dyn.GetLocalTransform());
+		TransformPayloadDto payload = TransformPayloadDto.FromGDTransform(dyn.GetLocalTransform());
 		string objID = dyn.NetworkedObjectID;
 
 		RpcId(1, nameof(NetRecvTransformOnServer), objID, payload, lerpTransform);
@@ -223,7 +223,7 @@ public partial class NetworkTransformSync : Instance
 		string objID = dyn.NetworkedObjectID;
 
 		Transform3D transform = dyn.GetLocalTransform();
-		SetPendingBatch(objID, new(dyn, reliable ? TransformPayloadDto.FromTransformUInt64(transform) : TransformPayloadDto.FromTransform(transform), lerpTransform, excludePeer)
+		SetPendingBatch(objID, new(dyn, reliable ? TransformPayloadDto.FromGDTransformUInt64(transform) : TransformPayloadDto.FromGDTransform(transform), lerpTransform, excludePeer)
 		{
 			Reliable = reliable,
 			Forced = true
