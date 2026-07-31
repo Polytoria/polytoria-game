@@ -910,7 +910,7 @@ public class LuaMetatable : LuaObject
 			{
 				if (!script.PermissionFlags.HasFlag(methodAttribute.Permissions))
 				{
-				#if CREATOR
+#if CREATOR
 					if (script.Root.SessionType == World.SessionTypeEnum.Creator)
 					{
 						var addonSession = AddonsManager.GetAddonSession(script);
@@ -923,7 +923,7 @@ public class LuaMetatable : LuaObject
 							return state.Yield(1);
 						}
 					}
-				#endif
+#endif
 					throw new UnauthorizedAccessException("script does not have permission to call the specified method (" + targetMethod.Name + ")");
 				}
 			}
