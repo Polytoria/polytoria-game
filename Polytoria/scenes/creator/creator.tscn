@@ -39,6 +39,7 @@
 [ext_resource type="PackedScene" uid="uid://msq1k3h4a75p" path="res://scenes/creator/wizard/new_project/new_project.tscn" id="31_87ukk"]
 [ext_resource type="PackedScene" uid="uid://cvxoyotxeotax" path="res://scenes/creator/docks/explorer/explorer.tscn" id="32_4fw2t"]
 [ext_resource type="Script" uid="uid://b77lltdi1as4p" path="res://scripts/creator/ui/docks/bottombar/console/ConsoleCommandLine.cs" id="33_5ay1h"]
+[ext_resource type="Script" uid="uid://do7oij3iu8c1a" path="res://scripts/creator/ui/tabs/text_editor/TextEditorField.cs" id="34_0jcko"]
 [ext_resource type="PackedScene" uid="uid://duq8icfg2fwo0" path="res://scenes/creator/docks/properties/properties.tscn" id="34_bc04q"]
 [ext_resource type="Texture2D" uid="uid://deii1n7ji6sj0" path="res://assets/textures/ui-icons/play.svg" id="36_2ib2a"]
 [ext_resource type="PackedScene" uid="uid://dccewf7osrg82" path="res://scenes/creator/popups/search/search.tscn" id="38_ce354"]
@@ -1239,6 +1240,7 @@ code_completion_enabled = true
 indent_automatic = true
 auto_brace_completion_enabled = true
 auto_brace_completion_highlight_matching = true
+script = ExtResource("34_0jcko")
 
 [node name="Layout" type="HBoxContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/CommandBar" unique_id=1808549576]
 layout_mode = 2

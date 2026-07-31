@@ -63,9 +63,9 @@ public partial class TextEditorRoot : Node
 	public const int ToggleCommentMenuId = 10015;
 	public const int ToggleBlockCommentMenuId = 10016;
 
-	private const int FontSizeStep = 2;
-	private const int MinFontSize = 8;
-	private const int MaxFontSize = 72;
+	public const int FontSizeStep = 2;
+	public const int MinFontSize = 8;
+	public const int MaxFontSize = 72;
 	private const string BlockCommentStart = "--[[";
 	private const string BlockCommentEnd = "--]]";
 
@@ -430,7 +430,7 @@ public partial class TextEditorRoot : Node
 			{
 				_oldText = curText;
 
-				if (IsCompletionTrigger())
+				if (IsCompletionTrigger(CodeEditor))
 				{
 					OnCompletionRequest();
 				}
@@ -438,11 +438,11 @@ public partial class TextEditorRoot : Node
 		}
 	}
 
-	private bool IsCompletionTrigger()
+	public static bool IsCompletionTrigger(CodeEdit codeEdit)
 	{
-		int line = CodeEditor.GetCaretLine();
-		int col = CodeEditor.GetCaretColumn();
-		string lineText = CodeEditor.GetLine(line);
+		int line = codeEdit.GetCaretLine();
+		int col = codeEdit.GetCaretColumn();
+		string lineText = codeEdit.GetLine(line);
 
 		if (string.IsNullOrWhiteSpace(lineText)) return false;
 
@@ -465,7 +465,7 @@ public partial class TextEditorRoot : Node
 	public async void OnCompletionRequest()
 	{
 		if (_completion == null) return;
-		await RequestCompletions(CodeEditor, _completion, Container.TargetFilePathAbsolute, iconBasePath: CodeCompletionIconPath, skipIfMatches: GetWordBeforeCaret());
+		await RequestCompletions(CodeEditor, _completion, Container.TargetFilePathAbsolute, iconBasePath: CodeCompletionIconPath, skipIfMatches: GetWordBeforeCaret(CodeEditor));
 	}
 
 	public static async Task RequestCompletions(CodeEdit codeEdit, LuaCompletionService completion, string scriptPath, string? iconBasePath = null, string? skipIfMatches = null)
@@ -516,11 +516,11 @@ public partial class TextEditorRoot : Node
 		_statusBar.Text = $"{Container.OriginTabName}: ({lineIndex}:{column})";
 	}
 
-	public string GetWordBeforeCaret()
+	public static string GetWordBeforeCaret(CodeEdit codeEdit)
 	{
-		int lineIndex = CodeEditor.GetCaretLine();
-		int column = CodeEditor.GetCaretColumn();
-		string lineText = CodeEditor.GetLine(lineIndex);
+		int lineIndex = codeEdit.GetCaretLine();
+		int column = codeEdit.GetCaretColumn();
+		string lineText = codeEdit.GetLine(lineIndex);
 
 		if (column == 0) return string.Empty;
 

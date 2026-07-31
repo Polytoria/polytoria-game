@@ -14,8 +14,8 @@ namespace Polytoria.Creator.UI;
 
 public partial class FileItemContextMenu : ContextMenu
 {
-	private const ScriptPermissionFlags standardPermissionFlags = ScriptPermissionFlags.IORead | ScriptPermissionFlags.IOWrite | ScriptPermissionFlags.ContextAccess;
-	private const ScriptPermissionFlags debugPermissionFlags = standardPermissionFlags | ScriptPermissionFlags.CreatorAccess;
+	private const ScriptPermissionFlags standardPermissionFlags = ScriptPermissionFlags.ContextAccess;
+	private const ScriptPermissionFlags debugPermissionFlags = standardPermissionFlags | ScriptPermissionFlags.IORead | ScriptPermissionFlags.IOWrite | ScriptPermissionFlags.CreatorAccess;
 
 	public CreatorSession Session = null!;
 

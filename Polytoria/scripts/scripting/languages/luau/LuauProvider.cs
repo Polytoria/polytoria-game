@@ -735,7 +735,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 
 		// Return existing if already required
-		if (ms.LuauState != null)
+		if (ms.LuauState != null && ms.Root.SessionType != World.SessionTypeEnum.Creator)
 		{
 			if (ms.CachedLuauResultRef.HasValue)
 			{

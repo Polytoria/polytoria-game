@@ -3,6 +3,12 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+#if CREATOR
+using Polytoria.Creator;
+using Polytoria.Creator.Managers;
+using Polytoria.Datamodel.Creator;
+using static Polytoria.Datamodel.Creator.CreatorAddons;
+#endif
 using Polytoria.Attributes;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Data;
@@ -840,26 +846,6 @@ public class LuaMetatable : LuaObject
 			throw new Exception("attempt to call non static method on a static object (" + key + ")");
 		}
 
-		ScriptMethodAttribute? methodAttribute = targetMethod.GetCustomAttribute<ScriptMethodAttribute>();
-
-		if (methodAttribute != null)
-		{
-			if (methodAttribute.Permissions != ScriptPermissionFlags.None)
-			{
-				if (!script.PermissionFlags.HasFlag(methodAttribute.Permissions))
-				{
-					throw new UnauthorizedAccessException("script does not have permission to call the specified method (" + targetMethod.Name + ")");
-				}
-			}
-		}
-
-		Attributes.ObsoleteAttribute? obsoleteAttribute = targetMethod.GetCustomAttribute<Attributes.ObsoleteAttribute>();
-
-		if (obsoleteAttribute != null)
-		{
-			PT.PrintWarn($"{targetMethod.Name} is obsolete. {obsoleteAttribute.Message}");
-		}
-
 		// Prepare args array formatted for params
 		ParameterInfo[] parametersFinal = targetMethod.GetParameters();
 		int callerParamIndex = Array.FindIndex(parametersFinal, p => p.IsDefined(typeof(ScriptingCallerAttribute)));
@@ -872,26 +858,25 @@ public class LuaMetatable : LuaObject
 			int paramsCount = Math.Max(0, argsCount - fixedParamCount);
 			Type paramsElementType = parametersFinal[^1].ParameterType.GetElementType()!;
 
-			// Convert fixed args
 			for (int i = 0; i < fixedParamCount; i++)
+			{
 				finalArgs.Add(ScriptService.ConvertToPropertyType(args[i], parametersFinal[i].ParameterType));
+			}
 
-			// Convert params args
 			Array paramsArray = new object[paramsCount];
 			for (int i = 0; i < paramsCount; i++)
+			{
 				paramsArray.SetValue(ScriptService.ConvertToPropertyType(args[fixedParamCount + i], paramsElementType), i);
+			}
 
 			finalArgs.Add(paramsArray);
 		}
 		else
 		{
-			// No params, just convert normally
 			int argIndex = 0;
 			for (int i = 0; i < parametersFinal.Length; i++)
 			{
-				if (i == callerParamIndex)
-					continue; // Skip the caller parameter
-
+				if (i == callerParamIndex) continue;
 				if (argIndex < argsCount)
 				{
 					finalArgs.Add(ScriptService.ConvertToPropertyType(args[argIndex], parametersFinal[i].ParameterType));
@@ -899,23 +884,57 @@ public class LuaMetatable : LuaObject
 				}
 			}
 
-			// Fill remaining with default values
 			for (int i = argsCount; i < parametersFinal.Length; i++)
 			{
-				if (i == callerParamIndex)
-					continue; // Skip the caller parameter
-
+				if (i == callerParamIndex) continue;
 				int paramIndex = i + (callerParamIndex >= 0 && i >= callerParamIndex ? 1 : 0);
 				if (paramIndex < parametersFinal.Length)
+				{
 					finalArgs.Add(parametersFinal[paramIndex].HasDefaultValue ? parametersFinal[paramIndex].DefaultValue : null);
+				}
 			}
 		}
 
-		// Apply caller if ScriptingCallerAttribute is found
 		if (callerParamIndex >= 0)
+		{
 			finalArgs.Insert(callerParamIndex, script);
+		}
 
 		object?[] invokeArgs = [.. finalArgs];
+
+		ScriptMethodAttribute? methodAttribute = targetMethod.GetCustomAttribute<ScriptMethodAttribute>();
+
+		if (methodAttribute != null)
+		{
+			if (methodAttribute.Permissions != ScriptPermissionFlags.None)
+			{
+				if (!script.PermissionFlags.HasFlag(methodAttribute.Permissions))
+				{
+				#if CREATOR
+					if (script.Root.SessionType == World.SessionTypeEnum.Creator)
+					{
+						var addonSession = AddonsManager.GetAddonSession(script);
+						if (addonSession != null)
+						{
+							AddonPermissionEnum[] needed = PermissionsToAddonPerms(methodAttribute.Permissions);
+							TaskCompletionSource<int> permTcs = new();
+							LuauProvider.SetYieldTask(state, permTcs.Task);
+							_ = RequestPermAndResume(script, state, targetMethod, targetObject, invokeArgs, needed, addonSession, permTcs);
+							return state.Yield(1);
+						}
+					}
+				#endif
+					throw new UnauthorizedAccessException("script does not have permission to call the specified method (" + targetMethod.Name + ")");
+				}
+			}
+		}
+
+		Attributes.ObsoleteAttribute? obsoleteAttribute = targetMethod.GetCustomAttribute<Attributes.ObsoleteAttribute>();
+
+		if (obsoleteAttribute != null)
+		{
+			PT.PrintWarn($"{targetMethod.Name} is obsolete. {obsoleteAttribute.Message}");
+		}
 
 		if (ScriptService.IsAsyncMethod(targetMethod))
 		{
@@ -1061,4 +1080,40 @@ public class LuaMetatable : LuaObject
 		public override bool Equals(object? obj) => obj is OverloadKey k && Equals(k);
 		public override int GetHashCode() => _hashCode;
 	}
+
+#if CREATOR
+	private static AddonPermissionEnum[] PermissionsToAddonPerms(ScriptPermissionFlags flags)
+	{
+		List<AddonPermissionEnum> list = [];
+		if (flags.HasFlag(ScriptPermissionFlags.IORead)) list.Add(AddonPermissionEnum.IORead);
+		if (flags.HasFlag(ScriptPermissionFlags.IOWrite)) list.Add(AddonPermissionEnum.IOWrite);
+		return [.. list];
+	}
+
+	private async Task RequestPermAndResume(Script script, LuaState state, MethodInfo method, object? target, object?[] args, AddonPermissionEnum[] perms, AddonsManager.AddonSession session, TaskCompletionSource<int> tcs)
+	{
+		try
+		{
+			bool granted = await CreatorService.Interface.PromptAddonReqPerm(perms, session.Data);
+			if (!granted)
+			{
+				tcs.SetException(new UnauthorizedAccessException("User declined permissions for " + method.Name));
+				return;
+			}
+			AddonsManager.SetAddonPermissions(script, perms, true);
+			if (ScriptService.IsAsyncMethod(method))
+			{
+				TaskCompletionSource<int> innerTcs = new();
+				AsyncExec(target, state, method, args, innerTcs);
+				tcs.SetResult(await innerTcs.Task);
+			}
+			else
+			{
+				LangProvider.PushValueToLua(state, method.Invoke(target, args));
+				tcs.SetResult(1);
+			}
+		}
+		catch (Exception ex) { tcs.SetException(ex); }
+	}
+#endif
 }

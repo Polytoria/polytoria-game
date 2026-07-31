@@ -2,14 +2,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+using Godot;
 using Polytoria.Attributes;
 using Polytoria.Creator.Managers;
 using Polytoria.Creator.UI;
 using Polytoria.Datamodel.Resources;
 using Polytoria.Scripting;
+using Polytoria.Scripting.Luau;
 using Polytoria.Shared;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace Polytoria.Datamodel.Creator;
 
@@ -122,6 +125,54 @@ public sealed partial class CreatorAddons : Instance
 			ToolItems.Add(item);
 			Menu.Singleton.UpdateAddonMenu(this);
 			return item;
+		}
+
+		/// <summary>
+		/// Saves the passed string to the user's clipboard.
+		/// </summary>
+		[ScriptMethod(Permissions = ScriptPermissionFlags.ContextAccess)]
+		public static void SetClipboard(string text) => DisplayServer.ClipboardSet(text);
+
+		/// <summary>
+		/// Returns the contents of the user's clipboard.
+		/// </summary>
+		[ScriptMethod(Permissions = ScriptPermissionFlags.ContextAccess)]
+		public static string GetClipboard() => DisplayServer.ClipboardGet();
+
+		/// <summary>
+		/// Prompts the user to pick a script file and returns it's result, or nil if invalid.
+		/// </summary>
+		[ScriptMethod(Permissions = ScriptPermissionFlags.IORead)]
+		public static async Task<object?> RequestScriptFile([ScriptingCaller] Script caller)
+		{
+			TaskCompletionSource<string?> fileTcs = new();
+			CreatorService.Interface.PromptFileSelect(new()
+			{
+				Title = "Select script file",
+				DialogMode = DisplayServer.FileDialogMode.OpenFile,
+				Filters = ["*.lua,*.luau;Luau Script"]
+			},
+			paths => fileTcs.SetResult(File.ReadAllText(paths[0])),
+			() => fileTcs.SetResult(null));
+
+			string? source = await fileTcs.Task;
+			if (source == null || caller.LuauState == null || !caller.LuauState.IsAlive) return null;
+
+			byte[] bytecode;
+			try { bytecode = LuauProvider.Singleton.CompileSource(source); }
+			catch { return null; }
+
+			LuaState mainState = caller.LuauState;
+			LuaState co = LuauProvider.NewThread(mainState);
+			int coRef = mainState.Ref();
+			try
+			{
+				co.Load("@requested_script", bytecode);
+				await LuauProvider.ResumeThread(co, mainState, 0, throwError: true);
+				return co.GetTop() > 0 ? LuauProvider.Singleton.LuaToObject(co, 1) : null;
+			}
+			catch { return null; }
+			finally { mainState.Unref(coRef); }
 		}
 	}
 

@@ -23,17 +23,15 @@ public partial class ConsoleCommandLine : Control
 	private const int MinVisibleLines = 1;
 	private const int MaxVisibleLines = 4;
 	private const int MaxRecents = 30;
-	private const string NonstrictLuauRcContent = "{\n\t\"languageMode\": \"nonstrict\"\n}";
-	private const ScriptPermissionFlags standardPermissionFlags = ScriptPermissionFlags.IORead | ScriptPermissionFlags.IOWrite | ScriptPermissionFlags.ContextAccess;
-	private const ScriptPermissionFlags debugPermissionFlags = standardPermissionFlags | ScriptPermissionFlags.CreatorAccess;
-
+	private const ScriptPermissionFlags standardPermissionFlags = ScriptPermissionFlags.ContextAccess;
+	private const ScriptPermissionFlags debugPermissionFlags = standardPermissionFlags | ScriptPermissionFlags.IORead | ScriptPermissionFlags.IOWrite | ScriptPermissionFlags.CreatorAccess;
 	private string _temporaryFile = null!;
 	private string _recentsFolder = null!;
 	private string _scratchFolder = null!;
 	private Godot.Timer? _completionRetryTimer;
 
 	[Export] private Label _diagLabel = null!;
-	[Export] private CodeEdit _codeEdit = null!;
+	[Export] private TextEditorField _codeEdit = null!;
 	[Export] private Button _runButton = null!;
 	[Export] private TextEditorFind _finder = null!;
 
@@ -99,21 +97,11 @@ public partial class ConsoleCommandLine : Control
 		_codeEdit.CodeCompletionRequested += OnCompletionRequest;
 
 		Directory.CreateDirectory(_scratchFolder);
-		EnsureNonstrictOverride(_scratchFolder);
 		if (!File.Exists(_temporaryFile))
 		{
 			File.WriteAllText(_temporaryFile, _codeEdit.Text);
 		}
 		_ = _completion.OpenScriptAsync(_temporaryFile);
-	}
-
-	private static void EnsureNonstrictOverride(string scratchFolder)
-	{
-		string luaurcPath = Path.Combine(scratchFolder, ".luaurc");
-		if (!File.Exists(luaurcPath))
-		{
-			File.WriteAllText(luaurcPath, NonstrictLuauRcContent);
-		}
 	}
 
 	public override async void _ExitTree()
@@ -240,6 +228,10 @@ public partial class ConsoleCommandLine : Control
 			}
 		}
 		_completion?.UpdateScriptChangeAsync(_temporaryFile, _codeEdit.Text);
+		if (_completion != null && TextEditorRoot.IsCompletionTrigger(_codeEdit))
+		{
+			OnCompletionRequest();
+		}
 		UpdateHeight();
 	}
 
@@ -268,7 +260,7 @@ public partial class ConsoleCommandLine : Control
 	private async void OnCompletionRequest()
 	{
 		if (_completion == null) return;
-		await TextEditorRoot.RequestCompletions(_codeEdit, _completion, _temporaryFile);
+		await TextEditorRoot.RequestCompletions(_codeEdit, _completion, _temporaryFile, skipIfMatches: TextEditorRoot.GetWordBeforeCaret(_codeEdit));
 	}
 
 	// Recalculates recent commands every commit from oldest to newest
