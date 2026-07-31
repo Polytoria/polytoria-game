@@ -662,6 +662,17 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			}
 		}
 		string logInfo = sb.ToString();
+
+		string? traceback;
+		lock (lua)
+		{
+			traceback = lua.DebugTrace();
+		}
+		if (!string.IsNullOrEmpty(traceback))
+		{
+			logInfo += "\nstacktrace:\n" + traceback;
+		}
+
 		logger.LogWarning(script, logInfo);
 		return 0;
 	}
