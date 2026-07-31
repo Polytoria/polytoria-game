@@ -16,7 +16,7 @@ public partial class TransformPayloadDto
 
 	public Vector3 Position
 	{
-		get => new Vector3(
+		get => new(
 			BitConverter.ToSingle(Data, 0),
 			BitConverter.ToSingle(Data, 4),
 			BitConverter.ToSingle(Data, 8)
@@ -32,32 +32,7 @@ public partial class TransformPayloadDto
 		}
 	}
 
-	public uint RawRotation
-	{
-		get => BitConverter.ToUInt32(Data, 12);
-		set
-		{
-			byte[] rot = BitConverter.GetBytes(value);
-			Array.Copy(rot, 0, Data, 12, 4);
-		}
-	}
-
-	public Quaternion Rotation
-	{
-		get => UnitQuaternionDto.FromCompressed(RawRotation);
-		set
-		{
-			RawRotation = UnitQuaternionDto.ToCompressed(value);
-		}
-	}
-
-	// UnitQuaternionDto is suitable for most network replication, however may be problematic at larger scales.
-	// UnitQuaternionDto has a ~0.137 degree step and uses 4 bytes,
-	// UnitQuaternionUInt64Dto has a ~0.003 497 degree step and uses 8 bytes.
-	// This is the the unimplemented TransformPayload logic for higher precision network replication of rotations.
-	[MemoryPackIgnore]
-	[JsonIgnore]
-	public ulong RawRotationUInt64
+	public ulong RawRotation
 	{
 		get => BitConverter.ToUInt64(Data, 12);
 		set
@@ -67,14 +42,12 @@ public partial class TransformPayloadDto
 		}
 	}
 
-	[MemoryPackIgnore]
-	[JsonIgnore]
-	public Quaternion RotationUInt64
+	public Quaternion Rotation
 	{
-		get => UnitQuaternionUInt64Dto.FromCompressed(RawRotationUInt64);
+		get => UnitQuaternionUInt64Dto.FromCompressed(RawRotation);
 		set
 		{
-			RawRotationUInt64 = UnitQuaternionUInt64Dto.ToCompressed(value);
+			RawRotation = UnitQuaternionUInt64Dto.ToCompressed(value);
 		}
 	}
 
@@ -95,21 +68,21 @@ public partial class TransformPayloadDto
 	public static TransformPayloadDto FromString(string str)
 	{
 		var parts = str.Split('|');
-		return new TransformPayloadDto(Vector3Dto.FromString(parts[0]), UnitQuaternionDto.FromString(parts[1]));
+		return new TransformPayloadDto(Vector3Dto.FromString(parts[0]), UnitQuaternionUInt64Dto.FromString(parts[1]));
 	}
 
 	public static string ToString(Vector3 Position, Quaternion Rotation)
 	{
-		return $"{Vector3Dto.ToString(Position)}|{UnitQuaternionDto.ToString(Rotation)}";
+		return $"{Vector3Dto.ToString(Position)}|{UnitQuaternionUInt64Dto.ToString(Rotation)}";
 	}
 
-	public static byte[] ToArray(Vector3 Position, uint Rotation) => [
+	public static byte[] ToArray(Vector3 Position, ulong Rotation) => [
 		..BitConverter.GetBytes(Position.X),
 		..BitConverter.GetBytes(Position.Y),
 		..BitConverter.GetBytes(Position.Z),
 		..BitConverter.GetBytes(Rotation)
 	];
-	public static byte[] ToArray(Vector3 Position, Quaternion Rotation) => ToArray(Position, UnitQuaternionDto.ToCompressed(Rotation));
+	public static byte[] ToArray(Vector3 Position, Quaternion Rotation) => ToArray(Position, UnitQuaternionUInt64Dto.ToCompressed(Rotation));
 	public static byte[] ToArray(Transform3D t) => ToArray(t.Origin, t.Basis.GetRotationQuaternion());
 	public static byte[] ToArray(TransformPayloadDto t) => ToArray(t.Position, t.RawRotation);
 
