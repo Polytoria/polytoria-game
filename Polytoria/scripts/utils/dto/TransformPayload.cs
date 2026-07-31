@@ -14,9 +14,13 @@ public partial class TransformPayloadDto
 {
 	public byte[] Data { get; set; } = null!;
 
+	[MemoryPackIgnore, JsonIgnore]
+	public bool UInt64 = false;
+
+	[MemoryPackIgnore, JsonIgnore]
 	public Vector3 Position
 	{
-		get => new Vector3(
+		get => new(
 			BitConverter.ToSingle(Data, 0),
 			BitConverter.ToSingle(Data, 4),
 			BitConverter.ToSingle(Data, 8)
@@ -32,70 +36,54 @@ public partial class TransformPayloadDto
 		}
 	}
 
-	public uint RawRotation
-	{
-		get => BitConverter.ToUInt32(Data, 12);
-		set
-		{
-			byte[] rot = BitConverter.GetBytes(value);
-			Array.Copy(rot, 0, Data, 12, 4);
-		}
-	}
-
+	[MemoryPackIgnore, JsonIgnore]
 	public Quaternion Rotation
 	{
-		get => UnitQuaternionDto.FromCompressed(RawRotation);
-		set
+		get
 		{
-			RawRotation = UnitQuaternionDto.ToCompressed(value);
+			if (UInt64)
+			{
+				return UnitQuaternionUInt64Dto.FromCompressed(BitConverter.ToUInt64(Data, 12));
+			}
+			return UnitQuaternionDto.FromCompressed(BitConverter.ToUInt32(Data, 12));
 		}
-	}
-
-	// UnitQuaternionDto is suitable for most network replication, however may be problematic at larger scales.
-	// UnitQuaternionDto has a ~0.137 degree step and uses 4 bytes,
-	// UnitQuaternionUInt64Dto has a ~0.003 497 degree step and uses 8 bytes.
-	// This is the the unimplemented TransformPayload logic for higher precision network replication of rotations.
-	[MemoryPackIgnore]
-	[JsonIgnore]
-	public ulong RawRotationUInt64
-	{
-		get => BitConverter.ToUInt64(Data, 12);
 		set
 		{
-			byte[] rot = BitConverter.GetBytes(value);
-			Array.Copy(rot, 0, Data, 12, 8);
-		}
-	}
-
-	[MemoryPackIgnore]
-	[JsonIgnore]
-	public Quaternion RotationUInt64
-	{
-		get => UnitQuaternionUInt64Dto.FromCompressed(RawRotationUInt64);
-		set
-		{
-			RawRotationUInt64 = UnitQuaternionUInt64Dto.ToCompressed(value);
+			if (UInt64)
+			{
+				Array.Copy(BitConverter.GetBytes(UnitQuaternionUInt64Dto.ToCompressed(value)), 0, Data, 12, 8);
+			}
+			else
+			{
+				Array.Copy(BitConverter.GetBytes(UnitQuaternionDto.ToCompressed(value)), 0, Data, 12, 4);
+			}
 		}
 	}
 
 	[MemoryPackConstructor, JsonConstructor]
 	public TransformPayloadDto() { }
-	public TransformPayloadDto(byte[] bytes)
+	public TransformPayloadDto(byte[] bytes, bool uint64)
 	{
 		Data = bytes;
+		UInt64 = uint64;
 	}
-	public TransformPayloadDto(Vector3 position, Quaternion rotation)
-	{
-		Data = ToArray(position, rotation);
-	}
+	public TransformPayloadDto(byte[] bytes) : this(bytes, bytes.Length == 20) { }
 
-	public bool IsEqualApprox(TransformPayloadDto other) => Position.IsEqualApprox(other.Position) && Rotation.IsEqualApprox(other.Rotation);
+	public bool IsEqualApprox(Vector3 pos, Quaternion rot) => Position.IsEqualApprox(pos) && Rotation.IsEqualApprox(rot);
+	public bool IsEqualApprox(Transform3D t) => Position.IsEqualApprox(t.Origin) && Rotation.IsEqualApprox(t.Basis.GetRotationQuaternion());
+	public bool IsEqualApprox(TransformPayloadDto other) => IsEqualApprox(other.Position, other.Rotation);
 
 	// String helpers because memory pack don't like nested objects
 	public static TransformPayloadDto FromString(string str)
 	{
 		var parts = str.Split('|');
-		return new TransformPayloadDto(Vector3Dto.FromString(parts[0]), UnitQuaternionDto.FromString(parts[1]));
+		return new(ToArray(Vector3Dto.FromString(parts[0]), UnitQuaternionDto.FromString(parts[1])), false);
+	}
+
+	public static TransformPayloadDto FromStringUInt64(string str)
+	{
+		var parts = str.Split('|');
+		return new(ToArrayUInt64(Vector3Dto.FromString(parts[0]), UnitQuaternionUInt64Dto.FromString(parts[1])), true);
 	}
 
 	public static string ToString(Vector3 Position, Quaternion Rotation)
@@ -111,8 +99,15 @@ public partial class TransformPayloadDto
 	];
 	public static byte[] ToArray(Vector3 Position, Quaternion Rotation) => ToArray(Position, UnitQuaternionDto.ToCompressed(Rotation));
 	public static byte[] ToArray(Transform3D t) => ToArray(t.Origin, t.Basis.GetRotationQuaternion());
-	public static byte[] ToArray(TransformPayloadDto t) => ToArray(t.Position, t.RawRotation);
+	public static TransformPayloadDto FromTransform(Transform3D t) => new(ToArray(t), false);
 
-	public static TransformPayloadDto FromArray(byte[] f) => new(f);
-	public static TransformPayloadDto FromGDTransform(Transform3D t) => new(t.Origin, t.Basis.GetRotationQuaternion());
+	public static byte[] ToArrayUInt64(Vector3 Position, ulong Rotation) => [
+		..BitConverter.GetBytes(Position.X),
+		..BitConverter.GetBytes(Position.Y),
+		..BitConverter.GetBytes(Position.Z),
+		..BitConverter.GetBytes(Rotation)
+	];
+	public static byte[] ToArrayUInt64(Vector3 Position, Quaternion Rotation) => ToArrayUInt64(Position, UnitQuaternionUInt64Dto.ToCompressed(Rotation));
+	public static byte[] ToArrayUInt64(Transform3D t) => ToArrayUInt64(t.Origin, t.Basis.GetRotationQuaternion());
+	public static TransformPayloadDto FromTransformUInt64(Transform3D t) => new(ToArrayUInt64(t), true);
 }
