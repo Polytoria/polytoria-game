@@ -98,7 +98,7 @@ public partial class Grabbable : Instance
 
 	public override void ExitTree()
 	{
-		_dragger?.SetGrabbed(null);
+		_dragger?.SetGrabbing(null);
 		_parent?.Clicked.Disconnect(OnClicked);
 		_parent?.MouseEnter.Disconnect(OnMouseEnter);
 		_parent?.MouseExit.Disconnect(OnMouseExit);
@@ -193,7 +193,7 @@ public partial class Grabbable : Instance
 	{
 		if (_parent == null) return;
 		_dragger = plr;
-		_dragger.SetGrabbed(_parent);
+		_dragger.SetGrabbing(_parent);
 		_parent.SetNetworkAuthority(plr);
 		Grabbed.Invoke(plr);
 		RpcId(plr.PeerID, nameof(NetGrabDrag));
@@ -215,7 +215,7 @@ public partial class Grabbable : Instance
 	internal void InternalGiveGrab()
 	{
 		_dragger = Root.Players.LocalPlayer;
-		_dragger.SetGrabbed(_parent);
+		_dragger.SetGrabbing(_parent);
 		_dragging = true;
 		Grabbed.Invoke(_dragger);
 		Root.PlayerGUI.SetCursorShape(Control.CursorShape.CanDrop);
@@ -246,7 +246,7 @@ public partial class Grabbable : Instance
 	private void InternalReleaseDrag()
 	{
 		_dragging = false;
-		_dragger?.SetGrabbed(null);
+		_dragger?.SetGrabbing(null);
 		_dragger = null;
 		Released.Invoke();
 	}
