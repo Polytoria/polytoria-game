@@ -435,6 +435,7 @@ public partial class CharacterModel : Physical
 		seat.Occupant = this;
 		seat.InvokeSat(this);
 		SetBlendValue(CharacterModel.CharacterModelBlendEnum.Sitting, 1);
+		Seated.Invoke(seat);
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable, CallLocal = true)]
@@ -448,9 +449,11 @@ public partial class CharacterModel : Physical
 
 			if (SittingIn != null)
 			{
-				SittingIn.Occupant = null;
-				SittingIn.InvokeVacated(this);
+				Seat seat = SittingIn;
+				seat.Occupant = null;
+				seat.InvokeVacated(this);
 				SittingIn = null;
+				Unseated.Invoke(seat);
 			}
 
 			SetBlendValue(CharacterModel.CharacterModelBlendEnum.Sitting, 0);
@@ -510,12 +513,17 @@ public partial class CharacterModel : Physical
 		set
 		{
 			if (Controller is Player plr && !plr.IsReady) return;
+			float oldHealth = _health;
 			_health = value;
 			if (_health <= 0 && !IsDead)
 			{
 				TriggerDead();
 			}
 			OnPropertyChanged();
+			if (_health != oldHealth)
+			{
+				HealthChanged.Invoke(_health, oldHealth);
+			}
 		}
 	}
 
@@ -679,6 +687,10 @@ public partial class CharacterModel : Physical
 				{
 					_coyoteUsed = false;
 					Landed.Invoke();
+				}
+				else
+				{
+					LeftGround.Invoke();
 				}
 			}
 
@@ -926,6 +938,7 @@ public partial class CharacterModel : Physical
 			_coyoteUsed = true;
 			CharacterVelocity.Y = JumpPower;
 			playJumpSound = true;
+			Jumped.Invoke();
 		}
 		if (IsSitting)
 		{
@@ -1296,6 +1309,21 @@ public partial class CharacterModel : Physical
 
 	[ScriptProperty]
 	public PTSignal Landed { get; private set; } = new();
+
+	[ScriptProperty]
+	public PTSignal<float, float> HealthChanged { get; private set; } = new();
+
+	[ScriptProperty]
+	public PTSignal Jumped { get; private set; } = new();
+
+	[ScriptProperty]
+	public PTSignal LeftGround { get; private set; } = new();
+
+	[ScriptProperty]
+	public PTSignal<Seat> Seated { get; private set; } = new();
+
+	[ScriptProperty]
+	public PTSignal<Seat> Unseated { get; private set; } = new();
 
 	[ScriptMethod]
 	public void PlayIdle()
