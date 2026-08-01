@@ -611,6 +611,46 @@ public partial class NPC : Instance
 	}
 
 
+	[ScriptProperty, Attributes.Obsolete("Use Character.HealthChanged instead")]
+	public PTSignal<float, float> HealthChanged
+	{
+		get => Character?.HealthChanged;
+		private set;
+	}
+
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.Jumped instead")]
+	public PTSignal Jumped
+	{
+		get => Character?.Jumped;
+		private set;
+	}
+
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.LeftGround instead")]
+	public PTSignal LeftGround
+	{
+		get => Character?.LeftGround;
+		private set;
+	}
+
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.Seated instead")]
+	public PTSignal<Seat> Seated
+	{
+		get => Character?.Seated;
+		private set;
+	}
+
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.Unseated instead")]
+	public PTSignal<Seat> Unseated
+	{
+		get => Character?.Unseated;
+		private set;
+	}
+
+
 	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.Position instead"), CloneIgnore]
 	public Vector3 Position
 	{
