@@ -70,6 +70,7 @@ public sealed partial class Player : NPC
 	private RemoteTransform3D _remoteCamAttach = null!;
 	internal Dynamic CamAttach = null!;
 	private Physical? _mouseHoveringOn;
+	private Physical? _grabbed;
 
 	private Vector3 DefaultSpawnLocation = new(0, 5, 0);
 	internal event Action<APIUserInfo>? UserInfoReady;
@@ -311,6 +312,14 @@ public sealed partial class Player : NPC
 			_rotationMode = value;
 			OnPropertyChanged();
 		}
+	}
+
+	[ScriptProperty]
+	public Physical? Grabbed => _grabbed;
+
+	public void SetGrabbed(Physical? phy)
+	{
+		_grabbed = phy;
 	}
 
 	[ScriptProperty]
