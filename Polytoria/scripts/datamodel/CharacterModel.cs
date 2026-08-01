@@ -699,15 +699,11 @@ public partial class CharacterModel : Physical
 				Node collider = (Node)FootFwdRaycast.GetCollider();
 				if (collider != null && GetNetObjFromProxy(collider) is Truss truss)
 				{
-					if (!IsClimbing)
+					if (!IsClimbing && !ClimbDebounce && truss.Climbable)
 					{
-						if (!ClimbDebounce)
-						{
-							ClimbingTruss = truss;
-							IsClimbing = true;
-							PlayClimb();
-						}
-
+						ClimbingTruss = truss;
+						IsClimbing = true;
+						PlayClimb();
 					}
 				}
 				else
