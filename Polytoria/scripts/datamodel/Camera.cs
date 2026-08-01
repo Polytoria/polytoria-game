@@ -53,7 +53,7 @@ public sealed partial class Camera : Dynamic
 
 	private float _moveSpeed = 8f;
 	private readonly float _rotateSpeed = 0.005f;
-	private Dynamic? _target = null!;
+	private Dynamic? _target = null;
 	private RemoteTransform3D tracker = new() { UpdatePosition = false, UpdateRotation = false };
 
 	private bool _isMouseCaptured;
@@ -340,7 +340,14 @@ public sealed partial class Camera : Dynamic
 	[ScriptProperty]
 	public Dynamic? Target
 	{
-		get => _target;
+		get
+		{
+			if (_target != null && _target.IsDeleted)
+			{
+				_target = null;
+			}
+			return _target;
+		}
 		set
 		{
 			_target?.Deleted -= OnTrackerThreatened;
@@ -371,6 +378,10 @@ public sealed partial class Camera : Dynamic
 	[ScriptProperty]
 	public PTSignal FirstPersonExited { get; private set; } = new();
 
+	private void UpdateTracker(CameraModeEnum? cammode = null)
+	{
+		tracker.UpdatePosition = false;// (cammode ?? Mode) == CameraModeEnum.Follow;
+	}
 	private void UpdateTracker(CameraModeEnum? cammode = null)
 	{
 		tracker.UpdatePosition = false;// (cammode ?? Mode) == CameraModeEnum.Follow;
@@ -458,6 +469,7 @@ public sealed partial class Camera : Dynamic
 
 	public override void Process(double delta)
 	{
+		base.Process(delta);
 		if (Root.Environment.CurrentCamera != this) return;
 		if (Mode == CameraModeEnum.Follow)
 		{
@@ -465,11 +477,11 @@ public sealed partial class Camera : Dynamic
 			{
 				if (Input.IsActionPressed("zoom_in"))
 				{
-					_targetZoom = _distance - (ScrollSensitivity / 5);
+					_targetZoom -= ScrollSensitivity / 5;
 				}
 				if (Input.IsActionPressed("zoom_out"))
 				{
-					_targetZoom = _distance + (ScrollSensitivity / 5);
+					_targetZoom += ScrollSensitivity / 5;
 				}
 
 				// Handle Controller Right stick input
@@ -520,7 +532,7 @@ public sealed partial class Camera : Dynamic
 				}
 			}
 
-			_currentZoom = (float)Mathf.Lerp(_currentZoom, _targetZoom, MathUtils.ExpDecay((float)delta, ScrollLerpSpeed));
+			_currentZoom = Mathf.Lerp(_currentZoom, _targetZoom, MathUtils.ExpDecay((float)delta, ScrollLerpSpeed));
 			float finalizedZoom = _currentZoom;
 
 			_turnY2.Position = new Vector3(0, 0, _currentZoom);
@@ -545,13 +557,7 @@ public sealed partial class Camera : Dynamic
 					Vector3 hitPoint = (Vector3)result["position"];
 
 					float hitDist = origin.DistanceTo(hitPoint) - ClipSafeMargin;
-					finalizedZoom = Mathf.Min(_distance, hitDist);
-
-					// Prevent zooming after zero
-					if (finalizedZoom < 0)
-					{
-						finalizedZoom = 0;
-					}
+					finalizedZoom = Mathf.Max(0, hitDist);
 				}
 			}
 
@@ -1012,7 +1018,7 @@ public sealed partial class Camera : Dynamic
 		Vector2 screenPos = new(pos.X * size.X, pos.Y * size.Y);
 		Vector3 origin = Camera3D.ProjectRayOrigin(screenPos);
 		Vector3 direction = Camera3D.ProjectRayNormal(screenPos);
-		return (origin + direction * Camera3D.Near);
+		return origin + direction * Camera3D.Near;
 	}
 
 	[ScriptMethod]
@@ -1047,7 +1053,7 @@ public sealed partial class Camera : Dynamic
 	{
 		Vector3 rayOrigin = Camera3D.ProjectRayOrigin(new(pos.X, pos.Y));
 		Vector3 rayDir = Camera3D.ProjectRayNormal(new(pos.X, pos.Y));
-		return (rayOrigin + rayDir * Camera3D.Near);
+		return rayOrigin + rayDir * Camera3D.Near;
 	}
 
 
@@ -1138,7 +1144,7 @@ public sealed partial class Camera : Dynamic
 		// In GoDot the Z axis points to the Camera
 		Vector3 direction = -globalTransform.Basis.Z;
 
-		Datamodel.Environment.RayResult? hit = GetPlacementRay(ignoreList);
+		RayResult? hit = GetPlacementRay(ignoreList);
 
 		if (hit != null)
 		{

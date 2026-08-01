@@ -662,12 +662,12 @@ public partial class CreatorInterface : Control, IScriptObject
 
 		FileDialog dialog = new()
 		{
+			Access = FileDialog.AccessEnum.Filesystem,
 			Title = data.Title,
 			CurrentDir = currentDir,
 			CurrentFile = data.FileName,
 			ShowHiddenFiles = data.ShowHidden,
 			FileMode = MapFileMode(data.DialogMode),
-			Access = FileDialog.AccessEnum.Filesystem,
 			UseNativeDialog = true,
 		};
 

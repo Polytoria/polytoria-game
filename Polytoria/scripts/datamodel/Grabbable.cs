@@ -114,6 +114,10 @@ public partial class Grabbable : Instance
 
 	public override void PreDelete()
 	{
+		if (_dragging && _dragger == Root.Players.LocalPlayer)
+		{
+			Root.PlayerGUI.SetCursorShape(Control.CursorShape.Arrow);
+		}
 		Root.Input.GodotInputEvent -= OnInput;
 		base.PreDelete();
 	}

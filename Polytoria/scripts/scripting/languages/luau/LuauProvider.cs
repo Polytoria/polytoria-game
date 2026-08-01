@@ -26,6 +26,7 @@ using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Script = Polytoria.Datamodel.Script;
+using System.Diagnostics;
 
 namespace Polytoria.Scripting.Luau;
 
@@ -661,20 +662,11 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		logger.LogWarning(script, logInfo);
 		return 0;
 	}
-	public int LuaWait(IntPtr L)
+	public static int LuaWait(IntPtr L)
 	{
 		LuaState lua = LuaState.FromIntPtr(L);
 
-		double n;
-
-		if (lua.IsNumber(1))
-		{
-			n = lua.ToNumber(1);
-		}
-		else
-		{
-			n = 0;
-		}
+		double n = lua.IsNumber(1) ? lua.ToNumber(1) : 0;
 
 		TaskCompletionSource<int> tcs = new();
 
@@ -682,16 +674,11 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 		async void RunAsync()
 		{
-			if (n != 0)
-			{
-				await Globals.Singleton.WaitAsync((float)n);
-			}
-			else
-			{
-				await Globals.Singleton.WaitPhysicsFrame();
-			}
+			Task task = n > 0 ? Globals.Singleton.WaitAsync((float)n) : Globals.Singleton.WaitPhysicsFrame();
+			Stopwatch sw = Stopwatch.StartNew();
+			await task;
 
-			PushValueToLua(lua, true);
+			lua.PushNumber(sw.Elapsed.TotalSeconds);
 			tcs.SetResult(1);
 		}
 
