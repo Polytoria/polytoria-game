@@ -382,10 +382,6 @@ public sealed partial class Camera : Dynamic
 	{
 		tracker.UpdatePosition = false;// (cammode ?? Mode) == CameraModeEnum.Follow;
 	}
-	private void UpdateTracker(CameraModeEnum? cammode = null)
-	{
-		tracker.UpdatePosition = false;// (cammode ?? Mode) == CameraModeEnum.Follow;
-	}
 
 	private void OnTrackerThreatened()
 	{

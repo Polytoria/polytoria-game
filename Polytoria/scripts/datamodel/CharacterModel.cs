@@ -48,7 +48,7 @@ public partial class CharacterModel : Physical
 	private bool _canMove = true;
 	internal bool ClimbDebounce = false;
 	internal bool JustFinishedClimbing = false;
-	private bool _canJumpWhileClimbing = true;
+	internal bool _canJumpWhileClimbing = true;
 	private Tool? _holdingTool;
 	private Seat? _sittingIn;
 	private bool _keepInventory = false;
