@@ -651,7 +651,7 @@ public sealed partial class Player : NPC
 				ptmodel.ResetAppearance();
 			}
 			Character.Velocity = Vector3.Zero;
-			Character.WrapToSpawnPoint();
+			Character.WarpToSpawnPoint();
 			Character.Health = Character.MaxHealth;
 			Character.Anchored = false;
 		}
