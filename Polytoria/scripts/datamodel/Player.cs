@@ -487,6 +487,7 @@ public sealed partial class Player : NPC
 			// Ignore jump command if is custom
 			if (MovementMode == PlayerMovementModeEnum.Scripted) return;
 			if (!Character.CanMove) return;
+			Character._canJumpWhileClimbing = true;
 			Character.Jump();
 		}
 		else if (@event.IsActionPressed("toggle_sprint"))

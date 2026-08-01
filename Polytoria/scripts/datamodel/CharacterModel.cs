@@ -48,6 +48,7 @@ public partial class CharacterModel : Physical
 	private bool _canMove = true;
 	internal bool ClimbDebounce = false;
 	internal bool JustFinishedClimbing = false;
+	private bool _canJumpWhileClimbing = true;
 	private Tool? _holdingTool;
 	private Seat? _sittingIn;
 	private bool _keepInventory = false;
@@ -702,6 +703,7 @@ public partial class CharacterModel : Physical
 					if (!IsClimbing && !ClimbDebounce && truss.Climbable)
 					{
 						ClimbingTruss = truss;
+						_canJumpWhileClimbing = false;
 						IsClimbing = true;
 						PlayClimb();
 					}
@@ -945,7 +947,7 @@ public partial class CharacterModel : Physical
 		{
 			JumpSound?.Play();
 		}
-		if (IsClimbing)
+		if (_canJumpWhileClimbing && IsClimbing)
 		{
 			EndClimb();
 			ClimbDebounce = true;
