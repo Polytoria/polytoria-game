@@ -78,10 +78,14 @@ public sealed partial class NetworkPropSync : Instance
 
 		if (propValue is Vector2 v2) propValue = new Vector2Dto(v2);
 		else if (propValue is Vector3 v3) propValue = new Vector3Dto(v3);
+		else if (propValue is Quaternion q) propValue = new UnitQuaternionUInt64Dto(q);
 		else if (propValue is Color c) propValue = new ColorDto(c);
 		else if (propValue is Transform3D t) propValue = new Transform3DDto(t);
 		else if (propValue is ColorSeries cs) propValue = new ColorSeriesDto(cs);
+		else if (propValue is NumberSeries ns) propValue = new NumberSeriesDto(ns);
 		else if (propValue is NumberRange nr) propValue = new NumberRangeDto(nr);
+		else if (propValue is UIScale us) propValue = new UIScaleDto(us);
+		else if (propValue is Variant v) propValue = new VariantDto(v);
 
 		Type propType = propValue.GetType();
 
@@ -127,6 +131,11 @@ public sealed partial class NetworkPropSync : Instance
 			Vector3Dto? dto = SerializeUtils.Deserialize<Vector3Dto?>(data);
 			if (dto != null) intermediateValue = dto.ToVector3();
 		}
+		else if (targetType == typeof(Quaternion))
+		{
+			UnitQuaternionUInt64Dto? dto = SerializeUtils.Deserialize<UnitQuaternionUInt64Dto?>(data);
+			if (dto != null) intermediateValue = dto.ToQuaternion();
+		}
 		else if (targetType == typeof(Color))
 		{
 			ColorDto? dto = SerializeUtils.Deserialize<ColorDto?>(data);
@@ -142,10 +151,25 @@ public sealed partial class NetworkPropSync : Instance
 			ColorSeriesDto? dto = SerializeUtils.Deserialize<ColorSeriesDto?>(data);
 			if (dto != null) intermediateValue = dto.ToColorRange();
 		}
+		else if (targetType == typeof(NumberSeries))
+		{
+			NumberSeriesDto? dto = SerializeUtils.Deserialize<NumberSeriesDto?>(data);
+			if (dto != null) intermediateValue = dto.ToNumberSeries();
+		}
 		else if (targetType == typeof(NumberRange))
 		{
 			NumberRangeDto? dto = SerializeUtils.Deserialize<NumberRangeDto?>(data);
 			if (dto != null) intermediateValue = dto.ToNumberRange();
+		}
+		else if (targetType == typeof(UIScale))
+		{
+			UIScaleDto? dto = SerializeUtils.Deserialize<UIScaleDto?>(data);
+			if (dto != null) intermediateValue = dto.ToUIScale();
+		}
+		else if (targetType == typeof(Variant))
+		{
+			VariantDto? dto = SerializeUtils.Deserialize<VariantDto?>(data);
+			if (dto != null) intermediateValue = dto.ToVariant();
 		}
 		else
 		{
@@ -188,8 +212,14 @@ public sealed partial class NetworkPropSync : Instance
 		}
 		if (propValue is Vector2 v2) propValue = new Vector2Dto(v2);
 		else if (propValue is Vector3 v3) propValue = new Vector3Dto(v3);
+		else if (propValue is Quaternion q) propValue = new UnitQuaternionUInt64Dto(q);
 		else if (propValue is Color c) propValue = new ColorDto(c);
 		else if (propValue is Transform3D t) propValue = new Transform3DDto(t);
+		else if (propValue is ColorSeries cs) propValue = new ColorSeriesDto(cs);
+		else if (propValue is NumberSeries ns) propValue = new NumberSeriesDto(ns);
+		else if (propValue is NumberRange nr) propValue = new NumberRangeDto(nr);
+		else if (propValue is UIScale us) propValue = new UIScaleDto(us);
+		else if (propValue is Variant v) propValue = new VariantDto(v);
 		Type propType = propValue.GetType();
 
 		using var ms = new MemoryStream();
@@ -235,6 +265,11 @@ public sealed partial class NetworkPropSync : Instance
 			Vector3Dto? dto = await SerializeUtils.DeserializeAsync<Vector3Dto?>(mem);
 			if (dto != null) intermediateValue = dto.ToVector3();
 		}
+		else if (targetType == typeof(Quaternion))
+		{
+			UnitQuaternionUInt64Dto? dto = await SerializeUtils.DeserializeAsync<UnitQuaternionUInt64Dto?>(mem);
+			if (dto != null) intermediateValue = dto.ToQuaternion();
+		}
 		else if (targetType == typeof(Color))
 		{
 			ColorDto? dto = await SerializeUtils.DeserializeAsync<ColorDto?>(mem);
@@ -244,6 +279,31 @@ public sealed partial class NetworkPropSync : Instance
 		{
 			Transform3DDto? dto = await SerializeUtils.DeserializeAsync<Transform3DDto?>(mem);
 			if (dto != null) intermediateValue = dto.ToTransform3D();
+		}
+		else if (targetType == typeof(ColorSeries))
+		{
+			ColorSeriesDto? dto = await SerializeUtils.DeserializeAsync<ColorSeriesDto?>(mem);
+			if (dto != null) intermediateValue = dto.ToColorRange();
+		}
+		else if (targetType == typeof(NumberSeries))
+		{
+			NumberSeriesDto? dto = await SerializeUtils.DeserializeAsync<NumberSeriesDto?>(mem);
+			if (dto != null) intermediateValue = dto.ToNumberSeries();
+		}
+		else if (targetType == typeof(NumberRange))
+		{
+			NumberRangeDto? dto = await SerializeUtils.DeserializeAsync<NumberRangeDto?>(mem);
+			if (dto != null) intermediateValue = dto.ToNumberRange();
+		}
+		else if (targetType == typeof(UIScale))
+		{
+			UIScaleDto? dto = await SerializeUtils.DeserializeAsync<UIScaleDto?>(mem);
+			if (dto != null) intermediateValue = dto.ToUIScale();
+		}
+		else if (targetType == typeof(Variant))
+		{
+			VariantDto? dto = await SerializeUtils.DeserializeAsync<VariantDto?>(mem);
+			if (dto != null) intermediateValue = dto.ToVariant();
 		}
 		else
 		{
@@ -514,16 +574,16 @@ public sealed partial class NetworkPropSync : Instance
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
 	private void NetRecvBatchedPropsReliable(byte[] propsRaw)
 	{
-		NetRecvBatchedProps(propsRaw, true);
+		NetRecvBatchedProps(propsRaw);
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Unreliable)]
 	private void NetRecvBatchedPropsUnreliable(byte[] propsRaw)
 	{
-		NetRecvBatchedProps(propsRaw, false);
+		NetRecvBatchedProps(propsRaw);
 	}
 
-	private void NetRecvBatchedProps(byte[] propsRaw, bool reliable)
+	private void NetRecvBatchedProps(byte[] propsRaw)
 	{
 		var objects = SerializeUtils.Deserialize<BatchPropObjectData[]>(propsRaw);
 		if (objects == null) return;

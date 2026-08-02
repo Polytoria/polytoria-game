@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/Truss.svg-e8ac02f90ac2d0dfae6aeadbf9dfdca5.dp
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

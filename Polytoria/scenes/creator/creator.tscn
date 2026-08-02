@@ -33,12 +33,15 @@
 [ext_resource type="PackedScene" uid="uid://bfh6n2s5op0nu" path="res://scenes/creator/docks/toolbox/toolbox.tscn" id="26_dfqoe"]
 [ext_resource type="Script" uid="uid://dsmyuj4u8d0kx" path="res://scripts/creator/ui/StatusBar.cs" id="26_xdd36"]
 [ext_resource type="PackedScene" uid="uid://c0dcwpeyvcmot" path="res://scenes/creator/docks/filebrowser/file_browser.tscn" id="27_4n5gq"]
+[ext_resource type="Texture2D" uid="uid://cma54623spmlg" path="res://assets/textures/ui-icons/search.svg" id="29_4fw2t"]
 [ext_resource type="PackedScene" uid="uid://ca8ul4i0eiuch" path="res://scenes/creator/splash/startup_splash.tscn" id="30_8cbqn"]
 [ext_resource type="Script" uid="uid://c5celm4bxr4vy" path="res://scripts/creator/ui/docks/bottombar/console/DebugConsole.cs" id="30_bc04q"]
 [ext_resource type="PackedScene" uid="uid://msq1k3h4a75p" path="res://scenes/creator/wizard/new_project/new_project.tscn" id="31_87ukk"]
 [ext_resource type="PackedScene" uid="uid://cvxoyotxeotax" path="res://scenes/creator/docks/explorer/explorer.tscn" id="32_4fw2t"]
 [ext_resource type="PackedScene" uid="uid://duq8icfg2fwo0" path="res://scenes/creator/docks/properties/properties.tscn" id="34_bc04q"]
+[ext_resource type="PackedScene" uid="uid://dccewf7osrg82" path="res://scenes/creator/popups/search/search.tscn" id="38_ce354"]
 [ext_resource type="PackedScene" uid="uid://dauvdi8d2yqpy" path="res://scenes/creator/wizard/introduction_wizard.tscn" id="39_dfqoe"]
+[ext_resource type="PackedScene" uid="uid://b7voaj38vy8xd" path="res://scenes/creator/docks/bottombar/console_filters.tscn" id="40_console_filters"]
 
 [sub_resource type="FontVariation" id="FontVariation_khfyn"]
 variation_opentype = {
@@ -98,13 +101,13 @@ corner_radius_bottom_left = 3
 corner_detail = 5
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1xu8h"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
 
-[sub_resource type="Theme" id="Theme_v5oku"]
-Button/styles/hover = SubResource("StyleBoxFlat_87ukk")
-Button/styles/normal = SubResource("StyleBoxEmpty_1xu8h")
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c7ht3"]
-bg_color = Color(0.04, 0.04, 0.04, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qmplr"]
+bg_color = Color(0.129412, 0.588235, 0.952941, 1)
 corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
@@ -116,6 +119,37 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
+
+[sub_resource type="Theme" id="Theme_v5oku"]
+Button/colors/font_color = Color(0.8, 0.8, 0.8, 1)
+Button/colors/font_focus_color = Color(0.8, 0.8, 0.8, 1)
+Button/colors/font_hover_color = Color(0.8, 0.8, 0.8, 1)
+Button/colors/font_hover_pressed_color = Color(0.8, 0.8, 0.8, 1)
+Button/colors/font_pressed_color = Color(0.8, 0.8, 0.8, 1)
+Button/font_sizes/font_size = 12
+Button/styles/hover = SubResource("StyleBoxFlat_87ukk")
+Button/styles/normal = SubResource("StyleBoxEmpty_1xu8h")
+OptionButton/colors/font_color = Color(0.8, 0.8, 0.8, 1)
+OptionButton/colors/font_focus_color = Color(0.8, 0.8, 0.8, 1)
+OptionButton/colors/font_hover_color = Color(1, 1, 1, 1)
+OptionButton/colors/font_hover_pressed_color = Color(1, 1, 1, 1)
+OptionButton/colors/font_pressed_color = Color(1, 1, 1, 1)
+OptionButton/font_sizes/font_size = 12
+OptionButton/styles/hover = SubResource("StyleBoxFlat_87ukk")
+OptionButton/styles/normal = SubResource("StyleBoxEmpty_1xu8h")
+OptionButton/styles/pressed = SubResource("StyleBoxFlat_87ukk")
+PopupMenu/colors/font_color = Color(0.8, 0.8, 0.8, 1)
+PopupMenu/colors/font_hover_color = Color(1, 1, 1, 1)
+PopupMenu/font_sizes/font_size = 12
+PopupMenu/styles/hover = SubResource("StyleBoxFlat_qmplr")
+PopupMenu/styles/panel = SubResource("StyleBoxFlat_1juwm")
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c7ht3"]
+bg_color = Color(0.04, 0.04, 0.04, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ohlc5"]
 content_margin_left = 8.0
@@ -457,7 +491,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 alignment = 2
 
-[node name="PlayOptions" type="PanelContainer" parent="GUI/Menu/Layout/Margin/Layout" unique_id=1850775813 node_paths=PackedStringArray("_playBtn", "_playAtCamBtn", "_stopBtn", "_playerCountMenu")]
+[node name="PlayOptions" type="PanelContainer" parent="GUI/Menu/Layout/Margin/Layout" unique_id=1850775813 node_paths=PackedStringArray("_playBtn", "_playAtCamBtn", "_stopBtn", "_playerCountOption")]
 layout_mode = 2
 theme = SubResource("Theme_v5oku")
 theme_override_styles/panel = SubResource("StyleBoxFlat_c7ht3")
@@ -465,7 +499,7 @@ script = ExtResource("5_c7ht3")
 _playBtn = NodePath("Layout/Play")
 _playAtCamBtn = NodePath("Layout/PlayAtCam")
 _stopBtn = NodePath("Layout/Stop")
-_playerCountMenu = NodePath("Layout/Play/MenuButton")
+_playerCountOption = NodePath("Layout/PlayerCount")
 
 [node name="Layout" type="HBoxContainer" parent="GUI/Menu/Layout/Margin/Layout/PlayOptions" unique_id=438009992]
 layout_mode = 2
@@ -492,23 +526,18 @@ texture = ExtResource("5_imygl")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="MenuButton" type="MenuButton" parent="GUI/Menu/Layout/Margin/Layout/PlayOptions/Layout/Play" unique_id=1993994925]
-layout_mode = 0
-offset_right = 64.0
-offset_bottom = 32.0
-mouse_filter = 2
+[node name="PlayerCount" type="OptionButton" parent="GUI/Menu/Layout/Margin/Layout/PlayOptions/Layout" unique_id=1993994925]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+alignment = 1
 item_count = 4
 popup/item_0/text = "1 Player"
-popup/item_0/checkable = 2
 popup/item_0/id = 1
 popup/item_1/text = "2 Players"
-popup/item_1/checkable = 2
 popup/item_1/id = 2
 popup/item_2/text = "3 Players"
-popup/item_2/checkable = 2
 popup/item_2/id = 3
 popup/item_3/text = "4 Players"
-popup/item_3/checkable = 2
 popup/item_3/id = 4
 
 [node name="PlayAtCam" type="Button" parent="GUI/Menu/Layout/Margin/Layout/PlayOptions/Layout" unique_id=816052539]
@@ -596,6 +625,7 @@ button_pressed = true
 action_mode = 0
 button_group = SubResource("ButtonGroup_v0rtd")
 script = ExtResource("8_c8w7j")
+ToolMode = null
 
 [node name="Icon" type="TextureRect" parent="GUI/Ribbon/Buttons/Select" unique_id=75873074]
 layout_mode = 1
@@ -1067,7 +1097,6 @@ size_flags_horizontal = 3
 theme = ExtResource("16_1f7jh")
 theme_override_constants/icon_max_width = 16
 clip_tabs = false
-close_with_middle_mouse = false
 tab_close_display_policy = 2
 drag_to_rearrange_enabled = true
 
@@ -1115,11 +1144,11 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_ubkni")
 [node name="Tabs" type="TabContainer" parent="GUI/Splitter/Center/BottomTabs" unique_id=1589727556]
 layout_mode = 2
 size_flags_vertical = 3
+current_tab = 0
 tabs_position = 1
 deselect_enabled = true
 
-[node name="Console" type="MarginContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs" unique_id=259802220 node_paths=PackedStringArray("_richLabel", "_searchEdit", "_clearBtn")]
-visible = false
+[node name="Console" type="MarginContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs" unique_id=259802220 node_paths=PackedStringArray("_richLabel", "_searchEdit", "_clearBtn", "_filterBtn")]
 custom_minimum_size = Vector2(0, 220)
 layout_mode = 2
 theme_override_constants/margin_left = 8
@@ -1128,8 +1157,9 @@ theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 8
 script = ExtResource("30_bc04q")
 _richLabel = NodePath("VBoxContainer/RichTextLabel")
-_searchEdit = NodePath("VBoxContainer/HBoxContainer/LineEdit")
-_clearBtn = NodePath("VBoxContainer/HBoxContainer/Button")
+_searchEdit = NodePath("VBoxContainer/SearchBar/LineEdit")
+_clearBtn = NodePath("VBoxContainer/SearchBar/ClearBtn")
+_filterBtn = NodePath("VBoxContainer/SearchBar/FilterBtn")
 metadata/_tab_index = 0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console" unique_id=681967966]
@@ -1153,20 +1183,30 @@ scroll_following = true
 vertical_alignment = 2
 selection_enabled = true
 
-[node name="HBoxContainer" type="HBoxContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer" unique_id=1369015190]
+[node name="SearchBar" type="HBoxContainer" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer" unique_id=1369015190]
 custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
+theme_override_constants/separation = 8
 
-[node name="LineEdit" type="LineEdit" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/HBoxContainer" unique_id=767147599]
+[node name="FilterBtn" type="Button" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/SearchBar" unique_id=1370024557]
+custom_minimum_size = Vector2(32, 0)
+layout_mode = 2
+tooltip_text = "Filter console output"
+icon = ExtResource("29_4fw2t")
+
+[node name="LineEdit" type="LineEdit" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/SearchBar" unique_id=767147599]
 layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "Search..."
 
-[node name="Button" type="Button" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/HBoxContainer" unique_id=276167707]
+[node name="ClearBtn" type="Button" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console/VBoxContainer/SearchBar" unique_id=276167707]
 custom_minimum_size = Vector2(28, 0)
 layout_mode = 2
 icon = ExtResource("22_i1txp")
 expand_icon = true
+
+[node name="ConsoleFilters" parent="GUI/Splitter/Center/BottomTabs/Tabs/Console" unique_id=1370024561 instance=ExtResource("40_console_filters")]
+visible = false
 
 [node name="Right" type="PanelContainer" parent="GUI/Splitter" unique_id=528512110]
 custom_minimum_size = Vector2(320, 0)
@@ -1233,6 +1273,17 @@ layout_mode = 2
 mouse_filter = 0
 edit_intensity = false
 picker_shape = 2
+
+[node name="Search" parent="GUI" unique_id=512968994 instance=ExtResource("38_ce354")]
+visible = false
+z_index = 20
+custom_minimum_size = Vector2(500, 400)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
 
 [node name="StartupSplash" parent="GUI" unique_id=286100395 instance=ExtResource("30_8cbqn")]
 visible = false

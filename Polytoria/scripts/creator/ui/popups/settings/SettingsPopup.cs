@@ -18,16 +18,16 @@ public sealed partial class SettingsPopup : PopupWindowBase
 	[Export] private Tree _categoryTree = null!;
 	[Export] private Control _layout = null!;
 
-	private static readonly IReadOnlyDictionary<string, List<SettingDef>> SectionDefs =
+	private static readonly Dictionary<string, List<SettingDef>> SectionDefs =
 		CreatorSettingsRegistry.Definitions.Values
 			.GroupBy(d => d.SectionKey)
 			.ToDictionary(g => g.Key, g => g.ToList());
 
 	private static readonly IReadOnlyList<SettingSectionDef> SortedSections =
-		CreatorSettingsRegistry.Sections.OrderBy(s => s.SortOrder).ToArray();
+		[.. CreatorSettingsRegistry.Sections.OrderBy(s => s.SortOrder)];
 
 	private readonly Dictionary<TreeItem, string> _itemToSectionKey = [];
-	private readonly Dictionary<string, List<SettingsPropertyUI>> _sectionUIs = [];
+	private readonly Dictionary<string, List<Control>> _sectionUIs = [];
 	private string _activeSection = string.Empty;
 
 	public override void _Ready()
@@ -59,7 +59,7 @@ public sealed partial class SettingsPopup : PopupWindowBase
 
 	private void OnItemSelected()
 	{
-		if (!_itemToSectionKey.TryGetValue(_categoryTree.GetSelected(), out string sectionKey))
+		if (!_itemToSectionKey.TryGetValue(_categoryTree.GetSelected(), out var sectionKey))
 			return;
 
 		if (sectionKey == _activeSection)
@@ -86,12 +86,29 @@ public sealed partial class SettingsPopup : PopupWindowBase
 				_layout.AddChild(ui);
 			}
 
+			if (sectionKey == "advanced")
+			{
+				HSeparator separator = new();
+				_layout.AddChild(separator);
+				cachedUIs.Add(separator);
+
+				UIViewLicensesRow licensesRow = GD.Load<PackedScene>("res://scenes/shared/settings/licenses_row.tscn").Instantiate<UIViewLicensesRow>();
+				licensesRow.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+				_layout.AddChild(licensesRow);
+				cachedUIs.Add(licensesRow);
+			}
+
 			_sectionUIs[sectionKey] = cachedUIs;
 		}
 		else
 		{
-			foreach (var ui in cachedUIs)
-				ui.Visible = true;
+			foreach (Control child in cachedUIs)
+			{
+				if (child is SettingsPropertyUI spui)
+					spui.Visible = spui.PropertyVisible;
+				else
+					child.Visible = true;
+			}
 		}
 	}
 }

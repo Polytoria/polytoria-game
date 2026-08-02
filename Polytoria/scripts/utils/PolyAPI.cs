@@ -18,10 +18,7 @@ public static class PolyAPI
 	public static void SetAuthToken(string userToken)
 	{
 		// Remove Authorization if exists
-		if (_client.DefaultRequestHeaders.ContainsKey("Authorization"))
-		{
-			_client.DefaultRequestHeaders.Remove("Authorization");
-		}
+		_client.DefaultRequestHeaders.Remove("Authorization");
 		_client.DefaultRequestHeaders.Add("Authorization", "Bearer " + userToken);
 	}
 
@@ -71,6 +68,13 @@ public static class PolyAPI
 		return _client.GetFromJsonAsync(
 			Globals.ApiEndpoint.PathJoin("/v1/places/" + placeID.ToString()),
 			APIGenerationContext.Default.APIPlaceInfo
+		);
+	}
+	public static Task<APIGuildInfo> GetGuildFromID(int guildID)
+	{
+		return _client.GetFromJsonAsync(
+			Globals.ApiEndpoint.PathJoin("/v1/guilds/" + guildID.ToString()),
+			APIGenerationContext.Default.APIGuildInfo
 		);
 	}
 

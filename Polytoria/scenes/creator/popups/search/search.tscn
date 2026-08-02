@@ -1,0 +1,85 @@
+[gd_scene format=3 uid="uid://dccewf7osrg82"]
+
+[ext_resource type="Script" uid="uid://dvpmyue4jyed4" path="res://scripts/creator/ui/popups/Search.cs" id="1_12hy2"]
+[ext_resource type="Texture2D" uid="uid://cma54623spmlg" path="res://assets/textures/ui-icons/search.svg" id="1_wvvfc"]
+[ext_resource type="PackedScene" uid="uid://de12014sipdhp" path="res://scenes/creator/popups/search/search_button.tscn" id="2_2lk4x"]
+[ext_resource type="PackedScene" uid="uid://dbaked5s53qqn" path="res://scenes/shared/loader.tscn" id="4_12hy2"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wvvfc"]
+bg_color = Color(0.14901961, 0.14901961, 0.14901961, 1)
+border_width_bottom = 4
+border_color = Color(0, 0, 0, 0.3137255)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+expand_margin_left = 8.0
+expand_margin_top = 8.0
+expand_margin_right = 8.0
+expand_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2lk4x"]
+bg_color = Color(0.08627451, 0.08627451, 0.08627451, 1)
+expand_margin_top = 2.0
+
+[node name="Search" type="Panel" unique_id=770064460 node_paths=PackedStringArray("searchBar", "searchResultsContainer", "loadingSpinner", "statusText")]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_wvvfc")
+script = ExtResource("1_12hy2")
+searchResult = ExtResource("2_2lk4x")
+searchBar = NodePath("VBoxContainer/Query")
+searchResultsContainer = NodePath("VBoxContainer/ScrollContainer/VBoxContainer")
+loadingSpinner = NodePath("Loader")
+statusText = NodePath("VBoxContainer/StatusText")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=555243102]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Query" type="LineEdit" parent="VBoxContainer" unique_id=737451191]
+layout_mode = 2
+placeholder_text = "Search..."
+right_icon = ExtResource("1_wvvfc")
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=999981243]
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxFlat_2lk4x")
+
+[node name="StatusText" type="Label" parent="VBoxContainer" unique_id=958873950]
+visible = false
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer" unique_id=1594996242]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ScrollContainer" unique_id=263831607]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="PanelContainer" parent="VBoxContainer/ScrollContainer/VBoxContainer" unique_id=1529731814 instance=ExtResource("2_2lk4x")]
+visible = false
+layout_mode = 2
+
+[node name="Loader" parent="." unique_id=116749580 instance=ExtResource("4_12hy2")]
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -30.0
+offset_top = 72.215
+offset_right = 30.0
+offset_bottom = 132.21506
+grow_horizontal = 2

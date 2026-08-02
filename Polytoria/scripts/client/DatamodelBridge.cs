@@ -18,12 +18,12 @@ public partial class DatamodelBridge : Node3D
 	private World Root = null!;
 	public long SeparatedPartCount = 0;
 
-	private Dictionary<Part, PartHandle> _handles = [];
-	private Dictionary<ChunkKey, ChunkBatch> _batches = [];
-	private HashSet<Part> _dirty = [];
+	private readonly Dictionary<Part, PartHandle> _handles = [];
+	private readonly Dictionary<ChunkKey, ChunkBatch> _batches = [];
+	private readonly HashSet<Part> _dirty = [];
 	private Rid _scenario;
 
-	private Dictionary<(Part.PartMaterialEnum, bool), Material> _materials = [];
+	private readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materials = [];
 
 	private bool isGameReady = false;
 
@@ -82,12 +82,7 @@ public partial class DatamodelBridge : Node3D
 			return mat;
 		}
 
-		mat = Globals.LoadMaterial(partMaterial, isTransparent ? 0f : 1f);
-		if (mat == null)
-		{
-			throw new System.Exception("Unknown material: " + partMaterial.ToString());
-		}
-
+		mat = Globals.LoadMaterial(partMaterial, isTransparent ? 0f : 1f) ?? throw new System.Exception("Unknown material: " + partMaterial.ToString());
 		if (mat is StandardMaterial3D sm)
 		{
 			sm.VertexColorUseAsAlbedo = true;
@@ -279,7 +274,12 @@ public partial class DatamodelBridge : Node3D
 			batch.Parts[index] = lastPart;
 
 			_handles[lastPart] = new PartHandle { Key = handle.Key, Index = index };
-			batch.MultiMesh.SetInstanceTransform(index, lastPart.GetGlobalTransform());
+
+			// prevents a bunch of error spam. idk why these nodes often arent in the tree but this kept spamming errors
+			if (lastPart.GDNode3D.IsInsideTree())
+			{
+				batch.MultiMesh.SetInstanceTransform(index, lastPart.GetGlobalTransform());
+			}
 			batch.MultiMesh.SetInstanceColor(index, lastPart.Color.SrgbToLinear());
 		}
 
@@ -328,7 +328,7 @@ public partial class DatamodelBridge : Node3D
 			return;
 		}
 
-		System.Action propertyChangedHandler = () => { if (isGameReady) _dirty.Add(part); };
+		void propertyChangedHandler() { if (isGameReady) _dirty.Add(part); }
 
 		part.PropertyChanged.Connect(propertyChangedHandler);
 
@@ -361,6 +361,7 @@ public partial class DatamodelBridge : Node3D
 		{
 			if (!IsInstanceValid(part.GDNode3D) || !part.GDNode3D.IsInsideTree()) return false;
 			if (part.IsDeleted) return false;
+			if (part.IsDescendantOfClass<Camera>()) return false;
 			return true;
 		}
 		return false;

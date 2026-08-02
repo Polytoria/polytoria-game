@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/SpotLight.svg-21c76f6130eda30d257259ea51209c8
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

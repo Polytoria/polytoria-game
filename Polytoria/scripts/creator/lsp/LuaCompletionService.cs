@@ -24,13 +24,13 @@ public class LuaCompletionService(CreatorSession session)
 	public event Action<string, List<LspDiagnostic>>? PublishDiagnostics;
 
 	public static readonly string[] LuaKeywords =
-	{
+	[
 		"and", "break", "do", "else", "elseif", "end",
 		"false", "for", "function", "if",
 		"in", "local", "nil", "not", "or", "repeat",
 		"return", "then", "true", "until", "while",
 		"continue", "const"
-	};
+	];
 
 	public async Task InitAsync()
 	{

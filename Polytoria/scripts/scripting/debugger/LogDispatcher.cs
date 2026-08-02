@@ -61,6 +61,18 @@ public partial class LogDispatcher : NetworkedObject
 		});
 	}
 
+	public void LogWarning(Datamodel.Script from, string content)
+	{
+		PT.PrintV($"[Lua] {from.NetworkPath} {content}");
+		DispatchLog(new()
+		{
+			ID = Guid.NewGuid().ToString(),
+			LogType = LogTypeEnum.Warning,
+			Content = content,
+			LogFrom = (from is ClientScript) ? LogFromEnum.Client : LogFromEnum.Server
+		});
+	}
+
 	public void LogError(Datamodel.Script from, string content)
 	{
 		PT.PrintErrV($"[Lua] {from.NetworkPath} {content}");

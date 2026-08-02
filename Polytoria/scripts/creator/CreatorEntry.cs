@@ -9,8 +9,9 @@ using Polytoria.Creator.Settings;
 using Polytoria.Creator.Utils;
 using Polytoria.Datamodel.Creator;
 using Polytoria.Shared;
+using Polytoria.Shared.AssetLoaders;
+using Polytoria.Shared.Settings;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 namespace Polytoria.Creator;
@@ -19,9 +20,7 @@ public partial class CreatorEntry : Node
 {
 	public const int CreatorPort = 24220;
 
-	[RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Deserialize<TValue>(String, JsonSerializerOptions)")]
-	[RequiresDynamicCode("Calls System.Text.Json.JsonSerializer.Deserialize<TValue>(String, JsonSerializerOptions)")]
-	public override async void _EnterTree()
+	public async override void _EnterTree()
 	{
 		Dictionary<string, string> cmdargs = Globals.ReadCmdArgs();
 		cmdargs.TryGetValue("token", out string? launchToken);
@@ -35,6 +34,8 @@ public partial class CreatorEntry : Node
 		};
 		AddChild(creatorSettingsService, true, InternalMode.Front);
 		creatorSettingsService.Init();
+
+		AssetLoader.Singleton.MaxConcurrentRequests = creatorSettingsService.Get<int>(SharedSettingKeys.Advanced.AssetQueue);
 
 		creatorSettingsService.AddChild(new GraphicsSettingsApplier { Name = GraphicsSettingsApplier.NodeName, Settings = creatorSettingsService }, true, InternalMode.Front);
 

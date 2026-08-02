@@ -116,6 +116,7 @@ public partial class CreatorInterface : Control, IScriptObject
 		ApplyUIScale();
 		ApplyFullscreen();
 		ApplyVSync();
+		ApplyFpsCap();
 
 		base._Ready();
 	}
@@ -138,6 +139,12 @@ public partial class CreatorInterface : Control, IScriptObject
 				break;
 			case SharedSettingKeys.Display.VSync:
 				ApplyVSync();
+				break;
+			case SharedSettingKeys.Display.FpsPreset:
+				ApplyFpsCap();
+				break;
+			case SharedSettingKeys.Display.FpsCap:
+				ApplyFpsCap();
 				break;
 		}
 	}
@@ -177,6 +184,11 @@ public partial class CreatorInterface : Control, IScriptObject
 		bool useVSync = CreatorSettingsService.Instance.Get<bool>(SharedSettingKeys.Display.VSync);
 		DisplayServer.WindowSetVsyncMode(useVSync ? DisplayServer.VSyncMode.Enabled : DisplayServer.VSyncMode.Disabled);
 		OS.LowProcessorUsageMode = useVSync;
+	}
+
+	private static void ApplyFpsCap()
+	{
+		Engine.MaxFps = ResolveFpsCap(CreatorSettingsService.Instance);
 	}
 
 	public static void CreateNewWorld()
@@ -323,7 +335,7 @@ public partial class CreatorInterface : Control, IScriptObject
 			FileName = $"{target.Name}.ptmd",
 			DialogMode = DisplayServer.FileDialogMode.SaveFile,
 			Filters = ["*.ptmd;Polytoria Model"]
-		}, async (string[] paths) =>
+		}, async paths =>
 		{
 			if (paths.Length > 0)
 			{
@@ -395,6 +407,25 @@ public partial class CreatorInterface : Control, IScriptObject
 		}, "Give Folder name");
 	}
 
+	public void PromptCreateFile(string atPath)
+	{
+		if (CreatorService.CurrentSession == null) return;
+		CreatorSession session = CreatorService.CurrentSession;
+		PromptGiveName("File name...", async name =>
+		{
+			try
+			{
+				string createAt = Path.Join(atPath, name).SanitizePath();
+				await session.CreateFile(createAt);
+			}
+			catch (Exception ex)
+			{
+				PT.PrintErr(ex);
+				PopupAlert(ex.Message, "Error creating file");
+			}
+		}, "Give File name");
+	}
+
 
 	public void PromptCreateWorld(string atPath)
 	{
@@ -438,7 +469,7 @@ public partial class CreatorInterface : Control, IScriptObject
 			}
 		}
 
-		if (!await PromptConfirmation("Are you sure you want to delete " + wordToUse + "? You can recover this from the recycle bin")) return;
+		if (!await PromptConfirmation("Are you sure you want to delete " + wordToUse + "? You can recover this from the recycle bin.")) return;
 		try
 		{
 			foreach (string item in files)
@@ -570,7 +601,7 @@ public partial class CreatorInterface : Control, IScriptObject
 		PopupWindow(popup);
 	}
 
-	public void PopupManageAddons()
+	public static void PopupManageAddons()
 	{
 		OS.ShellShowInFileManager(ProjectSettings.GlobalizePath(AddonsManager.UserAddonFolder));
 	}
@@ -601,6 +632,11 @@ public partial class CreatorInterface : Control, IScriptObject
 		window.Visible = false;
 		window.ForceNative = true;
 		window.Theme = _creatorTheme;
+
+		float uiScale = GetWindow().ContentScaleFactor;
+		window.ContentScaleFactor = uiScale;
+		window.Size = (Vector2I)((Vector2)window.Size * uiScale);
+
 		AddChild(window);
 		window.PopupCentered();
 	}
@@ -626,12 +662,12 @@ public partial class CreatorInterface : Control, IScriptObject
 
 		FileDialog dialog = new()
 		{
+			Access = FileDialog.AccessEnum.Filesystem,
 			Title = data.Title,
 			CurrentDir = currentDir,
 			CurrentFile = data.FileName,
 			ShowHiddenFiles = data.ShowHidden,
 			FileMode = MapFileMode(data.DialogMode),
-			Access = FileDialog.AccessEnum.Filesystem,
 			UseNativeDialog = true,
 		};
 
@@ -694,6 +730,24 @@ public partial class CreatorInterface : Control, IScriptObject
 	internal async Task<bool> OnQuitRequested()
 	{
 		return await PromptConfirmation("Are you sure you want to quit? Any unsaved changes will be lost");
+	}
+
+	private static int ResolveFpsCap(ISettingsContext settings)
+	{
+		var preset = settings.Get<FpsPreset>(SharedSettingKeys.Display.FpsPreset);
+
+		return preset switch
+		{
+			FpsPreset.Custom => settings.Get<int>(SharedSettingKeys.Display.FpsCap),
+			FpsPreset.Limitless => 0,
+			FpsPreset.Reduced => 30,
+			FpsPreset.Standard => 60,
+			FpsPreset.Extended => 90,
+			FpsPreset.Smooth => 120,
+			FpsPreset.Slick => 144,
+			FpsPreset.Fluid => 240,
+			_ => 0
+		};
 	}
 }
 

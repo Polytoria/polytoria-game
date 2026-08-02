@@ -13,7 +13,9 @@ using Polytoria.Scripting;
 using Polytoria.Networking;
 using Polytoria.Shared;
 using Polytoria.Utils;
+using Polytoria.Utils.DTOs;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Polytoria.Providers.PlayerMovement;
 
@@ -26,6 +28,8 @@ public sealed partial class Player : NPC
 	private const float CameraHeight = 2f;
 	public const string CreatorHeadScene = "res://scenes/creator/livecollab/head.tscn";
 	public const string BubbleChatScene = "res://scenes/client/spatial/chat/bubble_chat.tscn";
+	public const string BadgeImageDirPath = "res://assets/textures/client/ui/playerlist/badges/";
+	private static readonly Dictionary<string, string> _badgePathCache = [];
 	private bool _isReady = false;
 	internal bool ClimbDebounce = false;
 	internal bool JustFinishedClimbing = false;
@@ -36,19 +40,23 @@ public sealed partial class Player : NPC
 
 	private float _respawnTime = 5.0f;
 	private bool _canMove = true;
+	private bool _canJumpWhileClimbing = true;
 	private float _sprintSpeed;
 	private float _stamina = 0;
 	private float _maxStamina = 3;
 	private bool _useStamina = true;
 	private float _staminaRegen = 1.2f;
 	private float _staminaBurn = 1.2f;
+	private bool _keepInventory = false;
 	private bool _useHeadTurning = false;
 	private int _userID;
 	private bool _useBubbleChat = true;
 	private bool _autoLoadAppearance = true;
 	private bool _allowAnimationWhileMoving = false;
 	private PlayerMovementModeEnum _movementMode = PlayerMovementModeEnum.Default;
+	private PlayerRotationModeEnum _rotationMode = PlayerRotationModeEnum.Automatic;
 	private Team? _team;
+	private Color _chatColorBeforeTeam;
 
 	internal bool SprintOverride = false;
 	private float _pingStartTime = 0;
@@ -197,6 +205,17 @@ public sealed partial class Player : NPC
 	}
 
 	[Editable, ScriptProperty]
+	public bool KeepInventory
+	{
+		get => _keepInventory;
+		set
+		{
+			_keepInventory = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
 	public bool UseHeadTurning
 	{
 		get => _useHeadTurning;
@@ -253,6 +272,13 @@ public sealed partial class Player : NPC
 			{
 				TeamChanged.Invoke(_team);
 				Root.Teams.DispatchTeamUpdate();
+				if (value != null)
+				{
+					_chatColorBeforeTeam = ChatColor;
+					ChatColor = value.Color;
+				}
+				else
+					ChatColor = _chatColorBeforeTeam;
 			}
 			OnPropertyChanged();
 		}
@@ -276,6 +302,17 @@ public sealed partial class Player : NPC
 		}
 	}
 
+	[Editable, ScriptProperty]
+	public PlayerRotationModeEnum RotationMode
+	{
+		get => _rotationMode;
+		set
+		{
+			_rotationMode = value;
+			OnPropertyChanged();
+		}
+	}
+
 	[ScriptProperty]
 	public int NetworkPing { get; private set; }
 
@@ -286,7 +323,62 @@ public sealed partial class Player : NPC
 	public bool IsCreator { get; internal set; }
 
 	[ScriptProperty, SyncVar]
+	public string UserRoleClass { get; internal set; } = "";
+
+	[ScriptProperty, SyncVar]
 	public Color ChatColor { get; set; } = new(1, 1, 1);
+
+	private static readonly Color[] ChatColorPalette =
+		[
+			Color.FromHtml("#4e9aa8"),
+			Color.FromHtml("#00a86b"),
+			Color.FromHtml("#4b3f69"),
+			Color.FromHtml("#d8ad39"),
+			Color.FromHtml("#d6c69a"),
+			Color.FromHtml("#26A69A"),
+			Color.FromHtml("#7CB342"),
+			Color.FromHtml("#5C6BC0"),
+			Color.FromHtml("#FB7EFD"),
+			Color.FromHtml("#54A0FF"),
+			Color.FromHtml("#5F27CD"),
+			Color.FromHtml("#01A3A4"),
+			Color.FromHtml("#F368E0"),
+			Color.FromHtml("#FF9F43"),
+			Color.FromHtml("#1DD1A1"),
+			Color.FromHtml("#48DBFB"),
+			Color.FromHtml("#AB47BC"),
+			Color.FromHtml("#42A5F5"),
+			Color.FromHtml("#66BB6A"),
+			Color.FromHtml("#FFA726"),
+			Color.FromHtml("#8D6E63"),
+			Color.FromHtml("#78909C"),
+			Color.FromHtml("#D4E157"),
+			Color.FromHtml("#B39DDB"),
+		];
+
+	public static Color ChatColorFromUserID(int userID)
+	{
+		return ChatColorPalette[userID % ChatColorPalette.Length];
+	}
+
+	public static string GetBadgeIconPath(Player player)
+	{
+		string badgeName = player.IsCreator ? "creator"
+			: !string.IsNullOrEmpty(player.UserRoleClass) ? player.UserRoleClass
+			: player.IsAdmin ? "admin"
+			: "";
+
+		if (string.IsNullOrEmpty(badgeName))
+			return "";
+
+		if (_badgePathCache.TryGetValue(badgeName, out string? cached))
+			return cached;
+
+		string path = BadgeImageDirPath.PathJoin(badgeName + ".png");
+		string result = ResourceLoader.Exists(path) ? path : "";
+		_badgePathCache[badgeName] = result;
+		return result;
+	}
 
 	[ScriptProperty, Attributes.Obsolete("Use Input.IsInputFocused instead")]
 	public bool IsInputFocused => Root.Input.IsInputFocused;
@@ -332,8 +424,11 @@ public sealed partial class Player : NPC
 	[
 		"wave",
 		"dance",
+		"dance2",
 		"helicopter",
 		"sit",
+		"agree",
+		"disagree",
 	];
 
 	// List of all emotes
@@ -344,6 +439,11 @@ public sealed partial class Player : NPC
 		"helicopter",
 		"sit",
 		"point",
+		"agree",
+		"disagree",
+		"scream",
+		"dance2",
+		"disappointed",
 	];
 
 	// Oneshot emotes
@@ -351,13 +451,17 @@ public sealed partial class Player : NPC
 	[
 		"wave",
 		"point",
+		"disagree",
+		"agree",
+		"scream",
+		"disappointed",
 	];
 
 	public override void InitGDNode()
 	{
 		base.InitGDNode();
-		CharBody3D.CollisionLayer = 2;
-		CharBody3D.CollisionMask = 3;
+		CollisionLayers = 2;
+		CollisionMask = 3;
 	}
 
 	public override void Init()
@@ -444,17 +548,21 @@ public sealed partial class Player : NPC
 	{
 		if (Root.Players.PlayerCollisionEnabled)
 		{
-			CharBody3D.SetCollisionMaskValue(2, true);
+			SetCollisionMask(2, true);
 		}
 		else
 		{
-			CharBody3D.SetCollisionMaskValue(2, false);
+			SetCollisionMask(2, false);
 		}
 	}
 
 	public override void Process(double delta)
 	{
 		base.Process(delta);
+		if (!Root.Network.IsServer)
+		{
+			UpdateCamera(delta);
+		}
 		if (!IsLocal)
 		{
 			UpdateTransformTick(delta);
@@ -471,55 +579,6 @@ public sealed partial class Player : NPC
 		{
 			return;
 		}
-
-		if (Anchored)
-		{
-			// just in case it's anchored cuz ragdoll
-			if (Character is PolytorianModel pt && pt.Ragdolling == false)
-			{
-				UpdateCamera(delta);
-			}
-			AfkTick(delta);
-			return;
-		}
-
-		Camera? cam = Root.Environment.CurrentCamera;
-
-		// Apply camera modifier if enabled
-		if (UseHeadTurning && cam != null && cam.Mode == Camera.CameraModeEnum.Follow && cam.Target == CamAttach)
-		{
-			Character?.ApplyCameraModifier(cam);
-		}
-
-		if (IsSitting)
-		{
-			// Add stamina while sitting
-			AddStaminaTick(delta);
-			UpdateCamera(delta);
-			return;
-		}
-
-		if (PlayerMovement != null)
-		{
-			var snapshot = PlayerMovement.SampleInput(delta);
-			PlayerMovement.ProcessInput(snapshot);
-		}
-		else
-		{
-			IsMoving = Velocity.Length() > 0.01f;
-		}
-
-		// Stop animation on move
-		if (IsMoving && !AllowAnimationWhileMoving)
-		{
-			Character?.Animator?.StopAnimation();
-		}
-
-		// Update camera right after position set
-		UpdateCamera(delta);
-		AfkTick(delta);
-
-		ApplyPushForce();
 	}
 
 	private void UpdateCamera(double delta)
@@ -533,7 +592,7 @@ public sealed partial class Player : NPC
 	internal void AddStaminaTick(double delta)
 	{
 		if (!UseStamina) { return; }
-		Stamina += (float)(delta / StaminaRegen);
+		Stamina += (float)(delta * StaminaRegen);
 		if (Stamina > MaxStamina)
 		{
 			Stamina = MaxStamina;
@@ -543,7 +602,7 @@ public sealed partial class Player : NPC
 	internal void RemoveStaminaTick(double delta)
 	{
 		if (!UseStamina) { return; }
-		Stamina -= (float)(delta / StaminaBurn);
+		Stamina -= (float)(delta * StaminaBurn);
 		if (Stamina < 0)
 		{
 			Stamina = 0;
@@ -585,6 +644,8 @@ public sealed partial class Player : NPC
 
 	public override void PhysicsProcess(double delta)
 	{
+		base.PhysicsProcess(delta);
+
 		if (Root.SessionType != World.SessionTypeEnum.Client || !IsLocal || !IsReady) { return; }
 
 		if (Character is PolytorianModel pt && pt.Ragdolling)
@@ -610,13 +671,10 @@ public sealed partial class Player : NPC
 			Node collider = (Node)FootFwdRaycast.GetCollider();
 			if (collider != null && GetNetObjFromProxy(collider) is Truss truss)
 			{
-				if (!IsClimbing)
+				if (!IsClimbing && !ClimbDebounce && truss.Climbable)
 				{
-					if (ClimbDebounce)
-					{
-						return;
-					}
 					ClimbingTruss = truss;
+					_canJumpWhileClimbing = false;
 					IsClimbing = true;
 					Character?.PlayClimb();
 				}
@@ -631,7 +689,52 @@ public sealed partial class Player : NPC
 			EndClimb();
 		}
 
-		base.PhysicsProcess(delta);
+		if (Anchored)
+		{
+			// just in case it's anchored cuz ragdoll
+			if (Character is PolytorianModel pt2 && pt2.Ragdolling == false)
+			{
+				UpdateCamera(delta);
+			}
+			AfkTick(delta);
+			return;
+		}
+
+		Camera? cam = Root.Environment.CurrentCamera;
+
+		// Apply camera modifier if enabled
+		if (UseHeadTurning && cam != null && cam.Mode == Camera.CameraModeEnum.Follow && cam.Target == CamAttach)
+		{
+			Character?.ApplyCameraModifier(cam);
+		}
+
+		if (IsSitting)
+		{
+			// Add stamina while sitting
+			AddStaminaTick(delta);
+			UpdateCamera(delta);
+			return;
+		}
+
+		if (PlayerMovement != null)
+		{
+			var snapshot = PlayerMovement.SampleInput(delta);
+			PlayerMovement.ProcessInput(snapshot);
+		}
+		else
+		{
+			IsMoving = Velocity.Length() > 0.01f;
+		}
+
+		// Stop animation on move
+		if (IsMoving && !AllowAnimationWhileMoving)
+		{
+			Character?.Animator?.StopAnimation();
+		}
+
+		AfkTick(delta);
+
+		ApplyPushForce();
 	}
 
 	internal void EndClimb()
@@ -698,6 +801,7 @@ public sealed partial class Player : NPC
 			// Ignore jump command if is custom
 			if (MovementMode == PlayerMovementModeEnum.Scripted) return;
 			if (!CanMove) return;
+			_canJumpWhileClimbing = true;
 			Jump();
 		}
 		else if (@event.IsActionPressed("toggle_sprint"))
@@ -812,10 +916,13 @@ public sealed partial class Player : NPC
 	public override void Jump()
 	{
 		base.Jump();
-		if (IsClimbing)
+		if (_canJumpWhileClimbing)
 		{
-			EndClimb();
-			ClimbDebounce = true;
+			if (IsClimbing)
+			{
+				EndClimb();
+				ClimbDebounce = true;
+			}
 		}
 	}
 
@@ -833,12 +940,12 @@ public sealed partial class Player : NPC
 		_bubbleChat.Visible = true;
 	}
 
-	public void WrapToSpawnPoint()
+	public void WarpToSpawnPoint()
 	{
 		if (Root.Environment.SpawnPoints.Count > 0)
 		{
 			Entity spawnpoint = ArrayUtils.GetRandom(Root.Environment.SpawnPoints);
-			Position = spawnpoint.Position + new Vector3(0, spawnpoint.Size.Y + 2.0f, 0);
+			Position = spawnpoint.Position + spawnpoint.Up * (spawnpoint.Size.Y / 2 + 3.0f);
 			Rotation = new(0, spawnpoint.Rotation.Y, 0);
 		}
 		else
@@ -939,6 +1046,7 @@ public sealed partial class Player : NPC
 		StaminaBurn = Root.PlayerDefaults.StaminaBurn;
 		JumpPower = Root.PlayerDefaults.JumpPower;
 		RespawnTime = Root.PlayerDefaults.RespawnTime;
+		KeepInventory = Root.PlayerDefaults.KeepInventory;
 		UseHeadTurning = Root.PlayerDefaults.UseHeadTurning;
 		UseBubbleChat = Root.PlayerDefaults.UseBubbleChat;
 		AutoLoadAppearance = Root.PlayerDefaults.AutoLoadAppearance;
@@ -951,7 +1059,7 @@ public sealed partial class Player : NPC
 		Velocity = Vector3.Zero;
 
 		ResetAppearance();
-		WrapToSpawnPoint();
+		WarpToSpawnPoint();
 
 		Health = MaxHealth;
 		Anchored = false;
@@ -964,9 +1072,12 @@ public sealed partial class Player : NPC
 		// Only allow this operation in server
 		if (!Root.Network.IsServer) return;
 
-		foreach (Instance item in Inventory.GetChildren())
+		if (!KeepInventory)
 		{
-			item.Delete();
+			foreach (Instance item in Inventory.GetChildren())
+			{
+				item.Delete();
+			}
 		}
 
 		if (Root.PlayerDefaults.Inventory != null)
@@ -1009,18 +1120,7 @@ public sealed partial class Player : NPC
 		}
 	}
 
-	internal override Transform3D TransformNetworkPass(int fromPeer, Transform3D newTransform)
-	{
-		if (fromPeer != 1)
-		{
-			// Prevent scaling from client
-			Vector3 existingScale = GetLocalTransform().Basis.Scale;
-			newTransform.Basis = newTransform.Basis.Orthonormalized().Scaled(existingScale);
-		}
-		return newTransform;
-	}
-
-	internal override bool TransformNetworkCheck(Transform3D newTransform)
+	internal override bool TransformNetworkCheck(TransformPayloadDto newTransform)
 	{
 		// TODO: Make sanity checks here
 		return true;
@@ -1050,5 +1150,14 @@ public sealed partial class Player : NPC
 	{
 		Default,
 		Scripted
+	}
+
+	[ScriptEnum]
+	public enum PlayerRotationModeEnum
+	{
+		Automatic, // Default value (works how it did before), automatically switches between rotating to movement or facing camera when Ctrl Locked or in First Person
+		CameraLocked,
+		Movement,
+		MovementCtrlLockOnly // separate version that still locks in First Person, will only rotate to movement when Ctrl Locked
 	}
 }

@@ -36,7 +36,7 @@ public partial class MobileUI : Control
 	[Export] public MobileLoadingScreen LoadingScreen = null!;
 
 	private Deeplink _deepLink = new();
-	private readonly Dictionary<MobileViewEnum, MobileViewBase> _viewCache = new();
+	private readonly Dictionary<MobileViewEnum, MobileViewBase> _viewCache = [];
 
 	public override void _Ready()
 	{
@@ -46,6 +46,10 @@ public partial class MobileUI : Control
 		cmdargs.TryGetValue("state", out string? mobileState);
 
 		AddChild(_deepLink, true);
+
+		var initResult = _deepLink.Initialize();
+
+		_deepLink.DeeplinkReceived += OnDeeplinkReceived;
 
 		if (Globals.IsMobileBuild)
 		{
@@ -72,8 +76,6 @@ public partial class MobileUI : Control
 		{
 			_ = PolyMobileAuthAPI.LoginWithCodeAndState(mobileCode, mobileState);
 		}
-
-		_deepLink.DeeplinkReceived += OnDeeplinkReceived;
 
 		_mainView = GetNode<Control>("Layout/MainView");
 		if (Globals.IsMobileBuild)
@@ -110,11 +112,8 @@ public partial class MobileUI : Control
 
 	private void HideStartupSplash()
 	{
-		if (StartSplash != null)
-		{
-			StartSplash.HideSplash();
-			StartSplash = null;
-		}
+		StartSplash?.HideSplash();
+		StartSplash = null;
 	}
 
 	private async void OnDeeplinkReceived(DeeplinkURL url)

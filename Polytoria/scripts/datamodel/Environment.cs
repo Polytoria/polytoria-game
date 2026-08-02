@@ -78,8 +78,16 @@ public sealed partial class Environment : Instance
 			_gravity = value;
 
 			Rid space = Root.World3D.Space;
-			PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.Gravity, -(_gravity.Y / 5));
-			PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.GravityVector, _gravity.Normalized());
+			if (_gravity == Vector3.Zero)
+			{
+				PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.Gravity, 0);
+			}
+			else
+			{
+				float strength = _gravity.Length();
+				PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.Gravity, strength / 5f);
+				PhysicsServer3D.AreaSetParam(space, PhysicsServer3D.AreaParameter.GravityVector, _gravity / strength);
+			}
 
 			OnPropertyChanged();
 		}
@@ -275,7 +283,7 @@ public sealed partial class Environment : Instance
 		{
 			Vector3 hitPos = (Vector3)result["position"];
 			Vector3 normal = (Vector3)result["normal"];
-			Node collider = (Node)result["collider"];
+			Node collider = (Node)(GodotObject)result["collider"];
 
 			return new()
 			{
@@ -321,7 +329,7 @@ public sealed partial class Environment : Instance
 			Vector3 normal = (Vector3)result["normal"];
 			Rid colliderRid = (Rid)result["rid"];
 			ignoreRids.Add(colliderRid);
-			Node collider = (Node)result["collider"];
+			Node collider = (Node)(GodotObject)result["collider"];
 
 			rayResults.Add(new()
 			{
@@ -406,7 +414,7 @@ public sealed partial class Environment : Instance
 
 		foreach (Godot.Collections.Dictionary result in results)
 		{
-			Node collider = (Node)result["collider"];
+			Node collider = (Node)(GodotObject)result["collider"];
 			Instance? i = ColliderToInstance(collider);
 
 			if (i != null)
@@ -457,7 +465,7 @@ public sealed partial class Environment : Instance
 		// Build navigation mesh
 		foreach (Instance i in GetDescendants())
 		{
-			if (i is Part part)
+			if (i is Part part && part.CanCollide is true)
 			{
 				StaticBody3D staticBody = new();
 				_navRegion.AddChild(staticBody);
@@ -469,8 +477,9 @@ public sealed partial class Environment : Instance
 				};
 				staticBody.AddChild(collisionShape);
 				collisionShape.GlobalTransform = part.GetGlobalTransform();
+
 			}
-			else if (i is Mesh m)
+			else if (i is Mesh m && m.CanCollide is true)
 			{
 				Node3D md = (Node3D)m.GDNode.Duplicate();
 				_navRegion.AddChild(md);

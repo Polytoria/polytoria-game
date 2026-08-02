@@ -65,7 +65,7 @@ public static class RenderingDeviceSwitcher
 
 	private static string[] GetRestartArgs(string[] args, string renderingName)
 	{
-		List<string> filtered = new List<string>();
+		List<string> filtered = [];
 
 		for (int i = 0; i < args.Length; i++)
 		{
@@ -90,7 +90,7 @@ public static class RenderingDeviceSwitcher
 		filtered.Add(renderingName);
 		filtered.Add("-rmswignore");
 
-		return filtered.ToArray();
+		return [.. filtered];
 	}
 
 	public static string GetCurrentDriverName()

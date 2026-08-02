@@ -6,7 +6,9 @@ using Godot;
 using Polytoria.Client.UI.Playerlist.Stats;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Resources;
+using Polytoria.Schemas.API;
 using Polytoria.Shared;
+using System;
 using System.Collections.Generic;
 
 namespace Polytoria.Client.UI.Playerlist;
@@ -20,9 +22,11 @@ public partial class UIUserCard : Control
 	[Export] private Label _usernameLabel = null!;
 	[Export] private Control _statsContainer = null!;
 	[Export] private TextureRect _pfpIconRect = null!;
+	[Export] private TextureRect _badgeRect = null!;
+	[Export] private UIPlayerList _playerList = null!;
 	private readonly PTImageAsset _plrIconAsset = new();
 	private static World Root => CoreUIRoot.Singleton.Root;
-	internal Player TargetPlayer => Root.Players.LocalPlayer;
+	internal static Player TargetPlayer => Root.Players.LocalPlayer;
 
 	public override void _Ready()
 	{
@@ -36,8 +40,14 @@ public partial class UIUserCard : Control
 		Root.Stats.StatAdded.Connect(AddStat);
 		Root.Stats.StatRemoved.Connect(RemoveStat);
 
-		TargetPlayer.TeamChanged.Connect(OnTeamChanged);
-		OnTeamChanged(TargetPlayer.Team);
+		if (TargetPlayer.UserInfo.HasValue)
+		{
+			LoadBadge();
+		}
+		else
+		{
+			TargetPlayer.UserInfoReady += OnUserInfoReady;
+		}
 
 		foreach (var item in Root.Stats.GetChildren())
 		{
@@ -53,30 +63,33 @@ public partial class UIUserCard : Control
 		_plrIconAsset.ResourceLoaded -= OnIconLoaded;
 		Root.Stats.StatAdded.Disconnect(AddStat);
 		Root.Stats.StatRemoved.Disconnect(RemoveStat);
-		TargetPlayer.TeamChanged.Disconnect(OnTeamChanged);
+		TargetPlayer.UserInfoReady -= OnUserInfoReady;
 
 		base._ExitTree();
-	}
-
-	private void OnTeamChanged(Team? to)
-	{
-		if (to != null)
-		{
-			SelfModulate = to.Color.Darkened(0.4f);
-		}
-		else
-		{
-			SelfModulate = new(0, 0, 0);
-		}
 	}
 
 	private void AddStat(Stat stat)
 	{
 		if (_statToUserCardStat.ContainsKey(stat)) return;
+
+		stat.PropertyChanged.Connect(_ => OnStatVisibilityChanged(stat));
+
+		if (!stat.Visible) return;
+
+		CreateStatRow(stat);
+	}
+
+	private void CreateStatRow(Stat stat)
+	{
+		if (_statToUserCardStat.ContainsKey(stat)) return;
+
 		var s = Globals.CreateInstanceFromScene<UIUserCardStat>(UserCardStat);
 		s.TargetStat = stat;
 		s.Root = this;
+
 		_statsContainer.AddChild(s);
+		_statsContainer.MoveChild(s, GetInsertIndex(stat));
+
 		_statToUserCardStat.Add(stat, s);
 
 		void OnStatDeleted()
@@ -87,6 +100,28 @@ public partial class UIUserCard : Control
 
 		stat.Deleted += OnStatDeleted;
 		RefreshBox();
+	}
+
+	private int GetInsertIndex(Stat stat)
+	{
+		Stat[] visibleStats = Root.Stats.GetVisibleStats();
+		return Array.IndexOf(visibleStats, stat);
+	}
+
+	private void OnStatVisibilityChanged(Stat stat)
+	{
+		bool hasRow = _statToUserCardStat.ContainsKey(stat);
+
+		if (stat.Visible && !hasRow)
+		{
+			CreateStatRow(stat);
+		}
+		else if (!stat.Visible && hasRow)
+		{
+			_statToUserCardStat[stat].QueueFree();
+			_statToUserCardStat.Remove(stat);
+			RefreshBox();
+		}
 	}
 
 	private void RemoveStat(Stat stat)
@@ -104,9 +139,42 @@ public partial class UIUserCard : Control
 		_pfpIconRect.Texture = (Texture2D)resource;
 	}
 
+	private void OnUserInfoReady(APIUserInfo _)
+	{
+		TargetPlayer.UserInfoReady -= OnUserInfoReady;
+		LoadBadge();
+	}
+
+	private void LoadBadge()
+	{
+		string badgePath = Player.GetBadgeIconPath(TargetPlayer);
+		if (badgePath.Length > 0)
+			_badgeRect.Texture = GD.Load<Texture2D>(badgePath);
+	}
+
 	private async void RefreshBox()
 	{
 		await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
 		SetAnchorsAndOffsetsPreset(LayoutPreset.TopRight);
+	}
+
+	public override void _GuiInput(InputEvent @event)
+	{
+		if (Root.Input.IsTouchscreen)
+		{
+			if (@event is InputEventScreenTouch touch && !touch.Pressed)
+			{
+				_playerList?.ToggleLeaderboard();
+				AcceptEvent();
+			}
+
+			return;
+		}
+
+		if (@event is InputEventMouseButton mouse && mouse.ButtonIndex == MouseButton.Left && !mouse.Pressed)
+		{
+			_playerList?.ToggleLeaderboard();
+			AcceptEvent();
+		}
 	}
 }

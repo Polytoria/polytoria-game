@@ -107,7 +107,7 @@ public class PTColor : IScriptGDObject
 	public static string ToString(PTColor? v)
 	{
 		if (v == null) return "<Color>";
-		return $"<Color:({v.color.R}, {v.color.G}, {v.color.B}, {v.color.A}>";
+		return $"<Color:({v.color.R}, {v.color.G}, {v.color.B}, {v.color.A})>";
 	}
 
 	[ScriptMethod]

@@ -60,8 +60,9 @@ internal partial class NativeBindings
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
 	internal static partial IntPtr luaL_newstate();
 
-	[DllImport(LuaLibraryName, CallingConvention = CallingConvention.Cdecl)]
-	internal static extern void lua_setsafeenv(IntPtr L, int index, int value);
+	[LibraryImport(LuaLibraryName)]
+	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+	internal static partial void lua_setsafeenv(IntPtr L, int index, int value);
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -70,14 +71,6 @@ internal partial class NativeBindings
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
 	internal static partial void luaL_openlibs(IntPtr L);
-
-	[LibraryImport(LuaLibraryName, StringMarshalling = StringMarshalling.Utf8)]
-	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-	internal static partial int luaL_loadstring(IntPtr L, string s);
-
-	[LibraryImport(LuaLibraryName, StringMarshalling = StringMarshalling.Utf8)]
-	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-	internal static partial int luaL_loadfile(IntPtr L, string filename);
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -131,17 +124,19 @@ internal partial class NativeBindings
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
 	internal static partial int lua_isnumber(IntPtr L, int index);
 
-	[LibraryImport(LuaLibraryName)]
-	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-	internal static partial int lua_isboolean(IntPtr L, int index);
+	internal static int lua_isboolean(IntPtr L, int index)
+	{
+		return lua_type(L, index) == (int)LuaType.Boolean ? 1 : 0;
+	}
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
 	internal static partial int lua_iscfunction(IntPtr L, int index);
 
-	[LibraryImport(LuaLibraryName)]
-	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-	internal static partial double lua_tonumber(IntPtr L, int index);
+	internal static double lua_tonumber(IntPtr L, int index)
+	{
+		return lua_tonumberx(L, index, out _);
+	}
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -169,7 +164,7 @@ internal partial class NativeBindings
 
 	[LibraryImport(LuaLibraryName, StringMarshalling = StringMarshalling.Utf8)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	internal static partial void lua_pushcclosurek(IntPtr L, LuaFunction fn, string debugname, int nup, LuaContinuation? cont);
+	internal static partial void lua_pushcclosurek(IntPtr L, LuaFunction fn, string? debugname, int nup, LuaContinuation? cont);
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -183,9 +178,10 @@ internal partial class NativeBindings
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
 	internal static partial IntPtr lua_newuserdatadtor(IntPtr L, UIntPtr sz, LuaUserdataDestructor? dtor);
 
-	[LibraryImport(LuaLibraryName)]
-	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-	internal static partial IntPtr lua_newuserdata(IntPtr L, UIntPtr size);
+	internal static IntPtr lua_newuserdata(IntPtr L, UIntPtr size)
+	{
+		return lua_newuserdatadtor(L, size, null);
+	}
 
 	[LibraryImport(LuaLibraryName, StringMarshalling = StringMarshalling.Utf8)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -255,9 +251,13 @@ internal partial class NativeBindings
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
 	internal static partial int lua_error(IntPtr luaState);
 
-	[LibraryImport(LuaLibraryName)]
-	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	internal static partial IntPtr lua_newuserdatauv(IntPtr luaState, UIntPtr size, int nuvalue);
+	internal static IntPtr lua_newuserdatauv(IntPtr luaState, UIntPtr size, int nuvalue)
+	{
+		if (nuvalue != 0)
+			throw new NotSupportedException("Luau userdata does not support Lua 5.4 user values.");
+
+		return lua_newuserdatadtor(luaState, size, null);
+	}
 
 	[LibraryImport(LuaLibraryName, StringMarshalling = StringMarshalling.Utf8)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -299,9 +299,13 @@ internal partial class NativeBindings
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
 	internal static partial double lua_tonumberx(IntPtr L, int idx, out int isnum);
 
-	[LibraryImport(LuaLibraryName)]
-	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	internal static partial void luaL_unref(IntPtr luaState, int registryIndex, int reference);
+	internal static void luaL_unref(IntPtr luaState, int registryIndex, int reference)
+	{
+		if (registryIndex != LuaState.LUA_REGISTRYINDEX)
+			throw new NotSupportedException("Only LUA_REGISTRYINDEX unref is supported here.");
+
+		lua_unref(luaState, reference);
+	}
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -315,13 +319,23 @@ internal partial class NativeBindings
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
 	internal static partial IntPtr lua_tothread(IntPtr luaState, int index);
 
-	[LibraryImport(LuaLibraryName)]
+	[LibraryImport(LuaLibraryName, EntryPoint = "lua_rawsetptagged")]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	internal static partial void lua_rawsetp(IntPtr luaState, int index, IntPtr p);
+	private static partial void lua_rawsetptagged(IntPtr luaState, int index, IntPtr p, int tag);
 
-	[LibraryImport(LuaLibraryName)]
+	[LibraryImport(LuaLibraryName, EntryPoint = "lua_rawgetptagged")]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	internal static partial int lua_rawgetp(IntPtr luaState, int index, IntPtr p);
+	private static partial int lua_rawgetptagged(IntPtr luaState, int index, IntPtr p, int tag);
+
+	internal static void lua_rawsetp(IntPtr luaState, int index, IntPtr p)
+	{
+		lua_rawsetptagged(luaState, index, p, 0);
+	}
+
+	internal static int lua_rawgetp(IntPtr luaState, int index, IntPtr p)
+	{
+		return lua_rawgetptagged(luaState, index, p, 0);
+	}
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]

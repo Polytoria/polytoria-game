@@ -642,4 +642,12 @@ public enum KeyCodeEnum
 	/// <para>Game controller right trigger axis.</para>
 	/// </summary>
 	GamepadAxisTriggerRight = 3005,
+	/// <summary>
+	/// <para>Mouse movement x-axis.</para>
+	/// </summary>
+	MouseAxisX = 3006,
+	/// <summary>
+	/// <para>Mouse movement y-axis.</para>
+	/// </summary>
+	MouseAxisY = 3007,
 }

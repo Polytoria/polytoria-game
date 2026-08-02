@@ -45,6 +45,12 @@ public struct NumberRange : IScriptObject, IData
 
 	public NumberRange() { }
 
+	public NumberRange(float min, float max)
+	{
+		_min = min;
+		_max = max;
+	}
+
 	[ScriptMethod]
 	public static NumberRange New(float from, float to)
 	{

@@ -41,6 +41,7 @@ public sealed partial class ScriptService : Instance
 		{ typeof(Color), typeof(PTColor) },
 		{ typeof(Quaternion), typeof(PTQuaternion) },
 		{ typeof(Aabb), typeof(PTBounds) },
+		{ typeof(Variant), typeof(PTVariant) },
 	};
 
 	// Dictionary of all data type exposed to scripting
@@ -50,13 +51,18 @@ public sealed partial class ScriptService : Instance
 		{ "Vector2", typeof(PTVector2) },
 		{ "Quaternion", typeof(PTQuaternion) },
 		{ "Color", typeof(PTColor) },
+		{ "Variant", typeof(PTVariant) },
+		{ "Bounds", typeof(PTBounds) },
 		{ "NetMessage", typeof(NetMessage) },
 		{ "HttpRequestData", typeof(HttpRequestData) },
 		{ "HttpResponseData", typeof(HttpResponseData) },
 		{ "NewServerRequestData", typeof(NewServerRequestData) },
 		{ "InputButton", typeof(InputButton) },
 		{ "ColorSeries", typeof(ColorSeries) },
+		{ "NumberSeries", typeof(NumberSeries) },
 		{ "NumberRange", typeof(NumberRange) },
+		{ "UIScale", typeof(UIScale) },
+		{ "ShadowLayer", typeof(ShadowLayer) },
 	};
 
 	// Dictionary of all enum exposed to scripting (populated by source generator)
@@ -121,7 +127,7 @@ public sealed partial class ScriptService : Instance
 		script.Bytecode = provider.CompileSource(script.Source);
 	}
 
-	public void Close(Script script)
+	public static void Close(Script script)
 	{
 		PT.Print("Closing script: ", script.LuaPath);
 
@@ -163,6 +169,7 @@ public sealed partial class ScriptService : Instance
 			{ "Presence", root.Presence },
 			{ "Preferences", root.Preferences },
 			{ "Worlds", root.Worlds },
+			{ "Hooks", root.Hooks }
 		};
 
 		if (script != null)
@@ -194,7 +201,9 @@ public sealed partial class ScriptService : Instance
 	}
 
 
+#pragma warning disable IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
 	internal static PropertyInfo? GetScriptPropertyOfName(
+#pragma warning restore IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
 		[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type type,
 		string name,
 		bool compat = false)
@@ -240,7 +249,9 @@ public sealed partial class ScriptService : Instance
 		action.LangProvider?.FreePTCallback(action);
 	}
 
+#pragma warning disable IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
 	internal static MethodInfo? ResolveMethod(
+#pragma warning restore IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
 		bool compatibility,
 		string key,
 		[DynamicallyAccessedMembers(DynamicallyAccessedTypes)] Type type)
@@ -258,25 +269,22 @@ public sealed partial class ScriptService : Instance
 		if (compatibility)
 		{
 			// Find legacy method first
+
 			method = methods.FirstOrDefault(p =>
 				p.IsDefined(typeof(ScriptLegacyMethodAttribute)) &&
 				string.Equals(
 					p.GetCustomAttribute<ScriptLegacyMethodAttribute>()?.MethodName,
 					key,
-					StringComparison.CurrentCultureIgnoreCase));
+					StringComparison.CurrentCultureIgnoreCase)) ??
 
-			// If not found, fallback to ScriptMethodAttribute
-
-			if (method == null)
-			{
-				method = methods.FirstOrDefault(p =>
+				// If not found, fallback to ScriptMethodAttribute
+				methods.FirstOrDefault(p =>
 					p.IsDefined(typeof(ScriptMethodAttribute)) &&
 					(p.Name.Equals(key, StringComparison.CurrentCultureIgnoreCase) ||
 					 string.Equals(
 						 p.GetCustomAttribute<ScriptMethodAttribute>()?.MethodName,
 						 key,
 						 StringComparison.CurrentCultureIgnoreCase)));
-			}
 		}
 		else
 		{
@@ -293,7 +301,9 @@ public sealed partial class ScriptService : Instance
 		return method;
 	}
 
+#pragma warning disable IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
 	internal static (MethodInfo Method, ScriptMetamethodAttribute Attribute)[] GetMetamethods(
+#pragma warning restore IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
 			[DynamicallyAccessedMembers(DynamicallyAccessedTypes)] Type type)
 	{
 		// Try to get from cache first
@@ -342,10 +352,7 @@ public sealed partial class ScriptService : Instance
 		{
 			Type? elemType = targetType.GetElementType();
 			if (elemType == null) return false;
-			foreach (object? elem in objArr)
-				if (elem != null && !elemType.IsAssignableFrom(elem.GetType()))
-					return false;
-			return true;
+			return objArr.All((element) => IsObjectConvertible(element, elemType));
 		}
 
 		// Empty array to dictionary
@@ -373,14 +380,14 @@ public sealed partial class ScriptService : Instance
 			return true;
 		}
 
-		// IConvertible fallback
-		if (arg is IConvertible && typeof(IConvertible).IsAssignableFrom(underlying))
-			return true;
-
 		// string to double
 		if (arg is string s && (underlying == typeof(int) || underlying == typeof(long)
 			|| underlying == typeof(short) || underlying == typeof(float) || underlying == typeof(double)))
 			return double.TryParse(s, out _);
+
+		// IConvertible fallback
+		if (arg is IConvertible && typeof(IConvertible).IsAssignableFrom(underlying))
+			return true;
 
 		return false;
 	}
@@ -469,20 +476,8 @@ public sealed partial class ScriptService : Instance
 			if (targetElementType == null)
 				return null;
 
-			// Check if all elements are assignable to target element type
-			bool allCompatible = true;
-
-			for (int i = 0; i < objectArray.Length; i++)
-			{
-				if (objectArray[i] != null && !targetElementType.IsAssignableFrom(objectArray[i].GetType()))
-				{
-					allCompatible = false;
-					break;
-				}
-			}
-
 			// If all elements are compatible, create a typed array
-			if (allCompatible)
+			if (objectArray.All((element) => IsObjectConvertible(element, targetElementType)))
 			{
 				List<object> convertedList = [];
 				for (int i = 0; i < objectArray.Length; i++)
@@ -540,15 +535,17 @@ public sealed partial class ScriptService : Instance
 		if (method.ReturnType == typeof(Task)) return true;
 		Type attType = typeof(AsyncStateMachineAttribute);
 
-		// Obtain the custom attribute for the method. 
-		// The value returned contains the StateMachineType property. 
-		// Null is returned if the attribute isn't present for the method. 
+		// Obtain the custom attribute for the method.
+		// The value returned contains the StateMachineType property.
+		// Null is returned if the attribute isn't present for the method.
 		AsyncStateMachineAttribute? attrib = (AsyncStateMachineAttribute?)method.GetCustomAttribute(attType);
 
-		return (attrib != null);
+		return attrib != null;
 	}
 
+#pragma warning disable IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
 	internal static MethodsCacheData ResolveMethods([DynamicallyAccessedMembers(DynamicallyAccessedTypes)] Type type, string key, bool compatibility)
+#pragma warning restore IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
 	{
 		CacheKey cacheKey = new() { Type = type, Key = key, IsCompatibility = compatibility };
 
@@ -601,7 +598,7 @@ public sealed partial class ScriptService : Instance
 		return cacheData;
 	}
 
-	// --------------- HANDLE INSTANCE FOR TYPES --------------- 
+	// --------------- HANDLE INSTANCE FOR TYPES ---------------
 	internal static object CreateInstanceForType(Type targetType)
 	{
 		// Instance types
@@ -698,6 +695,13 @@ public sealed partial class ScriptService : Instance
 			return list.Cast<CreatorAddons.AddonPermissionEnum>().ToArray();
 		}
 #endif
+		else if (elementType == typeof(ShadowLayer))
+		{
+			ShadowLayer[] arr = new ShadowLayer[list.Count];
+			for (int i = 0; i < list.Count; i++)
+				arr[i] = (ShadowLayer)list[i];
+			return arr;
+		}
 
 		throw new NotSupportedException($"INTERNAL BUG: ConvertListToArray: Array element type {elementType} is not supported in AOT");
 	}

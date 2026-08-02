@@ -7,6 +7,8 @@ using Polytoria.Attributes;
 using Polytoria.Datamodel.Resources;
 using Polytoria.Networking;
 using Polytoria.Scripting;
+using Polytoria.Enums;
+
 
 #if CREATOR
 using Polytoria.Creator.Spatial;
@@ -19,22 +21,27 @@ public sealed partial class Sound : Dynamic
 {
 	public const float SoundDistanceMultipler = 1.25f;
 	private const float MinPitch = 0.001f;
-	private AudioAsset? _asset;
+	private const float MaxVolume = 2f;
 	private AudioStreamPlayer? _audioPlayer;
 	private AudioStreamPlayer3D? _audioPlayer3D;
 	private bool _playAfterLoad = false;
 	private bool _serverIsPlaying = false;
 	private Resource? _prevAsset;
+	private string _audioBusName = "Master";
+	private AudioEffectPanner? _efPanner;
 
+	private AudioAsset? _asset;
 	private int _soundID = 0;
 	private bool _autoplay = false;
-	private float _volume = 1;
-	private float _time = 0;
+	private float _volume = 1f;
+	private float _time = 0f;
 	private bool _loop = false;
+	private float _loopStart = 0f;
 	private bool _playInWorld = false;
 	private bool _paused = false;
 	private float _pitch = 1f;
 	private float _maxDistance = 60f;
+	private float _pan = 0f;
 
 	private AudioStream? _currentStream;
 
@@ -92,7 +99,7 @@ public sealed partial class Sound : Dynamic
 		get => _volume;
 		set
 		{
-			_volume = Mathf.Clamp(value, 0, 1);
+			_volume = Mathf.Clamp(value, 0, MaxVolume);
 			UpdateVolume();
 			OnPropertyChanged();
 		}
@@ -106,6 +113,18 @@ public sealed partial class Sound : Dynamic
 		{
 			_pitch = Mathf.Max(value, MinPitch);
 			UpdatePitch();
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float Pan
+	{
+		get => _pan;
+		set
+		{
+			_pan = Mathf.Clamp(value, -1f, 1f);
+			UpdatePan();
 			OnPropertyChanged();
 		}
 	}
@@ -128,6 +147,27 @@ public sealed partial class Sound : Dynamic
 		set
 		{
 			_loop = value;
+
+			SetStreamLoop(_currentStream, value);
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float LoopStart
+	{
+		get => _loopStart;
+		set
+		{
+			// unclamped value is reapplied and clamped when Sound is loaded
+			if (_currentStream != null)
+			{
+				value = (float)Mathf.Clamp(value, 0, _currentStream.GetLength());
+			}
+
+			_loopStart = value;
+
+			SetStreamLoopStart(_currentStream, value);
 			OnPropertyChanged();
 		}
 	}
@@ -168,6 +208,42 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
+	private AudioStreamPlayer3D.AttenuationModelEnum _attenuationMode = AudioStreamPlayer3D.AttenuationModelEnum.Disabled;
+
+	[Editable, ScriptProperty]
+	public SoundAttenuationModeEnum AttenuationMode
+	{
+		get
+		{
+			return _attenuationMode switch
+			{
+				AudioStreamPlayer3D.AttenuationModelEnum.InverseDistance => SoundAttenuationModeEnum.Linear,
+				AudioStreamPlayer3D.AttenuationModelEnum.InverseSquareDistance => SoundAttenuationModeEnum.Squared,
+				AudioStreamPlayer3D.AttenuationModelEnum.Logarithmic => SoundAttenuationModeEnum.Logarithmic,
+				AudioStreamPlayer3D.AttenuationModelEnum.Disabled => SoundAttenuationModeEnum.Disabled,
+				_ => SoundAttenuationModeEnum.Disabled
+			};
+		}
+		set
+		{
+			if (_audioPlayer3D == null) return;
+
+			_attenuationMode = value switch
+			{
+				SoundAttenuationModeEnum.Linear => AudioStreamPlayer3D.AttenuationModelEnum.InverseDistance,
+				SoundAttenuationModeEnum.Squared => AudioStreamPlayer3D.AttenuationModelEnum.InverseSquareDistance,
+				SoundAttenuationModeEnum.Logarithmic => AudioStreamPlayer3D.AttenuationModelEnum.Logarithmic,
+				SoundAttenuationModeEnum.Disabled => AudioStreamPlayer3D.AttenuationModelEnum.Disabled,
+				_ => _audioPlayer3D.AttenuationModel
+			};
+
+			_audioPlayer3D.AttenuationModel = _attenuationMode;
+			_audioPlayer3D.AttenuationFilterCutoffHz = _attenuationMode == AudioStreamPlayer3D.AttenuationModelEnum.Disabled ? 20500 : 5000;
+
+			OnPropertyChanged();
+		}
+	}
+
 	[ScriptProperty]
 	public float Time
 	{
@@ -188,11 +264,10 @@ public sealed partial class Sound : Dynamic
 	[ScriptProperty] public bool Loading { get; private set; } = false;
 
 	[ScriptProperty]
-	public float Length => _audioPlayer != null
-				? (float)_audioPlayer.Stream.GetLength()
-				: _audioPlayer3D != null ? (float)_audioPlayer3D.Stream.GetLength() : 0;
+	public float Length => (_currentStream != null ? (float)_currentStream.GetLength() : 0);
 
 	[ScriptProperty] public PTSignal Loaded { get; private set; } = new();
+	[ScriptProperty] public PTSignal Finished { get; private set; } = new();
 
 	[SyncVar]
 	public bool ServerIsPlaying
@@ -229,48 +304,54 @@ public sealed partial class Sound : Dynamic
 
 		if (!PlayInWorld)
 		{
+			_audioBusName = "Sound_" + ObjectID;
+			AudioServer.AddBus();
+			int idx = AudioServer.BusCount - 1;
+			AudioServer.SetBusName(idx, _audioBusName);
+			AudioServer.SetBusSend(idx, "Master");
+			_efPanner = new AudioEffectPanner();
+			AudioServer.AddBusEffect(idx, _efPanner);
+
 			_audioPlayer = new AudioStreamPlayer
 			{
 				Stream = _currentStream
 			};
 			GDNode.AddChild(_audioPlayer, @internal: Node.InternalMode.Back);
 			_audioPlayer.Finished += OnPlayerFinished;
+			_audioPlayer.Bus = _audioBusName;
 		}
 		else
 		{
 			_audioPlayer3D = new AudioStreamPlayer3D
 			{
-				Stream = _currentStream
+				Stream = _currentStream,
+				AttenuationModel = _attenuationMode,
+				AttenuationFilterCutoffHz = _attenuationMode == AudioStreamPlayer3D.AttenuationModelEnum.Disabled ? 20500 : 5000
 			};
 			GDNode.AddChild(_audioPlayer3D, @internal: Node.InternalMode.Back);
-			// check issue https://github.com/godotengine/godot/issues/23485
-			_audioPlayer3D.AttenuationFilterCutoffHz = 20500;
 			_audioPlayer3D.Finished += OnPlayerFinished;
 		}
-		UpdateAudioPlayer();
+		UpdateMaxDistance();
+		UpdateVolume();
+		UpdatePitch();
 	}
 
 	private void CleanupAudioPlayer()
 	{
-		if (_audioPlayer != null)
-		{
-			_audioPlayer.Finished -= OnPlayerFinished;
-		}
-
-		if (_audioPlayer3D != null)
-		{
-			_audioPlayer3D.Finished -= OnPlayerFinished;
-		}
+		_audioPlayer?.Finished -= OnPlayerFinished;
+		_audioPlayer3D?.Finished -= OnPlayerFinished;
 
 		_audioPlayer = null;
 		_audioPlayer3D = null;
-	}
 
-	private void UpdateAudioPlayer()
-	{
-		UpdateMaxDistance();
-		UpdateVolume();
-		UpdatePitch();
+		if (_audioBusName != "Master")
+		{
+			int idx = AudioServer.GetBusIndex(_audioBusName);
+
+			if (idx >= 0) AudioServer.RemoveBus(idx);
+
+			_efPanner = null;
+		}
 	}
 
 	private void UpdateMaxDistance()
@@ -290,6 +371,12 @@ public sealed partial class Sound : Dynamic
 		_audioPlayer3D?.PitchScale = _pitch;
 	}
 
+	private void UpdatePan()
+	{
+		// Pan does not apply to in-world sounds
+		_efPanner?.Pan = _pan;
+	}
+
 	private void CreatePTAudioAsset()
 	{
 		Loading = true;
@@ -303,19 +390,13 @@ public sealed partial class Sound : Dynamic
 
 	private void OnPlayerFinished()
 	{
-		// Loop the audio
-		if (Loop)
+		// Event is not fired on looping sound
+		Playing = false;
+		if (HasAuthority)
 		{
-			Play();
+			ServerIsPlaying = false;
 		}
-		else
-		{
-			Playing = false;
-			if (HasAuthority)
-			{
-				ServerIsPlaying = false;
-			}
-		}
+		Finished.Invoke();
 	}
 
 	[ScriptMethod]
@@ -337,6 +418,7 @@ public sealed partial class Sound : Dynamic
 	[ScriptMethod]
 	public void PlayOneShot(float volume = 1f)
 	{
+		// WARN: only add panning to oneshot after sorting extra complexity of audiobus and safety
 		InternalPlayOneShot(volume);
 
 		if (HasAuthority)
@@ -362,13 +444,23 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
+	[ScriptMethod]
+	public float GetPeakVolume()
+	{
+		int bus = AudioServer.GetBusIndex(_audioBusName);
+		if (bus < 0)
+			return 0f;
+
+		float left = AudioServer.GetBusPeakVolumeLeftDb(bus, 0);
+		float right = AudioServer.GetBusPeakVolumeRightDb(bus, 0);
+
+		return Mathf.DbToLinear(Mathf.Max(left, right));
+	}
+
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
 	private void NetPlayOneshot(float volume)
 	{
-		if (volume > 1)
-		{
-			volume = 1;
-		}
+		Mathf.Clamp(volume, 0f, 1f);
 
 		InternalPlayOneShot(volume);
 	}
@@ -403,8 +495,6 @@ public sealed partial class Sound : Dynamic
 			{
 				ServerIsPlaying = true;
 			}
-			// Mute audio on server
-			if (Root.Network.IsServer) return;
 			_audioPlayer?.Play();
 			_audioPlayer3D?.Play();
 		}
@@ -416,6 +506,9 @@ public sealed partial class Sound : Dynamic
 
 	private void InternalPlayOneShot(float volume)
 	{
+		// can safely mute on the server since this method doesn't change any properties
+		if (Root.Network.IsServer) return;
+
 		if (_audioPlayer != null)
 		{
 			AudioStreamPlayer clone = (AudioStreamPlayer)_audioPlayer.Duplicate();
@@ -432,6 +525,7 @@ public sealed partial class Sound : Dynamic
 
 			clone.Finished += f;
 
+			SetStreamLoop(clone.Stream, false);
 			clone.Play();
 		}
 
@@ -451,6 +545,7 @@ public sealed partial class Sound : Dynamic
 
 			clone3D.Finished += f;
 
+			SetStreamLoop(clone3D.Stream, false);
 			clone3D.Play();
 		}
 	}
@@ -481,6 +576,9 @@ public sealed partial class Sound : Dynamic
 		_currentStream = (AudioStream)audio;
 		_audioPlayer?.Stream = (AudioStream)audio;
 		_audioPlayer3D?.Stream = (AudioStream)audio;
+		// reapply to new stream
+		LoopStart = _loopStart;
+		Loop = _loop;
 
 		Loaded.Invoke();
 
@@ -488,6 +586,36 @@ public sealed partial class Sound : Dynamic
 		{
 			_playAfterLoad = false;
 			InternalPlay();
+		}
+	}
+
+	private static void SetStreamLoop(AudioStream? stream, bool val)
+	{
+		switch (stream)
+		{
+			case AudioStreamMP3 aStream:
+				aStream.Loop = val;
+				break;
+			case AudioStreamOggVorbis aStream:
+				aStream.Loop = val;
+				break;
+				// unused in Polytoria
+				//case AudioStreamWav aStream:
+		}
+	}
+
+	private static void SetStreamLoopStart(AudioStream? stream, float val)
+	{
+		switch (stream)
+		{
+			case AudioStreamMP3 aStream:
+				aStream.LoopOffset = val;
+				break;
+			case AudioStreamOggVorbis aStream:
+				aStream.LoopOffset = val;
+				break;
+				// unused in Polytoria
+				//case AudioStreamWav aStream:
 		}
 	}
 }

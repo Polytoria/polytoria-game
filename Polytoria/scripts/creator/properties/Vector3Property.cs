@@ -55,14 +55,14 @@ public sealed partial class Vector3Property : HBoxContainer, IProperty<Vector3>
 		_y = GetNode<SpinBox>("Y");
 		_z = GetNode<SpinBox>("Z");
 
-		ConnectAxis(_x, axisIndex: 0, "X");
-		ConnectAxis(_y, axisIndex: 1, "Y");
-		ConnectAxis(_z, axisIndex: 2, "Z");
+		ConnectAxis(_x, axisIndex: 0);
+		ConnectAxis(_y, axisIndex: 1);
+		ConnectAxis(_z, axisIndex: 2);
 
 		Refresh();
 	}
 
-	private void ConnectAxis(SpinBox spinBox, int axisIndex, string axisName)
+	private void ConnectAxis(SpinBox spinBox, int axisIndex)
 	{
 		spinBox.ValueChanged += value =>
 		{

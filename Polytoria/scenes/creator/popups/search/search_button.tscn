@@ -1,0 +1,82 @@
+[gd_scene format=3 uid="uid://de12014sipdhp"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cg7xc"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.12103007, 0.121030085, 0.121029995, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_lkccc"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dhdme"]
+bg_color = Color(0, 0, 0, 0.078431375)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+expand_margin_left = 4.0
+expand_margin_top = 4.0
+expand_margin_right = 4.0
+expand_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mhkpa"]
+bg_color = Color(1, 1, 1, 0.078431375)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+expand_margin_left = 4.0
+expand_margin_top = 4.0
+expand_margin_right = 4.0
+expand_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_wutkh"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_k6h7g"]
+bg_color = Color(1, 1, 1, 0.078431375)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+expand_margin_left = 4.0
+expand_margin_top = 4.0
+expand_margin_right = 4.0
+expand_margin_bottom = 4.0
+
+[node name="PanelContainer" type="PanelContainer" unique_id=1529731814]
+theme_override_styles/panel = SubResource("StyleBoxFlat_cg7xc")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=905283807]
+layout_mode = 2
+
+[node name="Name" type="Label" parent="HBoxContainer" unique_id=1309246539]
+layout_mode = 2
+text = "super cool node :3"
+
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer" unique_id=2064848082]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Location" type="Label" parent="HBoxContainer" unique_id=446106556]
+modulate = Color(0.4326237, 0.43262374, 0.4326237, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "location.that.makes.your.head.explode"
+
+[node name="Button" type="Button" parent="." unique_id=515995843]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_lkccc")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_dhdme")
+theme_override_styles/hover = SubResource("StyleBoxFlat_mhkpa")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_wutkh")
+theme_override_styles/focus = SubResource("StyleBoxFlat_k6h7g")

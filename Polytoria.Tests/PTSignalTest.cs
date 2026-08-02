@@ -35,7 +35,7 @@ public class PTSignalTest
 		signal.Invoke("arg1", 42);
 
 		Assert.Single(calls);
-		Assert.Equal(new object?[] { "arg1", 42 }, calls[0]);
+		Assert.Equal(["arg1", 42], calls[0]);
 	}
 
 	[Fact]

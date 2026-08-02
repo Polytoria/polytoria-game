@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/UITextInput.svg-4d243ae22bffb3fac4a0b0b2621f0
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

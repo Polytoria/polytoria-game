@@ -30,7 +30,9 @@ public sealed partial class SingleProperty : SpinBox, IProperty<float>
 		return Value;
 	}
 
+#pragma warning disable CA1061 // Do not hide base class methods
 	public void SetValue(object? value)
+#pragma warning restore CA1061 // Do not hide base class methods
 	{
 		if (value == null) return;
 		Value = (float)value;

@@ -13,6 +13,7 @@ public sealed partial class Stats : Instance
 {
 	public PTSignal<Stat> StatAdded { get; private set; } = new();
 	public PTSignal<Stat> StatRemoved { get; private set; } = new();
+	public PTSignal<Stat> StatPropertyChanged { get; private set; } = new();
 
 	public override void Init()
 	{
@@ -37,10 +38,30 @@ public sealed partial class Stats : Instance
 		return [.. stats];
 	}
 
+	[ScriptMethod]
+	public Stat[] GetVisibleStats()
+	{
+		List<Stat> stats = [];
+
+		foreach (Instance item in GetChildren())
+		{
+			if (item is Stat { Visible: true } s)
+			{
+				stats.Add(s);
+			}
+		}
+
+		return [.. stats];
+	}
+
 	private void OnChildAdded(Instance instance)
 	{
 		if (instance is Stat stat)
 		{
+			stat.PropertyChanged.Connect(() =>
+			{
+				StatPropertyChanged.Invoke(stat);
+			});
 			StatAdded.Invoke(stat);
 		}
 	}

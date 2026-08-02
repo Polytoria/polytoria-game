@@ -55,7 +55,7 @@ public partial class ExplorerItemContextMenu : ContextMenu
 		AddIconItem("select-all", "Select Children", 25);
 		AddSeparator();
 		AddIconItem("group", "Group", 31);
-		if (Target is IGroup)
+		if (Target is IGroup or RigidBody)
 		{
 			AddIconItem("ungroup", "Ungroup", 32);
 		}
@@ -95,7 +95,7 @@ public partial class ExplorerItemContextMenu : ContextMenu
 		{
 			case 1: // Add child
 				{
-					InsertMenuPopup menu = CreatorService.Interface.OpenInsertMenu(Target);
+					CreatorService.Interface.OpenInsertMenu(Target);
 					break;
 				}
 			case 2: // Add script

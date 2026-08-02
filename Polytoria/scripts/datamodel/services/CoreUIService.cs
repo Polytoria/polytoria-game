@@ -4,6 +4,7 @@
 
 using Polytoria.Attributes;
 using Polytoria.Client.UI;
+using Polytoria.Scripting;
 using Polytoria.Shared;
 using System.Threading.Tasks;
 
@@ -14,6 +15,7 @@ public sealed partial class CoreUIService : Instance
 {
 	private const string CoreUIPath = "res://scenes/client/ui/core_ui.tscn";
 
+	private int _chatBubbleRenderDistance = 40;
 	private bool _useUserCard = true;
 	private bool _useChat = true;
 	private bool _useHealthBar = true;
@@ -23,8 +25,34 @@ public sealed partial class CoreUIService : Instance
 	private bool _useMenuButton = true;
 	private bool _useEmoteWheel = true;
 	private bool _canRespawn = true;
+	private CtrlLockCursorEnum _ctrlLockCursor = CtrlLockCursorEnum.Chevron;
 
 	public CoreUIRoot CoreUI = null!;
+
+	public PTSignal CtrlLockCursorChanged { get; private set; } = new();
+
+	[ScriptProperty]
+	public static float TopInset => 80;
+
+	[Editable, ScriptProperty]
+	public CtrlLockCursorEnum CtrlLockCursor
+	{
+		get => _ctrlLockCursor;
+		set
+		{
+			_ctrlLockCursor = value;
+			RefreshCoreUIsVisibility();
+			OnPropertyChanged();
+			CtrlLockCursorChanged.Invoke();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public int ChatBubbleRenderDistance
+	{
+		get => _chatBubbleRenderDistance;
+		set { _chatBubbleRenderDistance = value; }
+	}
 
 	[Editable, ScriptProperty, ScriptLegacyProperty("UserCardEnabled")]
 	public bool UseUserCard
@@ -104,7 +132,14 @@ public sealed partial class CoreUIService : Instance
 			CoreUI.Chat.Visible = UseChat;
 			CoreUI.ChatButton.Visible = UseChat;
 			CoreUI.HealthBar.Visible = UseHealthBar;
+			CoreUI.Leaderboard.Visible = UseLeaderboard;
 			CoreUI.Inventory.Visible = UseHotbar;
+			CoreUI.InventoryButton.Visible = UseBackpack;
+			if (!UseBackpack)
+			{
+				CoreUI.Inventory.CloseBackpack();
+				CoreUI.InventoryButton.SetPressedNoSignal(false);
+			}
 			CoreUI.MenuButton.Visible = UseMenuButton;
 			CoreUI.EmoteWheel.UseEmoteWheel = UseEmoteWheel;
 		}
@@ -141,5 +176,19 @@ public sealed partial class CoreUIService : Instance
 		}
 
 		return CoreUI;
+	}
+
+	[ScriptEnum("CtrlLockCursor")]
+	public enum CtrlLockCursorEnum
+	{
+		None,
+		Chevron,
+		Stereotypical,
+		StereotypicalDot,
+		Tactical,
+		Dot,
+		TacticalDot,
+		Plus,
+		X
 	}
 }

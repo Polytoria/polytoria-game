@@ -1,0 +1,15 @@
+[gd_resource type="ArrayMesh" format=4 uid="uid://c87ni0ty2you5"]
+
+[resource]
+resource_name = "TriangleCorner"
+_surfaces = [{
+"aabb": AABB(-0.50000024, -0.5, -0.49999997, 1.0000005, 1, 0.99999994),
+"attribute_data": PackedByteArray("c5vQ+l380Ppzm+eZc5vnmXOb0PqKOtD6ppQCih9Qic6YCwKKppQCipgLAoofUFET"),
+"format": 34896613399,
+"index_count": 12,
+"index_data": PackedByteArray("AAABAAIAAwAEAAUABgAHAAgACQAKAAsA"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 12,
+"vertex_data": PackedByteArray("AAAAAP//AAAAAAAAAAAAAAAA/////wAA//8AAP///78AAAAA////vwAA//////+/AAAAAAAAqukAAAAA//+q6f//AAD//6rp//8AAP//QNwAAP////9A3AAAAAAAAEDc/z//f/8//3//P/9//3//f/9//3//f/9/CWr6Sglq+koJavpKl85xX5fOcV+XznFf")
+}]

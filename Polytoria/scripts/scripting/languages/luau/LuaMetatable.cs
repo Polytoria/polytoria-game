@@ -63,7 +63,7 @@ public class LuaMetatable : LuaObject
 				return;
 			}
 
-			// --------------- HANDLE TASK --------------- 
+			// --------------- HANDLE TASK ---------------
 			if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
 			{
 				try
@@ -91,6 +91,10 @@ public class LuaMetatable : LuaObject
 					else if (task is Task<NetworkedObject> netObjTask)
 					{
 						LangProvider.PushValueToLua(state, netObjTask.Result);
+					}
+					else if (task is Task<Clothing> clothingTask)
+					{
+						LangProvider.PushValueToLua(state, clothingTask.Result);
 					}
 					else if (task is Task<Accessory> accessoryTask)
 					{
@@ -283,6 +287,13 @@ public class LuaMetatable : LuaObject
 						throw new UnauthorizedAccessException("script does not have permission to access the specified property (" + key + ")");
 					}
 				}
+			}
+
+			Attributes.ObsoleteAttribute? obsoleteAttribute = prop.GetCustomAttribute<Attributes.ObsoleteAttribute>();
+
+			if (obsoleteAttribute != null)
+			{
+				PT.PrintWarn($"{prop.Name} is obsolete. {obsoleteAttribute.Message}");
 			}
 
 			object? value = prop.GetValue(targetObject);
@@ -840,6 +851,13 @@ public class LuaMetatable : LuaObject
 					throw new UnauthorizedAccessException("script does not have permission to call the specified method (" + targetMethod.Name + ")");
 				}
 			}
+		}
+
+		Attributes.ObsoleteAttribute? obsoleteAttribute = targetMethod.GetCustomAttribute<Attributes.ObsoleteAttribute>();
+
+		if (obsoleteAttribute != null)
+		{
+			PT.PrintWarn($"{targetMethod.Name} is obsolete. {obsoleteAttribute.Message}");
 		}
 
 		// Prepare args array formatted for params

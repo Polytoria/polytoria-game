@@ -15,9 +15,13 @@ namespace Polytoria.Datamodel;
 public partial class Stat : Instance
 {
 	private string _displayName = "";
+	private bool _visible = true;
 
 	internal Dictionary<Player, object?> PlayerToStat = [];
 	public PTSignal<Player, object?> PlayerStatChanged = new();
+
+	private readonly Dictionary<int, double> _pendingDoubles = [];
+	private readonly Dictionary<int, string> _pendingStrings = [];
 
 	[Editable, ScriptProperty, DefaultValue("")]
 	public string DisplayName
@@ -26,6 +30,22 @@ public partial class Stat : Instance
 		set
 		{
 			_displayName = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue(true)]
+	public bool Visible
+	{
+		get => _visible;
+		set
+		{
+			if (_visible == value)
+			{
+				return;
+			}
+
+			_visible = value;
 			OnPropertyChanged();
 		}
 	}
@@ -39,6 +59,7 @@ public partial class Stat : Instance
 	public override void Ready()
 	{
 		Root.Players.PlayerRemoved.Connect(OnPlayerRemoved);
+		Root.Players.PlayerAdded.Connect(OnPlayerAdded);
 		if (!Root.Network.IsServer)
 			RpcId(1, nameof(NetReqPlayerStats));
 
@@ -76,20 +97,39 @@ public partial class Stat : Instance
 			if (plr != null)
 			{
 				if (stat.StringValue != null)
-				{
 					InternalSet(plr, stat.StringValue);
-				}
 				else if (stat.NumberValue != null)
-				{
 					InternalSet(plr, stat.NumberValue.Value);
-				}
 			}
+			else
+			{
+				if (stat.StringValue != null)
+					_pendingStrings[stat.UserID] = stat.StringValue;
+				else if (stat.NumberValue != null)
+					_pendingDoubles[stat.UserID] = stat.NumberValue.Value;
+			}
+		}
+	}
+
+	private void OnPlayerAdded(Player plr)
+	{
+		if (_pendingDoubles.TryGetValue(plr.UserID, out double dval))
+		{
+			InternalSet(plr, dval);
+			_pendingDoubles.Remove(plr.UserID);
+		}
+		if (_pendingStrings.TryGetValue(plr.UserID, out string sval))
+		{
+			InternalSet(plr, sval);
+			_pendingStrings.Remove(plr.UserID);
 		}
 	}
 
 	private void OnPlayerRemoved(Player plr)
 	{
 		PlayerToStat.Remove(plr);
+		_pendingDoubles.Remove(plr.UserID);
+		_pendingStrings.Remove(plr.UserID);
 	}
 
 	[ScriptMethod]
@@ -127,9 +167,9 @@ public partial class Stat : Instance
 	{
 		Player? plr = Root.Players.GetPlayerByID(playerID);
 		if (plr != null)
-		{
 			InternalSet(plr, val);
-		}
+		else
+			_pendingDoubles[playerID] = val;
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
@@ -137,9 +177,9 @@ public partial class Stat : Instance
 	{
 		Player? plr = Root.Players.GetPlayerByID(playerID);
 		if (plr != null)
-		{
 			InternalSet(plr, val);
-		}
+		else
+			_pendingStrings[playerID] = val;
 	}
 
 	[ScriptMethod]
@@ -174,7 +214,7 @@ public partial class Stat : Instance
 	public string GetDisplayValue(Player plr)
 	{
 		object? val = Get(plr);
-		string displayTxt = "N/A";
+		string displayTxt = "0";
 
 		if (val != null)
 		{

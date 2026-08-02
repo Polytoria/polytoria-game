@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/heart.svg-b5041261cae6d407f44e79476c150a73.dp
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

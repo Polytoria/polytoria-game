@@ -16,8 +16,10 @@ declare _POLY_2: boolean
 
 declare _LOCALTEST: boolean
 
+declare function warn(message: string)
+
 declare function wait(seconds: number?)
-    
+
 declare function spawn(callback: () -> ())
 
 declare function tick(): number
@@ -95,3 +97,5 @@ declare History: CreatorHistory
 declare CreatorGUI: CreatorGUI
 
 declare Preferences: PreferencesService
+
+declare Hooks: HookService

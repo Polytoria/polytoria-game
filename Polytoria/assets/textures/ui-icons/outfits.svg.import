@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/outfits.svg-cbdf96ffd1ba25af6af9f78d5bb305f5.
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://cckb83ji66win"]
+
+[ext_resource type="PackedScene" uid="uid://cmdwcyudig0ny" path="res://scenes/creator/properties/EnumProperty.tscn" id="1_0kbus"]
+[ext_resource type="Script" uid="uid://bq45e07b33diu" path="res://scripts/creator/properties/VariantProperty.cs" id="1_swic3"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_it30t"]
+
+[node name="Variant" type="PanelContainer" unique_id=263212813 node_paths=PackedStringArray("_variantEnumNode", "_controlNode")]
+custom_minimum_size = Vector2(200, 24)
+offset_right = 147.0
+offset_bottom = 119.0
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxEmpty_it30t")
+script = ExtResource("1_swic3")
+_variantEnumNode = NodePath("Layout/Enum")
+_controlNode = NodePath("Layout")
+
+[node name="Layout" type="VBoxContainer" parent="." unique_id=583682905]
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="Enum" parent="Layout" unique_id=2044044869 instance=ExtResource("1_0kbus")]
+layout_mode = 2
+script = null

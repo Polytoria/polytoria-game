@@ -12,15 +12,11 @@ public class LuaEnum : LuaMetatable
 
 	public override int Index(IntPtr L)
 	{
-		LuaState state = LuaState.FromIntPtr(L);
-
 		return 0;
 	}
 
 	public override int NewIndex(IntPtr L)
 	{
-		LuaState state = LuaState.FromIntPtr(L);
-
 		return 0;
 	}
 

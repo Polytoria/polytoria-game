@@ -30,7 +30,9 @@ public sealed partial class Int32Property : SpinBox, IProperty<int>
 		return Value;
 	}
 
+#pragma warning disable CA1061 // Do not hide base class methods
 	public void SetValue(object? value)
+#pragma warning restore CA1061 // Do not hide base class methods
 	{
 		if (value == null) return;
 		Value = (int)value;

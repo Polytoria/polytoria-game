@@ -48,6 +48,12 @@ public class InputButtonCollection : IEnumerable, IScriptObject
 		_buttons.Remove(btn);
 	}
 
+	[ScriptMethod]
+	public InputButton[] GetButtons()
+	{
+		return [.. _buttons];
+	}
+
 	IEnumerator IEnumerable.GetEnumerator()
 	{
 		return _buttons.GetEnumerator();

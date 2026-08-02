@@ -169,7 +169,7 @@ public class PTSignal : IScriptObject
 	public async Task<object?[]> Wait()
 	{
 		TaskCompletionSource<object?[]> tcs = new();
-		Once((object?[] args) => tcs.TrySetResult(args ?? []));
+		Once(args => tcs.TrySetResult(args ?? []));
 		return await tcs.Task;
 	}
 

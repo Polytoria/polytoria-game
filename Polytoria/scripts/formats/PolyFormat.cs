@@ -28,7 +28,7 @@ namespace Polytoria.Formats;
 
 public static partial class PolyFormat
 {
-	private static readonly ConditionalWeakTable<Type, Dictionary<string, PropertyInfo>> _propertyCache = new();
+	private static readonly ConditionalWeakTable<Type, Dictionary<string, PropertyInfo>> _propertyCache = [];
 
 	public static object? SerializePropValue(object? propValue)
 	{
@@ -109,6 +109,10 @@ public static partial class PolyFormat
 					return JsonSerializer.Deserialize(element.GetRawText(), PolyJSONGenerationContext.Default.Vector2);
 				if (targetType == typeof(Vector3))
 					return JsonSerializer.Deserialize(element.GetRawText(), PolyJSONGenerationContext.Default.Vector3);
+				if (targetType == typeof(Quaternion))
+					return JsonSerializer.Deserialize(element.GetRawText(), PolyJSONGenerationContext.Default.Quaternion);
+				if (targetType == typeof(Variant))
+					return JsonSerializer.Deserialize(element.GetRawText(), PolyJSONGenerationContext.Default.Variant);
 				break;
 		}
 
@@ -572,12 +576,8 @@ public static partial class PolyFormat
 				val = DeserializePropValue(propVal, propType);
 			}
 
-			string curVer = loadContext.RootData.Version;
-
-			if ((SemVersion.Parse(curVer, SemVersionStyles.Any)
-				.ComparePrecedenceTo(SemVersion.Parse("2.0.3")) < 0) || loadContext.ForceCordMigration)
+			if (loadContext.ForceCordMigration)
 			{
-				GD.Print("Semver detected, migrating");
 				MigrateAxis(propName, ref val);
 			}
 
@@ -595,10 +595,12 @@ public static partial class PolyFormat
 	private static Dictionary<string, PropertyInfo> GetOrCreatePropertyCache(
 		[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type type)
 	{
-		return _propertyCache.GetValue(type, t =>
+		return _propertyCache.GetValue(type, static t =>
 		{
 			Dictionary<string, PropertyInfo> cache = [];
+#pragma warning disable IL2070 // Datamodel types has the reflections needed
 			PropertyInfo[] properties = t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy);
+#pragma warning restore IL2070
 			foreach (PropertyInfo prop in properties)
 			{
 				if (prop.IsDefined(typeof(EditableAttribute)) || prop.IsDefined(typeof(SaveIncludeAttribute)))
@@ -621,7 +623,7 @@ public static partial class PolyFormat
 		IEnumerable<PropertyInfo> creatorProperties = obj.GetEditableProperties();
 
 		IEnumerable<PropertyInfo> saveIncludes = objType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
-			.Where(p => p.GetCustomAttribute<SaveIncludeAttribute>() != null);
+			.Where(p => p.GetCustomAttributeCached<SaveIncludeAttribute>() != null);
 
 		HashSet<string> existingNames = [.. creatorProperties.Select(p => p.Name)];
 		creatorProperties = creatorProperties.Concat(
@@ -630,14 +632,14 @@ public static partial class PolyFormat
 
 		foreach (PropertyInfo prop in creatorProperties)
 		{
-			if (prop.IsDefined(typeof(Attributes.ObsoleteAttribute))) continue;
-			if (prop.IsDefined(typeof(SaveIgnoreAttribute))) continue;
+			if (prop.IsDefinedCached(typeof(Attributes.ObsoleteAttribute))) continue;
+			if (prop.IsDefinedCached(typeof(SaveIgnoreAttribute))) continue;
 			if (prop.CanRead)
 			{
 				object? val = prop.GetValue(obj);
 				if (val == null) continue;
 
-				DefaultValueAttribute? df = prop.GetCustomAttribute<DefaultValueAttribute>();
+				DefaultValueAttribute? df = prop.GetCustomAttributeCached<DefaultValueAttribute>();
 				if (df != null)
 				{
 					try
@@ -720,7 +722,7 @@ public static partial class PolyFormat
 				foreach (Instance child in instance.GetChildren())
 				{
 					Type ct = child.GetType();
-					if (ct.GetCustomAttribute<SaveIgnoreAttribute>() != null) continue;
+					if (ct.GetCustomAttributeCached<SaveIgnoreAttribute>() != null) continue;
 					if (child.ModelRoot != null && instance.EditableChildren)
 					{
 						// Save editable children
@@ -982,8 +984,11 @@ public static partial class PolyFormat
 	[JsonSourceGenerationOptions(WriteIndented = true, Converters = [
 		typeof(Vector2JsonConverter),
 		typeof(Vector3JsonConverter),
+		typeof(UnitQuaternionUInt64JsonConverter),
+		typeof(VariantJsonConverter),
 		typeof(ColorJsonConverter),
 		typeof(ColorSeriesJsonConverter),
+		typeof(NumberSeriesJsonConverter),
 		typeof(NumberRangeJsonConverter)
 		], NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals)]
 	[JsonSerializable(typeof(string))]
@@ -1002,10 +1007,16 @@ public static partial class PolyFormat
 
 	[JsonSerializable(typeof(Vector2))]
 	[JsonSerializable(typeof(Vector3))]
+	[JsonSerializable(typeof(Quaternion))]
 	[JsonSerializable(typeof(Color))]
+	[JsonSerializable(typeof(Variant))]
 
 	[JsonSerializable(typeof(ColorSeries))]
+	[JsonSerializable(typeof(NumberSeries))]
 	[JsonSerializable(typeof(NumberRange))]
+	[JsonSerializable(typeof(UIScale))]
+	[JsonSerializable(typeof(ShadowLayer))]
+	[JsonSerializable(typeof(ShadowLayer[]))]
 
 	[JsonSerializable(typeof(string[]))]
 	[JsonSerializable(typeof(byte[]))]

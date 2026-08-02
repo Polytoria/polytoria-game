@@ -15,4 +15,5 @@ namespace Polytoria.Attributes;
 public sealed class EditableAttribute : Attribute
 {
 	public bool IsHidden { set; get; }
+	public string? CustomPropertyControl { set; get; }
 }

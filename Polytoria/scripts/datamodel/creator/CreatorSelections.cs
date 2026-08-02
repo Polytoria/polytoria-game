@@ -150,7 +150,7 @@ public sealed partial class CreatorSelections : Instance
 
 		if (instance is UIField field)
 		{
-			Root.Container!.UIGizmos.RemoveBox(field);
+			Root.Container?.UIGizmos.RemoveBox(field);
 		}
 
 		Explorer.Deselect(instance);
@@ -248,7 +248,7 @@ public sealed partial class CreatorSelections : Instance
 
 		foreach (Instance item in models)
 		{
-			if (item is not IGroup and RigidBody) continue;
+			if (item is not IGroup and not RigidBody) continue;
 			foreach (Instance modelItem in item.GetChildren())
 			{
 				modelItem.Reparent(item.Parent!);

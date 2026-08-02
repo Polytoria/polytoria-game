@@ -46,7 +46,21 @@ public class DefaultMovement : IPlayerMovement
 				}
 			}
 
-			camLocked = cam.IsFirstPerson || cam.CtrlLocked;
+			switch (Target.RotationMode)
+			{
+				case Player.PlayerRotationModeEnum.Automatic:
+					camLocked = cam.IsFirstPerson || cam.CtrlLocked;
+					break;
+				case Player.PlayerRotationModeEnum.CameraLocked:
+					camLocked = true;
+					break;
+				case Player.PlayerRotationModeEnum.Movement:
+					camLocked = false;
+					break;
+				case Player.PlayerRotationModeEnum.MovementCtrlLockOnly:
+					camLocked = cam.IsFirstPerson;
+					break;
+			}
 		}
 
 		return new()
@@ -151,15 +165,17 @@ public class DefaultMovement : IPlayerMovement
 					};
 				}
 
+
+				float animMoveAmount = Mathf.Max(Mathf.Clamp(moveDirection.Length(), 0f, 1f), 0.15f);
 				if (sprinting && Target.SprintSpeed != Target.WalkSpeed)
 				{
 					finalState = CharacterModel.CharacterModelStateEnum.Running;
-					Target.Character?.SetAnimSpeed(gdWalkSpeed / 20);
+					Target.Character?.SetAnimSpeed(gdWalkSpeed / 20 * animMoveAmount);
 				}
 				else
 				{
 					finalState = CharacterModel.CharacterModelStateEnum.Walking;
-					Target.Character?.SetAnimSpeed(gdWalkSpeed / 8);
+					Target.Character?.SetAnimSpeed(gdWalkSpeed / 8 * animMoveAmount);
 				}
 			}
 			else if (!Target.IsClimbing)

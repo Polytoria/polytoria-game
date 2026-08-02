@@ -112,6 +112,7 @@ public sealed partial class Tabs : Control
 		};
 
 		_tabBar.TabClosePressed += async idx => await Remove(_orderedControls[(int)idx]);
+		_tabBar.GuiInput += OnTabBarGUIInput;
 
 		_leftButton.ButtonDown += () => _scrollLeft = true;
 		_leftButton.ButtonUp += () => _scrollLeft = false;
@@ -152,7 +153,8 @@ public sealed partial class Tabs : Control
 				CurrentControl = existing;
 				return;
 			}
-			TextEditorContainer tec = new(txt.TargetPath, fullPath, txt.Session) { OriginTabName = txt.Title ?? "" };
+
+			TextEditorContainer tec = new(txt.TargetPath, fullPath, txt.CodeCompletion, txt.Session) { OriginTabName = txt.Title ?? "" };
 			container = tec;
 			ScriptTypeEnum st = CreatorService.GetScriptTypeFromPath(txt.TargetPath);
 			icon = st switch
@@ -171,6 +173,10 @@ public sealed partial class Tabs : Control
 
 		_tabBar.AddTab(title ?? other.Title, Globals.LoadIcon(icon));
 		CurrentControl = container;
+
+		UpdateTabBar();
+		_tabBar.Position = new Vector2(_maxScroll, _tabBar.Position.Y);
+
 	}
 
 	private async Task Remove(Control control, bool isBulkOp = false)
@@ -245,6 +251,7 @@ public sealed partial class Tabs : Control
 	{
 		public string TargetPath = null!;
 		public CreatorSession Session = null!;
+		public FileTypeEnum CodeCompletion = FileTypeEnum.Lua;
 	}
 
 	public class GameTab : TabData
@@ -261,6 +268,21 @@ public sealed partial class Tabs : Control
 	{
 		if (_scrollLeft) ScrollTabBar((float)(900 * delta));
 		if (_scrollRight) ScrollTabBar((float)(-900 * delta));
+	}
+
+	private void OnTabBarGUIInput(InputEvent @event)
+	{
+		if (@event is InputEventMouseButton btn)
+		{
+			if (btn.ButtonIndex == MouseButton.WheelUp)
+			{
+				ScrollTabBar((float)(10 * btn.Factor));
+			}
+			else if (btn.ButtonIndex == MouseButton.WheelDown)
+			{
+				ScrollTabBar((float)(10 * -btn.Factor));
+			}
+		}
 	}
 
 	private void ScrollTabBar(float delta)
@@ -304,5 +326,17 @@ public sealed partial class Tabs : Control
 			_scrollLeft = false;
 		}
 		else if (!_leftButton.Visible) _leftButton.Visible = true;
+	}
+
+	public List<WorldContainer> GetAllOpenWorlds()
+	{
+		return _orderedControls
+			.OfType<WorldContainer>()
+			.ToList();
+	}
+
+	public string WorldContainerToTabTitle(WorldContainer wc)
+	{
+		return _tabBar.GetTabTitle(wc.GetIndex());
 	}
 }

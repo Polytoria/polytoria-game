@@ -4,7 +4,6 @@
 
 using Godot;
 using Polytoria.Datamodel;
-using Polytoria.Datamodel.Services;
 
 namespace Polytoria.Client.UI.Chat;
 
@@ -27,6 +26,9 @@ public partial class UIChatLabel : RichTextLabel
 	public Color NameColor = new(1, 1, 1);
 	public string AuthorName = null!;
 	public Player? AuthorPlayer;
+	public bool ChatColorsEnabled = true;
+	public string FontPath = "";
+	public int FontSize;
 
 	public bool IsPending
 	{
@@ -53,15 +55,41 @@ public partial class UIChatLabel : RichTextLabel
 		UpdateContent();
 	}
 
+	private string GetBadgeBBCode(int fontSize)
+	{
+		if (AuthorPlayer == null)
+			return "";
+
+		string badgePath = Player.GetBadgeIconPath(AuthorPlayer);
+		if (badgePath.Length == 0)
+			return "";
+
+		int size = fontSize > 0 ? Mathf.Max(fontSize, 16) : 16;
+		return $"[img={size}x{size}]{badgePath}[/img]";
+	}
+
 	private void UpdateContent()
 	{
+		string badgeBBCode = GetBadgeBBCode(FontSize);
+		string text;
 		if (AuthorName == "")
 		{
-			Text = $"{ChatService.FormatEmojis(Content)}";
+			text = Content;
 		}
 		else
 		{
-			Text = $"[color={NameColor.ToHtml()}]{AuthorName}[/color]: {ChatService.FormatEmojis(Content)}";
+			string nameText = ChatColorsEnabled
+				? $"[color={NameColor.ToHtml(false)}]{AuthorName}[/color]"
+				: AuthorName;
+			text = $"{badgeBBCode}{(badgeBBCode.Length > 0 ? " " : "")}{nameText}: {Content}";
 		}
+
+		if (!string.IsNullOrEmpty(FontPath))
+			text = $"[font={FontPath}]{text}[/font]";
+
+		if (FontSize > 0)
+			text = $"[font_size={FontSize}]{text}[/font_size]";
+
+		Text = text;
 	}
 }

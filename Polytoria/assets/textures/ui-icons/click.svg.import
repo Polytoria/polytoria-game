@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/click.svg-78243912b404032dba066fd22cc2fb1e.dp
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

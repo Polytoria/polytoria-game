@@ -34,7 +34,13 @@ public static class XmlFormat
 		ShapeEnum.Bevel,
 		ShapeEnum.Concave,
 		ShapeEnum.Cone,
-		ShapeEnum.Corner
+		ShapeEnum.Corner,
+		ShapeEnum.Torus,
+		ShapeEnum.Octant,
+		ShapeEnum.BeveledCorner,
+		ShapeEnum.ConcaveCorner,
+		ShapeEnum.TriangleCorner,
+		ShapeEnum.TriangleConcaveCorner
 	];
 
 	private static readonly PartMaterialEnum[] _partMaterials = [
@@ -168,7 +174,9 @@ public static class XmlFormat
 					return;
 				}
 
+#pragma warning disable IL2074 // Datamodel types are guaranteed to have those reflection access
 				item.Class = datamodel;
+#pragma warning restore IL2074
 			}
 			else if (name.SequenceEqual("name") && _inProps)
 			{
@@ -245,6 +253,14 @@ public static class XmlFormat
 						_y = 0;
 						_z = 0;
 					}
+					else if (name.SequenceEqual("quaternion"))
+					{
+						value = new Quaternion(_x, _y, _z, _w);
+						_x = 0;
+						_y = 0;
+						_z = 0;
+						_w = 1;
+					}
 					else if (name.SequenceEqual("color"))
 					{
 						value = new Color(_x, _y, _z, _w);
@@ -257,7 +273,7 @@ public static class XmlFormat
 					if (value != null)
 					{
 						// Capitalize first character, for Backward compatibility.
-						_propName = char.ToUpper(_propName[0]) + _propName.Substring(1);
+						_propName = char.ToUpper(_propName[0]) + _propName[1..];
 
 						if (_propName == "Name")
 						{
@@ -308,7 +324,7 @@ public static class XmlFormat
 						// Force shape to truss
 						if (item.Class == typeof(Truss))
 						{
-							if (_propName == "Shape" && value is int idx)
+							if (_propName == "Shape" && value is int)
 							{
 								value = ShapeEnum.Truss;
 							}
@@ -402,7 +418,9 @@ public static class XmlFormat
 		Dictionary<string, PropertyInfo> properties = _editablePropertyCache.GetValue(type, static targetType =>
 		{
 			Dictionary<string, PropertyInfo> result = new(StringComparer.Ordinal);
+#pragma warning disable IL2070 // Already guaranteed to be editable
 			PropertyInfo[] allProps = targetType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
+#pragma warning restore IL2070
 
 			foreach (PropertyInfo property in allProps)
 			{
@@ -424,6 +442,7 @@ public static class XmlFormat
 	{
 		return _datamodelTypeCache.GetOrAdd(className, static name =>
 		{
+#pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
 			Type? datamodelType = _datamodelAssembly.GetType($"Polytoria.Datamodel.{name}", throwOnError: false, ignoreCase: false);
 			if (datamodelType != null)
 			{
@@ -431,6 +450,7 @@ public static class XmlFormat
 			}
 
 			return _datamodelAssembly.GetType($"Polytoria.Datamodel.Services.{name}", throwOnError: false, ignoreCase: false);
+#pragma warning restore IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
 		});
 	}
 
@@ -560,14 +580,14 @@ public static class XmlFormat
 		}
 
 		// Apply properties
-		foreach ((PropertyInfo Property, object Value) property in item.Properties)
+		foreach ((PropertyInfo Property, object Value) in item.Properties)
 		{
 			try
 			{
-				object val = property.Value;
+				object val = Value;
 
 				// Handle conversions
-				val = (val, property.Property.PropertyType) switch
+				val = (val, Property.PropertyType) switch
 				{
 					// int -> string
 					(int intVal, Type t) when t == typeof(string) => intVal.ToString() ?? "",
@@ -575,11 +595,11 @@ public static class XmlFormat
 					(float floatVal, Type t) when t == typeof(int) => (int)floatVal,
 					_ => val
 				};
-				property.Property.SetValue(instance, val);
+				Property.SetValue(instance, val);
 			}
 			catch (Exception ex)
 			{
-				PT.PrintErr(property.Property.Name, " to ", property.Value, " set error ", ex);
+				PT.PrintErr(Property.Name, " to ", Value, " set error ", ex);
 			}
 		}
 

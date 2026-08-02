@@ -130,6 +130,8 @@ public partial class LuaState : IDisposable
 		return GetTop() + index + 1;
 	}
 
+	public static int UpValIndex(int index) => LUA_GLOBALSINDEX - index;
+
 	/// <summary>
 	/// Pushes an integer with value n onto the stack. 
 	/// </summary>
@@ -288,7 +290,7 @@ public partial class LuaState : IDisposable
 	public long ToInteger(int index)
 	{
 		lock (_lock)
-			return NativeBindings.lua_tointegerx(_state, index, out int isNum);
+			return NativeBindings.lua_tointegerx(_state, index, out int _);
 	}
 
 	/// <summary>
@@ -416,7 +418,7 @@ public partial class LuaState : IDisposable
 			NativeBindings.lua_pushboolean(_state, b ? 1 : 0);
 	}
 
-	public void PushCFunction(LuaFunction func, string name = "luafunc", int n = 0)
+	public void PushCFunction(LuaFunction func, string? name = null, int n = 0)
 	{
 		IntPtr userdataPtr = NewUserDataDTor((UIntPtr)IntPtr.Size, FunctionGarbageCollect);
 
@@ -669,7 +671,7 @@ public partial class LuaState : IDisposable
 
 	public int Error(string value, params object[] v)
 	{
-		string message = string.Format(value, v);
+		string message = v.Length > 0 ? string.Format(value, v) : value;
 		lock (_lock)
 			return NativeBindings.luaL_errorL(_state, message);
 	}

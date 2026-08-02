@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/UIView.svg-07fd5ffbc5e662cb7a982994468ac821.d
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true

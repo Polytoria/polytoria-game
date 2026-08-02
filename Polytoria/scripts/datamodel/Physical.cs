@@ -4,9 +4,11 @@
 
 using Godot;
 using Polytoria.Attributes;
+using Polytoria.Datamodel.Data;
 using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
+using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,10 +38,10 @@ public partial class Physical : Dynamic
 		public List<Node> CollisionSyncNodes { get; } = [];
 	}
 
-	public virtual float SyncInterval { get; protected set; } = 0.1f;
 	private const float TouchedGapCheck = 20f;
 	private bool _anchored = true;
 	private bool _canCollide = true;
+	private uint _collisionLayers = 1, _collisionMask = 1;
 	private Vector3 _velocity = Vector3.Zero;
 	private Vector3 _angularVelocity = Vector3.Zero;
 
@@ -49,8 +51,6 @@ public partial class Physical : Dynamic
 
 	private int _touchedListenerCount = 0;
 	private bool _canTouch = false;
-
-	private double _syncClock = 0;
 
 	private readonly Dictionary<Physical, int> _touchContacts = [];
 
@@ -128,6 +128,61 @@ public partial class Physical : Dynamic
 		}
 	}
 
+	[Editable(CustomPropertyControl = "Bitmap32"), ScriptProperty]
+	public virtual uint CollisionLayers
+	{
+		get => _collisionLayers;
+		set
+		{
+			if (_collisionLayers == value)
+			{
+				return;
+			}
+
+			_collisionLayers = value;
+
+			UpdateCollision();
+
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable(CustomPropertyControl = "Bitmap32"), ScriptProperty]
+	public virtual uint CollisionMask
+	{
+		get => _collisionMask;
+		set
+		{
+			if (_collisionMask == value)
+			{
+				return;
+			}
+
+			_collisionMask = value;
+
+			UpdateCollision();
+
+			OnPropertyChanged();
+		}
+	}
+
+	protected virtual uint GetAppliedCollisionLayers()
+	{
+		return _collisionLayers;
+	}
+
+	protected void ApplyCollisionObjectLayers()
+	{
+		CollisionObject3D? collisionObject3D = GetCollisionObject();
+		if (collisionObject3D == null)
+		{
+			return;
+		}
+
+		collisionObject3D.CollisionLayer = GetAppliedCollisionLayers();
+		collisionObject3D.CollisionMask = _collisionMask;
+	}
+
 	internal void UpdateFreeze()
 	{
 		bool finalVal = _anchored;
@@ -173,6 +228,9 @@ public partial class Physical : Dynamic
 	internal void UpdateCollision()
 	{
 		if (IsDeleted) return;
+
+		ApplyCollisionObjectLayers();
+
 		if (OverrideCanCollide)
 		{
 			SetCollisionDisabled(!OverrideCanCollideTo);
@@ -185,6 +243,14 @@ public partial class Physical : Dynamic
 			// Stop collision override if player's not ready
 			if (this is Player plr && !plr.IsReady) { return; }
 			bool setTo = !_canCollide;
+
+#if CREATOR
+			if (Root != null && Root.SessionType == World.SessionTypeEnum.Creator)
+			{
+				setTo = false;
+			}
+#endif
+
 			SetCollisionDisabled(setTo);
 
 			if (setTo)
@@ -490,10 +556,7 @@ public partial class Physical : Dynamic
 			_canTouch = true;
 			PT.CallOnMainThread(() =>
 			{
-				if (PhysicalArea != null)
-				{
-					PhysicalArea.Monitoring = true;
-				}
+				PhysicalArea?.Monitoring = true;
 			});
 		}
 	}
@@ -505,10 +568,7 @@ public partial class Physical : Dynamic
 			_canTouch = false;
 			PT.CallOnMainThread(() =>
 			{
-				if (PhysicalArea != null)
-				{
-					PhysicalArea.Monitoring = false;
-				}
+				PhysicalArea?.Monitoring = false;
 			});
 		}
 	}
@@ -523,16 +583,10 @@ public partial class Physical : Dynamic
 		UpdateTransformTick(delta);
 		if (Root == null || Root?.Network == null) { return; }
 
-		_syncClock += delta;
-
 		// Sync if has authority and not anchored, if so. sync in interval
-		if (_syncClock > SyncInterval)
+		if (NetTransformAuthority == Root.Network.LocalPeerID && !Anchored)
 		{
-			_syncClock = 0;
-			if (NetTransformAuthority == Root.Network.LocalPeerID && !Anchored)
-			{
-				UpdateNetTransform();
-			}
+			UpdateNetTransform();
 		}
 		base.PhysicsProcess(delta);
 	}
@@ -840,7 +894,7 @@ public partial class Physical : Dynamic
 		return null;
 	}
 
-	public static Physical? GetPhysicalFromBodyShape(CollisionObject3D body, int shapeIndex)
+	public static Physical? GetPhysicalFromBodyShape(CollisionObject3D body)
 	{
 		if (_bodyToPhysical.TryGetValue(body, out Physical? val))
 			return val;
@@ -931,7 +985,7 @@ public partial class Physical : Dynamic
 		if (body is not CollisionObject3D collisionBody)
 			return;
 
-		Physical? p = GetPhysicalFromBodyShape(collisionBody, (int)bodyShapeIndex);
+		Physical? p = GetPhysicalFromBodyShape(collisionBody);
 		if (p != null)
 		{
 			InternalInvokeTouched(p);
@@ -943,7 +997,7 @@ public partial class Physical : Dynamic
 		if (body is not CollisionObject3D collisionBody)
 			return;
 
-		Physical? p = GetPhysicalFromBodyShape(collisionBody, (int)bodyShapeIndex);
+		Physical? p = GetPhysicalFromBodyShape(collisionBody);
 		if (p != null)
 		{
 			InternalInvokeTouchEnded(p);
@@ -1094,7 +1148,7 @@ public partial class Physical : Dynamic
 			Scale = new(1.01f, 1.01f, 1.01f)
 		};
 
-		PhysicalArea.SetCollisionMaskValue(2, true);
+		SetCollisionMask(2, true);
 
 		PhysicalArea.AreaEntered += AreaEntered;
 		PhysicalArea.AreaExited += AreaExited;
@@ -1109,6 +1163,30 @@ public partial class Physical : Dynamic
 		{
 			CreateAreaShape(item);
 		}
+	}
+
+	[ScriptMethod]
+	public void SetCollisionLayer(int layer, bool value)
+	{
+		CollisionLayers = BitmapUtils.Set(CollisionLayers, layer, value);
+	}
+
+	[ScriptMethod]
+	public void SetCollisionMask(int layer, bool value)
+	{
+		CollisionMask = BitmapUtils.Set(CollisionMask, layer, value);
+	}
+
+	[ScriptMethod]
+	public bool GetCollisionLayer(int layer)
+	{
+		return BitmapUtils.Get(CollisionLayers, layer);
+	}
+
+	[ScriptMethod]
+	public bool GetCollisionMask(int layer)
+	{
+		return BitmapUtils.Get(CollisionMask, layer);
 	}
 
 	[ScriptMethod]

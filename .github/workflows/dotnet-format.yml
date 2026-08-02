@@ -1,0 +1,12 @@
+name: Dotnet Format checks
+on: pull_request
+
+jobs:
+  dotnet-format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Run dotnet-format
+        run: dotnet format --verify-no-changes

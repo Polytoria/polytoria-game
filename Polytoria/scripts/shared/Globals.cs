@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using Mesh = Godot.Mesh;
 using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection.Metadata;
 
 namespace Polytoria.Shared;
 
@@ -64,7 +65,7 @@ public sealed partial class Globals : Node
 	private static readonly Dictionary<string, (Mesh, Shape3D)> _shapesCache = [];
 	private static readonly Dictionary<string, Material> _skyboxesCache = [];
 
-	private static Dictionary<(Part.PartMaterialEnum, bool), Material> _materialCache = [];
+	private static readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materialCache = [];
 
 	private static bool _isExiting = false;
 
@@ -216,14 +217,16 @@ public sealed partial class Globals : Node
 		base._Input(@event);
 	}
 
-	public static T LoadInstance<T>(World? root = null) where T : Instance
+	public static T LoadInstance<T>(World? root = null, Action<T>? preInit = null) where T : Instance
 	{
-		return (T)LoadNetworkedObject(typeof(T).Name, root)!;
+		Action<NetworkedObject>? wrapped = preInit == null ? null : netObj => preInit((T)netObj);
+		return (T)LoadNetworkedObject(typeof(T).Name, root, wrapped)!;
 	}
 
-	public static T? LoadInstance<T>(string className, World? root = null) where T : Instance
+	public static T? LoadInstance<T>(string className, World? root = null, Action<T>? preInit = null) where T : Instance
 	{
-		return (T?)LoadNetworkedObject(className, root);
+		Action<NetworkedObject>? wrapped = preInit == null ? null : netObj => preInit((T)netObj);
+		return (T?)LoadNetworkedObject(className, root, wrapped);
 	}
 
 	[return: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]
@@ -252,7 +255,7 @@ public sealed partial class Globals : Node
 		return null;
 	}
 
-	public static NetworkedObject? LoadNetworkedObject(string className, World? root = null)
+	public static NetworkedObject? LoadNetworkedObject(string className, World? root = null, Action<NetworkedObject>? preInit = null)
 	{
 		Type? type = GetTypeByName(className);
 		if (type != null)
@@ -261,6 +264,7 @@ public sealed partial class Globals : Node
 			if (obj is NetworkedObject netObj)
 			{
 				netObj.NameOverride = className;
+				preInit?.Invoke(netObj);
 				netObj.Root = root!;
 				return netObj;
 			}
@@ -278,17 +282,22 @@ public sealed partial class Globals : Node
 	}
 
 #if CREATOR
-	public static IProperty LoadProperty(Type type)
+	public static IProperty LoadProperty(Type type, string? overridePropertyType = null)
 	{
-		string cacheToLoad = type.IsEnum ? "Enum" : type.Name;
-		if (type.IsAssignableTo(typeof(BaseAsset)))
-		{
+		string cacheToLoad;
+
+		if (overridePropertyType != null)
+			cacheToLoad = overridePropertyType;
+		else if (type.IsEnum)
+			cacheToLoad = "Enum";
+		else if (type.IsAssignableTo(typeof(BaseAsset)))
 			cacheToLoad = "BaseAsset";
-		}
 		else if (type.IsAssignableTo(typeof(Instance)))
-		{
 			cacheToLoad = "Instance";
-		}
+		else if (type.IsArray)
+			cacheToLoad = type.GetElementType()!.Name + "Array";
+		else
+			cacheToLoad = type.Name;
 
 		PackedScene packedScene = ForceLoadResource(_propertiesCache, cacheToLoad, $"{PropertiesPath}{cacheToLoad}Property.tscn");
 		return packedScene.Instantiate<IProperty>();
@@ -607,16 +616,23 @@ public sealed partial class Globals : Node
 			return IntPtr.Zero;
 		}
 
-		if (!OS.HasFeature("x86_64"))
+		string platform = ResolveCurrentPlatform();
+		bool siliconMac = (OS.HasFeature("macos") && OS.HasFeature("arm64")); // development is supported on mac silicon
+
+		if (!OS.HasFeature("x86_64") && !siliconMac)
 		{
 			if (IsInGDEditor)
 			{
 				PT.PrintWarn("Unsupported platform for development");
 			}
-			return IntPtr.Zero;
+
+			// i wasted an hour finding this damn return statement... -jeweleyed
+			if (platform == "android" || platform == "ios")
+			{
+				return IntPtr.Zero;
+			}
 		}
 
-		string platform = ResolveCurrentPlatform();
 		string? dllPath = ResolveDllPath(libraryName, platform);
 
 		if (dllPath == null)

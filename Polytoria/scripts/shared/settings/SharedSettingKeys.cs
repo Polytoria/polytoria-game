@@ -10,6 +10,8 @@ public static class SharedSettingKeys
 	{
 		public const string Fullscreen = "display.fullscreen";
 		public const string VSync = "display.vsync";
+		public const string FpsPreset = "display.fps_preset";
+		public const string FpsCap = "display.fps_cap";
 	}
 
 	public static class Graphics
@@ -35,5 +37,10 @@ public static class SharedSettingKeys
 		public const string SdfgiCascades = "graphics.post_processing.sdfgi_cascades";
 		public const string SsilRadius = "graphics.post_processing.ssil_radius";
 		public const string NormalMaps = "graphics.post_processing.normal_maps";
+	}
+
+	public static class Advanced
+	{
+		public const string AssetQueue = "advanced.asset_queue";
 	}
 }

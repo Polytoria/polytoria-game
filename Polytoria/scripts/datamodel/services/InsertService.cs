@@ -22,7 +22,7 @@ namespace Polytoria.Datamodel.Services;
 public sealed partial class InsertService : Instance
 {
 	private readonly PTHttpClient _httpClient = new();
-	private static readonly Dictionary<int, APIStoreItem> _storeItemCache = new();
+	private static readonly Dictionary<int, APIStoreItem> _storeItemCache = [];
 
 	[ScriptMethod, Attributes.Obsolete("Use ModelAsync instead")]
 	public void Model(int id, PTCallback? callback = null)
@@ -122,6 +122,22 @@ public sealed partial class InsertService : Instance
 		return model;
 	}
 #endif
+
+	[ScriptMethod]
+	public async Task<Clothing?> ClothingAsync(int id)
+	{
+		APIStoreItem storeItem = await GetStoreItemCachedAsync(id);
+
+		PTImageAsset imageAsset = New<PTImageAsset>();
+		imageAsset.ImageID = (uint)id;
+		imageAsset.ImageType = ImageTypeEnum.Asset;
+
+		Clothing clothing = New<Clothing>();
+		clothing.Name = storeItem.Name;
+		clothing.Image = imageAsset;
+
+		return clothing;
+	}
 
 	[ScriptMethod]
 	public async Task<Accessory?> AccessoryAsync(int id)

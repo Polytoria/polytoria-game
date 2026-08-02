@@ -14,6 +14,7 @@ public sealed partial class PlayerDefaults : HiddenBase
 	private float _walkSpeed;
 	private float _jumpPower;
 	private Color _chatColor;
+	private bool _chatColorsEnabled;
 	private float _respawnTime;
 	private bool _canMove;
 	private float _sprintSpeed;
@@ -22,6 +23,7 @@ public sealed partial class PlayerDefaults : HiddenBase
 	private bool _useStamina;
 	private float _staminaRegen;
 	private float _staminaBurn;
+	private bool _keepInventory;
 	private bool _useHeadTurning;
 	private bool _useBubbleChat;
 	private bool _autoLoadAppearance;
@@ -95,6 +97,12 @@ public sealed partial class PlayerDefaults : HiddenBase
 	}
 
 
+	[Editable, ScriptProperty]
+	public bool ChatColorsEnabled
+	{
+		get => _chatColorsEnabled;
+		set { _chatColorsEnabled = value; OnPropertyChanged(); }
+	}
 	[Editable, ScriptProperty]
 	public bool CanMove
 	{
@@ -174,6 +182,18 @@ public sealed partial class PlayerDefaults : HiddenBase
 
 
 	[Editable, ScriptProperty]
+	public bool KeepInventory
+	{
+		get => _keepInventory;
+		set
+		{
+			_keepInventory = value;
+			OnPropertyChanged();
+		}
+	}
+
+
+	[Editable, ScriptProperty]
 	public bool UseHeadTurning
 	{
 		get => _useHeadTurning;
@@ -243,6 +263,7 @@ public sealed partial class PlayerDefaults : HiddenBase
 		WalkSpeed = 16f;
 		JumpPower = 36f;
 		ChatColor = new Color(1, 1, 1);
+		ChatColorsEnabled = true;
 		RespawnTime = 5.0f;
 		CanMove = true;
 		SprintSpeed = 25f;

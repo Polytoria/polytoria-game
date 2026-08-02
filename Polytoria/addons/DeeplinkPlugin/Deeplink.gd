@@ -13,8 +13,8 @@ const PLUGIN_SINGLETON_NAME: String = "DeeplinkPlugin"
 const DEEPLINK_RECEIVED_SIGNAL_NAME = "deeplink_received"
 
 enum Platform {
-	Android =		1 << 0,		## 1- Android
-	iOS =			1 << 1,		## 2- iOS
+	Android = 1 << 0,  ## 1- Android
+	iOS = 1 << 1,  ## 2- iOS
 }
 
 @export_category("Details")
@@ -31,15 +31,16 @@ enum Platform {
 ## A path prefix in a deeplink is a specific part of a URL that is used to map a web link to a particular
 ## activity or screen within an app. For example, a path prefix like /recipe would route any URL with that
 ## prefix, such as http://www.recipe-app.com/recipe/grilled-potato-salad, directly to the recipe viewing screen
-## for the specified recipe in the app instead of the website. 
+## for the specified recipe in the app instead of the website.
 @export var path_prefix: String = ""
 
 @export_category("Platform")
 ## List of platforms for which this deeplink will be exported.
-@export_flags(" ") var enabled_platforms = Platform.Android | Platform.iOS: set = _set_enabled_platforms
+@export_flags(" ") var enabled_platforms = Platform.Android | Platform.iOS:
+	set = _set_enabled_platforms
 
 @export_category("Android-specific")
-@export_group("Intent","android_")
+@export_group("Intent", "android_")
 ## In Android, the android:label attribute within an <intent-filter> element serves to provide a user-readable
 ## label for the capabilities described by that specific intent filter. This label is displayed to the user
 ## when the activity is presented as an option to handle an intent that matches the filter.
@@ -50,7 +51,7 @@ enum Platform {
 ## default handler for specific web domains and schemes defined within the intent filter.
 @export var android_is_auto_verify: bool = true
 
-@export_group("Intent Category","android_")
+@export_group("Intent Category", "android_")
 ## The android.intent.category.DEFAULT category in an Android intent-filter indicates that the activity
 ## can be the target of an implicit intent when no other specific category is explicitly declared in the intent.
 @export var android_is_default: bool = true
@@ -68,7 +69,7 @@ func _ready() -> void:
 			_plugin_singleton = Engine.get_singleton(PLUGIN_SINGLETON_NAME)
 			_connect_signals()
 		elif not OS.has_feature("editor_hint"):
-			log_error("%s singleton not found!" % PLUGIN_SINGLETON_NAME)
+			GmpLogger.log_error("%s singleton not found!" % PLUGIN_SINGLETON_NAME)
 
 
 func _validate_property(property: Dictionary) -> void:
@@ -93,7 +94,7 @@ func initialize() -> int:
 	if _plugin_singleton != null:
 		__result = _plugin_singleton.initialize()
 	else:
-		log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
+		GmpLogger.log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
 
 	return __result
 
@@ -107,7 +108,7 @@ func is_domain_associated(a_domain: String) -> bool:
 	if _plugin_singleton != null:
 		__result = _plugin_singleton.is_domain_associated(a_domain)
 	else:
-		log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
+		GmpLogger.log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
 
 	return __result
 
@@ -116,7 +117,7 @@ func navigate_to_open_by_default_settings() -> void:
 	if _plugin_singleton != null:
 		_plugin_singleton.navigate_to_open_by_default_settings()
 	else:
-		log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
+		GmpLogger.log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
 
 
 func get_link_url() -> String:
@@ -125,7 +126,7 @@ func get_link_url() -> String:
 	if _plugin_singleton != null:
 		__result = _null_check(_plugin_singleton.get_url())
 	else:
-		log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
+		GmpLogger.log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
 
 	return __result
 
@@ -136,7 +137,7 @@ func get_link_scheme() -> String:
 	if _plugin_singleton != null:
 		__result = _null_check(_plugin_singleton.get_scheme())
 	else:
-		log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
+		GmpLogger.log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
 
 	return __result
 
@@ -147,7 +148,7 @@ func get_link_host() -> String:
 	if _plugin_singleton != null:
 		__result = _null_check(_plugin_singleton.get_host())
 	else:
-		log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
+		GmpLogger.log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
 
 	return __result
 
@@ -158,7 +159,7 @@ func get_link_path() -> String:
 	if _plugin_singleton != null:
 		__result = _null_check(_plugin_singleton.get_path())
 	else:
-		log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
+		GmpLogger.log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
 
 	return __result
 
@@ -167,7 +168,7 @@ func clear_data() -> void:
 	if _plugin_singleton != null:
 		_plugin_singleton.clear_data()
 	else:
-		log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
+		GmpLogger.log_error("%s plugin not initialized" % PLUGIN_SINGLETON_NAME)
 
 
 func _on_deeplink_received(a_data: Dictionary) -> void:
@@ -176,15 +177,3 @@ func _on_deeplink_received(a_data: Dictionary) -> void:
 
 func _null_check(a_value) -> String:
 	return "" if a_value == null else a_value
-
-
-static func log_error(a_description: String) -> void:
-	push_error("%s: %s" % [PLUGIN_SINGLETON_NAME, a_description])
-
-
-static func log_warn(a_description: String) -> void:
-	push_warning("%s: %s" % [PLUGIN_SINGLETON_NAME, a_description])
-
-
-static func log_info(a_description: String) -> void:
-	print_rich("[color=purple]%s: INFO: %s[/color]" % [PLUGIN_SINGLETON_NAME, a_description])

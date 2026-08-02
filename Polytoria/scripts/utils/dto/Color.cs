@@ -13,17 +13,25 @@ namespace Polytoria.Utils.DTOs;
 [MemoryPackable]
 public partial class ColorDto
 {
-	[JsonInclude] public string Hex { get; set; } = "#FFF";
+	[JsonInclude] public uint Rgba { get; set; } = 0xFFFFFFFF;
 
 	[MemoryPackConstructor, JsonConstructor]
 	public ColorDto() { }
 	public ColorDto(Color c)
 	{
-		Hex = c.ToHtml();
+		Rgba =
+			((uint)(byte)(c.R * 255) << 24) |
+			((uint)(byte)(c.G * 255) << 16) |
+			((uint)(byte)(c.B * 255) << 8) |
+			(byte)(c.A * 255);
 	}
 	public Color ToColor()
 	{
-		return Color.FromString(Hex, new(1, 1, 1));
+		return new Color(
+			((Rgba >> 24) & 0xFF) / 255f,
+			((Rgba >> 16) & 0xFF) / 255f,
+			((Rgba >> 8) & 0xFF) / 255f,
+			(Rgba & 0xFF) / 255f);
 	}
 
 	public static string ToString(Color src)
