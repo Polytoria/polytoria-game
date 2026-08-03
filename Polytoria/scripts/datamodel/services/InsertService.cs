@@ -124,6 +124,22 @@ public sealed partial class InsertService : Instance
 #endif
 
 	[ScriptMethod]
+	public async Task<Clothing?> ClothingAsync(int id)
+	{
+		APIStoreItem storeItem = await GetStoreItemCachedAsync(id);
+
+		PTImageAsset imageAsset = New<PTImageAsset>();
+		imageAsset.ImageID = (uint)id;
+		imageAsset.ImageType = ImageTypeEnum.Asset;
+
+		Clothing clothing = New<Clothing>();
+		clothing.Name = storeItem.Name;
+		clothing.Image = imageAsset;
+
+		return clothing;
+	}
+
+	[ScriptMethod]
 	public async Task<Accessory?> AccessoryAsync(int id)
 	{
 		APIStoreItem storeItem = await GetStoreItemCachedAsync(id);
