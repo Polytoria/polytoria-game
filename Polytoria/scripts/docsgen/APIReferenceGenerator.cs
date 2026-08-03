@@ -75,7 +75,7 @@ public static class APIReferenceGenerator
 					eventsDef.Add(new(
 						property.Name,
 						propertyType.IsGenericType
-							? [.. propertyType.GetGenericArguments().Select(a => new ScriptParameter(type: ProcessOptionalTypeName(a)))]
+							? [.. propertyType.GetGenericArguments().Select(a => new ScriptParameter(Type: ProcessOptionalTypeName(a)))]
 							: []
 					));
 				}
@@ -187,7 +187,7 @@ public static class APIReferenceGenerator
 					[
 						new("parent", nameof(NetworkedObject) + '?')
 					],
-					isStatic: true
+					IsStatic: true
 				));
 			}
 
@@ -377,7 +377,14 @@ public static class APIReferenceGenerator
 
 	private static string? ProcessTypeName(Type? type)
 	{
-		if (type == null) return null;
+		if (type == null ||
+			type == typeof(void) ||
+			type == typeof(Task) ||
+			type == typeof(Nullable) ||
+			type == typeof(ValueType))
+		{
+			return null;
+		}
 
 		if (type == typeof(byte) ||
 			type == typeof(sbyte) ||
@@ -414,19 +421,15 @@ public static class APIReferenceGenerator
 			return "buffer";
 		}
 
-		if (type == typeof(PTCallback) || type == typeof(PTFunction))
+		// TODO: make PTFunction and PTCallback generic so these aren't garbage types
+		if (type == typeof(PTCallback))
 		{
-			// TODO: make PTFunction and PTCallback generic so this isn't a garbage
-			// type
-			return "(...any) -> ...any";
+			return "(...any) -> ()";
 		}
 
-		if (type == typeof(void) ||
-			type == typeof(Task) ||
-			type == typeof(Nullable) ||
-			type == typeof(ValueType))
+		if (type == typeof(PTFunction))
 		{
-			return null;
+			return "(...any) -> ...any";
 		}
 
 		// --- Proxies --- //
@@ -506,29 +509,21 @@ public static class APIReferenceGenerator
 		return ProcessTypeName(type);
 	}
 
-	public readonly struct ScriptParameter(string? name = null, string? type = null, string? defaultValue = null)
+	public readonly record struct ScriptParameter(string? Name = null, string? Type = null, string? DefaultValue = null)
 	{
-		public readonly string? Name = name;
-		public readonly string Type = type ?? "nil";
-		public readonly string? DefaultValue = defaultValue;
+		public readonly string Type = Type ?? "nil";
 
-		public readonly string ToString(bool inFuncType = false)
+		public readonly string ToString(bool inFuncType = false) => Name switch
 		{
-			return Name switch
-			{
-				null => Type,
-				// must use variadic type pack ('...' Type) in function types
-				"..." when inFuncType => $"...{Type}",
-				_ => $"{Name}: {Type}",
-			};
-		}
+			null => Type,
+			// must use variadic type pack ('...' Type) in function types
+			"..." when inFuncType => $"...{Type}",
+			_ => $"{Name}: {Type}",
+		};
 	}
 
-	public readonly struct ScriptObsoletionInfo(string? reason = null, string? use = null)
+	public readonly record struct ScriptObsoletionInfo(string? Reason = null, string? UseInstead = null)
 	{
-		public readonly string? Reason = reason;
-		public readonly string? UseInstead = use;
-
 		public ScriptObsoletionInfo(Attributes.ObsoleteAttribute obsoleteAttribute) : this(obsoleteAttribute.Reason, obsoleteAttribute.UseInstead) { }
 
 		public override readonly string ToString()
@@ -543,7 +538,7 @@ public static class APIReferenceGenerator
 
 		/// <summary>
 		/// Generates a Luau <c>@deprecated</c> attribute for functions:
-		/// <see href="https://rfcs.luau.org/syntax-attribute-functions-deprecated.html" />
+		/// <see href="https://luau.org/attributes/#deprecated" />
 		/// </summary>
 		public readonly string GetAttribute()
 		{
@@ -574,65 +569,24 @@ public static class APIReferenceGenerator
 		}
 	}
 
-	public readonly struct ScriptMethod(string name, string? returnType, ScriptParameter[] parameters, bool isAsync = false, bool isStatic = false, bool isSemiStatic = false, ScriptObsoletionInfo? obsoletionInfo = null)
+	public readonly record struct ScriptMethod(string Name, string? ReturnType, ScriptParameter[] Parameters, bool IsAsync = false, bool IsStatic = false, bool IsSemiStatic = false, ScriptObsoletionInfo? ObsoletionInfo = null)
 	{
-		public readonly string Name = name;
-		public readonly string? ReturnType = returnType;
-		public readonly ScriptParameter[] Parameters = parameters;
-		public readonly bool IsAsync = isAsync;
-		public readonly bool IsStatic = isStatic;
-		public readonly bool IsSemiStatic = isSemiStatic;
-		public readonly ScriptObsoletionInfo? ObsoletionInfo = obsoletionInfo;
-
 		[JsonIgnore]
 		public readonly bool IsMetamethod => Name.StartsWith("__");
 	}
 
-	public readonly struct ScriptProperty(string name, string type, bool isAccessibleByScripts, bool isReadOnly, bool isStatic, ScriptObsoletionInfo? obsoletionInfo = null)
+	public readonly record struct ScriptProperty(string Name, string Type, bool IsAccessibleByScripts, bool IsReadOnly, bool IsStatic, ScriptObsoletionInfo? ObsoletionInfo = null)
 	{
-		public readonly string Name = name;
-		public readonly string Type = type;
-		public readonly bool IsAccessibleByScripts = isAccessibleByScripts;
-		public readonly bool IsReadOnly = isReadOnly;
-		public readonly bool IsStatic = isStatic;
-		public readonly ScriptObsoletionInfo? ObsoletionInfo = obsoletionInfo;
-
 		public readonly override string ToString() => $"{Name}: {Type}";
 	}
 
-	public readonly struct ScriptEvent(string name, ScriptParameter[] parameters)
-	{
-		public readonly string Name = name;
-		public readonly ScriptParameter[] Parameters = parameters;
-	}
+	public readonly record struct ScriptEvent(string Name, ScriptParameter[] Parameters);
 
-	public readonly struct ScriptEnum(string name, string internalName, string[] options)
-	{
-		public readonly string Name = name;
-		public readonly string InternalName = internalName;
-		public readonly string[] Options = options;
-	}
+	public readonly record struct ScriptEnum(string Name, string InternalName, string[] Options);
 
-	public readonly struct ScriptClass(string name, string? baseType, ScriptProperty[] properties, ScriptMethod[] methods, ScriptEvent[] events, bool isStatic, bool isAbstract, bool isInstantiable, string? staticAlias)
-	{
-		public readonly string Name = name;
-		public readonly string? BaseType = baseType;
-		public readonly ScriptProperty[] Properties = properties;
-		public readonly ScriptMethod[] Methods = methods;
-		public readonly ScriptEvent[] Events = events;
-		public readonly bool IsStatic = isStatic;
-		public readonly bool IsAbstract = isAbstract;
-		public readonly bool IsInstantiable = isInstantiable;
-		public readonly string? StaticAlias = staticAlias;
-	}
+	public readonly record struct ScriptClass(string Name, string? BaseType, ScriptProperty[] Properties, ScriptMethod[] Methods, ScriptEvent[] Events, bool IsStatic, bool IsAbstract, bool IsInstantiable, string? StaticAlias);
 
-	public readonly struct APIReferenceRoot(string version, ScriptClass[] classes, ScriptEnum[] enums, string[] instanceClasses)
-	{
-		public readonly string Version = version;
-		public readonly ScriptClass[] Classes = classes;
-		public readonly ScriptEnum[] Enums = enums;
-		public readonly string[] InstanceClasses = instanceClasses;
-	}
+	public readonly record struct APIReferenceRoot(string Version, ScriptClass[] Classes, ScriptEnum[] Enums, string[] InstanceClasses);
 }
 
 [JsonSourceGenerationOptions(IncludeFields = true)]

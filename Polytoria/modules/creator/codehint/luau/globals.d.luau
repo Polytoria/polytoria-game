@@ -22,7 +22,7 @@ declare _SERVER: boolean?
 
 declare function warn<T...>(...: T...)
 
-declare function wait(seconds: number?): true
+declare function wait(seconds: number?): number
 
 declare function spawn<T...>(callback: (T...) -> ...any, ...: T...)
 

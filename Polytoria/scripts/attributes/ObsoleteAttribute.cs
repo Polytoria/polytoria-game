@@ -9,7 +9,7 @@ namespace Polytoria.Attributes;
 
 /// <summary>
 /// Mark this as obsolete. Maps to Luau's <c>@deprecated</c> attribute:
-/// <see href="https://rfcs.luau.org/syntax-attribute-functions-deprecated.html" />
+/// <see href="https://luau.org/attributes/#deprecated" />
 /// </summary>
 /// <param name="reason">The reason for obsoletion</param>
 /// <param name="use">What should be used instead</param>

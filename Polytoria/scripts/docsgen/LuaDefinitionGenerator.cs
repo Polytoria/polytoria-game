@@ -19,7 +19,7 @@ public static class LuaDefinitionGenerator
 	public static void GenerateDocFiles(string atFolder)
 	{
 		// Clear old lua folder
-		foreach (string file in Directory.GetFiles(atFolder))
+		foreach (string file in Directory.EnumerateFiles(atFolder))
 		{
 			File.Delete(file);
 		}
@@ -59,8 +59,12 @@ public static class LuaDefinitionGenerator
 
 		foreach (ScriptClass c in refer.Classes)
 		{
-			// Ignore already declared types
-			if (c.Name == "PTSignal" || c.Name == "PTSignalConnection") continue;
+			if (
+				// Ignore already declared types
+				c.Name == "PTSignal" || c.Name == "PTSignalConnection" ||
+				// Ignore unused types
+				c.Name == "PTCallback" || c.Name == "PTFunction"
+			) continue;
 
 			builder.AppendLine();
 			AppendClass(builder, c);
@@ -129,6 +133,7 @@ public static class LuaDefinitionGenerator
 				// the type checker will not consider a class's __index or
 				// __newindex metamethods when checking for keys, so they must be
 				// converted to a `[K]: V` field
+
 				bool isNewIndex = m.Name == "__newindex";
 				if (isNewIndex || m.Name == "__index")
 				{
