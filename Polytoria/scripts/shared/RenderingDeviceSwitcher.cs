@@ -18,18 +18,13 @@ public static class RenderingDeviceSwitcher
 			RenderingMethodOption.Standard => RenderingDeviceEnum.Forward,
 			RenderingMethodOption.Performance => RenderingDeviceEnum.Mobile,
 			RenderingMethodOption.Compatibility => RenderingDeviceEnum.GLCompatibility,
-			RenderingMethodOption.Auto => throw new ArgumentException("Auto does not map to rendering device"),
+			RenderingMethodOption.Auto => RenderingDeviceEnum.Mobile,
 			_ => RenderingDeviceEnum.Forward
 		};
 	}
 
 	public static void Switch(RenderingMethodOption option)
 	{
-		if (option == RenderingMethodOption.Auto)
-		{
-			return;
-		}
-
 		Switch(FromRenderingMethodOption(option));
 	}
 
