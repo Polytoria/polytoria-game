@@ -103,6 +103,12 @@ public sealed partial class Player : NPC
 	[ScriptProperty]
 	public PTSignal Respawned { get; private set; } = new();
 
+	[ScriptProperty]
+	public PTSignal<Physical> GrabbedGrabbable { get; private set; } = new();
+
+	[ScriptProperty]
+	public PTSignal<Physical> ReleasedGrabbable { get; private set; } = new();
+
 	[SyncVar, ScriptProperty]
 	public int UserID
 	{
@@ -317,9 +323,16 @@ public sealed partial class Player : NPC
 	[ScriptProperty]
 	public Physical? Grabbing => _grabbing;
 
-	public void SetGrabbing(Physical? phy)
+	public void SetGrabbing(Physical phy)
 	{
 		_grabbing = phy;
+		GrabbedGrabbable.Invoke(phy);
+	}
+
+	public void ReleaseGrabbing()
+	{
+		ReleasedGrabbable.Invoke(_grabbing);
+		_grabbing = null;
 	}
 
 	[ScriptProperty]

@@ -98,7 +98,7 @@ public partial class Grabbable : Instance
 
 	public override void ExitTree()
 	{
-		_dragger?.SetGrabbing(null);
+		_dragger?.ReleaseGrabbing();
 		_parent?.Clicked.Disconnect(OnClicked);
 		_parent?.MouseEnter.Disconnect(OnMouseEnter);
 		_parent?.MouseExit.Disconnect(OnMouseExit);
@@ -246,7 +246,7 @@ public partial class Grabbable : Instance
 	private void InternalReleaseDrag()
 	{
 		_dragging = false;
-		_dragger?.SetGrabbing(null);
+		_dragger?.ReleaseGrabbing();
 		_dragger = null;
 		Released.Invoke();
 	}
