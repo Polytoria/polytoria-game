@@ -41,7 +41,6 @@ public sealed partial class CoreUIService : Instance
 	};
 	private Dictionary<CursorAsset, Action> _cursorCallbacks = new() { };
 	private CursorAsset? _crosshairOverride;
-
 	public CoreUIRoot CoreUI = null!;
 
 	[Editable, ScriptProperty, Attributes.Obsolete("Use CrosshairOverride instead.")]
@@ -134,6 +133,9 @@ public sealed partial class CoreUIService : Instance
 			OnPropertyChanged();
 		}
 	}
+
+  [ScriptProperty]
+	public static float TopInset => 80;
 
 	[Editable, ScriptProperty]
 	public int ChatBubbleRenderDistance

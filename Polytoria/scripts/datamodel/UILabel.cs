@@ -157,9 +157,12 @@ public partial class UILabel : UIView
 		get => _autoSize;
 		set
 		{
+			bool changed = _autoSize != value;
+			if (changed && _autoSize) NodeControl.Resized -= UpdateText;
+
 			_autoSize = value;
-			if (_autoSize) NodeControl.Resized += UpdateText;
-			else NodeControl.Resized -= UpdateText;
+			if (changed && _autoSize) NodeControl.Resized += UpdateText;
+
 			UpdateText();
 			OnPropertyChanged();
 		}
@@ -331,5 +334,16 @@ public partial class UILabel : UIView
 		OutlineColor = new(0, 0, 0);
 
 		base.Init();
+	}
+
+	public override void PreDelete()
+	{
+		if (_autoSize)
+		{
+			NodeControl.Resized -= UpdateText;
+			_autoSize = false;
+		}
+
+		base.PreDelete();
 	}
 }
