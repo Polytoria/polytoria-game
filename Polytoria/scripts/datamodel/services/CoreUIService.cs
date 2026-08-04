@@ -134,7 +134,7 @@ public sealed partial class CoreUIService : Instance
 		}
 	}
 
-  [ScriptProperty]
+	[ScriptProperty]
 	public static float TopInset => 80;
 
 	[Editable, ScriptProperty]
