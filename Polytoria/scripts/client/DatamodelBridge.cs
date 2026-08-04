@@ -19,6 +19,7 @@ public partial class DatamodelBridge : Node3D
 	public long SeparatedPartCount = 0;
 
 	private readonly Dictionary<Part, PartHandle> _handles = [];
+	private readonly Dictionary<Part, System.Action> _propertyHandlers = [];
 	private readonly Dictionary<ChunkKey, ChunkBatch> _batches = [];
 	private readonly HashSet<Part> _dirty = [];
 	private Rid _scenario;
@@ -64,8 +65,9 @@ public partial class DatamodelBridge : Node3D
 			Root.InstanceExitingTree -= OnInstanceRemoving;
 			Root.Loaded.Disconnect(OnGameReady);
 
-			// Cleanup parts
-			foreach (var item in _handles.Keys)
+			// Cleanup parts. Iterates the handler map rather than _handles so separately
+			// rendered parts are unsubscribed too, and snapshots it because RemovePart mutates.
+			foreach (Part item in new List<Part>(_propertyHandlers.Keys))
 			{
 				RemovePart(item);
 			}
@@ -208,6 +210,16 @@ public partial class DatamodelBridge : Node3D
 
 	private void AddToBatch(Part part, ChunkKey key)
 	{
+		// Batched parts rely on PropertyChanged to re-enter _dirty for color/transform/key
+		// updates. Subscribing here rather than in AddPart covers both entry paths: parts that
+		// are eligible when they enter the tree, and parts promoted later via the _dirty loop.
+		if (!_propertyHandlers.ContainsKey(part))
+		{
+			void propertyChangedHandler() { if (isGameReady) _dirty.Add(part); }
+			part.PropertyChanged.Connect(propertyChangedHandler);
+			_propertyHandlers[part] = propertyChangedHandler;
+		}
+
 		if (!_batches.TryGetValue(key, out var batch))
 		{
 			(Godot.Mesh mesh, _) = Globals.LoadShape(part.Shape.ToString());
@@ -324,30 +336,36 @@ public partial class DatamodelBridge : Node3D
 		if (_handles.ContainsKey(part)) return;
 		if (!IsPartEligible(part))
 		{
+			// Deliberately no PropertyChanged subscription here: moving unanchored parts fire
+			// PropertyChanged every tick via InvokeTransformChanged(), and none of it can make
+			// them batchable. Eligibility changes are pushed explicitly instead - see
+			// QueuePartForReevaluation and the Anchored setter.
 			part.CreateSeparateMesh();
 			return;
 		}
 
-		void propertyChangedHandler() { if (isGameReady) _dirty.Add(part); }
-
-		part.PropertyChanged.Connect(propertyChangedHandler);
-
 		var key = GetKeyForPart(part);
 		AddToBatch(part, key);
 
-		if (_handles.TryGetValue(part, out var handle))
-		{
-			handle.PropertyChangedHandler = propertyChangedHandler;
-		}
+		_dirty.Add(part);
+	}
 
+	/// <summary>
+	/// Re-evaluates a part's batch eligibility on the next frame. Parts that enter the tree
+	/// ineligible have no PropertyChanged subscription, so the transitions that can make them
+	/// batchable (anchoring, primarily) must be pushed here explicitly by the datamodel.
+	/// </summary>
+	internal void QueuePartForReevaluation(Part part)
+	{
+		if (!isGameReady) return;
 		_dirty.Add(part);
 	}
 
 	public void RemovePart(Part part)
 	{
-		if (_handles.TryGetValue(part, out var handle))
+		if (_propertyHandlers.Remove(part, out System.Action? propertyChangedHandler))
 		{
-			part.PropertyChanged.Disconnect(handle.PropertyChangedHandler);
+			part.PropertyChanged.Disconnect(propertyChangedHandler);
 		}
 
 		part.CreateSeparateMesh();
@@ -371,7 +389,6 @@ public partial class DatamodelBridge : Node3D
 	{
 		public ChunkKey Key;
 		public int Index;
-		public System.Action PropertyChangedHandler = null!;
 	}
 
 	private struct ChunkKey

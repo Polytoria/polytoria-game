@@ -105,6 +105,13 @@ public partial class Physical : Dynamic
 				UpdateFreeze();
 			}
 
+			// Anchoring changes multimesh batch eligibility, and parts that entered the tree
+			// unanchored have no bridge subscription to catch it - push it explicitly.
+			if (this is Part part)
+			{
+				Root?.Bridge?.QueuePartForReevaluation(part);
+			}
+
 			OnPropertyChanged();
 		}
 	}
