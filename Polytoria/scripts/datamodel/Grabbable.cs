@@ -215,7 +215,10 @@ public partial class Grabbable : Instance
 	internal void InternalGiveGrab()
 	{
 		_dragger = Root.Players.LocalPlayer;
-		_dragger.SetGrabbing(_parent);
+		if (_parent != null)
+		{
+			_dragger.SetGrabbing(_parent);
+		}
 		_dragging = true;
 		Grabbed.Invoke(_dragger);
 		Root.PlayerGUI.SetCursorShape(Control.CursorShape.CanDrop);
