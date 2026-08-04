@@ -211,6 +211,27 @@ public partial class RigidBody : Physical
 		CanCollide = true;
 	}
 
+	/// <summary>
+	/// Constant forces are stored on the body and applied each simulation step - but only while
+	/// the body is awake. Jolt wakes a body when the constant force is SET, not while it acts,
+	/// so a body that later slows down still falls asleep with the force in place and hangs
+	/// wherever it is (a hull slowly rising under a stored buoyancy force can stop mid-air).
+	/// A body with a standing constant force or torque must not be allowed to sleep.
+	/// </summary>
+	private void UpdateSleepForConstantForces()
+	{
+		bool noStandingForce = GDRigidBody.ConstantForce == Vector3.Zero && GDRigidBody.ConstantTorque == Vector3.Zero;
+
+		if (GDRigidBody.CanSleep != noStandingForce)
+		{
+			GDRigidBody.CanSleep = noStandingForce;
+			if (!noStandingForce)
+			{
+				GDRigidBody.Sleeping = false;
+			}
+		}
+	}
+
 	internal override void ApplyAddForce(Vector3 force, ForceModeEnum mode = ForceModeEnum.Force)
 	{
 		if (mode == ForceModeEnum.Force)
@@ -220,6 +241,7 @@ public partial class RigidBody : Physical
 		else if (mode == ForceModeEnum.Acceleration)
 		{
 			GDRigidBody.AddConstantCentralForce(force);
+			UpdateSleepForConstantForces();
 		}
 		else if (mode == ForceModeEnum.Impulse)
 		{
@@ -244,6 +266,7 @@ public partial class RigidBody : Physical
 		else if (mode == ForceModeEnum.Acceleration)
 		{
 			GDRigidBody.AddConstantTorque(force);
+			UpdateSleepForConstantForces();
 		}
 		else if (mode == ForceModeEnum.Impulse)
 		{
@@ -268,6 +291,7 @@ public partial class RigidBody : Physical
 		else if (mode == ForceModeEnum.Acceleration)
 		{
 			GDRigidBody.AddConstantForce(force, position);
+			UpdateSleepForConstantForces();
 		}
 		else if (mode == ForceModeEnum.Impulse)
 		{
@@ -293,6 +317,7 @@ public partial class RigidBody : Physical
 		else if (mode == ForceModeEnum.Acceleration)
 		{
 			GDRigidBody.AddConstantCentralForce(worldForce);
+			UpdateSleepForConstantForces();
 		}
 		else if (mode == ForceModeEnum.Impulse)
 		{
@@ -319,6 +344,7 @@ public partial class RigidBody : Physical
 		else if (mode == ForceModeEnum.Acceleration)
 		{
 			GDRigidBody.AddConstantTorque(worldTorque);
+			UpdateSleepForConstantForces();
 		}
 		else if (mode == ForceModeEnum.Impulse)
 		{
