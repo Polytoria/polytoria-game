@@ -130,8 +130,8 @@ public static class SharedSettingsRegistry
 					Options =
 					[
 						new() { Value = RenderingMethodOption.Auto, Label = "Auto" },
-						new() { Value = RenderingMethodOption.Standard, Label = "Standard" },
-						new() { Value = RenderingMethodOption.Performance, Label = "Performance" },
+						new() { Value = RenderingMethodOption.Standard, Label = "Standard", IsDisabledPredicate = () => !RenderingDeviceSwitcher.IsRDAvailable() },
+						new() { Value = RenderingMethodOption.Performance, Label = "Performance", IsDisabledPredicate = () => !RenderingDeviceSwitcher.IsRDAvailable() },
 						new() { Value = RenderingMethodOption.Compatibility, Label = "Compatibility" },
 					]
 				}
