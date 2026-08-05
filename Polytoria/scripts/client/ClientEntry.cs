@@ -49,6 +49,9 @@ public sealed partial class ClientEntry : Node3D
 
 	private Timer? _connectTimer;
 	private APIClientAuthResponseMessage? _clientConnectData;
+#if CREATOR
+	private string? _creatorTestToken;
+#endif
 #if ALLOW_SELFHOST
 	public Vector3? DebugSpawnPos { get; private set; }
 #endif
@@ -105,6 +108,15 @@ public sealed partial class ClientEntry : Node3D
 		if (testUserID != null)
 		{
 			TestUserID = int.Parse(testUserID);
+		}
+#endif
+
+#if CREATOR
+		_creatorTestToken = ctoken;
+
+		if (!string.IsNullOrWhiteSpace(_creatorTestToken))
+		{
+			PolyCreatorAPI.SetToken(_creatorTestToken);
 		}
 #endif
 		networkMode ??= "client";
@@ -239,14 +251,6 @@ public sealed partial class ClientEntry : Node3D
 		sw.Restart();
 		Root.Setup();
 		PT.Print($"World setup in {sw.ElapsedMilliseconds}ms");
-
-#if CREATOR
-		// Set creator token for testing (used for loading unapproved assets made by the user)
-		if (ctoken != null)
-		{
-			PolyCreatorAPI.SetToken(ctoken);
-		}
-#endif
 
 #if ALLOW_SELFHOST
 		// Load the test world for server
@@ -528,6 +532,13 @@ public sealed partial class ClientEntry : Node3D
 		string logFilePath = abs.PathJoin(plrID + ".txt");
 
 		List<string> args = ["--windowed", "--log-file", logFilePath, "-network", "client", "-id", plrID.ToString(), "-ltchild", "-port", port.ToString()];
+
+#if CREATOR
+		if (!string.IsNullOrWhiteSpace(_creatorTestToken))
+		{
+			args.AddRange(["-ctoken", _creatorTestToken]);
+		}
+#endif
 
 		if (Globals.IsInGDEditor)
 		{
