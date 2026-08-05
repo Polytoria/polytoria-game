@@ -18,7 +18,7 @@ public static class RenderingDeviceSwitcher
 			RenderingMethodOption.Standard => RenderingDeviceEnum.Forward,
 			RenderingMethodOption.Performance => RenderingDeviceEnum.Mobile,
 			RenderingMethodOption.Compatibility => RenderingDeviceEnum.GLCompatibility,
-			RenderingMethodOption.Auto => RenderingDeviceEnum.Mobile,
+			RenderingMethodOption.Auto => RenderingServer.GetRenderingDevice() != null ? RenderingDeviceEnum.Mobile : RenderingDeviceEnum.GLCompatibility,
 			_ => RenderingDeviceEnum.Forward
 		};
 	}
