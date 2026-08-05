@@ -16,6 +16,20 @@ public class PTColor : IScriptGDObject
 	[ScriptProperty] public float B { get => color.B; set => color.B = value; }
 	[ScriptProperty] public float A { get => color.A; set => color.A = value; }
 
+	// Each constant returns a new instance rather than a shared one. R, G, B and A are
+	// writable, so handing out one shared instance would let a script permanently change
+	// what the constant means for everything else in the session.
+	[ScriptProperty] public static PTColor Black => New(0, 0, 0);
+	[ScriptProperty] public static PTColor Blue => New(0, 0, 1);
+	[ScriptProperty] public static PTColor Clear => New(0, 0, 0, 0);
+	[ScriptProperty] public static PTColor Cyan => New(0, 1, 1);
+	[ScriptProperty] public static PTColor Gray => New(0.5f, 0.5f, 0.5f);
+	[ScriptProperty] public static PTColor Green => New(0, 1, 0);
+	[ScriptProperty] public static PTColor Magenta => New(1, 0, 1);
+	[ScriptProperty] public static PTColor Red => New(1, 0, 0);
+	[ScriptProperty] public static PTColor White => New(1, 1, 1);
+	[ScriptProperty] public static PTColor Yellow => New(1, 1, 0);
+
 	public static PTColor FromGDClass(Color clr)
 	{
 		return new PTColor()
