@@ -1026,6 +1026,20 @@
                   "Children": [],
                   "LinkedModel": null,
                   "IsLinkedChild": false
+                },
+                {
+                  "Name": "Color",
+                  "ClassName": "ServerScript",
+                  "ID": "bff59c86-1c2e-4b2d-b691-d04babd12c01",
+                  "Properties": {
+                    "IsEnabled": true,
+                    "LinkedScript": "9d6e36f7-3f33-4a76-af1f-1d76c108b13a",
+                    "Compatibility": false,
+                    "Tags": []
+                  },
+                  "Children": [],
+                  "LinkedModel": null,
+                  "IsLinkedChild": false
                 }
               ],
               "LinkedModel": null,
