@@ -55,7 +55,12 @@ public sealed partial class CreatorSettingsService : SettingsServiceBase
 			GraphicsPresetManager.SelectPreset(this, GraphicsPreset.Medium);
 
 		RenderingMethodOption renderingMethod = Get<RenderingMethodOption>(SharedSettingKeys.Graphics.RenderingMethod);
-		RenderingDeviceSwitcher.Switch(renderingMethod);
+		if (!RenderingDeviceSwitcher.Switch(renderingMethod))
+		{
+			PT.PrintErr("Renderer '" + renderingMethod + "' unsupported on this device, reverting to 'Auto'.");
+			Set(SharedSettingKeys.Graphics.RenderingMethod, RenderingMethodOption.Auto);
+			QueueSave();
+		}
 	}
 
 	private static void MigrateFromOldFormat()
