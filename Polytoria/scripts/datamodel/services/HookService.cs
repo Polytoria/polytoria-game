@@ -52,7 +52,7 @@ public sealed partial class HookService : Instance
 	public override void PhysicsProcess(double delta)
 	{
 		PhysicsUpdated.Invoke(delta);
-		base.Process(delta);
+		base.PhysicsProcess(delta);
 	}
 
 	private void OnFramePreDraw()

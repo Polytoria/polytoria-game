@@ -164,7 +164,7 @@ public static class CreatorSettingsRegistry
 				Description = "When enabled, the editor will automatically format scripts on save.",
 				ValueKind = SettingValueKind.Bool,
 				ControlKind = SettingControlKind.Toggle,
-				DefaultValue = true,
+				DefaultValue = false,
 				Conditions = [
 					new SettingCondition<PreferredEditorEnum>() {
 						Target = CreatorSettingKeys.CodeEditor.PreferredEditor,
