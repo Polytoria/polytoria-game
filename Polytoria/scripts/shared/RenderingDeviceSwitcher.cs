@@ -18,30 +18,31 @@ public static class RenderingDeviceSwitcher
 			RenderingMethodOption.Standard => RenderingDeviceEnum.Forward,
 			RenderingMethodOption.Performance => RenderingDeviceEnum.Mobile,
 			RenderingMethodOption.Compatibility => RenderingDeviceEnum.GLCompatibility,
-			RenderingMethodOption.Auto => IsRDAvailable() ? RenderingDeviceEnum.Mobile : RenderingDeviceEnum.GLCompatibility,
-			_ => RenderingDeviceEnum.Forward
+			_ => throw new ArgumentException("Auto does not map to rendering device")
 		};
 	}
 
-	public static bool Switch(RenderingMethodOption option)
+	public static void Switch(RenderingMethodOption option)
 	{
-		return Switch(FromRenderingMethodOption(option));
+		if (option is not (RenderingMethodOption.Standard or RenderingMethodOption.Performance or RenderingMethodOption.Compatibility))
+		{
+			return;
+		}
+
+		Switch(FromRenderingMethodOption(option));
 	}
 
-	public static bool Switch(RenderingDeviceEnum to)
+	public static void Switch(RenderingDeviceEnum to)
 	{
 		// Mobile are locked to one renderer only, don't change
-		if (Globals.IsMobileBuild) return true;
-
-		// Device can't run the requested rendering method, don't change
-		if (!IsRDAvailable() && to != RenderingDeviceEnum.GLCompatibility) return false;
+		if (Globals.IsMobileBuild) return;
 
 		string renderingName = GetRenderingName(to);
 		string currentMethod = RenderingServer.GetCurrentRenderingMethod();
 		if (currentMethod == renderingName)
 		{
 			// already using this rendering, nothing to do
-			return true;
+			return;
 		}
 
 		string[] args = OS.GetCmdlineArgs();
@@ -49,7 +50,7 @@ public static class RenderingDeviceSwitcher
 		if (args.Contains("-rmswignore"))
 		{
 			// Already switched, but godot may have refused it. let's just go with that anyways
-			return true;
+			return;
 		}
 
 		string exePath = OS.GetExecutablePath();
@@ -60,8 +61,6 @@ public static class RenderingDeviceSwitcher
 		Globals.Singleton.Quit(force: true);
 		throw new SwitchingRenderingDeviceException();
 	}
-
-	public static bool IsRDAvailable() => RenderingServer.GetRenderingDevice() != null;
 
 	private static string[] GetRestartArgs(string[] args, string renderingName)
 	{
