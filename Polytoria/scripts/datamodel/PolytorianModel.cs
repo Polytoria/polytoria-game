@@ -777,64 +777,28 @@ public sealed partial class PolytorianModel : CharacterModel
 				body.AssetID = (uint)asset.ID;
 				BodyMesh = body;
 			}
-			else if (asset.Type == "hat")
+			else if (asset.Type == "hat" || asset.Type == "tool")
 			{
 				try
 				{
-					Accessory? accessory = await Root.Insert.AccessoryAsync(asset.ID);
-					if (myCount != _loadAppearanceCount) { accessory?.Delete(); throw new OperationCanceledException("The avatar is cancelled"); }
-					if (IsDeleted)
+					if (asset.Type == "hat")
 					{
-						accessory?.Delete();
-						throw new OperationCanceledException("The avatar is deleted");
+						Root.Insert.CreateAccessory(asset.ID, asset.Name, asset.AccessoryType).Parent = this;
 					}
-					accessory?.Parent = this;
+					else if (Parent is Player plr && loadTool)
+					{
+						hasTool = true;
+						Root.Insert.CreateTool(asset.ID, asset.Name).Parent = plr.Inventory;
+					}
+					else if (Parent is NPC npc && loadToolNpc)
+					{
+						hasTool = true;
+						npc.EquipTool(Root.Insert.CreateTool(asset.ID, asset.Name));
+					}
 				}
 				catch (Exception ex)
 				{
 					PT.PrintErr(ex);
-				}
-			}
-			else if (asset.Type == "tool")
-			{
-				if (Parent is Player plr && loadTool)
-				{
-					hasTool = true;
-					try
-					{
-						Tool? tool = await Root.Insert.ToolAsync(asset.ID);
-						if (myCount != _loadAppearanceCount) { tool?.Delete(); throw new OperationCanceledException("The avatar is cancelled"); }
-						if (IsDeleted)
-						{
-							tool?.Delete();
-							throw new OperationCanceledException("The avatar is deleted");
-						}
-						tool?.Parent = plr.Inventory;
-					}
-					catch (Exception ex)
-					{
-						PT.PrintErr(ex);
-					}
-				}
-				else if (Parent is NPC npc && loadToolNpc)
-				{
-					hasTool = true;
-					try
-					{
-						Tool? tool = await Root.Insert.ToolAsync(asset.ID);
-						if (myCount != _loadAppearanceCount) { tool?.Delete(); throw new OperationCanceledException("The avatar is cancelled"); }
-						if (IsDeleted)
-						{
-							tool?.Delete();
-							throw new OperationCanceledException("The avatar is deleted");
-						}
-						if (tool != null)
-							npc.EquipTool(tool);
-					}
-					catch (Exception ex)
-					{
-						PT.PrintErr(ex);
-					}
 				}
 			}
 		}
