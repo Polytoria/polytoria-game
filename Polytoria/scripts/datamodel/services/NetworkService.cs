@@ -304,12 +304,10 @@ public sealed partial class NetworkService : Instance
 		}
 		catch (Exception ex)
 		{
-#if DEBUG
 			if (OS.IsDebugBuild())
 			{
 				PT.PrintErr("Invalid Packet: ", ex);
 			}
-#endif
 		}
 	}
 
@@ -325,12 +323,10 @@ public sealed partial class NetworkService : Instance
 		}
 		catch (Exception ex)
 		{
-#if DEBUG
 			if (OS.IsDebugBuild())
 			{
 				PT.PrintErr("Invalid deferred packet: ", ex, "\nOrigin stack trace: ", netMsg.StackTrace);
 			}
-#endif
 		}
 	}
 
@@ -418,12 +414,10 @@ public sealed partial class NetworkService : Instance
 		}
 		catch (Exception ex)
 		{
-#if DEBUG
 			if (OS.IsDebugBuild())
 			{
 				PT.PrintErr("Invalid Packet: ", ex, "\nOrigin stack trace: ", netMsg.StackTrace);
 			}
-#endif
 		}
 	}
 
