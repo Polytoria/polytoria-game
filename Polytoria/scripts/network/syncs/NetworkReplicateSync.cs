@@ -125,12 +125,7 @@ public sealed partial class NetworkReplicateSync : Instance
 				}
 				else
 				{
-					if (!_pendingReplicates.TryGetValue(parentID, out List<NetReplicateData>? value))
-					{
-						value = [];
-						_pendingReplicates[parentID] = value;
-					}
-
+					List<NetReplicateData> value = GetPendingReplicates(parentID);
 					if (_useNetworkLog) { PT.Print($"[Net] [{NetService.LocalPeerID}] Pending {data.NodePath}"); }
 					value.Add(data);
 				}
@@ -165,16 +160,22 @@ public sealed partial class NetworkReplicateSync : Instance
 		// Check for pending replications
 		if (_pendingReplicates.Count == 0)
 		{
+			SetProcess(false);
 			return;
 		}
 
-		foreach (string? key in _pendingReplicates.Keys)
+		foreach (string key in _pendingReplicates.Keys.ToArray())
 		{
 			NetworkedObject? node = NetService.Root.GetNetObjectFromID(key);
 			if (node != null)
 			{
 				CheckLeftoverReplication(node);
 			}
+		}
+
+		if (_pendingReplicates.Count == 0)
+		{
+			SetProcess(false);
 		}
 	}
 
@@ -197,12 +198,19 @@ public sealed partial class NetworkReplicateSync : Instance
 		}
 	}
 
-	private static NetReplicateData[] PackNetObjs(NetworkedObject[] netObjs)
+	private static NetReplicateData[] PackNetObjs(IReadOnlyList<NetworkedObject> netObjs)
 	{
-		List<NetReplicateData> netObjsData = [];
+		return PackNetObjs(netObjs, 0, netObjs.Count);
+	}
 
-		foreach (NetworkedObject netObj in netObjs)
+	private static NetReplicateData[] PackNetObjs(IReadOnlyList<NetworkedObject> netObjs, int start, int count)
+	{
+		List<NetReplicateData> netObjsData = new(count);
+
+		int end = start + count;
+		for (int i = start; i < end; i++)
 		{
+			NetworkedObject netObj = netObjs[i];
 			// If no sync, continue
 			if (netObj.GetType().IsDefined(typeof(NoSyncAttribute), false)) continue;
 
@@ -231,6 +239,18 @@ public sealed partial class NetworkReplicateSync : Instance
 		}
 	}
 
+	private List<NetReplicateData> GetPendingReplicates(string parentID)
+	{
+		if (!_pendingReplicates.TryGetValue(parentID, out List<NetReplicateData>? value))
+		{
+			value = [];
+			_pendingReplicates[parentID] = value;
+		}
+
+		SetProcess(true);
+		return value;
+	}
+
 	internal void CountInstanceLoaded(NetworkedObject? obj)
 	{
 		if (obj != null)
@@ -250,7 +270,7 @@ public sealed partial class NetworkReplicateSync : Instance
 		}
 	}
 
-	public async void SendNetReplicate(NetworkedObject netObj, bool isSyncOnce = false)
+	public void SendNetReplicate(NetworkedObject netObj, bool isSyncOnce = false)
 	{
 		// if not client, return
 		if (NetService.NetworkMode != NetworkModeEnum.Client) return;
@@ -259,7 +279,7 @@ public sealed partial class NetworkReplicateSync : Instance
 		if (!netObj.Root.IsLoaded) return;
 
 		// If should not replicate, return
-		if (!netObj.ShouldReplicate) return;
+		if (netObj.IsDeleted || !netObj.ShouldReplicate) return;
 
 		if (_useNetworkLog) { PT.Print($"[Net] Send Replicate {netObj.Name}"); }
 
@@ -334,11 +354,7 @@ public sealed partial class NetworkReplicateSync : Instance
 		else
 		{
 			// Parent not ready yet → queue
-			if (!_pendingReplicates.TryGetValue(parentID, out List<NetReplicateData>? value))
-			{
-				value = [];
-				_pendingReplicates[parentID] = value;
-			}
+			List<NetReplicateData> value = GetPendingReplicates(parentID);
 			if (_useNetworkLog) { PT.Print($"[Net] [?] Pending {replicateData.NodePath}"); }
 			value.Add(replicateData);
 		}
@@ -383,5 +399,15 @@ public sealed partial class NetworkReplicateSync : Instance
 				netObj.RecvReplicate(r);
 			}
 		}
+	}
+
+	public override void PreDelete()
+	{
+		SetProcess(false);
+		_pendingReplicates.Clear();
+		_removedRef.Clear();
+		_worldReplicateSet.Clear();
+		InstanceLoadedProgress = null;
+		base.PreDelete();
 	}
 }

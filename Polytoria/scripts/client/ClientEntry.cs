@@ -420,7 +420,7 @@ public sealed partial class ClientEntry : Node3D
 					Root.ServerID = _clientConnectData.Value.ServerID;
 					networkService.IsProd = true;
 
-					_connectTimer = new();
+					_connectTimer = new() { OneShot = true };
 					AddChild(_connectTimer);
 					_connectTimer.Timeout += PollServerStatus;
 					_connectTimer.Start(StatusPollIntervalSec);
@@ -443,8 +443,8 @@ public sealed partial class ClientEntry : Node3D
 
 	private async void PollServerStatus()
 	{
-		if (_connectTimer == null) return;
-		if (!_clientConnectData.HasValue) return;
+		Timer? timer = _connectTimer;
+		if (timer == null || !_clientConnectData.HasValue) return;
 
 		try
 		{
@@ -453,18 +453,24 @@ public sealed partial class ClientEntry : Node3D
 			PT.Print(status.Status);
 			if (status.Status == "started")
 			{
+				timer.Timeout -= PollServerStatus;
+				timer.QueueFree();
+				_connectTimer = null;
 				TargetServerReady?.Invoke();
 				NetworkService.CreateClient(_clientConnectData.Value.IP, _clientConnectData.Value.Port);
-				_connectTimer.QueueFree();
-				return;
 			}
 		}
 		catch (Exception ex)
 		{
 			GD.PushError(ex);
 		}
-
-		_connectTimer.Start(StatusPollIntervalSec);
+		finally
+		{
+			if (_connectTimer == timer && GodotObject.IsInstanceValid(timer))
+			{
+				timer.Start(StatusPollIntervalSec);
+			}
+		}
 	}
 
 	public override void _UnhandledKeyInput(InputEvent @event)

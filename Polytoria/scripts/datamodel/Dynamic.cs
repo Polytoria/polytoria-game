@@ -489,7 +489,7 @@ public partial class Dynamic : Instance
 	{
 		if (Root == null || Root.Network == null) return;
 
-		ForceUpdateTransform();
+		GDNode3D.ForceUpdateTransform();
 		Transform3D current = GetLocalTransform();
 
 		if (_lastSentTransform is Transform3D lastSent)
@@ -502,9 +502,9 @@ public partial class Dynamic : Instance
 
 		_lastSentTransform = current;
 
-		InvokeTransformChanged();
+		UpdateCurrentTransformCache(current);
 		if (!Root.IsLoaded) return;
-		SendNetTransformUnreliable();
+		SendNetTransformUnreliable(current);
 	}
 
 	protected void UpdateNetTransformReliable()
@@ -520,26 +520,34 @@ public partial class Dynamic : Instance
 
 		_lastSentTransform = current;
 
-		InvokeTransformChanged();
+		UpdateCurrentTransformCache(current);
 		if (!Root.IsLoaded) return;
-		SendNetTransformReliable();
+		SendNetTransformReliable(current);
 	}
 
 	protected void SendNetTransformUnreliable(bool lerp = true)
 	{
 		if (Root == null || Root?.Network == null) { return; }
 
-		UpdateCurrentTransformCache();
+		ForceUpdateTransform();
+		Transform3D current = GetLocalTransform();
+		UpdateCurrentTransformCache(current);
+		SendNetTransformUnreliable(current, lerp);
+	}
+
+	private void SendNetTransformUnreliable(Transform3D current, bool lerp = true)
+	{
+		TransformPayloadDto payload = TransformPayloadDto.FromGDTransform(current);
 
 		if (!Root.Network.IsServer)
 		{
 			// Send transform to server
-			Root.Network.TransformSync.SendTransformToServer(this, lerp);
+			Root.Network.TransformSync.SendTransformToServer(this, payload, lerp);
 		}
 		else
 		{
 			// Server broadcasts to all clients
-			Root.Network.TransformSync.BroadcastTransformFromServer(this, lerp, reliable: false);
+			Root.Network.TransformSync.BroadcastTransformFromServer(this, payload, lerp, reliable: false);
 		}
 	}
 
@@ -548,12 +556,20 @@ public partial class Dynamic : Instance
 		if (Root == null || Root?.Network == null) return;
 		_lerpUnreliable = false;
 
-		UpdateCurrentTransformCache();
+		ForceUpdateTransform();
+		Transform3D current = GetLocalTransform();
+		UpdateCurrentTransformCache(current);
+		SendNetTransformReliable(current, lerp);
+	}
+
+	private void SendNetTransformReliable(Transform3D current, bool lerp = false)
+	{
 		ReliableTransformChanged?.Invoke();
 
 		if (Root.Network.IsServer)
 		{
-			Root.Network.TransformSync.BroadcastTransformFromServer(this, lerp, reliable: true);
+			TransformPayloadDto payload = TransformPayloadDto.FromGDTransform(current);
+			Root.Network.TransformSync.BroadcastTransformFromServer(this, payload, lerp, reliable: true);
 		}
 
 		// Cannot broadcast as reliable in client, values are ignored in client
@@ -566,7 +582,11 @@ public partial class Dynamic : Instance
 	{
 		if (!GDNode3D.IsInsideTree()) return;
 		ForceUpdateTransform();
-		Transform3D newt = GetLocalTransform();
+		UpdateCurrentTransformCache(GetLocalTransform());
+	}
+
+	private void UpdateCurrentTransformCache(Transform3D newt)
+	{
 		if (newt != _currentTransform)
 		{
 			if (_hasSyncedOnce)
@@ -889,7 +909,10 @@ public partial class Dynamic : Instance
 		var oldN = NodeSize;
 		NodeSize = scale * GetParentScale();
 		GDNode3D.Transform = new(to.Basis.Orthonormalized(), to.Origin.SanitizeNaN());
-		PropagateParentSizeChanged(oldN);
+		if (!oldN.IsEqualApprox(NodeSize))
+		{
+			PropagateParentSizeChanged(oldN);
+		}
 	}
 
 	private Vector3 GetParentScale()
