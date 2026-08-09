@@ -801,19 +801,17 @@ public partial class Physical : Dynamic
 		scaleNode.Position = config is { HasOffset: true } ? config.Offset : Vector3.Zero;
 	}
 
-	private Node3D CreateRemoteLinkNode(CollisionShape3D origin, Node target)
+	private RemoteTransform3D CreateRemoteLinkNode(CollisionShape3D origin, Node target)
 	{
-		Node3D scaleNode = new();
 		RemoteTransform3D rt = new()
 		{
 			UseGlobalCoordinates = true
 		};
-		scaleNode.AddChild(rt);
 
-		AttachRemoteLinkNode(origin, scaleNode);
+		AttachRemoteLinkNode(origin, rt);
 
 		rt.RemotePath = rt.GetPathTo(target);
-		return scaleNode;
+		return rt;
 	}
 
 	private void EnsureRemoteTransform(CollisionShape3D origin)
@@ -825,8 +823,8 @@ public partial class Physical : Dynamic
 			return;
 		}
 
-		Node3D scaleNode = CreateRemoteLinkNode(origin, origin);
-		SetTrackedNodes(origin, static state => state.CollisionSyncNodes, [scaleNode]);
+		RemoteTransform3D remoteTransform = CreateRemoteLinkNode(origin, origin);
+		SetTrackedNodes(origin, static state => state.CollisionSyncNodes, [remoteTransform]);
 	}
 
 	private void CreateAreaShapeInternal(CollisionShape3D origin)
@@ -838,12 +836,6 @@ public partial class Physical : Dynamic
 
 		CollisionShape3D CreateLinkedShape(Node parent)
 		{
-			// Create Node3D for scaling
-			Node3D scaleNode = new()
-			{
-				Scale = new(1.01f, 1.01f, 1.01f)
-			};
-
 			CollisionShape3D newShape = new()
 			{
 				Shape = sharedShape,
@@ -855,12 +847,12 @@ public partial class Physical : Dynamic
 
 			RemoteTransform3D rt = new()
 			{
-				UseGlobalCoordinates = true
+				UseGlobalCoordinates = true,
+				Scale = new(1.01f, 1.01f, 1.01f)
 			};
-			scaleNode.AddChild(rt);
-			createdNodes.Add(scaleNode);
+			createdNodes.Add(rt);
 
-			AttachRemoteLinkNode(origin, scaleNode);
+			AttachRemoteLinkNode(origin, rt);
 
 			rt.RemotePath = rt.GetPathTo(newShape);
 			return newShape;

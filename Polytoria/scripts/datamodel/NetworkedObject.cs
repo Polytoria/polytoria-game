@@ -48,13 +48,15 @@ public partial class NetworkedObject : IScriptObject
 
 	private static readonly Dictionary<Type, Dictionary<string, int>> _typeRpcIdMap = [];
 	private static readonly Dictionary<Type, Dictionary<int, MethodInfo>> _typeRpcMethodMap = [];
+	private static readonly Dictionary<Type, Dictionary<int, NetRpcAttribute>> _typeRpcAttributeMap = [];
 
-	private readonly Dictionary<string, double> _lastUnreliableSyncTime = [];
+	private Dictionary<string, double>? _lastUnreliableSyncTime;
 	private NetworkedObject? _networkParent;
 
 	internal bool InvokedEntry = false;
-	internal HashSet<NetworkedObject> NonInstanceChildren = [];
-	internal readonly Dictionary<string, long> PropertySequence = [];
+	private HashSet<NetworkedObject>? _nonInstanceChildren;
+	private Dictionary<string, long>? _propertySequence;
+	internal Dictionary<string, long> PropertySequence => _propertySequence ??= [];
 
 	public NetworkedObject? NetworkParent
 	{
@@ -69,7 +71,7 @@ public partial class NetworkedObject : IScriptObject
 			}
 			if (_networkParent != null && this is not Instance)
 			{
-				_networkParent.NonInstanceChildren.Remove(this);
+				_networkParent._nonInstanceChildren?.Remove(this);
 			}
 			if (_networkParent is Instance preI && this is Instance selfpreI)
 			{
@@ -85,7 +87,7 @@ public partial class NetworkedObject : IScriptObject
 
 			if (_networkParent != null && this is not Instance)
 			{
-				_networkParent.NonInstanceChildren.Add(this);
+				(_networkParent._nonInstanceChildren ??= []).Add(this);
 			}
 
 			if (_networkParent != null)
@@ -262,7 +264,7 @@ public partial class NetworkedObject : IScriptObject
 		}
 	}
 
-	private readonly Dictionary<string, object?> _lastSyncedValues = [];
+	private Dictionary<string, object?>? _lastSyncedValues;
 	protected bool isInitialized = false;
 
 	public bool IsDeleted
@@ -300,7 +302,8 @@ public partial class NetworkedObject : IScriptObject
 
 	internal int AppliedSequence = 0;
 
-	internal readonly HashSet<string> PendingProps = [];
+	private HashSet<string>? _pendingProps;
+	internal HashSet<string> PendingProps => _pendingProps ??= [];
 
 	internal bool IsPropReady { get; set; } = false;
 
@@ -337,7 +340,8 @@ public partial class NetworkedObject : IScriptObject
 	internal int NetPropAuthority { get; set; } = 1; // Network authority for changing properties
 
 
-	internal Dictionary<string, NetworkedObject> UniqueNames = [];
+	private Dictionary<string, NetworkedObject>? _uniqueNames;
+	internal Dictionary<string, NetworkedObject> UniqueNames => _uniqueNames ??= [];
 
 	[ScriptProperty] public PTSignal TreeEntered { get; private set; } = new();
 	[ScriptProperty] public PTSignal TreeExited { get; private set; } = new();
@@ -432,6 +436,7 @@ public partial class NetworkedObject : IScriptObject
 
 		Dictionary<string, int> nameToId = [];
 		Dictionary<int, MethodInfo> idToMethod = [];
+		Dictionary<int, NetRpcAttribute> idToAttribute = [];
 		int id = 0;
 
 		Type? currentType = type;
@@ -442,11 +447,12 @@ public partial class NetworkedObject : IScriptObject
 				BindingFlags.Public | BindingFlags.NonPublic |
 				BindingFlags.Instance | BindingFlags.DeclaredOnly))
 			{
-				if (method.GetCustomAttribute<NetRpcAttribute>() != null &&
-					!nameToId.ContainsKey(method.Name))
+				NetRpcAttribute? attribute = method.GetCustomAttribute<NetRpcAttribute>();
+				if (attribute != null && !nameToId.ContainsKey(method.Name))
 				{
 					nameToId[method.Name] = id;
 					idToMethod[id] = method;
+					idToAttribute[id] = attribute;
 					id++;
 				}
 			}
@@ -456,6 +462,7 @@ public partial class NetworkedObject : IScriptObject
 
 		_typeRpcIdMap[type] = nameToId;
 		_typeRpcMethodMap[type] = idToMethod;
+		_typeRpcAttributeMap[type] = idToAttribute;
 	}
 
 	private void RegisterName()
@@ -554,7 +561,7 @@ public partial class NetworkedObject : IScriptObject
 
 	public NetworkedObject? FindNonInstanceChild(string name)
 	{
-		foreach (NetworkedObject child in NonInstanceChildren)
+		foreach (NetworkedObject child in _nonInstanceChildren ?? [])
 		{
 			if (child.Name == name)
 			{
@@ -621,8 +628,8 @@ public partial class NetworkedObject : IScriptObject
 		SetProcess(false);
 		SetPhysicsProcess(false);
 
-		NonInstanceChildren.Clear();
-		PendingProps.Clear();
+		_nonInstanceChildren?.Clear();
+		_pendingProps?.Clear();
 
 		try
 		{
@@ -783,7 +790,7 @@ public partial class NetworkedObject : IScriptObject
 			}
 		}
 
-		foreach (NetworkedObject item in NonInstanceChildren)
+		foreach (NetworkedObject item in _nonInstanceChildren ?? [])
 		{
 			item.InvokeEnterTree();
 		}
@@ -811,7 +818,7 @@ public partial class NetworkedObject : IScriptObject
 				}
 			}
 
-			foreach (NetworkedObject item in NonInstanceChildren)
+			foreach (NetworkedObject item in _nonInstanceChildren ?? [])
 			{
 				item.InvokeExitTree();
 			}
@@ -1073,7 +1080,8 @@ public partial class NetworkedObject : IScriptObject
 
 	protected void OnPropertyChanged([CallerMemberName] string propertyName = "", bool syncToNet = true)
 	{
-		PropertyChanged.Invoke(propertyName);
+		if (PropertyChanged.HasConnections)
+			PropertyChanged.Invoke(propertyName);
 		if (syncToNet)
 			SyncPropToClients(propertyName);
 	}
@@ -1121,14 +1129,14 @@ public partial class NetworkedObject : IScriptObject
 			object? current = prop.GetValue(this);
 
 			// Check if last sync value is the same, or else skip if unreliable is on
-			if (!broadcastUnreliable && _lastSyncedValues.TryGetValue(propertyName, out object? lastValue))
+			if (!broadcastUnreliable && _lastSyncedValues?.TryGetValue(propertyName, out object? lastValue) == true)
 			{
 				// Check if last value is null, or is the same as one before
 				if ((lastValue == null && current == null) || (lastValue != null && lastValue.Equals(current))) { return; }
 			}
 
 			// Update cache
-			_lastSyncedValues[propertyName] = current;
+			(_lastSyncedValues ??= [])[propertyName] = current;
 
 			if (shouldBroadcast)
 			{
@@ -1137,7 +1145,7 @@ public partial class NetworkedObject : IScriptObject
 				{
 					double currentTime = Time.GetTicksMsec() / 1000.0;
 
-					if (_lastUnreliableSyncTime.TryGetValue(propertyName, out double lastSyncTime))
+					if (_lastUnreliableSyncTime?.TryGetValue(propertyName, out double lastSyncTime) == true)
 					{
 						double elapsed = currentTime - lastSyncTime;
 
@@ -1148,7 +1156,7 @@ public partial class NetworkedObject : IScriptObject
 						}
 					}
 
-					_lastUnreliableSyncTime[propertyName] = currentTime;
+					(_lastUnreliableSyncTime ??= [])[propertyName] = currentTime;
 				}
 
 				if (Root.Network.IsServer)
@@ -1315,7 +1323,7 @@ public partial class NetworkedObject : IScriptObject
 	{
 		List<NetworkedObject> instances = [];
 
-		instances.AddRange(NonInstanceChildren);
+		if (_nonInstanceChildren != null) instances.AddRange(_nonInstanceChildren);
 
 		if (this is Instance i)
 		{
@@ -1336,7 +1344,7 @@ public partial class NetworkedObject : IScriptObject
 
 		if (!ShouldReplicateChild) return [];
 
-		instances.AddRange(NonInstanceChildren);
+		if (_nonInstanceChildren != null) instances.AddRange(_nonInstanceChildren);
 
 		if (this is Instance i)
 		{
@@ -1359,7 +1367,7 @@ public partial class NetworkedObject : IScriptObject
 		{
 			instances.AddRange(i.Children);
 		}
-		instances.AddRange(NonInstanceChildren);
+		if (_nonInstanceChildren != null) instances.AddRange(_nonInstanceChildren);
 
 		return [.. instances];
 	}
@@ -1507,7 +1515,7 @@ public partial class NetworkedObject : IScriptObject
 		_isReplicating = false;
 		try
 		{
-			_lastSyncedValues[prop.Name] = value;
+			(_lastSyncedValues ??= [])[prop.Name] = value;
 			prop.SetValue(this, value);
 		}
 		catch (TargetInvocationException ex) when (ex.InnerException is InvalidOperationException)
@@ -1679,36 +1687,21 @@ public partial class NetworkedObject : IScriptObject
 
 	public void Rpc(string methodName, params object?[]? args)
 	{
-		InternalNetMsg netmsg = new()
-		{
-			BroadcastAll = true,
-			Target = ProcessRpcTarget(),
-			TargetMethod = GetRpcMethodId(methodName)
-		};
-
-		if (args != null)
-		{
-			foreach (object? arg in args)
-			{
-				netmsg.AddValue(arg);
-			}
-		}
-
-		MethodInfo? md = GetRpcMethod(methodName);
-		NetRpcAttribute? rpcA = md.GetCustomAttribute<NetRpcAttribute>() ?? throw new NetworkException($"Tried to call Rpc function which is not marked as Rpc ({md.Name})");
+		int methodId = GetRpcMethodId(methodName);
+		NetRpcAttribute rpcA = GetRpcAttribute(methodId);
 
 		if (Root == null || Root.Network == null || Root.Network.NetInstance == null)
 		{
-			md.Invoke(this, args);
+			GetRpcMethod(methodId).Invoke(this, args);
 			return;
 		}
 
 		if (rpcA.CallLocal)
 		{
-			md.Invoke(this, args);
+			GetRpcMethod(methodId).Invoke(this, args);
 		}
 
-		byte[] msg = netmsg.Serialize();
+		byte[] msg = BuildRpcPacket(methodId, true, args);
 
 		if (Globals.UseLogRPC)
 		{
@@ -1734,37 +1727,23 @@ public partial class NetworkedObject : IScriptObject
 
 	public void RpcId(int id, string methodName, params object?[]? args)
 	{
-		InternalNetMsg netmsg = new()
-		{
-			BroadcastAll = false,
-			Target = ProcessRpcTarget(),
-			TargetMethod = GetRpcMethodId(methodName)
-		};
-		if (args != null)
-		{
-			foreach (object? arg in args)
-			{
-				netmsg.AddValue(arg);
-			}
-		}
-
-		MethodInfo? md = GetRpcMethod(methodName);
-		NetRpcAttribute? rpcA = md.GetCustomAttribute<NetRpcAttribute>() ?? throw new NetworkException($"Tried to call Rpc function which is not marked as Rpc ({md.Name})");
+		int methodId = GetRpcMethodId(methodName);
+		NetRpcAttribute rpcA = GetRpcAttribute(methodId);
 
 		if (Root == null || Root.Network == null || Root.Network.NetInstance == null)
 		{
-			md.Invoke(this, args);
+			GetRpcMethod(methodId).Invoke(this, args);
 			return;
 		}
 
 		if (rpcA.CallLocal && id == Root.Network.LocalPeerID)
 		{
-			md.Invoke(this, args);
+			GetRpcMethod(methodId).Invoke(this, args);
 		}
 
 		if (id == 1 && Root.Network.IsServer) return;
 
-		byte[] msg = netmsg.Serialize();
+		byte[] msg = BuildRpcPacket(methodId, false, args);
 
 		if (Globals.UseLogRPC)
 		{
@@ -1805,6 +1784,17 @@ public partial class NetworkedObject : IScriptObject
 			throw new Exception($"No RPC method found with id '{methodId}'");
 
 		return method;
+	}
+
+	internal NetRpcAttribute GetRpcAttribute(int methodId)
+	{
+		if (!_typeRpcAttributeMap.TryGetValue(GetType(), out var idToAttribute))
+			throw new Exception($"RPC methods not initialized for type {GetType().Name}");
+
+		if (!idToAttribute.TryGetValue(methodId, out var attribute))
+			throw new Exception($"No RPC attribute found for method id '{methodId}'");
+
+		return attribute;
 	}
 
 	internal int GetRpcMethodId(string methodName)
@@ -1954,18 +1944,23 @@ public partial class NetworkedObject : IScriptObject
 
 	protected byte[] BuildRpcPacket(string methodName, params object?[] args)
 	{
-		byte[][] msg = new byte[args.Length][];
+		return BuildRpcPacket(GetRpcMethodId(methodName), false, args);
+	}
 
-		for (int i = 0; i < args.Length; i++)
+	private byte[] BuildRpcPacket(int methodId, bool broadcastAll, object?[]? args)
+	{
+		byte[][] msg = args == null ? [] : new byte[args.Length][];
+
+		for (int i = 0; i < msg.Length; i++)
 		{
-			msg[i] = NetworkPropSync.SerializePropValue(args[i]);
+			msg[i] = NetworkPropSync.SerializePropValue(args![i]);
 		}
 
 		InternalNetMsg.InternalNetMsgPayload payload = new()
 		{
-			BroadcastAll = false,
+			BroadcastAll = broadcastAll,
 			Target = ProcessRpcTarget(),
-			TargetMethod = GetRpcMethodId(methodName),
+			TargetMethod = methodId,
 			ByteArrays = msg,
 			OriginSender = 0,
 		};

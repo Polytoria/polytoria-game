@@ -29,7 +29,7 @@ warnings/check_invalid_track_paths=false
 [application]
 
 config/name="Polytoria"
-config/version="2.0.19"
+config/version="2.0.21"
 run/main_scene="uid://c2tql65t73ak5"
 config/use_custom_user_dir=true
 config/custom_user_dir_name="PolytoriaClient"
@@ -290,6 +290,7 @@ screenshot={
 save={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":true,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":83,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":true,"pressed":false,"keycode":0,"physical_keycode":83,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
 ]
 }
 save_magic={
@@ -449,6 +450,7 @@ jolt_physics_3d/limits/max_bodies=131070
 occlusion_culling/bvh_build_quality=0
 textures/canvas_textures/default_texture_filter=2
 rendering_device/driver.windows="d3d12"
+renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true
 lights_and_shadows/directional_shadow/size.mobile=512
 reflections/sky_reflections/ggx_samples.mobile=2
