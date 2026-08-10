@@ -33,33 +33,41 @@ public class LuaMetatable : LuaObject
 	public bool HasCustomNewIndex = false;
 	public bool HasToString = false;
 
-	private async void AsyncExec(object? targetObject, LuaState state, MethodInfo targetMethod, object?[] args, TaskCompletionSource<int> tcs)
+	private async void AsyncExec(Script script, object? targetObject, LuaState state, MethodInfo targetMethod, object?[] args, TaskCompletionSource<int> tcs)
 	{
-		object invokeResult = targetMethod.Invoke(targetObject, args)!;
+		object invokeResult;
+		try
+		{
+			invokeResult = targetMethod.Invoke(targetObject, args)!;
+		}
+		catch (Exception ex)
+		{
+			tcs.TrySetException(ex.InnerException ?? ex);
+			return;
+		}
 
 		if (invokeResult is Task task)
 		{
-			if (!task.IsCompleted)
+			try
 			{
-				try
-				{
-					await task;
-				}
-				catch
-				{
-					tcs.SetException(task.Exception?.InnerException ?? task.Exception ?? new Exception("Something went wrong"));
-				}
+				await task;
 			}
-			if (task.IsFaulted)
+			catch (Exception ex)
 			{
-				tcs.SetException(task.Exception.InnerException ?? task.Exception);
+				tcs.TrySetException(ex);
+				return;
+			}
+
+			if (!script.ShouldContinue)
+			{
+				tcs.TrySetResult(0);
 				return;
 			}
 			Type returnType = targetMethod.ReturnType;
 
 			if (returnType == typeof(Task))
 			{
-				tcs.SetResult(0);
+				tcs.TrySetResult(0);
 				return;
 			}
 
@@ -118,24 +126,24 @@ public class LuaMetatable : LuaObject
 						{
 							LangProvider.PushValueToLua(state, r);
 						}
-						tcs.SetResult(objectArrayTask.Result.Length);
+						tcs.TrySetResult(objectArrayTask.Result.Length);
 						return;
 					}
 					else
 					{
 						throw new NotSupportedException($"INTERNAL BUG: Task type {task.GetType()} is not supported in AOT");
 					}
-					tcs.SetResult(1);
+					tcs.TrySetResult(1);
 				}
 				catch (Exception ex)
 				{
-					tcs.SetException(ex.InnerException ?? ex);
+					tcs.TrySetException(ex.InnerException ?? ex);
 				}
 			}
 		}
 		else
 		{
-			tcs.SetResult(0);
+			tcs.TrySetResult(0);
 		}
 	}
 
@@ -263,12 +271,12 @@ public class LuaMetatable : LuaObject
 		}
 
 		PropertyInfo? prop = ScriptService.GetScriptPropertyOfName(TargetType, key, script.Compatibility);
-		MethodInfo? method = ScriptService.ResolveMethod(script.Compatibility, key, TargetType);
+		ScriptService.MethodsCacheData methodInfos = ScriptService.ResolveMethods(TargetType, key, script.Compatibility);
+		MethodInfo? method = methodInfos.Methods.FirstOrDefault();
 
 		if (method != null)
 		{
 			HandlesLuaStateAttribute? handleLuaState = method.GetCustomAttribute<HandlesLuaStateAttribute>();
-
 			if (handleLuaState != null)
 			{
 				return (int)method.Invoke(targetObject, [state])!;
@@ -278,19 +286,13 @@ public class LuaMetatable : LuaObject
 		if (prop != null)
 		{
 			ScriptPropertyAttribute? propAttribute = prop.GetCustomAttribute<ScriptPropertyAttribute>();
-			if (propAttribute != null)
+			if (propAttribute != null && propAttribute.Permissions != ScriptPermissionFlags.None &&
+				!script.PermissionFlags.HasFlag(propAttribute.Permissions))
 			{
-				if (propAttribute.Permissions != ScriptPermissionFlags.None)
-				{
-					if (!script.PermissionFlags.HasFlag(propAttribute.Permissions))
-					{
-						throw new UnauthorizedAccessException("script does not have permission to access the specified property (" + key + ")");
-					}
-				}
+				throw new UnauthorizedAccessException("script does not have permission to access the specified property (" + key + ")");
 			}
 
 			Attributes.ObsoleteAttribute? obsoleteAttribute = prop.GetCustomAttribute<Attributes.ObsoleteAttribute>();
-
 			if (obsoleteAttribute != null)
 			{
 				PT.PrintWarn($"{prop.Name} is obsolete. {obsoleteAttribute.Message}");
@@ -308,10 +310,6 @@ public class LuaMetatable : LuaObject
 				LuaState state = LuaState.FromIntPtr(L);
 
 				int top = state.GetTop();
-				int argsCount = top;
-
-				ScriptService.MethodsCacheData methodInfos = ScriptService.ResolveMethods(TargetType, key, script.Compatibility);
-
 				if (methodInfos.Methods.Length == 0)
 				{
 					throw new InvalidOperationException("target method doesn't exist (" + key + ")");
@@ -323,15 +321,9 @@ public class LuaMetatable : LuaObject
 				{
 					object? arg = LangProvider.LuaToObject(state, i + 1, methodInfos.ConvertParamsToGD, methodInfos.GetParamsAsFunction);
 
-					// ignore self
-					if (arg == targetObject && i == 0)
-					{
-						argsCount -= 1;
-					}
-					else
-					{
+					// Ignore self when the method was called with colon syntaxc
+					if (arg != targetObject || i != 0)
 						argList.Add(arg);
-					}
 				}
 
 				return ProcessMethod(state, methodInfos, targetObject, key, argList);
@@ -448,8 +440,9 @@ public class LuaMetatable : LuaObject
 		Script script = LuauProvider.GetScriptInstance(state);
 
 		string? key = state.GetNameCallAtom();
+		bool isFallback = string.IsNullOrEmpty(key);
 
-		if (string.IsNullOrEmpty(key))
+		if (isFallback)
 		{
 			// Fallback for edge cases where __namecall is invoked manually
 			key = state.ToString(2);
@@ -474,6 +467,8 @@ public class LuaMetatable : LuaObject
 
 		// Process arguments
 		int top = state.GetTop();
+		int firstArgument = isFallback ? 3 : 2;
+
 		List<object?> argList = [];
 
 		// Push self if function is semi-static.
@@ -482,9 +477,9 @@ public class LuaMetatable : LuaObject
 			argList.Add(LangProvider.LuaToObject(state, 1, methodInfos.ConvertParamsToGD, methodInfos.GetParamsAsFunction));
 		}
 
-		for (int i = 1; i < top; i++)
+		for (int i = firstArgument; i <= top; i++)
 		{
-			argList.Add(LangProvider.LuaToObject(state, i + 1, methodInfos.ConvertParamsToGD, methodInfos.GetParamsAsFunction));
+			argList.Add(LangProvider.LuaToObject(state, i, methodInfos.ConvertParamsToGD, methodInfos.GetParamsAsFunction));
 		}
 
 		return ProcessMethod(state, methodInfos, targetObject, key, argList);
@@ -816,9 +811,7 @@ public class LuaMetatable : LuaObject
 		object?[] args = [.. argList];
 		int argsCount = args.Length;
 
-		MethodInfo? targetMethod = null;
-
-		targetMethod = ResolveOverload(methodInfos.Methods, args, out bool hasParams);
+		MethodInfo? targetMethod = ResolveOverload(methodInfos.Methods, args, out bool hasParams);
 
 		if (targetMethod == null)
 		{
@@ -841,20 +834,13 @@ public class LuaMetatable : LuaObject
 		}
 
 		ScriptMethodAttribute? methodAttribute = targetMethod.GetCustomAttribute<ScriptMethodAttribute>();
-
-		if (methodAttribute != null)
+		if (methodAttribute != null && methodAttribute.Permissions != ScriptPermissionFlags.None &&
+			!script.PermissionFlags.HasFlag(methodAttribute.Permissions))
 		{
-			if (methodAttribute.Permissions != ScriptPermissionFlags.None)
-			{
-				if (!script.PermissionFlags.HasFlag(methodAttribute.Permissions))
-				{
-					throw new UnauthorizedAccessException("script does not have permission to call the specified method (" + targetMethod.Name + ")");
-				}
-			}
+			throw new UnauthorizedAccessException("script does not have permission to call the specified method (" + targetMethod.Name + ")");
 		}
 
 		Attributes.ObsoleteAttribute? obsoleteAttribute = targetMethod.GetCustomAttribute<Attributes.ObsoleteAttribute>();
-
 		if (obsoleteAttribute != null)
 		{
 			PT.PrintWarn($"{targetMethod.Name} is obsolete. {obsoleteAttribute.Message}");
@@ -864,7 +850,7 @@ public class LuaMetatable : LuaObject
 		ParameterInfo[] parametersFinal = targetMethod.GetParameters();
 		int callerParamIndex = Array.FindIndex(parametersFinal, p => p.IsDefined(typeof(ScriptingCallerAttribute)));
 
-		List<object?> finalArgs = [];
+		object?[] invokeArgs = new object?[parametersFinal.Length];
 
 		if (hasParams)
 		{
@@ -874,18 +860,18 @@ public class LuaMetatable : LuaObject
 
 			// Convert fixed args
 			for (int i = 0; i < fixedParamCount; i++)
-				finalArgs.Add(ScriptService.ConvertToPropertyType(args[i], parametersFinal[i].ParameterType));
+				invokeArgs[i] = ScriptService.ConvertToPropertyType(args[i], parametersFinal[i].ParameterType);
 
 			// Convert params args
 			Array paramsArray = new object[paramsCount];
 			for (int i = 0; i < paramsCount; i++)
 				paramsArray.SetValue(ScriptService.ConvertToPropertyType(args[fixedParamCount + i], paramsElementType), i);
 
-			finalArgs.Add(paramsArray);
+			invokeArgs[^1] = paramsArray;
 		}
 		else
 		{
-			// No params, just convert normally
+			// No params, just convert arguments
 			int argIndex = 0;
 			for (int i = 0; i < parametersFinal.Length; i++)
 			{
@@ -894,34 +880,25 @@ public class LuaMetatable : LuaObject
 
 				if (argIndex < argsCount)
 				{
-					finalArgs.Add(ScriptService.ConvertToPropertyType(args[argIndex], parametersFinal[i].ParameterType));
+					invokeArgs[i] = ScriptService.ConvertToPropertyType(args[argIndex], parametersFinal[i].ParameterType);
 					argIndex++;
 				}
-			}
-
-			// Fill remaining with default values
-			for (int i = argsCount; i < parametersFinal.Length; i++)
-			{
-				if (i == callerParamIndex)
-					continue; // Skip the caller parameter
-
-				int paramIndex = i + (callerParamIndex >= 0 && i >= callerParamIndex ? 1 : 0);
-				if (paramIndex < parametersFinal.Length)
-					finalArgs.Add(parametersFinal[paramIndex].HasDefaultValue ? parametersFinal[paramIndex].DefaultValue : null);
+				else
+				{
+					invokeArgs[i] = parametersFinal[i].HasDefaultValue ? parametersFinal[i].DefaultValue : null;
+				}
 			}
 		}
 
 		// Apply caller if ScriptingCallerAttribute is found
 		if (callerParamIndex >= 0)
-			finalArgs.Insert(callerParamIndex, script);
-
-		object?[] invokeArgs = [.. finalArgs];
+			invokeArgs[callerParamIndex] = script;
 
 		if (ScriptService.IsAsyncMethod(targetMethod))
 		{
 			TaskCompletionSource<int> tcs = new();
 			LuauProvider.SetYieldTask(state, tcs.Task);
-			AsyncExec(targetObject, state, targetMethod, invokeArgs, tcs);
+			AsyncExec(script, targetObject, state, targetMethod, invokeArgs, tcs);
 			return state.Yield(1);
 		}
 		else

@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using Mesh = Godot.Mesh;
 using System.Runtime.CompilerServices;
@@ -66,7 +67,9 @@ public sealed partial class Globals : Node
 	private static readonly Dictionary<string, Material> _skyboxesCache = [];
 
 	private static readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materialCache = [];
-
+	private readonly PriorityQueue<ScheduledWait, (ulong Target, ulong Order)> _waitQueue = new();
+	private ulong _nextWaitOrder;
+	private bool _processingWaits;
 	private static bool _isExiting = false;
 
 	public static bool IsExiting => _isExiting;
@@ -492,13 +495,62 @@ public sealed partial class Globals : Node
 		base._Notification(what);
 	}
 
-	public async Task WaitAsync(float time)
+	public Task WaitAsync(float time, CancellationToken cancellationToken = default)
 	{
-		var start = Time.GetTicksUsec();
-		var target = start + (ulong)(time * 1_000_000.0);
+		ulong start = Time.GetTicksUsec();
+		ulong target = start + (ulong)(time * 1_000_000.0);
+		if (target <= start)
+			return cancellationToken.IsCancellationRequested ? Task.FromCanceled(cancellationToken) : Task.CompletedTask;
 
-		while (Time.GetTicksUsec() < target)
-			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		ScheduledWait waiter = new();
+		if (cancellationToken.CanBeCanceled)
+		{
+			waiter.CancellationRegistration = cancellationToken.Register(
+				static state => ((ScheduledWait)state!).TrySetCanceled(), waiter);
+		}
+		_waitQueue.Enqueue(waiter, (target, _nextWaitOrder++));
+		if (!_processingWaits)
+			_ = ProcessWaits();
+
+		return waiter.Task;
+	}
+
+	private async Task ProcessWaits()
+	{
+		_processingWaits = true;
+		try
+		{
+			while (_waitQueue.Count > 0)
+			{
+				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+
+				while (_waitQueue.TryPeek(out ScheduledWait? waiter, out var priority) &&
+					(waiter.Task.IsCompleted || priority.Target <= Time.GetTicksUsec()))
+				{
+					_waitQueue.Dequeue();
+					waiter.CancellationRegistration.Dispose();
+					waiter.TrySetResult(true);
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			while (_waitQueue.TryDequeue(out ScheduledWait? waiter, out _))
+			{
+				waiter.CancellationRegistration.Dispose();
+				waiter.TrySetException(ex);
+			}
+			PT.PrintErr("Failed to process scheduled waits: ", ex);
+		}
+		finally
+		{
+			_processingWaits = false;
+		}
+	}
+
+	private sealed class ScheduledWait : TaskCompletionSource<bool>
+	{
+		public CancellationTokenRegistration CancellationRegistration;
 	}
 
 	public async Task WaitFrame()

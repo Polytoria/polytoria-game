@@ -34,6 +34,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 {
 	private const DynamicallyAccessedMemberTypes DynamicallyAccessedTypes = DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicMethods;
 	private const int GCStepThreshold = 100;
+	private const int GCStepSize = 100;
 
 	private static readonly Dictionary<Type, MethodInfo?> _gdToProxy = [];
 	private static readonly Dictionary<IntPtr, PTCallbackData> _ptrToCallback = [];
@@ -46,6 +47,9 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	private static long _nextObjectID;
 
 	private static int _allocsSinceLastGC = 0;
+	private int _releasedThreadsSinceLastGC;
+	private readonly HashSet<Script> _activeScripts = [];
+	private bool _disposed;
 
 	internal LuaState GlobalLuaState = null!;
 
@@ -150,7 +154,17 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	public void Run(Script script)
 	{
 		PT.Print("Running script: ", script.LuaPath);
-		LuaState state = InitalizeScript(script);
+		LuaState state;
+		try
+		{
+			state = InitalizeScript(script);
+		}
+		catch (Exception e)
+		{
+			script.Root.ScriptService.Logger.LogError(script, e.Message);
+			Close(script);
+			return;
+		}
 
 		// Try compile
 		try
@@ -160,6 +174,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		catch (Exception e)
 		{
 			script.Root.ScriptService.Logger.LogError(script, e.Message);
+			Close(script);
 			return;
 		}
 
@@ -178,6 +193,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		catch (Exception e)
 		{
 			script.Root.ScriptService.Logger.LogError(script, e.Message);
+			Close(script);
 		}
 	}
 
@@ -189,7 +205,13 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	public LuaState InitalizeScript(Script script)
 	{
 		LuaState state = NewThread(GlobalLuaState);
+		script.LuauStateRef = GlobalLuaState.Ref();
 		script.LuauState = state;
+		script.LanguageProvider = this;
+		script.LuauActive = true;
+		script.LuauCancellation?.Dispose();
+		script.LuauCancellation = new();
+		_activeScripts.Add(script);
 
 		state.SandboxGlobals();
 
@@ -312,6 +334,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		state.SetGlobal("_LOCALTEST");
 
 		var mainThread = NewThread(state);
+		script.LuauMainThreadRef = state.Ref();
 		script.LuauMainThread = mainThread;
 
 		return mainThread;
@@ -339,6 +362,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 			co = NewThread(mainThread);
 			coRef = mainThread.Ref();
+			TrackThreadReference(script, coRef);
 
 			mainThread.XMove(co, 1);
 
@@ -355,27 +379,64 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 		finally
 		{
-			lock (mainThread)
-				mainThread.Unref(coRef);
+			ReleaseThreadReference(script, coRef);
 		}
 	}
 
 	public void Close(Script script)
 	{
 		if (script.LuauState == null) return;
+		LuaState state = script.LuauState;
+		script.LuauActive = false;
+		script.Ran = false;
+		script.LuauCancellation?.Cancel();
+		script.LuauCancellation?.Dispose();
+		script.LuauCancellation = null;
+
+		ReleaseThreadReferences(script);
 
 		// Free function pointer references
-		foreach (IntPtr funcPtr in script.LuauFunctionPointers)
+		foreach (IntPtr funcPtr in script.LuauFunctionPointers.ToArray())
 		{
 			if (_ptrToCallback.TryGetValue(funcPtr, out PTCallbackData func))
 			{
+				if (func.State.IsAlive)
+				{
+					func.State.Unref(func.RefID);
+					func.State.Unref(func.HandlerRefID);
+				}
 				func.Callback.Dispose();
 				_callbackToPtr.Remove(func);
 			}
 			_ptrToCallback.Remove(funcPtr);
 		}
+		script.LuauFunctionPointers.Clear();
 
 		PTSignal.CleanupScript(script);
+
+		foreach (int reference in script.LuauFunctionReferences)
+			state.Unref(reference);
+		script.LuauFunctionReferences.Clear();
+
+		if (script is ModuleScript module && module.CachedLuauResultRef.HasValue)
+		{
+			state.Unref(module.CachedLuauResultRef.Value);
+			module.CachedLuauResultRef = null;
+		}
+
+		if (script.LuauMainThreadRef.HasValue)
+			state.Unref(script.LuauMainThreadRef.Value);
+		if (script.LuauStateRef.HasValue)
+			GlobalLuaState.Unref(script.LuauStateRef.Value);
+
+		script.LuauMainThread?.Dispose();
+		state.Dispose();
+		script.LuauMainThread = null;
+		script.LuauState = null;
+		script.LuauMainThreadRef = null;
+		script.LuauStateRef = null;
+		_activeScripts.Remove(script);
+
 	}
 
 	public void CallUpdate(Script script, double delta)
@@ -472,6 +533,45 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		return co;
 	}
 
+	private static void TrackThreadReference(Script script, int reference)
+	{
+		lock (script.LuauThreadReferences)
+			script.LuauThreadReferences.Add(reference);
+	}
+
+	private static void ReleaseThreadReference(Script script, int reference)
+	{
+		lock (script.LuauThreadReferences)
+		{
+			if (!script.LuauThreadReferences.Remove(reference))
+				return;
+		}
+
+		if (script.LanguageProvider is LuauProvider provider && !provider._disposed && provider.GlobalLuaState.IsAlive)
+		{
+			provider.GlobalLuaState.Unref(reference);
+
+			if (++provider._releasedThreadsSinceLastGC >= GCStepThreshold)
+			{
+				provider.GlobalLuaState.GarbageCollector(LuaGC.Step, GCStepSize);
+				provider._releasedThreadsSinceLastGC = 0;
+			}
+		}
+	}
+
+	private void ReleaseThreadReferences(Script script)
+	{
+		int[] references;
+		lock (script.LuauThreadReferences)
+		{
+			references = [.. script.LuauThreadReferences];
+			script.LuauThreadReferences.Clear();
+		}
+
+		foreach (int reference in references)
+			GlobalLuaState.Unref(reference);
+	}
+
 	public static async Task ResumeThread(LuaState thread, LuaState? from, int narg = 0, bool throwError = false, bool isMainThread = false)
 	{
 		Script script;
@@ -485,6 +585,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			logger = GetLogger(thread);
 			thread.PushThread();
 			threadRef = thread.Ref();
+			TrackThreadReference(script, threadRef);
 		}
 
 		try
@@ -497,6 +598,8 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 			while (true)
 			{
+				if (!script.ShouldContinue) return;
+
 				if (thread == null)
 				{
 					PT.PrintErr("Thread's null");
@@ -508,8 +611,6 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 					PT.PrintErr("Pointer's null");
 					break;
 				}
-
-				if (!script.ShouldContinue) return;
 
 				LuaStatus status;
 				lock (thread)
@@ -551,6 +652,9 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 		catch (Exception e)
 		{
+			if (!script.ShouldContinue)
+				return;
+
 			e = e.InnerException ?? e;
 
 			string errorMsg = e.Message;
@@ -588,10 +692,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 		finally
 		{
-			lock (thread)
-			{
-				thread.Unref(threadRef);
-			}
+			ReleaseThreadReference(script, threadRef);
 		}
 	}
 
@@ -665,6 +766,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	public static int LuaWait(IntPtr L)
 	{
 		LuaState lua = LuaState.FromIntPtr(L);
+		Script script = GetScriptInstance(lua);
 
 		double n = lua.IsNumber(1) ? lua.ToNumber(1) : 0;
 
@@ -674,12 +776,32 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 		async void RunAsync()
 		{
-			Task task = n > 0 ? Globals.Singleton.WaitAsync((float)n) : Globals.Singleton.WaitPhysicsFrame();
+			CancellationToken cancellationToken = script.LuauCancellation?.Token ?? CancellationToken.None;
+			Task task = n > 0
+				? Globals.Singleton.WaitAsync((float)n, cancellationToken)
+				: Globals.Singleton.WaitPhysicsFrame();
 			Stopwatch sw = Stopwatch.StartNew();
-			await task;
+			try
+			{
+				if (n > 0)
+					await task;
+				else
+					await task.WaitAsync(cancellationToken);
+			}
+			catch (OperationCanceledException)
+			{
+				tcs.TrySetResult(0);
+				return;
+			}
+
+			if (!script.ShouldContinue || lua.IsThreadReset())
+			{
+				tcs.TrySetResult(0);
+				return;
+			}
 
 			lua.PushNumber(sw.Elapsed.TotalSeconds);
-			tcs.SetResult(1);
+			tcs.TrySetResult(1);
 		}
 
 		RunAsync();
@@ -731,8 +853,19 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			return 0;
 		}
 
-		LuaState co = InitalizeScript(ms);
-		int coRef = state.Ref();
+		LuaState co;
+		try
+		{
+			co = InitalizeScript(ms);
+		}
+		catch (Exception ex)
+		{
+			Close(ms);
+			return state.Error(ex.Message);
+		}
+		co.PushThread();
+		int coRef = co.Ref();
+		TrackThreadReference(ms, coRef);
 
 		// Sandbox thread
 		co.SandboxGlobals();
@@ -758,8 +891,10 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 		if (capturedException1 != null)
 		{
-			state.Unref(coRef);
-			return state.Error(co.ToString(-1) ?? capturedException1.Message);
+			string error = co.ToString(-1) ?? capturedException1.Message;
+			ReleaseThreadReference(ms, coRef);
+			Close(ms);
+			return state.Error(error);
 		}
 
 		Exception? capturedException2 = null;
@@ -777,23 +912,30 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		// Caught error
 		if (capturedException2 != null)
 		{
-			state.Unref(coRef);
-			return state.Error(co.ToString(-1) ?? capturedException2.Message);
+			string error = co.ToString(-1) ?? capturedException2.Message;
+			ReleaseThreadReference(ms, coRef);
+			Close(ms);
+			return state.Error(error);
 		}
 
 		TaskCompletionSource<int> tcs = new();
 		SetYieldTask(state, tcs.Task);
 
-		_ = HandleRequireAsync(co, state, coRef, chunkName, tcs, ms);
+		_ = HandleRequireAsync(co, state, coRef, chunkName, tcs, ms, script);
 
 		return state.Yield(1);
 	}
 
-	private static async Task HandleRequireAsync(LuaState co, LuaState state, int coRef, string chunkName, TaskCompletionSource<int> tcs, ModuleScript ms)
+	private static async Task HandleRequireAsync(LuaState co, LuaState state, int coRef, string chunkName, TaskCompletionSource<int> tcs, ModuleScript ms, Script caller)
 	{
 		try
 		{
 			await ResumeThread(co, state, 0, true);
+			if (!ms.ShouldContinue || !caller.ShouldContinue)
+			{
+				tcs.TrySetResult(0);
+				return;
+			}
 
 			int top = co.GetTop();
 			if (top > 0)
@@ -805,21 +947,22 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 				state.PushValue(-top); // push copy of first result
 				ms.CachedLuauResultRef = state.Ref();
 			}
-			tcs.SetResult(top);
+			tcs.TrySetResult(top);
 		}
 		catch (Exception ex)
 		{
-			tcs.SetException(new Exception($"Failure when requiring {chunkName}: {ex.Message}"));
+			tcs.TrySetException(new Exception($"Failure when requiring {chunkName}: {ex.Message}"));
 		}
 		finally
 		{
-			state.Unref(coRef);
+			ReleaseThreadReference(ms, coRef);
 		}
 	}
 
 	public static int LuaSpawn(IntPtr L)
 	{
 		LuaState state = LuaState.FromIntPtr(L);
+		Script script = GetScriptInstance(state);
 
 		if (!state.IsFunction(1))
 		{
@@ -835,6 +978,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 		LuaState co = NewThread(state);
 		int coRef = state.Ref();
+		TrackThreadReference(script, coRef);
 
 		state.GetRef(funcRef);
 		state.XMove(co, 1);
@@ -857,7 +1001,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			}
 			finally
 			{
-				co.Unref(coRef);
+				ReleaseThreadReference(script, coRef);
 			}
 		}
 
@@ -870,6 +1014,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	public int LuaPCall(IntPtr L)
 	{
 		LuaState state = LuaState.FromIntPtr(L);
+		Script script = GetScriptInstance(state);
 		if (!state.IsFunction(1))
 		{
 			state.Error("pcall requires a function");
@@ -880,9 +1025,11 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 		state.PushValue(1);
 		int funcRef = state.Ref();
+		TrackThreadReference(script, funcRef);
 		LuaState co = NewThread(state);
 
 		int coRef = state.Ref();
+		TrackThreadReference(script, coRef);
 
 		state.GetRef(funcRef);
 		state.XMove(co, 1);
@@ -900,34 +1047,39 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		TaskCompletionSource<int> tcs = new();
 		SetYieldTask(state, tcs.Task);
 
-		_ = HandlePCallAsync(co, state, funcRef, coRef, nargs, tcs);
+		_ = HandlePCallAsync(co, state, funcRef, coRef, nargs, tcs, script);
 
 		return state.Yield(2);
 	}
 
-	private async Task HandlePCallAsync(LuaState co, LuaState state, int funcRef, int coRef, int nargs, TaskCompletionSource<int> tcs)
+	private async Task HandlePCallAsync(LuaState co, LuaState state, int funcRef, int coRef, int nargs, TaskCompletionSource<int> tcs, Script script)
 	{
 		try
 		{
 			await ResumeThread(co, state, nargs, true);
+			if (!script.ShouldContinue)
+			{
+				tcs.TrySetResult(0);
+				return;
+			}
 			int nresults = co.GetTop();
 			PushValueToLua(state, true);
 			if (nresults > 0)
 			{
 				co.XMove(state, nresults);
 			}
-			tcs.SetResult(1 + nresults);
+			tcs.TrySetResult(1 + nresults);
 		}
 		catch (Exception ex)
 		{
 			PushValueToLua(state, false);
 			PushValueToLua(state, ex.InnerException?.Message ?? ex.Message);
-			tcs.SetResult(2);
+			tcs.TrySetResult(2);
 		}
 		finally
 		{
-			state.Unref(funcRef);
-			state.Unref(coRef);
+			ReleaseThreadReference(script, funcRef);
+			ReleaseThreadReference(script, coRef);
 		}
 	}
 
@@ -941,6 +1093,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	public static int LuaCoroutineResume(IntPtr L)
 	{
 		LuaState lua = LuaState.FromIntPtr(L);
+		Script script = GetScriptInstance(lua);
 
 		if (!lua.IsThread(1))
 		{
@@ -969,7 +1122,10 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		{
 			if (threadData.HasValue)
 			{
-				_ = HandleYieldTaskAsync(thread, lua, threadData.Value.Task);
+				lua.PushValue(1);
+				int threadRef = lua.Ref();
+				TrackThreadReference(script, threadRef);
+				_ = HandleYieldTaskAsync(thread, threadData.Value.Task, threadRef, script);
 				lua.PushBoolean(true);
 				return 1;
 			}
@@ -1017,6 +1173,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	private static int AuxCoroutineWrap(IntPtr L)
 	{
 		LuaState lua = LuaState.FromIntPtr(L);
+		Script script = GetScriptInstance(lua);
 
 		LuaState thread = lua.ToThread(LuaState.UpValIndex(1));
 		int narg = lua.GetTop();
@@ -1038,7 +1195,10 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		{
 			if (threadData.HasValue)
 			{
-				_ = HandleYieldTaskAsync(thread, lua, threadData.Value.Task);
+				lua.PushValue(LuaState.UpValIndex(1));
+				int threadRef = lua.Ref();
+				TrackThreadReference(script, threadRef);
+				_ = HandleYieldTaskAsync(thread, threadData.Value.Task, threadRef, script);
 				return 0;
 			}
 			else
@@ -1081,9 +1241,18 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		return status;
 	}
 
-	private static async Task HandleYieldTaskAsync(LuaState thread, LuaState from, Task<int> initialTask)
+	private static async Task HandleYieldTaskAsync(LuaState thread, Task<int> initialTask, int threadRef, Script script)
 	{
-		await ResumeThread(thread, from, await initialTask, false);
+		try
+		{
+			int narg = await initialTask;
+			if (script.ShouldContinue && !thread.IsThreadReset())
+				await ResumeThread(thread, null, narg, false);
+		}
+		finally
+		{
+			ReleaseThreadReference(script, threadRef);
+		}
 	}
 
 #if DEBUG
@@ -1284,15 +1453,16 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 	public object? LuaToObject(LuaState state, int index, bool convertToGD = true, bool getAsFunction = false)
 	{
-		return LuaToObjectInternal(state, index, convertToGD, getAsFunction, []);
+		return LuaToObjectInternal(state, index, convertToGD, getAsFunction);
 	}
 
 	internal object? LuaToObjectInternal(LuaState state, int index, bool convertToGD = true, bool getAsFunction = false, HashSet<IntPtr> visitedTables = null!)
 	{
-		if (state.IsNumber(index)) return state.ToNumber(index); // number
-		if (state.IsString(index)) return state.ToString(index); // string
-		if (state.IsBoolean(index)) return state.ToBoolean(index); // boolean
-		if (state.IsUserData(index)) // userdata
+		LuaType type = state.Type(index);
+		if (type == LuaType.Number) return state.ToNumber(index);
+		if (type == LuaType.String) return state.ToString(index);
+		if (type == LuaType.Boolean) return state.ToBoolean(index);
+		if (type == LuaType.UserData)
 		{
 			IntPtr ptr = state.ToUserData(index);
 			if (ptr == IntPtr.Zero)
@@ -1324,12 +1494,13 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 				return i;
 			}
 		}
-		else if (state.IsFunction(index) && getAsFunction) // PTFunction
+		else if (type == LuaType.Function && getAsFunction) // PTFunction
 		{
 			Script script = GetScriptInstance(state);
 
 			state.PushValue(index);
 			int funcRef = state.Ref();
+			script.LuauFunctionReferences.Add(funcRef);
 
 			LuaState mainState = script.LuauState ?? throw new Exception("INTERNAL BUG: No main thread");
 
@@ -1344,6 +1515,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 				{
 					co = NewThread(mainState);
 					coRef = mainState.Ref();
+					TrackThreadReference(script, coRef);
 
 					mainState.GetRef(funcRef);
 					mainState.XMove(co, 1);
@@ -1376,7 +1548,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 				}
 				finally
 				{
-					mainState.Unref(coRef);
+					ReleaseThreadReference(script, coRef);
 				}
 			})
 			{
@@ -1385,7 +1557,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 			return del;
 		}
-		else if (state.IsFunction(index) && !getAsFunction) // PTCallback
+		else if (type == LuaType.Function && !getAsFunction) // PTCallback
 		{
 			IntPtr funcPtr = state.ToPointer(index);
 			if (_ptrToCallback.TryGetValue(funcPtr, out PTCallbackData cached))
@@ -1412,6 +1584,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 				co = NewThread(handler);
 				coRef = handler.Ref();
+				TrackThreadReference(script, coRef);
 
 				handler.GetRef(funcRef);
 				handler.XMove(co, 1);
@@ -1427,7 +1600,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 				}
 				finally
 				{
-					handler.Unref(coRef);
+					ReleaseThreadReference(script, coRef);
 				}
 			})
 			{
@@ -1451,8 +1624,9 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 			return del;
 		}
-		else if (state.IsTable(index)) // Tables
+		else if (type == LuaType.Table) // Tables
 		{
+			visitedTables ??= [];
 			IntPtr tablePtr = state.ToPointer(index);
 
 			if (!visitedTables.Add(tablePtr))
@@ -1551,7 +1725,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 				visitedTables.Remove(tablePtr);
 			}
 		}
-		else if (state.IsBuffer(index))
+		else if (type == LuaType.Buffer)
 		{
 			return state.ToBuffer(index);
 		}
@@ -1821,7 +1995,17 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		return GetGlobalTablePtr<LogDispatcher>(state, _loggerPtr)!;
 	}
 
-	public void Dispose() { }
+	public void Dispose()
+	{
+		if (_disposed) return;
+		foreach (Script script in _activeScripts.ToArray())
+			Close(script);
+
+		_disposed = true;
+		GlobalLuaState.Dispose();
+		if (ReferenceEquals(Singleton, this))
+			Singleton = null!;
+	}
 
 	private readonly struct MethodsCacheKey(Type type, string methodName, bool isCompatibility) : IEquatable<MethodsCacheKey>
 	{

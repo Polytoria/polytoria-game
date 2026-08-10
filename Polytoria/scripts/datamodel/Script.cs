@@ -9,6 +9,7 @@ using Polytoria.Datamodel.Services;
 using Polytoria.Scripting;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Polytoria.Datamodel;
 
@@ -19,6 +20,10 @@ public partial class Script : Instance
 
 	internal Scripting.Luau.LuaState? LuauState;
 	internal Scripting.Luau.LuaState? LuauMainThread;
+	internal int? LuauStateRef;
+	internal int? LuauMainThreadRef;
+	internal bool LuauActive;
+	internal CancellationTokenSource? LuauCancellation;
 
 	[CloneInclude]
 	public byte[]? Bytecode { get; internal set; }
@@ -26,6 +31,8 @@ public partial class Script : Instance
 	internal readonly Dictionary<object, int> LuauUserdataCache = [];
 	internal readonly HashSet<Scripting.Luau.LuaObject> LuauObjectCache = [];
 	internal readonly HashSet<IntPtr> LuauFunctionPointers = [];
+	internal readonly HashSet<int> LuauFunctionReferences = [];
+	internal readonly HashSet<int> LuauThreadReferences = [];
 
 	private string? _source;
 	private FileLinkAsset? _linkedFile;
@@ -103,7 +110,7 @@ public partial class Script : Instance
 	/// <summary>
 	/// Determine if this script should execute
 	/// </summary>
-	internal bool ShouldContinue => (this is ModuleScript || Ran) && IsEnabled && !IsDeleted;
+	internal bool ShouldContinue => LuauActive && (this is ModuleScript || Ran) && IsEnabled && !IsDeleted;
 
 	public IScriptLanguageProvider LanguageProvider = null!;
 
@@ -132,13 +139,14 @@ public partial class Script : Instance
 
 	public void Stop()
 	{
-		if (!Ran) return;
+		if (!Ran && LuauState == null) return;
 		ScriptService.Close(this);
 	}
 
 	public override void PreDelete()
 	{
-		Stop();
+		if (Ran || LuauState != null)
+			ScriptService.Close(this);
 		base.PreDelete();
 	}
 
