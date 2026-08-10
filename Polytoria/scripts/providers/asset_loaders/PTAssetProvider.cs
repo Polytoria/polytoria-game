@@ -29,50 +29,23 @@ public class PTAssetProvider : IAssetProvider
 #endif
 
 		string url = GetAssetServeURL(item.ID, item.Type);
-
 		ServeResponse response = await _client.GetFromJsonAsync(url, ServeResponseGenerationContext.Default.ServeResponse);
 		byte[] buffer = await _client.GetByteArrayAsync(response.Url);
-		item.SizeBytes = buffer.LongLength;
 
+		item.SizeBytes = buffer.LongLength;
 		item.DirectURL = response.Url;
 
+		CacheItem result;
 		switch (item.Type)
 		{
 			case ResourceType.Mesh:
-				{
-					GltfDocument document = new();
-					GltfState state = new() { CreateAnimations = true };
-
-					document.AppendFromBuffer(buffer, null, state);
-
-					Node3D scene = (Node3D)document.GenerateScene(state);
-
-					// Remove arbitrary nodes that may come with the GLTF (eg. Rigidbodies)
-					RemoveNonMeshNodes(scene);
-
-					// Set mipmap texture filter for meshes
-					SetMipmapTextureFilter(scene);
-
-					TaskCompletionSource<PackedScene> callback = new();
-
-					Callable.From(() =>
-					{
-						PackedScene mesh = new();
-						mesh.Pack(scene);
-						scene.Free();
-
-						callback.SetResult(mesh);
-					}).CallDeferred();
-
-					item.Resource = await callback.Task;
-
-					return item;
-				}
+				result = await LoadMesh(item, buffer);
+				break;
 			case ResourceType.Audio:
 				{
 					item.Resource = new AudioStreamMP3() { Data = buffer };
-
-					return item;
+					result = item;
+					break;
 				}
 			case ResourceType.Asset:
 			case ResourceType.Decal:
@@ -84,22 +57,15 @@ public class PTAssetProvider : IAssetProvider
 			case ResourceType.GuildThumbnail:
 			case ResourceType.GuildBanner:
 				{
-					Image image = new();
-					image.LoadPngFromBuffer(buffer);
-					image.GenerateMipmaps();
-					image.FixAlphaEdges();
-
-					if (item.Resize != null)
-					{
-						image.Resize(item.Resize.Value.X, item.Resize.Value.Y, Image.Interpolation.Lanczos);
-					}
-
+					Image image = await Task.Run(() => DecodeImage(buffer, item.Resize));
 					item.Resource = ImageTexture.CreateFromImage(image);
-
-					return item;
+					result = item;
+					break;
 				}
 			default: throw new NotImplementedException();
 		}
+
+		return result;
 	}
 
 	public string GetAssetServeURL(uint id, ResourceType itemType)
@@ -123,9 +89,71 @@ public class PTAssetProvider : IAssetProvider
 		return url;
 	}
 
-	public void Dispose()
+	public void Dispose() { }
+
+	private static async Task<CacheItem> LoadMesh(CacheItem item, byte[] buffer)
 	{
-		GC.SuppressFinalize(this);
+		Node3D scene = await Task.Run(() =>
+		{
+			GltfDocument document = new();
+			GltfState state = new() { CreateAnimations = true };
+
+			document.AppendFromBuffer(buffer, null, state);
+
+			return (Node3D)document.GenerateScene(state);
+		});
+
+		// Remove arbitrary nodes that may come with the GLTF (eg. Rigidbodies)
+		RemoveNonMeshNodes(scene);
+
+		// Set mipmap texture filter for meshes
+		SetMipmapTextureFilter(scene);
+
+		TaskCompletionSource<PackedScene> callback = new();
+
+		Callable.From(() =>
+		{
+			try
+			{
+				PackedScene mesh = new();
+				mesh.Pack(scene);
+				callback.SetResult(mesh);
+			}
+			catch (Exception ex)
+			{
+				callback.SetException(ex);
+			}
+			finally
+			{
+				scene.Free();
+			}
+		}).CallDeferred();
+
+		item.Resource = await callback.Task;
+
+		return item;
+	}
+
+	private static Image DecodeImage(byte[] buffer, Vector2I? resize)
+	{
+		Image image = new();
+		image.LoadPngFromBuffer(buffer);
+
+		if (resize != null)
+		{
+			image.Resize(resize.Value.X, resize.Value.Y, Image.Interpolation.Lanczos);
+		}
+
+		FixAlphaEdgesIfNeeded(image);
+		image.GenerateMipmaps();
+
+		return image;
+	}
+
+	private static void FixAlphaEdgesIfNeeded(Image image)
+	{
+		if (image.DetectAlpha() == Image.AlphaMode.None) return;
+		image.FixAlphaEdges();
 	}
 
 	private static void RemoveNonMeshNodes(Node node)
@@ -157,6 +185,7 @@ public class PTAssetProvider : IAssetProvider
 						if (material.AlbedoTexture is ImageTexture albedoTex)
 						{
 							Image img = albedoTex.GetImage();
+							FixAlphaEdgesIfNeeded(img);
 							img.GenerateMipmaps();
 							material.AlbedoTexture = ImageTexture.CreateFromImage(img);
 						}

@@ -5,6 +5,7 @@
 using Godot;
 using MemoryPack;
 using System;
+using System.Buffers.Binary;
 using System.Text.Json.Serialization;
 
 namespace Polytoria.Utils.DTOs;
@@ -17,29 +18,22 @@ public partial class TransformPayloadDto
 	public Vector3 Position
 	{
 		get => new Vector3(
-			BitConverter.ToSingle(Data, 0),
-			BitConverter.ToSingle(Data, 4),
-			BitConverter.ToSingle(Data, 8)
+			BinaryPrimitives.ReadSingleLittleEndian(Data.AsSpan(0, 4)),
+			BinaryPrimitives.ReadSingleLittleEndian(Data.AsSpan(4, 4)),
+			BinaryPrimitives.ReadSingleLittleEndian(Data.AsSpan(8, 4))
 		);
 		set
 		{
-			byte[] newData = [
-				..BitConverter.GetBytes(value.X),
-				..BitConverter.GetBytes(value.Y),
-				..BitConverter.GetBytes(value.Z)
-			];
-			Array.Copy(newData, Data, 12);
+			BinaryPrimitives.WriteSingleLittleEndian(Data.AsSpan(0, 4), value.X);
+			BinaryPrimitives.WriteSingleLittleEndian(Data.AsSpan(4, 4), value.Y);
+			BinaryPrimitives.WriteSingleLittleEndian(Data.AsSpan(8, 4), value.Z);
 		}
 	}
 
 	public uint RawRotation
 	{
-		get => BitConverter.ToUInt32(Data, 12);
-		set
-		{
-			byte[] rot = BitConverter.GetBytes(value);
-			Array.Copy(rot, 0, Data, 12, 4);
-		}
+		get => BinaryPrimitives.ReadUInt32LittleEndian(Data.AsSpan(12, 4));
+		set => BinaryPrimitives.WriteUInt32LittleEndian(Data.AsSpan(12, 4), value);
 	}
 
 	public Quaternion Rotation
@@ -103,16 +97,21 @@ public partial class TransformPayloadDto
 		return $"{Vector3Dto.ToString(Position)}|{UnitQuaternionDto.ToString(Rotation)}";
 	}
 
-	public static byte[] ToArray(Vector3 Position, uint Rotation) => [
-		..BitConverter.GetBytes(Position.X),
-		..BitConverter.GetBytes(Position.Y),
-		..BitConverter.GetBytes(Position.Z),
-		..BitConverter.GetBytes(Rotation)
-	];
+	public static byte[] ToArray(Vector3 Position, uint Rotation) => CreateData(Position, Rotation);
 	public static byte[] ToArray(Vector3 Position, Quaternion Rotation) => ToArray(Position, UnitQuaternionDto.ToCompressed(Rotation));
 	public static byte[] ToArray(Transform3D t) => ToArray(t.Origin, t.Basis.GetRotationQuaternion());
-	public static byte[] ToArray(TransformPayloadDto t) => ToArray(t.Position, t.RawRotation);
+	public static byte[] ToArray(TransformPayloadDto t) => [.. t.Data];
 
 	public static TransformPayloadDto FromArray(byte[] f) => new(f);
 	public static TransformPayloadDto FromGDTransform(Transform3D t) => new(t.Origin, t.Basis.GetRotationQuaternion());
+
+	private static byte[] CreateData(Vector3 position, uint rotation)
+	{
+		byte[] data = new byte[16];
+		BinaryPrimitives.WriteSingleLittleEndian(data.AsSpan(0, 4), position.X);
+		BinaryPrimitives.WriteSingleLittleEndian(data.AsSpan(4, 4), position.Y);
+		BinaryPrimitives.WriteSingleLittleEndian(data.AsSpan(8, 4), position.Z);
+		BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(12, 4), rotation);
+		return data;
+	}
 }
