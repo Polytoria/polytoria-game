@@ -232,6 +232,10 @@ internal partial class NativeBindings
 	internal static partial int lua_status(IntPtr L);
 
 	[LibraryImport(LuaLibraryName)]
+	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+	internal static partial int lua_costatus(IntPtr L, IntPtr co);
+
+	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
 	internal static partial void lua_setmetatable(IntPtr luaState, int objIndex);
 

@@ -49,6 +49,11 @@ public class LuaDefinitionGenerator
 		builder.AppendLine("end");
 		builder.AppendLine();
 
+		builder.AppendLine("declare class PTTask");
+		builder.AppendLine("\tfunction Cancel(self): ()");
+		builder.AppendLine("end");
+		builder.AppendLine();
+
 		builder.AppendLine("export type PTSignal<T... = ...any> = {");
 		builder.AppendLine("\tConnect: (self: PTSignal<T...>, callback: (T...) -> ()) -> PTSignalConnection,");
 		builder.AppendLine("\tDisconnect: (self: PTSignal<T...>, callback: (T...) -> ()) -> nil,");

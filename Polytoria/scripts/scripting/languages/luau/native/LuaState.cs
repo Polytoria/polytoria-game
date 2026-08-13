@@ -663,6 +663,14 @@ public partial class LuaState : IDisposable
 			return (LuaStatus)NativeBindings.lua_status(_state);
 	}
 
+	public LuaCoStatus CoStatus(LuaState co)
+	{
+		lock (_lock)
+		{
+			return (LuaCoStatus)NativeBindings.lua_costatus(_state, co.State);
+		}
+	}
+
 	public int Yield(int nresults)
 	{
 		lock (_lock)

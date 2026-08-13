@@ -3,14 +3,21 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+using System;
 using Polytoria.Attributes;
 using Polytoria.Scripting;
+using Polytoria.Scripting.Luau;
+using System.Collections.Generic;
 
 namespace Polytoria.Datamodel.Services;
 
 [Static("Hooks"), ExplorerExclude, SaveIgnore]
 public sealed partial class HookService : Instance
 {
+	private readonly List<QueuedResume> _spawnQueue = [];
+	private readonly List<TimedEntry> _timedQueue = [];
+	private readonly List<(PTCallback Callback, object?[] Args)> _deferredCallbacks = [];
+
 	[ScriptProperty]
 	public PTSignal<double> Updated { get; private set; } = new();
 	[ScriptProperty]
@@ -46,6 +53,9 @@ public sealed partial class HookService : Instance
 	public override void Process(double delta)
 	{
 		Updated.Invoke(delta);
+		DrainSpawnQueue();
+		DrainTimedQueue();
+		DrainDeferredCallbacks();
 		base.Process(delta);
 	}
 
@@ -63,5 +73,106 @@ public sealed partial class HookService : Instance
 	private void OnFramePostDraw()
 	{
 		PostRendered.Invoke(GDNode.GetProcessDeltaTime());
+	}
+
+	/// <summary>
+	/// Queues a thread's first resumption for the next drain. Used by 'spawn'
+	/// so a burst of spawns in one script doesn't cascade into the caller's
+	/// own call stack.
+	/// </summary>
+	internal void EnqueueSpawn(LuaState thread, int threadRef, int numArgs)
+	{
+		_spawnQueue.Add(new(thread, threadRef, numArgs));
+	}
+
+	/// <summary>
+	/// Queues resolve to run once Root.UpTime reaches wakeTime.
+	/// </summary>
+	internal void EnqueueTimed(decimal wakeTime, Action resolve)
+	{
+		_timedQueue.Add(new(wakeTime, resolve));
+	}
+
+	/// <summary>
+	/// Queues a PTCallback for the next drain.
+	/// </summary>
+	internal void EnqueueCallback(PTCallback callback, object?[] args)
+	{
+		_deferredCallbacks.Add((callback, args));
+	}
+
+	private void DrainSpawnQueue()
+	{
+		if (_spawnQueue.Count == 0) return;
+
+		// Snapshot so anything spawned during this drain runs next tick
+		QueuedResume[] batch = [.. _spawnQueue];
+		_spawnQueue.Clear();
+
+		foreach (QueuedResume entry in batch)
+		{
+			async void run()
+			{
+				try
+				{
+					await LuauProvider.ResumeThread(entry.Thread, null, entry.NumArgs);
+				}
+				finally
+				{
+					entry.Thread.Unref(entry.ThreadRef);
+				}
+			}
+			run();
+		}
+	}
+
+	private void DrainTimedQueue()
+	{
+		if (_timedQueue.Count == 0) return;
+
+		decimal now = Root.UpTime;
+		for (int i = _timedQueue.Count - 1; i >= 0; i--)
+		{
+			if (_timedQueue[i].WakeTime <= now)
+			{
+				Action resolve = _timedQueue[i].Resolve;
+				_timedQueue.RemoveAt(i);
+				resolve();
+			}
+		}
+	}
+
+	private void DrainDeferredCallbacks()
+	{
+		if (_deferredCallbacks.Count == 0) return;
+
+		var batch = _deferredCallbacks.ToArray();
+		_deferredCallbacks.Clear();
+
+		foreach ((PTCallback callback, object?[] args) in batch)
+		{
+			if (callback.Disposed) continue;
+			try
+			{
+				callback.InvokeDirect(args);
+			}
+			catch (Exception ex)
+			{
+				GD.PushError($"Deferred PTCallback Length: {args.Length} : " + ex.ToString());
+			}
+		}
+	}
+
+	internal readonly struct QueuedResume(LuaState thread, int threadRef, int numArgs)
+	{
+		public readonly LuaState Thread = thread;
+		public readonly int ThreadRef = threadRef;
+		public readonly int NumArgs = numArgs;
+	}
+
+	internal readonly struct TimedEntry(decimal wakeTime, Action resolve)
+	{
+		public readonly decimal WakeTime = wakeTime;
+		public readonly Action Resolve = resolve;
 	}
 }
