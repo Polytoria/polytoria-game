@@ -16,6 +16,8 @@ public delegate int LuaFunction(IntPtr state);
 
 public partial class LuaState : IDisposable
 {
+	internal Polytoria.Datamodel.Script? ScriptContext;
+	internal Polytoria.Scripting.LogDispatcher? LoggerContext;
 	private IntPtr _state;
 	private readonly LuaState? _parent;
 	private bool _disposed;
@@ -608,7 +610,14 @@ public partial class LuaState : IDisposable
 				throw new InvalidOperationException("Lua stack limit: unable to create new thread");
 
 			IntPtr thread = NativeBindings.lua_newthread(_state);
-			return new LuaState(this, thread);
+			LuaState newState = new(this, thread)
+			{
+				// Inherit script and logger context from the parent thread
+				ScriptContext = this.ScriptContext,
+				LoggerContext = this.LoggerContext
+			};
+
+			return newState;
 		}
 	}
 
@@ -800,6 +809,10 @@ public partial class LuaState : IDisposable
 			if (!_disposed && _state != IntPtr.Zero)
 			{
 				NativeBindings.lua_close(_state);
+
+				Polytoria.Scripting.Luau.LuauProvider._scriptContexts.TryRemove(_state, out _);
+				Polytoria.Scripting.Luau.LuauProvider._loggerContexts.TryRemove(_state, out _);
+
 				_state = IntPtr.Zero;
 				_disposed = true;
 			}

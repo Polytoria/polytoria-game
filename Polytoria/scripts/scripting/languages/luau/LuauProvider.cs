@@ -27,11 +27,18 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Script = Polytoria.Datamodel.Script;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 
 namespace Polytoria.Scripting.Luau;
 
 public sealed partial class LuauProvider : IScriptLanguageProvider
 {
+	/// <summary>
+	/// Caches the Script and LogDispatcher instances by their native LuaState pointer.
+	/// This allows us to bypass 4 P/Invoke calls when fetching context in __index/__newindex metamethods.
+	/// </summary>
+	internal static readonly ConcurrentDictionary<IntPtr, Polytoria.Datamodel.Script> _scriptContexts = new();
+	internal static readonly ConcurrentDictionary<IntPtr, Polytoria.Scripting.LogDispatcher> _loggerContexts = new();
 	private const DynamicallyAccessedMemberTypes DynamicallyAccessedTypes = DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicMethods;
 	private const int GCStepThreshold = 100;
 
@@ -189,7 +196,12 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	public LuaState InitalizeScript(Script script)
 	{
 		LuaState state = NewThread(GlobalLuaState);
+		state.ScriptContext = script;
+		state.LoggerContext = script.Root.ScriptService.Logger;
 		script.LuauState = state;
+
+		_scriptContexts[state.State] = script;
+		_loggerContexts[state.State] = script.Root.ScriptService.Logger;
 
 		state.SandboxGlobals();
 
@@ -312,6 +324,8 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		state.SetGlobal("_LOCALTEST");
 
 		var mainThread = NewThread(state);
+		_scriptContexts[mainThread.State] = script;
+		_loggerContexts[mainThread.State] = script.Root.ScriptService.Logger;
 		script.LuauMainThread = mainThread;
 
 		return mainThread;
@@ -1810,15 +1824,40 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		state.Pop(1);
 		return result;
 	}
-
-	public static Script GetScriptInstance(LuaState state)
+	/// <summary>
+	/// Gets the Script instance associated with this LuaState.
+	/// Uses a cached C# property or a pointer lookup to avoid expensive P/Invoke calls to the Lua global table.
+	/// </summary>
+	public static Polytoria.Datamodel.Script GetScriptInstance(LuaState state)
 	{
-		return GetGlobalTablePtr<Script>(state, _internalScriptPtr)!;
+		// Fast path: if the C# object already has it
+		if (state.ScriptContext != null) return state.ScriptContext;
+
+		// Fallback for FromIntPtr wrappers: lookup by pointer
+		if (_scriptContexts.TryGetValue(state.State, out var script))
+		{
+			state.ScriptContext = script; // Cache it on this wrapper so we don't lookup again
+			return script;
+		}
+
+		// Ultimate fallback (should rarely be hit)
+		return GetGlobalTablePtr<Polytoria.Datamodel.Script>(state, _internalScriptPtr)!;
 	}
-
-	public static LogDispatcher GetLogger(LuaState state)
+	/// <summary>
+	/// Gets the LogDispatcher instance associated with this LuaState.
+	/// Uses a cached C# property or a pointer lookup to avoid expensive P/Invoke calls to the Lua global table.
+	/// </summary>
+	public static Polytoria.Scripting.LogDispatcher GetLogger(LuaState state)
 	{
-		return GetGlobalTablePtr<LogDispatcher>(state, _loggerPtr)!;
+		if (state.LoggerContext != null) return state.LoggerContext;
+
+		if (_loggerContexts.TryGetValue(state.State, out var logger))
+		{
+			state.LoggerContext = logger;
+			return logger;
+		}
+
+		return GetGlobalTablePtr<Polytoria.Scripting.LogDispatcher>(state, _loggerPtr)!;
 	}
 
 	public void Dispose() { }
