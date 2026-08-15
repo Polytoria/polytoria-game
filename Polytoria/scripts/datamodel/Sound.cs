@@ -147,22 +147,6 @@ public sealed partial class Sound : Instance
 		set => Playing = value;
 	}
 
-	[Editable, ScriptProperty]
-	public NumberRange LoopRange
-	{
-		get => _loopRange;
-		set
-		{
-			_loopRange = value;
-			if (_currentStream != null && value.Min >= 0)
-			{
-				SetStreamLoopStart(_currentStream, (float)Mathf.Clamp(value.Min, 0, _currentStream.GetLength()));
-			}
-
-			OnPropertyChanged();
-		}
-	}
-
 	[Editable, ScriptProperty, Attributes.Obsolete("Use 'LoopRange.Min' instead.")]
 	public float LoopStart
 	{
@@ -186,6 +170,41 @@ public sealed partial class Sound : Instance
 			_paused = value;
 			_audioPlayer?.StreamPaused = value;
 			_audioPlayer3D?.StreamPaused = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool Playing
+	{
+		get => _playing;
+		set
+		{
+			if (_playing == value) return;
+
+			if (Root != null && Root.SessionType == World.SessionTypeEnum.Creator)
+			{
+				_playing = value;
+				OnPropertyChanged();
+				return;
+			}
+
+			if (value) Play(); else Stop();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public NumberRange LoopRange
+	{
+		get => _loopRange;
+		set
+		{
+			_loopRange = value;
+			if (_currentStream != null && value.Min >= 0)
+			{
+				SetStreamLoopStart(_currentStream, (float)Mathf.Clamp(value.Min, 0, _currentStream.GetLength()));
+			}
+
 			OnPropertyChanged();
 		}
 	}
@@ -254,25 +273,6 @@ public sealed partial class Sound : Instance
 			_time = value;
 			InternalSeek(_time);
 			Rpc(nameof(NetSoundSeek), _time);
-		}
-	}
-
-	[Editable, ScriptProperty]
-	public bool Playing
-	{
-		get => _playing;
-		set
-		{
-			if (_playing == value) return;
-
-			if (Root != null && Root.SessionType == World.SessionTypeEnum.Creator)
-			{
-				_playing = value;
-				OnPropertyChanged();
-				return;
-			}
-
-			if (value) Play(); else Stop();
 		}
 	}
 
