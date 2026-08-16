@@ -72,10 +72,9 @@ public partial class RendererViewport : SubViewport
 		Camera cam = Root.Environment.CurrentCamera!;
 		Camera3D c3d = cam.Camera3D;
 
-		NPC npc = Root.Insert.DefaultNPC();
-		npc.Parent = Root.Environment;
-		npc.Character!.GDNode3D.RotationDegrees = new(0, 15, 0);
-		PolytorianModel ptm = (PolytorianModel)npc.Character!;
+		PolytorianModel ptm = Root.Insert.DefaultNPCCharacter();
+		ptm.Parent = Root.Environment;
+		ptm.GDNode3D.RotationDegrees = new(0, 15, 0);
 		ptm.UseNametag = false;
 
 		ptm.SetAnimationOverrideTo(true);

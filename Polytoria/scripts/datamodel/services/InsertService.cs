@@ -45,7 +45,7 @@ public sealed partial class InsertService : Instance
 	}
 
 	[ScriptMethod]
-	public CharacterModel DefaultNPCCharacter()
+	public PolytorianModel DefaultNPCCharacter()
 	{
 
 		// Default character
