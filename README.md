@@ -14,6 +14,8 @@ Polytoria is a 3D multiplayer gaming platform built on top of the [Godot Engine]
 
 ## Getting the Software
 
+Hi
+
 You can head to [polytoria.com](https://polytoria.com/) to register your account. The download button will be available in the [worlds](https://polytoria.com/places) page.
 
 To launch the creator software, head to [polytoria.com/create](https://polytoria.com/create/) and click "Launch Creator".
