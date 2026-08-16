@@ -430,6 +430,11 @@ public partial class CharacterModel : Physical
 
 	private void InternalSit(Seat seat)
 	{
+		if (IsSitting && SittingIn != null)
+		{
+			SittingIn.Occupant = null;
+			SittingIn.InvokeVacated(this);
+		}
 		IsSitting = true;
 		OverrideNetworkTransform = true;
 		SittingIn = seat;
