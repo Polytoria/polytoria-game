@@ -49,6 +49,7 @@ public sealed partial class Player : NPC
 	internal bool teleporting = false;
 
 	private Physical? _mouseHoveringOn;
+	private Physical? _grabbing;
 
 	public Vector3 DefaultSpawnLocation = new(0, 5, 0);
 	internal event Action<APIUserInfo>? UserInfoReady;
@@ -171,6 +172,21 @@ public sealed partial class Player : NPC
 			_rotationMode = value;
 			OnPropertyChanged();
 		}
+	}
+
+	[ScriptProperty]
+	public Physical? Grabbing => _grabbing;
+
+	public void SetGrabbing(Physical phy)
+	{
+		_grabbing = phy;
+		Grabbed.Invoke(phy);
+	}
+
+	public void ReleaseGrabbing()
+	{
+		Ungrabbed.Invoke(_grabbing);
+		_grabbing = null;
 	}
 
 	[ScriptProperty]

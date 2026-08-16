@@ -1088,7 +1088,6 @@ public partial class NPC : Instance
 		if (Character != null) Character.Ready();
 		base.Ready();
 	}
-
 	[ScriptMethod]
 	public void SetNavDestination(Vector3 pos)
 	{

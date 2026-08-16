@@ -612,7 +612,7 @@ public sealed partial class PolytorianModel : CharacterModel
 			CharacterAttachmentEnum.Head => GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_Head/HeadAttachment"),
 			CharacterAttachmentEnum.UpperTorso => GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_UpperTorso/UpperTorsoAttachment"),
 			CharacterAttachmentEnum.LowerTorso => GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_LowerTorso/LowerTorsoAttachment"),
-			CharacterAttachmentEnum.ShoulderLeft => GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_UpperArm_L/ShoulderLeftAttachment"),
+			CharacterAttachmentEnum.ShoulderLeft => GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_UpperArm_L/LeftShoulderAttachment"),
 			CharacterAttachmentEnum.ShoulderRight => GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_UpperArm_R/RightShoulderAttachment"),
 			CharacterAttachmentEnum.ElbowLeft => GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_LowerArm_L/LeftElbowAttachment"),
 			CharacterAttachmentEnum.ElbowRight => GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_LowerArm_R/RightElbowAttachment"),
@@ -806,16 +806,13 @@ public sealed partial class PolytorianModel : CharacterModel
 				body.AssetID = (uint)asset.ID;
 				BodyMesh = body;
 			}
-			else if (asset.Type == "hat")
+			else if (asset.Type == "hat" || asset.Type == "tool")
 			{
 				try
 				{
-					Accessory? accessory = await Root.Insert.AccessoryAsync(asset.ID);
-					if (myCount != _loadAppearanceCount) { accessory?.Delete(); throw new OperationCanceledException("The avatar is cancelled"); }
-					if (IsDeleted)
+					if (asset.Type == "hat")
 					{
-						accessory?.Delete();
-						throw new OperationCanceledException("The avatar is deleted");
+						Root.Insert.CreateAccessory(asset.ID, asset.Name, asset.AccessoryType).Parent = this;
 					}
 					accessory?.Parent = this;
 				}
