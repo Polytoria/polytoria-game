@@ -24,6 +24,7 @@ public partial class NPC : Instance
 	private string _displayName = "";
 	private Node3D? _navAgentContainer;
 	private NavigationAgent3D? _navAgent;
+	private Physical? _grabbing;
 
 	// Pending properties to apply to character
 	private Color? _pendingHeadColor;
@@ -33,6 +34,27 @@ public partial class NPC : Instance
 	private Color? _pendingLeftLegColor;
 	private Color? _pendingRightLegColor;
 	private int? _pendingFaceID;
+
+	[ScriptProperty]
+	public PTSignal<Physical> Grabbed { get; private set; } = new();
+
+	[ScriptProperty]
+	public PTSignal<Physical> Ungrabbed { get; private set; } = new();
+
+	[ScriptProperty]
+	public Physical? Grabbing => _grabbing;
+
+	public void SetGrabbing(Physical phy)
+	{
+		_grabbing = phy;
+		Grabbed.Invoke(phy);
+	}
+
+	public void ReleaseGrabbing()
+	{
+		Ungrabbed.Invoke(_grabbing);
+		_grabbing = null;
+	}
 
 	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Apply them to Character"), CloneIgnore]
 	public Color HeadColor
