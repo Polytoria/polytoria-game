@@ -814,53 +814,20 @@ public sealed partial class PolytorianModel : CharacterModel
 					{
 						Root.Insert.CreateAccessory(asset.ID, asset.Name, asset.AccessoryType).Parent = this;
 					}
-					accessory?.Parent = this;
+					else if (Controller is Player plr && loadTool)
+					{
+						hasTool = true;
+						Root.Insert.CreateTool(asset.ID, asset.Name).Parent = Inventory;
+					}
+					else if (loadToolNpc)
+					{
+						hasTool = true;
+						EquipTool(Root.Insert.CreateTool(asset.ID, asset.Name));
+					}
 				}
 				catch (Exception ex)
 				{
 					PT.PrintErr(ex);
-				}
-			}
-			else if (asset.Type == "tool")
-			{
-				if (loadTool && this.Inventory != null)
-				{
-					hasTool = true;
-					try
-					{
-						Tool? tool = await Root.Insert.ToolAsync(asset.ID);
-						if (myCount != _loadAppearanceCount) { tool?.Delete(); throw new OperationCanceledException("The avatar is cancelled"); }
-						if (IsDeleted)
-						{
-							tool?.Delete();
-							throw new OperationCanceledException("The avatar is deleted");
-						}
-						tool?.Parent = this.Inventory;
-					}
-					catch (Exception ex)
-					{
-						PT.PrintErr(ex);
-					}
-				}
-				else if (loadToolNpc)
-				{
-					hasTool = true;
-					try
-					{
-						Tool? tool = await Root.Insert.ToolAsync(asset.ID);
-						if (myCount != _loadAppearanceCount) { tool?.Delete(); throw new OperationCanceledException("The avatar is cancelled"); }
-						if (IsDeleted)
-						{
-							tool?.Delete();
-							throw new OperationCanceledException("The avatar is deleted");
-						}
-						if (tool != null)
-							this.EquipTool(tool);
-					}
-					catch (Exception ex)
-					{
-						PT.PrintErr(ex);
-					}
 				}
 			}
 		}
