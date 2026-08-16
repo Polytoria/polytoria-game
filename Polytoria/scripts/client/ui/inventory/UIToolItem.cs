@@ -40,6 +40,9 @@ public partial class UIToolItem : Button
 	private Label _toolNameLabel = null!;
 	private TextureRect _toolIconRect = null!;
 	private Label _toolIndexLabel = null!;
+	private PanelContainer _tooltipPanel = null!;
+	private Label _tooltipLabel = null!;
+	private bool _hovered = false;
 	private TouchScreenButton? _touchscreenButton;
 	private Control _touchscreenBlock = null!;
 	private Control _baseControl = null!;
@@ -74,9 +77,17 @@ public partial class UIToolItem : Button
 		_toolIndexLabel = _baseControl.GetNode<Label>("Index");
 		_touchscreenBlock = _baseControl.GetNode<Control>("TouchscreenBlock");
 		_touchscreenButton = _touchscreenBlock.GetNodeOrNull<TouchScreenButton>("TSB");
+		_tooltipPanel = GetNodeOrNull<PanelContainer>("TooltipPanel");
+		if (_tooltipPanel != null)
+		{
+			_tooltipLabel = _tooltipPanel.GetNode<Label>("TooltipLabel");
+			MouseEntered += OnTooltipShow;
+			MouseExited += OnTooltipHide;
+		}
 
 		UpdateLabel();
 		UpdateName();
+		UpdateTooltip();
 
 		LinkedTool.PropertyChanged.Connect(OnToolPropChanged);
 		LinkedTool.Equipped.Connect(OnToolEquipped);
@@ -118,6 +129,11 @@ public partial class UIToolItem : Button
 		LinkedTool.Unequipped.Disconnect(OnToolUnequipped);
 
 		_touchscreenButton?.Pressed -= OnPressed;
+		if (_tooltipPanel != null)
+		{
+			MouseEntered -= OnTooltipShow;
+			MouseExited -= OnTooltipHide;
+		}
 	}
 
 	private void InsertToolImage()
@@ -187,11 +203,50 @@ public partial class UIToolItem : Button
 		{
 			UpdateName();
 		}
+		if (propName == "Tooltip")
+		{
+			UpdateTooltip();
+		}
 	}
 
 	private void UpdateName()
 	{
 		_toolNameLabel.Text = LinkedTool.Name;
+	}
+
+	private void UpdateTooltip()
+	{
+		if (_tooltipPanel == null) return;
+		_tooltipLabel.Text = LinkedTool.Tooltip;
+		if (_tooltipPanel.Visible)
+		{
+			RepositionAfterFrame();
+		}
+	}
+
+	private async void RepositionAfterFrame()
+	{
+		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		if (_tooltipPanel == null || !_tooltipPanel.Visible) return;
+		Vector2 size = _tooltipPanel.Size;
+		_tooltipPanel.Position = new Vector2(Mathf.Round((Size.X - size.X) / 2f), -Mathf.Round(size.Y) - 6f);
+	}
+
+	private void OnTooltipShow()
+	{
+		if (_tooltipPanel == null) return;
+		_hovered = true;
+		if (string.IsNullOrEmpty(LinkedTool.Tooltip)) return;
+		UpdateTooltip();
+		_tooltipPanel.Visible = true;
+		RepositionAfterFrame();
+	}
+
+	private void OnTooltipHide()
+	{
+		_hovered = false;
+		if (_tooltipPanel == null) return;
+		_tooltipPanel.Visible = false;
 	}
 
 	private void OnToolEquipped()
