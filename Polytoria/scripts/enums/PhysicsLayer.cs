@@ -8,7 +8,7 @@ using System;
 namespace Polytoria.Enums;
 
 [ScriptEnum, Flags]
-public enum PhysicsLayerEnum
+public enum PhysicsLayerEnum //: uint
 {
     None = 0,
     Default = 1,
@@ -17,5 +17,5 @@ public enum PhysicsLayerEnum
     CreatorBoundsCanCollide = 8,
     RaycastCollision = 16,
 
-    All = -1 //Sense it's in 2's compliment being converted to a uint equivelent to every bit being 1
+    All = unchecked((int)uint.MaxValue) //Like this sense we want all 32 bit values active
 }

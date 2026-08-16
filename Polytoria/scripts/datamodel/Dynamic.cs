@@ -11,6 +11,7 @@ using Polytoria.Datamodel.Interfaces;
 #endif
 using Polytoria.Utils;
 using Polytoria.Utils.DTOs;
+using Polytoria.Enums;
 using System;
 using System.Collections.Generic;
 

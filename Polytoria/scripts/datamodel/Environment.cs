@@ -278,7 +278,7 @@ public sealed partial class Environment : Instance
 	{
 		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
 
-		uint usedCollisionMask = UsesRaycastLayer ? (uint)PhysicsLayerEnum.RaycastCollision : (uint)PhysicsLayerEnum.All;
+		uint usedCollisionMask = UsesRaycastLayer ? (uint)PhysicsLayerEnum.RaycastCollision : unchecked((uint)PhysicsLayerEnum.All);
 
 		if (collisionMask != null)
 		{

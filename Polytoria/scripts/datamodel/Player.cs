@@ -847,8 +847,8 @@ public sealed partial class Player : NPC
 
 	private async void OnPlayerDied()
 	{
-		CollisionLayers = Root.Environment.UsesRaycastLayer ? CollisionLayers & ~(uint)PhysicsLayerEnum.RaycastCollision 
-															: CollisionLayers;
+		//CollisionLayers = Root.Environment.UsesRaycastLayer ? CollisionLayers & ~(uint)PhysicsLayerEnum.RaycastCollision 
+		//													: CollisionLayers;
 
 		if (IsLocal)
 		{
