@@ -199,7 +199,15 @@ public partial class NetworkTransformSync : Instance
 		}
 	}
 
-	public void SendTransformToServer(Dynamic dyn, bool lerpTransform = false)
+	public override void PreDelete()
+	{
+		SetProcess(false);
+		_pendingTransforms.Clear();
+		_pendingBatchUpdate.Clear();
+		base.PreDelete();
+	}
+
+	public void SendTransformToServer(Dynamic dyn, TransformPayloadDto payload, bool lerpTransform = false)
 	{
 		// Return if not ready
 		if (!dyn.IsNetworkReady || !dyn.Root.IsLoaded) return;
@@ -210,20 +218,18 @@ public partial class NetworkTransformSync : Instance
 		// Check authority
 		if (!CheckDynAuthor(dyn, NetService.LocalPeerID)) return;
 
-		TransformPayloadDto payload = TransformPayloadDto.FromGDTransform(dyn.GetLocalTransform());
 		string objID = dyn.NetworkedObjectID;
 
 		RpcId(1, nameof(NetRecvTransformOnServer), objID, payload, lerpTransform);
 	}
 
-	public void BroadcastTransformFromServer(Dynamic dyn, bool lerpTransform, int excludePeer = -1, bool reliable = true)
+	public void BroadcastTransformFromServer(Dynamic dyn, TransformPayloadDto payload, bool lerpTransform, int excludePeer = -1, bool reliable = true)
 	{
 		if (!NetService.IsServer) return;
 		if (!dyn.IsNetworkReady) return;
 		string objID = dyn.NetworkedObjectID;
 
-		Transform3D transform = dyn.GetLocalTransform();
-		SetPendingBatch(objID, new(dyn, reliable ? TransformPayloadDto.FromGDTransformUInt64(transform) : TransformPayloadDto.FromGDTransform(transform), lerpTransform, excludePeer)
+		SetPendingBatch(objID, new(payload, lerpTransform, excludePeer)
 		{
 			Reliable = reliable,
 			Forced = true
@@ -262,7 +268,7 @@ public partial class NetworkTransformSync : Instance
 			dyn.UpdateTransformFromNet(processed, false, lerpTransform);
 
 			// Add to batch pending
-			SetPendingBatch(objID, new(dyn, processed, lerpTransform, fromPeer) { Reliable = false });
+			SetPendingBatch(objID, new(processed, lerpTransform, fromPeer) { Reliable = false });
 		}
 	}
 
@@ -270,8 +276,7 @@ public partial class NetworkTransformSync : Instance
 	{
 		if (NetService.NetInstance == null || batch.Count == 0) return;
 
-		byte[] compressed = ZstdCompressionUtils.Compress(SerializeUtils.Serialize<BatchTransformData[]>([.. batch]));
-		byte[] packet = BuildRpcPacket(rpcName, compressed);
+		byte[] packet = BuildRpcPacket(rpcName, SerializeUtils.Serialize<BatchTransformData[]>([.. batch]));
 
 		if (excludePeer == -1)
 		{
@@ -279,7 +284,7 @@ public partial class NetworkTransformSync : Instance
 		}
 		else
 		{
-			NetService.NetInstance.BroadcastMessage(packet, transferMode, except: [excludePeer]);
+			NetService.NetInstance.BroadcastMessageExcept(packet, transferMode, 0, excludePeer);
 		}
 	}
 
@@ -297,7 +302,7 @@ public partial class NetworkTransformSync : Instance
 		{
 			BatchTransformData batchData = new(
 				k,
-				pending.Transform,
+				pending.Transform.Data,
 				pending.LerpTransform
 			);
 
@@ -369,7 +374,7 @@ public partial class NetworkTransformSync : Instance
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.UnreliableOrdered)]
 	private void RecvBatchedTransforms(byte[] transformsRaw, bool isReliable)
 	{
-		BatchTransformData[]? transforms = SerializeUtils.Deserialize<BatchTransformData[]>(ZstdCompressionUtils.Decompress(transformsRaw));
+		BatchTransformData[]? transforms = SerializeUtils.Deserialize<BatchTransformData[]>(transformsRaw);
 		if (transforms == null) return;
 		foreach (var data in transforms)
 		{
@@ -391,9 +396,8 @@ public partial class NetworkTransformSync : Instance
 		return list;
 	}
 
-	private struct PendingBatchTransform(Dynamic dyn, TransformPayloadDto transform, bool lerpTransform, int excludePeer)
+	private struct PendingBatchTransform(TransformPayloadDto transform, bool lerpTransform, int excludePeer)
 	{
-		public Dynamic Dyn = dyn;
 		public TransformPayloadDto Transform = transform;
 		public bool LerpTransform = lerpTransform;
 		public int ExcludePeer = excludePeer;
@@ -403,25 +407,22 @@ public partial class NetworkTransformSync : Instance
 
 	private struct PendingTransform()
 	{
-		public required TransformPayloadDto Transform;
+		public TransformPayloadDto Transform = default!;
 		public int FromPeer;
 		public int ToPeer = -1;
 	}
 
 	[MemoryPackable]
-	public partial class BatchTransformData
+	public partial struct BatchTransformData
 	{
 		public string ObjID = null!;
 		public byte[] Transform = null!;
 		public bool Lerp = false;
 
-		[MemoryPackConstructor]
-		public BatchTransformData() { }
-
-		public BatchTransformData(string objID, TransformPayloadDto transform, bool lerp)
+		public BatchTransformData(string objID, byte[] transform, bool lerp)
 		{
 			ObjID = objID;
-			Transform = transform.Data;
+			Transform = transform;
 			Lerp = lerp;
 		}
 	}

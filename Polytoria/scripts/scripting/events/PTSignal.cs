@@ -21,11 +21,13 @@ public class PTSignal : IScriptObject
 	public event Action? Subscribed;
 	public event Action? Unsubscribed;
 
-	private readonly List<PTCallback> _ptCallbacks = [];
+	private List<PTCallback>? _ptCallbacks;
 
-	private readonly HashSet<PTCallback> _ptSet = [];
+	private HashSet<PTCallback>? _ptSet;
 
 	private static readonly Dictionary<Script, List<PTSignal>> _subscribedScripts = [];
+
+	internal bool HasConnections => _ptCallbacks is { Count: > 0 };
 
 	public void Invoke(params object?[]? args)
 	{
@@ -34,13 +36,15 @@ public class PTSignal : IScriptObject
 
 	public void InvokeDirect(object?[] args)
 	{
+		if (_ptCallbacks == null) return;
+
 		for (int i = _ptCallbacks.Count - 1; i >= 0; i--)
 		{
 			PTCallback? cb = _ptCallbacks[i];
 			if (cb is null || cb.Disposed)
 			{
 				_ptCallbacks.RemoveAt(i);
-				if (cb is not null) _ptSet.Remove(cb);
+				if (cb is not null) _ptSet?.Remove(cb);
 				continue;
 			}
 
@@ -70,8 +74,13 @@ public class PTSignal : IScriptObject
 
 	private void RemoveThisSignalFromScript(Script s)
 	{
-		List<PTSignal> signals = GetSignalListFromScript(s);
+		if (!_subscribedScripts.TryGetValue(s, out List<PTSignal>? signals)) return;
+
 		signals.Remove(this);
+		if (signals.Count == 0)
+		{
+			_subscribedScripts.Remove(s);
+		}
 	}
 
 	[ScriptMethod]
@@ -79,8 +88,9 @@ public class PTSignal : IScriptObject
 	{
 		PTSignalConnection sc = new() { Callback = action, Signal = this };
 
+		_ptSet ??= [];
 		if (!_ptSet.Add(action)) return sc;
-		_ptCallbacks.Add(action);
+		(_ptCallbacks ??= []).Add(action);
 		if (action.FromScript != null)
 		{
 			AddThisSignalToScript(action.FromScript);
@@ -107,7 +117,7 @@ public class PTSignal : IScriptObject
 		if (del is Action a) { Connect(a); return; }
 		if (del is Action<object?[]> aArgs) { Connect(aArgs); return; }
 
-		if (_ptCallbacks.Any(c => c.OriginalDelegate == del))
+		if (_ptCallbacks?.Any(c => c.OriginalDelegate == del) == true)
 		{
 			GD.PushWarning("This delegate already exists");
 			return;
@@ -123,8 +133,8 @@ public class PTSignal : IScriptObject
 	[ScriptMethod]
 	public void Disconnect(PTCallback action)
 	{
-		if (!_ptSet.Remove(action)) return;
-		_ptCallbacks.Remove(action);
+		if (_ptSet?.Remove(action) != true) return;
+		_ptCallbacks?.Remove(action);
 		ScriptService.FreePTCallback(action);
 
 		if (action.FromScript != null)
@@ -137,14 +147,14 @@ public class PTSignal : IScriptObject
 
 	public void Disconnect(Action action)
 	{
-		var cb = _ptCallbacks.FirstOrDefault(c => c.OriginalDelegate?.Equals(action) == true);
+		var cb = _ptCallbacks?.FirstOrDefault(c => c.OriginalDelegate?.Equals(action) == true);
 		if (cb == null) return;
 		Disconnect(cb);
 	}
 
 	public void Disconnect(Action<object?[]> action)
 	{
-		var cb = _ptCallbacks.FirstOrDefault(c => c.OriginalDelegate?.Equals(action) == true);
+		var cb = _ptCallbacks?.FirstOrDefault(c => c.OriginalDelegate?.Equals(action) == true);
 		if (cb == null) return;
 		Disconnect(cb);
 	}
@@ -154,7 +164,7 @@ public class PTSignal : IScriptObject
 		if (del is Action a) { Disconnect(a); return; }
 		if (del is Action<object?[]> aArgs) { Disconnect(aArgs); return; }
 
-		var cb = _ptCallbacks.FirstOrDefault(c => c.OriginalDelegate == del);
+		var cb = _ptCallbacks?.FirstOrDefault(c => c.OriginalDelegate == del);
 		if (cb == null) return;
 		Disconnect(cb);
 	}
@@ -246,16 +256,19 @@ public class PTSignal : IScriptObject
 		}
 
 		// Free all Lua callbacks
-		foreach (var cb in _ptCallbacks)
+		if (_ptCallbacks != null)
 		{
-			if (cb != null && !cb.Disposed)
+			foreach (var cb in _ptCallbacks)
 			{
-				ScriptService.FreePTCallback(cb);
+				if (cb != null && !cb.Disposed)
+				{
+					ScriptService.FreePTCallback(cb);
+				}
 			}
 		}
 
-		_ptCallbacks.Clear();
-		_ptSet.Clear();
+		_ptCallbacks = null;
+		_ptSet = null;
 	}
 
 	/// <summary>
@@ -264,13 +277,15 @@ public class PTSignal : IScriptObject
 	/// <param name="s"></param>
 	public void DisconnectFromScript(Script s)
 	{
+		if (_ptCallbacks == null) return;
+
 		for (int i = _ptCallbacks.Count - 1; i >= 0; i--)
 		{
 			PTCallback? cb = _ptCallbacks[i];
 			if (cb is null || cb.Disposed || cb.FromScript == s)
 			{
 				_ptCallbacks.RemoveAt(i);
-				if (cb is not null) _ptSet.Remove(cb);
+				if (cb is not null) _ptSet?.Remove(cb);
 				continue;
 			}
 		}

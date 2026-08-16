@@ -26,6 +26,7 @@ public partial class DatamodelBridge : Node3D
 	private readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materials = [];
 
 	private bool isGameReady = false;
+	private bool _renderingEnabled;
 
 	public void Attach(World root, bool manualRebuild = false)
 	{
@@ -37,6 +38,13 @@ public partial class DatamodelBridge : Node3D
 
 		Root = root;
 		root.Bridge = this;
+		_renderingEnabled = DisplayServer.GetName() != "headless";
+		SetProcess(_renderingEnabled);
+
+		if (!_renderingEnabled)
+		{
+			return;
+		}
 
 		_scenario = Root.World3D.Scenario;
 
@@ -60,14 +68,17 @@ public partial class DatamodelBridge : Node3D
 	{
 		if (Root != null)
 		{
-			Root.InstanceEnteredTree -= OnInstanceAdded;
-			Root.InstanceExitingTree -= OnInstanceRemoving;
-			Root.Loaded.Disconnect(OnGameReady);
-
-			// Cleanup parts
-			foreach (var item in _handles.Keys)
+			if (_renderingEnabled)
 			{
-				RemovePart(item);
+				Root.InstanceEnteredTree -= OnInstanceAdded;
+				Root.InstanceExitingTree -= OnInstanceRemoving;
+				Root.Loaded.Disconnect(OnGameReady);
+
+				// Cleanup parts
+				foreach (Part item in new List<Part>(_handles.Keys))
+				{
+					RemovePart(item);
+				}
 			}
 
 			Root.Bridge = null!;
@@ -111,7 +122,7 @@ public partial class DatamodelBridge : Node3D
 
 	public override void _Process(double delta)
 	{
-		if (!isGameReady) return;
+		if (!_renderingEnabled || !isGameReady) return;
 		if (_dirty.Count == 0) return;
 
 		foreach (Part part in _dirty)
@@ -321,6 +332,7 @@ public partial class DatamodelBridge : Node3D
 
 	public void AddPart(Part part)
 	{
+		if (!_renderingEnabled) return;
 		if (_handles.ContainsKey(part)) return;
 		if (!IsPartEligible(part))
 		{
@@ -345,6 +357,7 @@ public partial class DatamodelBridge : Node3D
 
 	public void RemovePart(Part part)
 	{
+		if (!_renderingEnabled) return;
 		if (_handles.TryGetValue(part, out var handle))
 		{
 			part.PropertyChanged.Disconnect(handle.PropertyChangedHandler);
