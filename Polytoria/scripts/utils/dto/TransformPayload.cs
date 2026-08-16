@@ -13,9 +13,33 @@ namespace Polytoria.Utils.DTOs;
 [MemoryPackable]
 public partial class TransformPayloadDto
 {
-	private readonly bool _uInt64 = false;
+	private const int UInt32Length = sizeof(float) * 3 + sizeof(uint);
+	private const int UInt64Length = sizeof(float) * 3 + sizeof(ulong);
 
-	public byte[] Data { get; set; } = null!;
+	private bool _uInt64 = false;
+	private byte[] _data = new byte[UInt32Length];
+
+	public byte[] Data
+	{
+		get => _data;
+		set
+		{
+			if (_data == value) return;
+
+			switch (value.Length)
+			{
+				case UInt32Length: // UnitQuaternionDto
+					_uInt64 = false;
+					break;
+				case UInt64Length: // UnitQuaternionUInt64Dto
+					_uInt64 = true;
+					break;
+				default:
+					return;
+			}
+			_data = value;
+		}
+	}
 
 	[MemoryPackIgnore, JsonIgnore]
 	public Vector3 Position => new(
@@ -31,22 +55,7 @@ public partial class TransformPayloadDto
 
 	[MemoryPackConstructor, JsonConstructor]
 	public TransformPayloadDto() { }
-	public TransformPayloadDto(byte[] bytes)
-	{
-		switch (bytes.Length)
-		{
-			case 16: // 3 floats + 1 uint (use UnitQuaternionDto)
-				_uInt64 = false;
-				break;
-			case 20: // 3 floats + 1 ulong (use UnitQuaternionUInt64Dto)
-				_uInt64 = true;
-				break;
-			default: // invalid
-				Data = new byte[16];
-				return;
-		}
-		Data = bytes;
-	}
+	public TransformPayloadDto(byte[] bytes) { Data = bytes; }
 
 	public bool IsEqualApprox(Vector3 pos, Quaternion rot) => Position.IsEqualApprox(pos) && Rotation.IsEqualApprox(rot);
 	public bool IsEqualApprox(Transform3D t) => Position.IsEqualApprox(t.Origin) && Rotation.IsEqualApprox(t.Basis.GetRotationQuaternion());
@@ -54,7 +63,7 @@ public partial class TransformPayloadDto
 
 	public static byte[] ToArray(Vector3 Position, uint Rotation)
 	{
-		byte[] data = new byte[16];
+		byte[] data = new byte[UInt32Length];
 		BinaryPrimitives.WriteSingleLittleEndian(data.AsSpan(0, 4), Position.X);
 		BinaryPrimitives.WriteSingleLittleEndian(data.AsSpan(4, 4), Position.Y);
 		BinaryPrimitives.WriteSingleLittleEndian(data.AsSpan(8, 4), Position.Z);
@@ -67,7 +76,7 @@ public partial class TransformPayloadDto
 
 	public static byte[] ToArrayUInt64(Vector3 Position, ulong Rotation)
 	{
-		byte[] data = new byte[20];
+		byte[] data = new byte[UInt64Length];
 		BinaryPrimitives.WriteSingleLittleEndian(data.AsSpan(0, 4), Position.X);
 		BinaryPrimitives.WriteSingleLittleEndian(data.AsSpan(4, 4), Position.Y);
 		BinaryPrimitives.WriteSingleLittleEndian(data.AsSpan(8, 4), Position.Z);
