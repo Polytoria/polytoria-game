@@ -603,7 +603,7 @@ public partial class CreatorInterface : Control, IScriptObject
 
 	public static void PopupManageAddons()
 	{
-		OS.ShellShowInFileManager(ProjectSettings.GlobalizePath(AddonsManager.UserAddonFolder));
+		OS.ShellShowInFileManager(AddonsManager.UserAddonFolder);
 	}
 
 	public void PromptGiveName(string placeholder, Action<string> callback, string title = "Name...", string defaultValue = "")

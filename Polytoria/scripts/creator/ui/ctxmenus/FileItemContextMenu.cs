@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+using Polytoria.Scripting;
 using Polytoria.Datamodel.Creator;
 using Polytoria.Formats;
 using Polytoria.Shared;
@@ -13,6 +14,9 @@ namespace Polytoria.Creator.UI;
 
 public partial class FileItemContextMenu : ContextMenu
 {
+	private const ScriptPermissionFlags standardPermissionFlags = ScriptPermissionFlags.ContextAccess;
+	private const ScriptPermissionFlags debugPermissionFlags = standardPermissionFlags | ScriptPermissionFlags.IORead | ScriptPermissionFlags.IOWrite | ScriptPermissionFlags.CreatorAccess;
+
 	public CreatorSession Session = null!;
 
 	public required string[] Targets;
@@ -39,9 +43,9 @@ public partial class FileItemContextMenu : ContextMenu
 			Target = Targets[0];
 			string ext = Target.GetExtension();
 
-			if (Globals.ScriptFileExtensions.Contains(ext) && Globals.IsInGDEditor)
+			if (Globals.ScriptFileExtensions.Contains(ext))
 			{
-				AddIconItem("play", "Run (Developer Only)", 71);
+				AddIconItem("play", "Run", 71);
 			}
 
 			if (ext == "poly")
@@ -132,10 +136,9 @@ public partial class FileItemContextMenu : ContextMenu
 				CreatorService.Interface.PromptDeleteFiles(Targets);
 				break;
 			case 71: // Run script
-				if (!await CreatorService.Interface.PromptConfirmation("This script will have unrestricted access to your device. Are you sure you want to run it?")) return;
-				Session.RunScript(Targets[0]);
+				Session.RunScriptSource(Targets[0], Globals.IsInGDEditor ? debugPermissionFlags : standardPermissionFlags);
 				break;
-			case 81: // Run script
+			case 81: // Toggle Compressed
 				Session.ToggleCompressed(Targets[0]);
 				break;
 			case 89: // Set as main world

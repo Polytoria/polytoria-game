@@ -27,6 +27,7 @@ namespace Polytoria.Datamodel.Creator;
 public sealed partial class CreatorService : Node, IScriptObject
 {
 	public const string PolytoriaFolderName = "Polytoria/";
+	public static readonly string DocumentsRootPath = Path.Join(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments), PolytoriaFolderName);
 
 	private long _localTestIDCounter = 0;
 
@@ -63,10 +64,22 @@ public sealed partial class CreatorService : Node, IScriptObject
 		};
 		AddChild(Interface);
 
-		string polyFolder = Path.Join(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments), PolytoriaFolderName);
-		if (!Directory.Exists(polyFolder))
+		if (!Directory.Exists(DocumentsRootPath))
 		{
-			Directory.CreateDirectory(polyFolder);
+			Directory.CreateDirectory(DocumentsRootPath);
+		}
+
+		string localDataShortcut = Path.Combine(DocumentsRootPath, "Root");
+		if (!Directory.Exists(localDataShortcut) && !File.Exists(localDataShortcut))
+		{
+			try
+			{
+				Directory.CreateSymbolicLink(localDataShortcut, ProjectSettings.GlobalizePath("user://"));
+			}
+			catch (Exception ex)
+			{
+				PT.PrintWarn("Failed to create shortcut to root: ", ex.Message);
+			}
 		}
 	}
 

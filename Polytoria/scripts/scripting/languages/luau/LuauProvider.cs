@@ -149,7 +149,10 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 	public void Run(Script script)
 	{
-		PT.Print("Running script: ", script.LuaPath);
+		if (script.LuaPath != "world.Temporary.Instance")
+		{
+			PT.Print("Running script: ", script.LuaPath);
+		}
 		LuaState state = InitalizeScript(script);
 
 		// Try compile
@@ -659,6 +662,17 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			}
 		}
 		string logInfo = sb.ToString();
+
+		string? traceback;
+		lock (lua)
+		{
+			traceback = lua.DebugTrace();
+		}
+		if (!string.IsNullOrEmpty(traceback))
+		{
+			logInfo += "\nstacktrace:\n" + traceback;
+		}
+
 		logger.LogWarning(script, logInfo);
 		return 0;
 	}
@@ -721,7 +735,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 
 		// Return existing if already required
-		if (ms.LuauState != null)
+		if (ms.LuauState != null && ms.Root.SessionType != World.SessionTypeEnum.Creator)
 		{
 			if (ms.CachedLuauResultRef.HasValue)
 			{

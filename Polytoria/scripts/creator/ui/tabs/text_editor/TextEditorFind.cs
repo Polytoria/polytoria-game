@@ -24,7 +24,7 @@ public sealed partial class TextEditorFind : Control
 	private readonly List<Vector2I> _searchResults = [];
 	private int _currentResultIndex = -1;
 
-	public TextEditorRoot Root = null!;
+	public CodeEdit TargetCodeEdit = null!;
 
 	public bool Active = false;
 
@@ -113,11 +113,11 @@ public sealed partial class TextEditorFind : Control
 			? StringComparison.Ordinal
 			: StringComparison.OrdinalIgnoreCase;
 
-		int lineCount = Root.CodeEditor.GetLineCount();
+		int lineCount = TargetCodeEdit.GetLineCount();
 
 		for (int line = 0; line < lineCount; line++)
 		{
-			string lineText = Root.CodeEditor.GetLine(line);
+			string lineText = TargetCodeEdit.GetLine(line);
 			int index = 0;
 
 			while (index < lineText.Length)
@@ -179,8 +179,8 @@ public sealed partial class TextEditorFind : Control
 		int line = result.X;
 		int column = result.Y;
 
-		Root.CodeEditor.Select(line, column, line, column + _searchField.Text.Length);
-		Root.CodeEditor.CenterViewportToCaret();
+		TargetCodeEdit.Select(line, column, line, column + _searchField.Text.Length);
+		TargetCodeEdit.CenterViewportToCaret();
 	}
 
 	private void UpdateResultLabel()
@@ -204,10 +204,10 @@ public sealed partial class TextEditorFind : Control
 		int line = result.X;
 		int column = result.Y;
 
-		string lineText = Root.CodeEditor.GetLine(line);
+		string lineText = TargetCodeEdit.GetLine(line);
 		string newLineText = lineText.Remove(column, _searchField.Text.Length)
 									 .Insert(column, _replaceField.Text);
-		Root.CodeEditor.SetLine(line, newLineText);
+		TargetCodeEdit.SetLine(line, newLineText);
 
 		SearchCurrent();
 
@@ -229,10 +229,10 @@ public sealed partial class TextEditorFind : Control
 			int line = result.X;
 			int column = result.Y;
 
-			string lineText = Root.CodeEditor.GetLine(line);
+			string lineText = TargetCodeEdit.GetLine(line);
 			string newLineText = lineText.Remove(column, _searchField.Text.Length)
 										 .Insert(column, _replaceField.Text);
-			Root.CodeEditor.SetLine(line, newLineText);
+			TargetCodeEdit.SetLine(line, newLineText);
 		}
 
 		// Refresh search results
@@ -257,6 +257,6 @@ public sealed partial class TextEditorFind : Control
 	{
 		Active = false;
 		Visible = false;
-		Root.CodeEditor.GrabFocus();
+		TargetCodeEdit.GrabFocus();
 	}
 }

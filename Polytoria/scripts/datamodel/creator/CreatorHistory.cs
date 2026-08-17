@@ -17,6 +17,9 @@ public sealed partial class CreatorHistory : Instance
 {
 	private const float DeleteTimeoutSec = 60;
 	private HistoryAction? _currentAction = null;
+	private bool _trackInstances = false;
+	private Action<Instance>? _creationTracker = null;
+	private Action<Instance>? _removalTracker = null;
 	private readonly Stack<HistoryAction> _undoStack = new();
 	private readonly Stack<HistoryAction> _redoStack = new();
 
@@ -56,19 +59,43 @@ public sealed partial class CreatorHistory : Instance
 		CreatorService.Interface.StatusBar?.SetStatus("Redo " + action.Title);
 	}
 
+	/// <summary>
+	/// Creates new action.
+	/// </summary>
 	[ScriptMethod]
 	public void NewAction(string title)
 	{
 		_currentAction = new HistoryAction { Title = title };
 	}
 
+	/// <summary>
+	/// Tracks instance additions/removals performed during the current action automatically.
+	///	<br/>
+	/// Must be called after <see cref="NewAction"/> and before <see cref="CommitAction"/>.
+	/// No callbacks are required if this is called.
+	/// </summary>
+	[ScriptMethod]
+	public void TrackInstances()
+	{
+		if (_currentAction == null)
+		{
+			throw new InvalidOperationException("No action in progress. Call 'NewAction()' first.");
+		}
+		_trackInstances = true;
+	}
+
+	/// <summary>
+	/// Adds do callback to the current action.
+	///	<br/>
+	/// Must be called after <see cref="NewAction"/> and before <see cref="CommitAction"/>.
+	/// </summary>
 	[ScriptMethod]
 	public void AddDoCallback(PTCallback callback)
 	{
 		if (_currentAction == null)
 		{
 			throw new InvalidOperationException(
-				"No action in progress. Call NewAction() first.");
+				"No action in progress. Call 'NewAction()' first.");
 		}
 
 		ArgumentNullException.ThrowIfNull(callback);
@@ -76,13 +103,18 @@ public sealed partial class CreatorHistory : Instance
 		_currentAction.DoCallbacks.Add(callback);
 	}
 
+	/// <summary>
+	/// Adds undo callback to the current action.
+	///	<br/>
+	/// Must be called after <see cref="NewAction"/> and before <see cref="CommitAction"/>.
+	/// </summary>
 	[ScriptMethod]
 	public void AddUndoCallback(PTCallback callback)
 	{
 		if (_currentAction == null)
 		{
 			throw new InvalidOperationException(
-				"No action in progress. Call NewAction() first.");
+				"No action in progress. Call 'NewAction()' first.");
 		}
 
 		ArgumentNullException.ThrowIfNull(callback);
@@ -90,30 +122,104 @@ public sealed partial class CreatorHistory : Instance
 		_currentAction.UndoCallbacks.Add(callback);
 	}
 
+	/// <summary>
+	/// Commits the current action.
+	/// </summary>
 	[ScriptMethod]
 	public void CommitAction()
 	{
 		if (_currentAction == null)
 		{
 			throw new InvalidOperationException(
-				"No action to commit. Call NewAction() first.");
+				"No action to commit. Call 'NewAction()' first.");
 		}
 
-		if (_currentAction.DoCallbacks.Count == 0)
+		if (!_trackInstances && _currentAction.DoCallbacks.Count == 0)
 		{
-			throw new InvalidOperationException(
-				"Action must have at least one 'do' callback.");
+			throw new InvalidOperationException("Action must have at least one 'do' callback.");
 		}
 
-		if (_currentAction.UndoCallbacks.Count == 0)
+		if (!_trackInstances && _currentAction.UndoCallbacks.Count == 0)
 		{
-			throw new InvalidOperationException(
-				"Action must have at least one 'undo' callback.");
+			throw new InvalidOperationException("Action must have at least one 'undo' callback.");
+		}
+
+		List<(Instance Inst, Instance Parent, int Index)>? additions = null;
+		List<(Instance Inst, Instance Parent, int Index)>? removals = null;
+		if (_trackInstances)
+		{
+			additions = [];
+			removals = [];
+			_removalTracker = inst => removals.Add((inst, inst.Parent!, inst.Index));
+			_creationTracker = inst => additions.Add((inst, inst.Parent!, inst.Index));
+			Root.InstanceExitingTree += _removalTracker;
+			Root.InstanceEnteredTree += _creationTracker;
 		}
 
 		foreach (PTCallback callback in _currentAction.DoCallbacks)
 		{
 			callback?.Invoke();
+		}
+
+		if (_trackInstances && additions != null && removals != null)
+		{
+			Root.InstanceExitingTree -= _removalTracker;
+			Root.InstanceEnteredTree -= _creationTracker;
+			_removalTracker = null;
+			_creationTracker = null;
+			_trackInstances = false;
+
+			bool hasChanges = additions.Count > 0 || removals.Count > 0;
+			if (hasChanges)
+			{
+				(Instance Inst, Instance Parent, int Index)[] addedSnapshot = [.. additions];
+				(Instance Inst, Instance Parent, int Index)[] removedSnapshot = [.. removals];
+
+				bool additionsRecovered = true;
+				bool removalsRecovered = false;
+
+				_currentAction.UndoCallbacks.Insert(0, new((_callback) =>
+				{
+					additionsRecovered = false;
+					foreach ((Instance inst, _, _) in addedSnapshot)
+					{
+						inst.Parent = Root.TemporaryContainer;
+					}
+					StartSoftDeleteTimer(addedSnapshot, () => additionsRecovered);
+
+					removalsRecovered = true;
+					foreach ((Instance inst, Instance parent, int index) in removedSnapshot)
+					{
+						inst.Parent = parent;
+						parent.MoveChild(inst, index);
+					}
+				}));
+
+				_currentAction.DoCallbacks.Clear();
+				_currentAction.DoCallbacks.Add(new((_callback) =>
+				{
+					additionsRecovered = true;
+					foreach ((Instance inst, Instance parent, int index) in addedSnapshot)
+					{
+						inst.Parent = parent;
+						parent.MoveChild(inst, index);
+					}
+
+					removalsRecovered = false;
+					foreach ((Instance inst, _, _) in removedSnapshot)
+					{
+						inst.Parent = Root.TemporaryContainer;
+					}
+					StartSoftDeleteTimer(removedSnapshot, () => removalsRecovered);
+				}));
+			}
+		}
+
+		bool hasAnyEffect = _currentAction.DoCallbacks.Count > 0 || _currentAction.UndoCallbacks.Count > 0;
+		if (!hasAnyEffect)
+		{
+			_currentAction = null;
+			return;
 		}
 
 		_undoStack.Push(_currentAction);
@@ -201,6 +307,22 @@ public sealed partial class CreatorHistory : Instance
 		}));
 
 		CommitAction();
+	}
+
+	private void StartSoftDeleteTimer((Instance Inst, Instance Parent, int Index)[] instances, Func<bool> isRecovered)
+	{
+		Timer timer = new();
+		GDNode.AddChild(timer, @internal: Node.InternalMode.Back);
+		timer.Timeout += () =>
+		{
+			if (isRecovered()) return;
+			foreach ((Instance inst, _, _) in instances)
+			{
+				inst.Delete();
+			}
+			timer.QueueFree();
+		};
+		timer.Start(DeleteTimeoutSec);
 	}
 
 	public void DuplicateInstances(Instance[] instances)

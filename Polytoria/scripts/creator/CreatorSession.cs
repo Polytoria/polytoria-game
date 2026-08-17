@@ -826,13 +826,23 @@ return module";
 		}
 	}
 
-	public void RunScript(string path)
+	public void RunScript(string path, Scripting.ScriptPermissionFlags permissionFlags = Scripting.ScriptPermissionFlags.IORead | Scripting.ScriptPermissionFlags.IOWrite)
+	{
+		if (World.Current == null) { PT.Print("World current is null, did not run script"); return; }
+		path = GlobalizePath(path);
+		string source = File.ReadAllText(path);
+		RunScriptSource(source, permissionFlags);
+	}
+
+	/// <summary>
+	/// Runs raw lua source with no script attached (used by the command line)
+	/// </summary>
+	public void RunScriptSource(string source, Scripting.ScriptPermissionFlags permissionFlags = Scripting.ScriptPermissionFlags.IORead | Scripting.ScriptPermissionFlags.IOWrite)
 	{
 		if (World.Current == null) { PT.Print("World current is null, did not run script"); return; }
 		Script s = new() { Root = World.Current };
-		path = GlobalizePath(path);
-		s.Source = File.ReadAllText(path);
-		s.PermissionFlags = Scripting.ScriptPermissionFlags.IORead | Scripting.ScriptPermissionFlags.IOWrite;
+		s.Source = source;
+		s.PermissionFlags = permissionFlags;
 		s.Parent = World.Current.TemporaryContainer;
 		s.Run();
 	}
@@ -953,7 +963,7 @@ return module";
 	{
 		CreatorService.Interface.StatusBar?.SetStatus("Backing up world...");
 
-		string backupFolderPath = PolyFolderPath.PathJoin("backups");
+		string backupFolderPath = GetBackupsFolderPath();
 		if (!Directory.Exists(backupFolderPath))
 		{
 			Directory.CreateDirectory(backupFolderPath);
@@ -996,6 +1006,13 @@ return module";
 			PolyFormat.SaveWorldToFile(game, writeTo);
 		}
 		CreatorService.Interface.StatusBar?.SetStatus("World backed up!");
+	}
+
+	private string GetBackupsFolderPath()
+	{
+		string projectName = ProjectFolderPath.TrimEnd('/').GetFile();
+		string projectHash = ProjectFolderPath.Sha256Text()[..8];
+		return Path.Combine(CreatorService.DocumentsRootPath, "Backups", $"{projectName}_{projectHash}");
 	}
 
 	public void CreateVSCodeConfig()

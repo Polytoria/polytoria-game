@@ -98,12 +98,25 @@ public partial class NewProjectWizard : Control
 		return card;
 	}
 
+	private static string GetNextAvailableProjectName(string projectsRoot)
+	{
+		int index = 1;
+		string name;
+		do { name = $"{DefaultProjectName}{index++}"; }
+		while (Directory.Exists(Path.Join(projectsRoot, name)));
+		return name;
+	}
+
 	public void Open()
 	{
 		Visible = true;
-		_oldNameText = DefaultProjectName;
-		_projectNameEdit.Text = DefaultProjectName;
-		_projectPathEdit.Text = Path.Join(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments), CreatorService.PolytoriaFolderName, DefaultProjectName).SanitizePath();
+		string projectsRoot = Path.Join(CreatorService.DocumentsRootPath, "Projects");
+		Directory.CreateDirectory(projectsRoot);
+
+		string defaultName = GetNextAvailableProjectName(projectsRoot);
+		_oldNameText = defaultName;
+		_projectNameEdit.Text = defaultName;
+		_projectPathEdit.Text = Path.Join(projectsRoot, defaultName).SanitizePath();
 	}
 
 	public void Back()
