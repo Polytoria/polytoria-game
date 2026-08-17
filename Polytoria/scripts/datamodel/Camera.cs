@@ -44,6 +44,7 @@ public sealed partial class Camera : Dynamic
 	private float _xSpeed = 120.0f;
 	private float _ySpeed = 120.0f;
 	private bool _followLerp = false;
+	private bool _dragPanning = false;
 	private bool _ctrlLocked = false;
 	private bool _alwaysLocked = false;
 
@@ -306,11 +307,14 @@ public sealed partial class Camera : Dynamic
 			_ctrlLocked = value;
 			if (_ctrlLocked)
 			{
-				StartTurning();
+				if (!_dragPanning)
+				{
+					StartTurning();
+				}
 			}
 			else
 			{
-				if (!AlwaysLocked)
+				if (!AlwaysLocked && !_dragPanning)
 				{
 					StopTurning();
 				}
@@ -617,10 +621,13 @@ public sealed partial class Camera : Dynamic
 	{
 		if (Mode != CameraModeEnum.Follow) return;
 		IsFirstPerson = true;
-		Root.Input.CursorLocked = true;
-		Root.Input.CursorVisible = false;
 		_targetZoom = 0;
-		StartTurning();
+		if (!CtrlLocked && !_dragPanning)
+		{
+			Root.Input.CursorVisible = false;
+			Root.Input.CursorLocked = true;
+			StartTurning();
+		}
 		FirstPersonEntered?.Invoke();
 	}
 
@@ -632,7 +639,7 @@ public sealed partial class Camera : Dynamic
 		{
 			_targetZoom = DefaultZoomDistance;
 		}
-		if (!CtrlLocked)
+		if (!CtrlLocked && !_dragPanning)
 		{
 			Root.Input.CursorVisible = true;
 			Root.Input.CursorLocked = false;
@@ -648,7 +655,7 @@ public sealed partial class Camera : Dynamic
 			CtrlLocked = true;
 		}
 
-		if (IsFirstPerson || AlwaysLocked || CtrlLocked)
+		if (IsFirstPerson || AlwaysLocked || CtrlLocked || _dragPanning)
 		{
 			StartTurning();
 		}
@@ -758,23 +765,35 @@ public sealed partial class Camera : Dynamic
 
 		if (@event is InputEventMouseButton btnEvent)
 		{
-			if (btnEvent.ButtonIndex == MouseButton.Right && !(IsFirstPerson || CtrlLocked))
+			if (btnEvent.ButtonIndex == MouseButton.Right)
 			{
-				if (AlwaysLocked) return;
-				if (btnEvent.Pressed)
+				if (IsFirstPerson || CtrlLocked || AlwaysLocked)
+				{
+					if (!btnEvent.Pressed)
+					{
+						_dragPanning = false;
+					}
+					if (AlwaysLocked) return;
+				}
+				else if (btnEvent.Pressed)
 				{
 					if (!Root.Input.CursorLocked)
 					{
+						_dragPanning = true;
 						StartTurning();
 						Root.Input.CursorLocked = true;
 						Root.Input.CursorVisible = false;
 					}
 				}
-				else if (_turning)
+				else
 				{
-					StopTurning();
-					Root.Input.CursorLocked = false;
-					Root.Input.CursorVisible = true;
+					_dragPanning = false;
+					if (_turning)
+					{
+						StopTurning();
+						Root.Input.CursorLocked = false;
+						Root.Input.CursorVisible = true;
+					}
 				}
 			}
 		}
