@@ -775,7 +775,8 @@ public partial class NPC : Physical
 		Anchored = true;
 		OverrideCanCollide = true;
 		OverrideCanCollideTo = false;
-		SetCollisionLayerEnum(PhysicsLayerEnum.RaycastCollision, false);
+		CollisionLayers = Root.Environment.UsesRaycastLayer ? CollisionLayers & ~(uint)PhysicsLayerEnum.RaycastCollision 
+															: CollisionLayers;
 		Unsit(false);
 		UpdateCollision();
 
