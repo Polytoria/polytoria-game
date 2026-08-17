@@ -112,6 +112,7 @@ public partial class GUI3D : Dynamic
 	private void UpdateCanvasSize()
 	{
 		_subViewport.Size = new((int)(Size.X * 512), (int)(Size.Y * 512));
+
 		RecomputeChildTransforms();
 	}
 
@@ -249,6 +250,7 @@ public partial class GUI3D : Dynamic
 	internal override void OnNodeSizeChanged(Vector3 newSize)
 	{
 		_mesh.Scale = newSize;
+		_area.Scale = newSize;
 		base.OnNodeSizeChanged(newSize);
 	}
 
