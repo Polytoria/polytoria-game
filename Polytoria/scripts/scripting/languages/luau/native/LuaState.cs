@@ -21,7 +21,7 @@ public partial class LuaState : IDisposable
 	private IntPtr _state;
 	private readonly LuaState? _parent;
 	private bool _disposed;
-
+	private readonly bool _ownsState;
 	public const int LUA_MULTRET = -1;
 	public const int LUAI_MAXCSTACK = 8000;
 	public const int LUA_REGISTRYINDEX = -LUAI_MAXCSTACK - 2000;
@@ -39,6 +39,7 @@ public partial class LuaState : IDisposable
 
 	public LuaState()
 	{
+		_ownsState = true;
 		lock (_lock)
 		{
 			_state = NativeBindings.luaL_newstate();
@@ -49,6 +50,7 @@ public partial class LuaState : IDisposable
 
 	public LuaState(IntPtr state)
 	{
+		_ownsState = false;
 		_state = state;
 	}
 
@@ -110,6 +112,7 @@ public partial class LuaState : IDisposable
 	{
 		_state = thread;
 		_parent = parent;
+		_ownsState = false;
 	}
 
 	public void OpenLibs()
@@ -808,10 +811,14 @@ public partial class LuaState : IDisposable
 		{
 			if (!_disposed && _state != IntPtr.Zero)
 			{
-				NativeBindings.lua_close(_state);
+				// Only clean up the native state and dictionaries if this instance owns it
+				if (_ownsState)
+				{
+					NativeBindings.lua_close(_state);
 
-				Polytoria.Scripting.Luau.LuauProvider._scriptContexts.TryRemove(_state, out _);
-				Polytoria.Scripting.Luau.LuauProvider._loggerContexts.TryRemove(_state, out _);
+					Polytoria.Scripting.Luau.LuauProvider._scriptContexts.TryRemove(_state, out _);
+					Polytoria.Scripting.Luau.LuauProvider._loggerContexts.TryRemove(_state, out _);
+				}
 
 				_state = IntPtr.Zero;
 				_disposed = true;
