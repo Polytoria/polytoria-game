@@ -487,9 +487,9 @@ public sealed partial class Player : NPC
 		CollisionMask = (uint)(PhysicsLayerEnum.Default | PhysicsLayerEnum.Player);
 	}*/
 
-	public override void SetInitCollision() 
+	public override void SetInitCollision()
 	{
-		CollisionLayers = Root.Environment.UsesRaycastLayer ? (uint)PhysicsLayerEnum.Default | (uint)PhysicsLayerEnum.Player | (uint)PhysicsLayerEnum.RaycastCollision 
+		CollisionLayers = Root.Environment.UsesRaycastLayer ? (uint)PhysicsLayerEnum.Default | (uint)PhysicsLayerEnum.Player | (uint)PhysicsLayerEnum.RaycastCollision
 															: (uint)PhysicsLayerEnum.Default;
 		CollisionMask = (uint)(PhysicsLayerEnum.Default | PhysicsLayerEnum.Player);
 	}

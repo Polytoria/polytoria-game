@@ -10,12 +10,10 @@ namespace Polytoria.Enums;
 [ScriptEnum, Flags]
 public enum PhysicsLayerEnum //: uint
 {
-    None = 0,
-    Default = 1,
-    Player = 2,
-    CreatorBounds = 4,
-    CreatorBoundsCanCollide = 8,
-    RaycastCollision = 16,
-
-    All = unchecked((int)uint.MaxValue) //Like this sense we want all 32 bit values active
+	None = 0,
+	Default = 1,
+	Player = 2,
+	CreatorBounds = 4,
+	CreatorBoundsCanCollide = 8,
+	RaycastCollision = 16
 }

@@ -61,7 +61,7 @@ public sealed partial class Environment : Instance
 
 	private float _partDestroyHeight;
 	private bool _autoGenerateNavMesh;
-	private bool _usesRaycastLayer;	
+	private bool _usesRaycastLayer;
 	private Lighting.SkyboxEnum _skybox = Lighting.SkyboxEnum.Day1;
 	private bool _fogEnabled = false;
 	private Color _fogColor = new(1, 1, 1);
@@ -278,7 +278,7 @@ public sealed partial class Environment : Instance
 	{
 		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
 
-		uint usedCollisionMask = UsesRaycastLayer ? (uint)PhysicsLayerEnum.RaycastCollision : unchecked((uint)PhysicsLayerEnum.All);
+		uint usedCollisionMask = UsesRaycastLayer ? (uint)PhysicsLayerEnum.RaycastCollision : uint.MaxValue;
 
 		if (collisionMask != null)
 		{

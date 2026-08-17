@@ -486,9 +486,9 @@ public partial class Physical : Dynamic
 		base.Ready();
 	}
 
-	public virtual void SetInitCollision() 
+	public virtual void SetInitCollision()
 	{
-		CollisionLayers = Root.Environment.UsesRaycastLayer ? (uint)PhysicsLayerEnum.Default | (uint)PhysicsLayerEnum.RaycastCollision 
+		CollisionLayers = Root.Environment.UsesRaycastLayer ? (uint)PhysicsLayerEnum.Default | (uint)PhysicsLayerEnum.RaycastCollision
 															: (uint)PhysicsLayerEnum.Default;
 	}
 
@@ -1174,7 +1174,7 @@ public partial class Physical : Dynamic
 		CollisionLayers = BitmapUtils.Set(CollisionLayers, layer, value);
 	}
 
-	public void SetCollisionLayerEnum(PhysicsLayerEnum layerName, bool value) 
+	public void SetCollisionLayerEnum(PhysicsLayerEnum layerName, bool value)
 	{
 		CollisionLayers = BitmapUtils.SetRaw(CollisionMask, (uint)layerName, value);
 	}

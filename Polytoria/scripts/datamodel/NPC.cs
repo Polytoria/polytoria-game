@@ -769,13 +769,13 @@ public partial class NPC : Physical
 
 	private void TriggerNPCDead()
 	{
-		
+
 		if (IsDead) return;
 		if (Root.SessionType != World.SessionTypeEnum.Client) return;
 		Anchored = true;
 		OverrideCanCollide = true;
 		OverrideCanCollideTo = false;
-		CollisionLayers = Root.Environment.UsesRaycastLayer ? CollisionLayers & ~(uint)PhysicsLayerEnum.RaycastCollision 
+		CollisionLayers = Root.Environment.UsesRaycastLayer ? CollisionLayers & ~(uint)PhysicsLayerEnum.RaycastCollision
 															: CollisionLayers;
 		Unsit(false);
 		UpdateCollision();
