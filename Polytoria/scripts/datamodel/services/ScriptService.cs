@@ -246,6 +246,7 @@ public sealed partial class ScriptService : Instance
 
 	public static void FreePTCallback(PTCallback action)
 	{
+		action.FromScript?.Root.Hooks.DequeueCallback(action);
 		action.LangProvider?.FreePTCallback(action);
 	}
 

@@ -16,7 +16,7 @@ public sealed partial class HookService : Instance
 {
 	private readonly List<QueuedResume> _spawnQueue = [];
 	private readonly List<TimedEntry> _timedQueue = [];
-	private readonly List<(PTCallback Callback, object?[] Args)> _deferredCallbacks = [];
+	private readonly Dictionary<PTCallback, List<object?[]>> _deferredCallbacks = [];
 
 	[ScriptProperty]
 	public PTSignal<double> Updated { get; private set; } = new();
@@ -94,11 +94,26 @@ public sealed partial class HookService : Instance
 	}
 
 	/// <summary>
-	/// Queues a PTCallback for the next drain.
+	/// Queues a PTCallback call for the next drain.
 	/// </summary>
 	internal void EnqueueCallback(PTCallback callback, object?[] args)
 	{
-		_deferredCallbacks.Add((callback, args));
+		if (_deferredCallbacks.TryGetValue(callback, out List<object?[]>? calls))
+		{
+			calls.Add(args);
+		}
+		else
+		{
+			_deferredCallbacks[callback] = [args];
+		}
+	}
+
+	/// <summary>
+	/// Dequeues all of a PTCallback's calls from the next drain.
+	/// </summary>
+	internal void DequeueCallback(PTCallback callback)
+	{
+		_deferredCallbacks.Remove(callback);
 	}
 
 	private void DrainSpawnQueue()
@@ -146,19 +161,23 @@ public sealed partial class HookService : Instance
 	{
 		if (_deferredCallbacks.Count == 0) return;
 
-		var batch = _deferredCallbacks.ToArray();
+		// Snapshot so anything spawned during this drain runs next tick
+		Dictionary<PTCallback, List<object?[]>> batch = new(_deferredCallbacks);
 		_deferredCallbacks.Clear();
 
-		foreach ((PTCallback callback, object?[] args) in batch)
+		foreach ((PTCallback callback, List<object?[]> calls) in batch)
 		{
 			if (callback.Disposed) continue;
-			try
+			foreach (object?[] args in calls)
 			{
-				callback.InvokeDirect(args);
-			}
-			catch (Exception ex)
-			{
-				GD.PushError($"Deferred PTCallback Length: {args.Length} : " + ex.ToString());
+				try
+				{
+					callback.InvokeDirect(args);
+				}
+				catch (Exception ex)
+				{
+					GD.PushError($"Deferred PTCallback Length: {args.Length} : " + ex.ToString());
+				}
 			}
 		}
 	}
