@@ -14,6 +14,7 @@ public partial class UIButton : UILabel
 	private Color _pressedColor = new(0.6f, 0.6f, 0.6f, 1);
 	private Color _hoverColor = new(0.8f, 0.8f, 0.8f, 1);
 	private Color _normalColor = new(1f, 1f, 1f, 1);
+	private bool _pressedOnButton;
 	[ScriptProperty] public PTSignal Clicked { get; private set; } = new();
 
 	public override void Init()
@@ -24,13 +25,18 @@ public partial class UIButton : UILabel
 
 		MouseDown.Connect(() =>
 		{
+			_pressedOnButton = true;
 			NodeControl.Modulate = _pressedColor;
 		});
 
 		MouseUp.Connect(() =>
 		{
 			NodeControl.Modulate = _hoverColor;
-			Clicked.Invoke();
+			if (_pressedOnButton)
+			{
+				_pressedOnButton = false;
+				Clicked.Invoke();
+			}
 		});
 
 		MouseEnter.Connect(() =>
@@ -40,6 +46,7 @@ public partial class UIButton : UILabel
 
 		MouseExit.Connect(() =>
 		{
+			_pressedOnButton = false;
 			NodeControl.Modulate = _normalColor;
 		});
 	}
