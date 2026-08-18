@@ -142,9 +142,9 @@ public sealed partial class UIMenuOverview : UIMenuViewBase
 	public override void _Process(double delta)
 	{
 		World root = Menu.CoreUI.Root;
-		_statInstanceCountLabel.Text = root.InstanceCount.ToString() + " Instances";
-		_statTimePlayedLabel.Text = "Playing for " + TimeUtils.FormatSeconds((long)root.UpTime);
-		_statPlayerCountLabel.Text = root.Players.PlayersCount.ToString() + " players in the server";
+		_statInstanceCountLabel.Text = root.InstanceCount.ToString() + TrN(" Instance", " Instances", root.InstanceCount);
+		_statTimePlayedLabel.Text = Tr("Playing for ") + TimeUtils.FormatSeconds((long)root.UpTime);
+		_statPlayerCountLabel.Text = root.Players.PlayersCount.ToString() + TrN(" player in the server", " players in the server", root.Players.PlayersCount);
 		base._Process(delta);
 	}
 
