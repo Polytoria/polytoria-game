@@ -186,10 +186,17 @@ public sealed partial class HttpService : Instance
 				throw new InvalidOperationException("Access to raw IP addresses is not allowed in production");
 			}
 
-			var addresses = Dns.GetHostAddresses(host);
-			if (addresses.Any(ip => ip.IsPrivate()))
+			try
 			{
-				throw new InvalidOperationException("Access to private IP addresses is not allowed in production");
+				var addresses = Dns.GetHostAddresses(host);
+				if (addresses.Any(ip => ip.IsPrivate()))
+				{
+					throw new InvalidOperationException("Access to private IP addresses is not allowed in production");
+				}
+			}
+			catch
+			{
+				throw new InvalidOperationException("Access to private IP addresses is not allowed in production"); // For the life of me I can't think of a better way to word this
 			}
 		}
 	}
