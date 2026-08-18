@@ -376,10 +376,7 @@ public sealed partial class Environment : Instance
 			Node collider = (Node)(GodotObject)result["collider"];
 			Instance? instance = ColliderToInstance(collider);
 			if (instance == null) continue;
-			if (instance is Physical p)
-			{
-				if (p.IgnoreMouse) continue;
-			}
+			if (instance is Physical p && p.IgnoreMouse) continue;
 
 			Vector3 hitPos = (Vector3)result["position"];
 			Vector3 normal = (Vector3)result["normal"];
