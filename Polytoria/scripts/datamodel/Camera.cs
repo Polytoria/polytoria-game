@@ -966,6 +966,13 @@ public sealed partial class Camera : Dynamic
 		}
 	}
 
+	public (Vector3, Vector3) Project(Vector2 point)
+	{
+		Vector3 origin = Camera3D.ProjectRayOrigin(point);
+		Vector3 direction = Camera3D.ProjectRayNormal(point);
+		return (origin, direction);
+	}
+
 	[ScriptMethod]
 	public bool IsPositionInView(Vector3 pos)
 	{

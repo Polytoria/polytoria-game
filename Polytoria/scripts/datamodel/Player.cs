@@ -664,6 +664,14 @@ public sealed partial class Player : NPC
 		}
 	}
 
+	internal Environment.RayResult? CastMouseRay()
+	{
+		Camera? camera = Root.Environment.CurrentCamera;
+		if (camera == null) return null;
+		(Vector3 origin, Vector3 direction) = camera.Project(Root.Input.MousePosition);
+		return Root.Environment.RaycastMouse(origin, direction);
+	}
+
 	public override void PhysicsProcess(double delta)
 	{
 		base.PhysicsProcess(delta);
@@ -677,7 +685,7 @@ public sealed partial class Player : NPC
 			return;
 		}
 
-		Environment.RayResult? ray = Root.Environment.CurrentCamera?.ScreenPointToRay(Root.Input.MousePosition);
+		Environment.RayResult? ray = CastMouseRay();
 		if (ray.HasValue && ray.Value.Instance is Physical p)
 		{
 			if (_mouseHoveringOn != null && _mouseHoveringOn != p)
@@ -795,7 +803,7 @@ public sealed partial class Player : NPC
 
 		if (@event.IsActionPressed("activate"))
 		{
-			Environment.RayResult? ray = Root.Environment.CurrentCamera?.ScreenPointToRay(Root.Input.MousePosition);
+			Environment.RayResult? ray = CastMouseRay();
 			if (ray.HasValue && ray.Value.Instance is Physical p)
 			{
 				p.InvokeClicked(this);
