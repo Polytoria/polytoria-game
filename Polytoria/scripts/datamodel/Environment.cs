@@ -345,11 +345,16 @@ public sealed partial class Environment : Instance
 		return [.. rayResults];
 	}
 
-	public RayResult? RaycastMouse(Vector3 origin, Vector3 direction, float maxDistance = 1000f)
+	public RayResult? RaycastMouse(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null)
 	{
 		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
 		Godot.Collections.Array<Rid> ignoreRids = [];
 		RayResult? rayResult = null;
+
+		if (ignoreList != null)
+		{
+			ignoreRids = PhysicalsToArray(ignoreList);
+		}
 
 		while (true)
 		{
