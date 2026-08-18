@@ -610,7 +610,7 @@ public sealed partial class InputService : Instance
 		Vector3 rayOrigin = camera.ProjectRayOrigin(mousePos);
 		Vector3 rayDir = camera.ProjectRayNormal(mousePos);
 
-		RayResult? hit = Root.Environment.Raycast(rayOrigin, rayDir, ignoreList: ignoreList);
+		RayResult? hit = Root.Environment.RaycastMouse(rayOrigin, rayDir, ignoreList: ignoreList);
 		return hit != null ? hit.Value.Position : rayOrigin + rayDir * 1000f;
 	}
 
