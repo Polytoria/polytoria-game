@@ -14,9 +14,9 @@ namespace Polytoria.Datamodel.Services;
 [Static("Hooks"), ExplorerExclude, SaveIgnore]
 public sealed partial class HookService : Instance
 {
-	private readonly List<QueuedResume> _spawnQueue = [];
 	private readonly List<TimedEntry> _timedQueue = [];
-	private readonly Dictionary<PTCallback, List<object?[]>> _deferredCallbacks = [];
+	private readonly Dictionary<PTCallback, DeferredCallbackEntry> _deferredCallbacks = [];
+	private readonly List<Action> _nextTickQueue = [];
 
 	[ScriptProperty]
 	public PTSignal<double> Updated { get; private set; } = new();
@@ -53,9 +53,9 @@ public sealed partial class HookService : Instance
 	public override void Process(double delta)
 	{
 		Updated.Invoke(delta);
-		DrainSpawnQueue();
 		DrainTimedQueue();
 		DrainDeferredCallbacks();
+		DrainNextTickQueue();
 		base.Process(delta);
 	}
 
@@ -82,7 +82,15 @@ public sealed partial class HookService : Instance
 	/// </summary>
 	internal void EnqueueSpawn(LuaState thread, int threadRef, int numArgs)
 	{
-		_spawnQueue.Add(new(thread, threadRef, numArgs));
+		EnqueueNextTick(() =>
+		{
+			async void run()
+			{
+				try { await LuauProvider.ResumeThread(thread, null, numArgs); }
+				finally { thread.Unref(threadRef); }
+			}
+			run();
+		});
 	}
 
 	/// <summary>
@@ -98,46 +106,29 @@ public sealed partial class HookService : Instance
 	/// </summary>
 	internal void EnqueueCallback(PTCallback callback, object?[] args)
 	{
-		if (_deferredCallbacks.TryGetValue(callback, out List<object?[]>? calls))
+		if (_deferredCallbacks.TryGetValue(callback, out DeferredCallbackEntry? entry))
 		{
-			calls.Add(args);
+			entry.Calls.Add(args);
 		}
 		else
 		{
-			_deferredCallbacks[callback] = [args];
+			_deferredCallbacks[callback] = new([args]);
 		}
 	}
 
 	/// <summary>
-	/// Dequeues all of a PTCallback's calls from the next drain.
+	/// Frees a callback's resources after any pending drain invocations have fired.
+	/// Invocations queued before disconnect are allowed to fire, then the refs are released.
 	/// </summary>
-	internal void DequeueCallback(PTCallback callback)
+	internal void RequestFreeCallback(PTCallback callback)
 	{
-		_deferredCallbacks.Remove(callback);
-	}
-
-	private void DrainSpawnQueue()
-	{
-		if (_spawnQueue.Count == 0) return;
-
-		// Snapshot so anything spawned during this drain runs next tick
-		QueuedResume[] batch = [.. _spawnQueue];
-		_spawnQueue.Clear();
-
-		foreach (QueuedResume entry in batch)
+		if (_deferredCallbacks.TryGetValue(callback, out DeferredCallbackEntry? entry))
 		{
-			async void run()
-			{
-				try
-				{
-					await LuauProvider.ResumeThread(entry.Thread, null, entry.NumArgs);
-				}
-				finally
-				{
-					entry.Thread.Unref(entry.ThreadRef);
-				}
-			}
-			run();
+			entry.PendingFree = true;
+		}
+		else
+		{
+			ScriptService.FreePTCallbackDirect(callback);
 		}
 	}
 
@@ -161,37 +152,60 @@ public sealed partial class HookService : Instance
 	{
 		if (_deferredCallbacks.Count == 0) return;
 
-		// Snapshot so anything spawned during this drain runs next tick
-		Dictionary<PTCallback, List<object?[]>> batch = new(_deferredCallbacks);
+		Dictionary<PTCallback, DeferredCallbackEntry> batch = new(_deferredCallbacks);
 		_deferredCallbacks.Clear();
 
-		foreach ((PTCallback callback, List<object?[]> calls) in batch)
+		foreach ((PTCallback callback, DeferredCallbackEntry entry) in batch)
 		{
-			if (callback.Disposed) continue;
-			foreach (object?[] args in calls)
+			if (!callback.Disposed)
 			{
-				try
+				foreach (object?[] args in entry.Calls)
 				{
-					callback.InvokeDirect(args);
+					try { callback.InvokeDirect(args); }
+					catch (Exception ex) { GD.PushError($"Deferred PTCallback Length: {args.Length} : " + ex.ToString()); }
 				}
-				catch (Exception ex)
-				{
-					GD.PushError($"Deferred PTCallback Length: {args.Length} : " + ex.ToString());
-				}
+			}
+
+			// Release only after invocations have fired, and only if not already freed mid-invocation
+			if (entry.PendingFree && !callback.Disposed)
+			{
+				ScriptService.FreePTCallbackDirect(callback);
 			}
 		}
 	}
 
-	internal readonly struct QueuedResume(LuaState thread, int threadRef, int numArgs)
+	/// <summary>
+	/// Queues an action to run on the next Process() tick, after this tick's deferred
+	/// signal callbacks have drained (used by wait/delay's default path)
+	/// </summary>
+	internal void EnqueueNextTick(Action resolve)
 	{
-		public readonly LuaState Thread = thread;
-		public readonly int ThreadRef = threadRef;
-		public readonly int NumArgs = numArgs;
+		_nextTickQueue.Add(resolve);
+	}
+
+	private void DrainNextTickQueue()
+	{
+		if (_nextTickQueue.Count == 0) return;
+
+		Action[] batch = [.. _nextTickQueue];
+		_nextTickQueue.Clear();
+
+		foreach (Action resolve in batch)
+		{
+			try { resolve(); }
+			catch (Exception ex) { GD.PushError("Deferred next-tick action: " + ex); }
+		}
 	}
 
 	internal readonly struct TimedEntry(decimal wakeTime, Action resolve)
 	{
 		public readonly decimal WakeTime = wakeTime;
 		public readonly Action Resolve = resolve;
+	}
+
+	private sealed class DeferredCallbackEntry(List<object?[]> calls)
+	{
+		public readonly List<object?[]> Calls = calls;
+		public bool PendingFree;
 	}
 }

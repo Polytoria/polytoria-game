@@ -1,0 +1,110 @@
+diff --git a/Polytoria/scripts/datamodel/services/HookService.cs b/Polytoria/scripts/datamodel/services/HookService.cs
+index ef7b900..c90341f 100644
+--- a/Polytoria/scripts/datamodel/services/HookService.cs
++++ b/Polytoria/scripts/datamodel/services/HookService.cs
+@@ -17,6 +17,7 @@ public sealed partial class HookService : Instance
+ 	private readonly List<QueuedResume> _spawnQueue = [];
+ 	private readonly List<TimedEntry> _timedQueue = [];
+ 	private readonly Dictionary<PTCallback, List<object?[]>> _deferredCallbacks = [];
++	private readonly HashSet<PTCallback> _pendingFree = [];
+ 
+ 	[ScriptProperty]
+ 	public PTSignal<double> Updated { get; private set; } = new();
+@@ -109,11 +110,19 @@ public sealed partial class HookService : Instance
+ 	}
+ 
+ 	/// <summary>
+-	/// Dequeues all of a PTCallback's calls from the next drain.
++	/// Frees a callback's resources after any pending drain invocations have fired.
++	/// Invocations queued before disconnect are allowed to fire, then the refs are released.
+ 	/// </summary>
+-	internal void DequeueCallback(PTCallback callback)
++	internal void RequestFreeCallback(PTCallback callback)
+ 	{
+-		_deferredCallbacks.Remove(callback);
++		if (_deferredCallbacks.ContainsKey(callback))
++		{
++			_pendingFree.Add(callback);
++		}
++		else
++		{
++			ScriptService.FreePTCallbackDirect(callback);
++		}
+ 	}
+ 
+ 	private void DrainSpawnQueue()
+@@ -159,26 +168,39 @@ public sealed partial class HookService : Instance
+ 
+ 	private void DrainDeferredCallbacks()
+ 	{
+-		if (_deferredCallbacks.Count == 0) return;
++		if (_deferredCallbacks.Count == 0 && _pendingFree.Count == 0) return;
+ 
+-		// Snapshot so anything spawned during this drain runs next tick
+ 		Dictionary<PTCallback, List<object?[]>> batch = new(_deferredCallbacks);
+ 		_deferredCallbacks.Clear();
+ 
+ 		foreach ((PTCallback callback, List<object?[]> calls) in batch)
+ 		{
+-			if (callback.Disposed) continue;
+-			foreach (object?[] args in calls)
++			bool shouldFree = _pendingFree.Remove(callback);
++			if (!callback.Disposed)
+ 			{
+-				try
+-				{
+-					callback.InvokeDirect(args);
+-				}
+-				catch (Exception ex)
++				foreach (object?[] args in calls)
+ 				{
+-					GD.PushError($"Deferred PTCallback Length: {args.Length} : " + ex.ToString());
++					try { callback.InvokeDirect(args); }
++					catch (Exception ex) { GD.PushError($"Deferred PTCallback Length: {args.Length} : " + ex.ToString()); }
+ 				}
+ 			}
++
++			// Release only after invocations have fired, and only if not already freed mid-invocation
++			if (shouldFree && !callback.Disposed)
++			{
++				ScriptService.FreePTCallbackDirect(callback);
++			}
++		}
++
++		// Callbacks that re-enqueued and disconnected in the same drain cycle
++		if (_pendingFree.Count > 0)
++		{
++			PTCallback[] toFree = [.. _pendingFree];
++			_pendingFree.Clear();
++			foreach (PTCallback cb in toFree)
++			{
++				if (!cb.Disposed) ScriptService.FreePTCallbackDirect(cb);
++			}
+ 		}
+ 	}
+ 
+diff --git a/Polytoria/scripts/datamodel/services/ScriptService.cs b/Polytoria/scripts/datamodel/services/ScriptService.cs
+index 085d73e..ab8331d 100644
+--- a/Polytoria/scripts/datamodel/services/ScriptService.cs
++++ b/Polytoria/scripts/datamodel/services/ScriptService.cs
+@@ -246,7 +246,19 @@ public sealed partial class ScriptService : Instance
+ 
+ 	public static void FreePTCallback(PTCallback action)
+ 	{
+-		action.FromScript?.Root.Hooks.DequeueCallback(action);
++		if (action.FromScript != null)
++		{
++			action.FromScript.Root.Hooks.RequestFreeCallback(action);
++		}
++		else
++		{
++			FreePTCallbackDirect(action);
++		}
++	}
++
++	internal static void FreePTCallbackDirect(PTCallback action)
++	{
++		action.Dispose();
+ 		action.LangProvider?.FreePTCallback(action);
+ 	}
+ 

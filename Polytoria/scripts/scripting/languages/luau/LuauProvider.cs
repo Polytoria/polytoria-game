@@ -694,7 +694,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 	/// <summary>
 	/// Yields the calling thread until the specified amount of
-	/// time has passed or until the next physics update.
+	/// time has passed or until the next tick.
 	/// </summary>
 	/// <param name="time">The minimum time that must pass.</param>
 	/// <returns>The actual time elapsed.</returns>
@@ -722,13 +722,11 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 		else
 		{
-			async void run()
+			script.Root.Hooks.EnqueueNextTick(() =>
 			{
-				await Globals.Singleton.WaitPhysicsFrame();
 				lua.PushNumber(sw.Elapsed.TotalSeconds);
 				tcs.SetResult(1);
-			}
-			run();
+			});
 		}
 
 		return lua.Yield(1);
@@ -1011,19 +1009,15 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 		else
 		{
-			async void run()
+			script.Root.Hooks.EnqueueNextTick(() =>
 			{
-				await Globals.Singleton.WaitPhysicsFrame();
-				try
+				async void run()
 				{
-					await ResumeThread(co, null, numArgs);
+					try { await ResumeThread(co, null, numArgs); }
+					finally { co.Unref(coRef); }
 				}
-				finally
-				{
-					co.Unref(coRef);
-				}
-			}
-			run();
+				run();
+			});
 		}
 
 		PushCSClass(state, new PTTask { Thread = co });
