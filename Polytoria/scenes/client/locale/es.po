@@ -390,7 +390,7 @@ msgid "Rendering method to use. Use compatibility on older hardware."
 msgstr "Método de renderizado a usar. Utilice Compatibilidad para equipos antiguos."
 
 msgid "Auto"
-msgstr "Automatico"
+msgstr "Automático"
 
 msgid "Standard"
 msgstr "Estándar"
