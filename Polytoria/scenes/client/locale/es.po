@@ -414,7 +414,7 @@ msgid "MSAA anti-aliasing level."
 msgstr "Nivel de suavizado MSAA."
 
 msgid "Shadow Quality"
-msgstr "Calidad de las Sombras"
+msgstr "Calidad de Sombras"
 
 msgid "Shadow quality level."
 msgstr "Nivel de calidad de las sombras."
