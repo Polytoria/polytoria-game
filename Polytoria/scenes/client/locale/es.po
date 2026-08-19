@@ -277,7 +277,7 @@ msgid "Camera movement sensitivity."
 msgstr "Sensibilidad del movimiento de la cámara."
 
 msgid "UI Scale"
-msgstr "Escalda de la IU"
+msgstr "Escala de la Interfaz"
 
 msgid "Scale of the user interface."
 msgstr "Escala de la interfaz de usuario."
