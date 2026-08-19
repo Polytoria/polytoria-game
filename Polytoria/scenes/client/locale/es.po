@@ -336,7 +336,7 @@ msgid ""
 "If V-Sync is enabled, framerate won't surpass the display refresh rate."
 msgstr ""
 "Selecciona el ajuste de FPS que desees utilizar.\n"
-"Si la sincronización vertical (V-Sync) está activada, la velocidad de fotogramas no superará la frecuencia de actualización de la pantalla."
+"Si la sincronización vertical está activada, la velocidad de fotogramas no superará la frecuencia de actualización de la pantalla."
 
 msgid "Custom"
 msgstr "Personalizado"
