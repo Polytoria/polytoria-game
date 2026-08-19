@@ -307,7 +307,7 @@ msgid "Shows hidden advanced settings."
 msgstr "Muestra los ajustes avanzados ocultos."
 
 msgid "Automatic"
-msgstr "Automatico"
+msgstr "Automático"
 
 msgid "Language"
 msgstr "Idioma"
