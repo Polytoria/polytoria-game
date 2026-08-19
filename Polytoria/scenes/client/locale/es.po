@@ -39,7 +39,7 @@ msgstr ""
 
 #: scenes/client/ui/chat/chat.tscn
 msgid "Send a chat message..."
-msgstr "Envia un mensaje por chat..."
+msgstr "Envía un mensaje por el chat..."
 
 #: scenes/client/ui/playerlist/user_options.tscn
 msgid "Add Friend"
