@@ -423,7 +423,7 @@ msgid "Shadow Distance"
 msgstr "Distancia de Sombras"
 
 msgid "How far shadows are visible."
-msgstr "La distancia a la que se ven las sombras."
+msgstr "Hasta qué distancia se ven las sombras."
 
 msgid "Glow"
 msgstr "Resplandor"
