@@ -87,7 +87,7 @@ msgstr "Lista de Jugadores"
 
 #: scenes/client/ui/inventory/inventory.tscn
 msgid "Nothing in Inventory"
-msgstr "Inventario Vacio"
+msgstr "Inventario Vacío"
 
 msgid "Press ` to close"
 msgstr "Pulsa ` para cerrar"
