@@ -177,7 +177,7 @@ msgid "Server Under Pressure."
 msgstr "Servidor Bajo Presión."
 
 msgid "Radio Silence. The server is not responding right now."
-msgstr "Silencio de Radio. El servidor no responde en este momento."
+msgstr "Sin Respuesta. El servidor no responde en este momento."
 
 #: scripts/client/ui/menu/views/UIMenuOverview.cs
 msgid "Playing for "
