@@ -301,7 +301,7 @@ msgid "Show connection status warnings."
 msgstr "Muestra advertencias sobre el estado de la conexión."
 
 msgid "Show Advanced Settings"
-msgstr "Mostrar Ajustes Avanzadados"
+msgstr "Mostrar Ajustes Avanzados"
 
 msgid "Shows hidden advanced settings."
 msgstr "Muestra los ajustes avanzados ocultos."
