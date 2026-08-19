@@ -298,7 +298,7 @@ msgid "Show Connection Indicators"
 msgstr "Mostrar Indicadores de Conexión"
 
 msgid "Show connection status warnings."
-msgstr "Muestra advertencias sobre el estado de la conexión."
+msgstr "Mostrar advertencias sobre el estado de la conexión."
 
 msgid "Show Advanced Settings"
 msgstr "Mostrar Ajustes Avanzados"
