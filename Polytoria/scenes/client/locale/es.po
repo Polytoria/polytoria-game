@@ -155,7 +155,7 @@ msgid "Your Polytoria account has been terminated, please visit the website for 
 msgstr "Tu cuenta de Polytoria ha sido suspendida. Visita la página web para obtener más información."
 
 msgid "Authentication failure, Please try again."
-msgstr "Fallo de autenticación. Porfavor inténtalo de nuevo."
+msgstr "Error de autenticación. Por favor inténtelo de nuevo."
 
 msgid "Integrity failure, please update your client."
 msgstr "Fallo de integridad, porfavor actualiza tu cliente."
