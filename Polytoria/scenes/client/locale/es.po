@@ -46,7 +46,7 @@ msgid "Add Friend"
 msgstr "Añadir Amigo"
 
 msgid "Remove Friend"
-msgstr "Remover Amigo"
+msgstr "Eliminar Amigo"
 
 msgid "View Profile"
 msgstr "Ver Perfil"
