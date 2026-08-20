@@ -1147,7 +1147,7 @@ public partial class Physical : Dynamic
 		{
 			Monitorable = true,
 			Monitoring = _canTouch,
-			Scale = new(1.01f, 1.01f, 1.01f),
+			Scale = new(1.01f, 1.01f, 1.01f)
 		};
 
 		SetCollisionMaskEnum(PhysicsLayerEnum.Player, true);

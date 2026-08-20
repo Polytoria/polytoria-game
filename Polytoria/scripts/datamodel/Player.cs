@@ -480,13 +480,6 @@ public sealed partial class Player : NPC
 		"disappointed",
 	];
 
-	/*public override void InitGDNode()
-	{
-		base.InitGDNode();
-		CollisionLayers = (uint)(PhysicsLayerEnum.Player | PhysicsLayerEnum.RaycastCollision);
-		CollisionMask = (uint)(PhysicsLayerEnum.Default | PhysicsLayerEnum.Player);
-	}*/
-
 	public override void SetInitCollision()
 	{
 		CollisionLayers = Root.Environment.UsesRaycastLayer ? (uint)PhysicsLayerEnum.Default | (uint)PhysicsLayerEnum.Player | (uint)PhysicsLayerEnum.RaycastCollision
