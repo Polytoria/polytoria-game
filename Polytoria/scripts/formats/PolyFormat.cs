@@ -266,6 +266,40 @@ public static partial class PolyFormat
 		if (rawdata.Length == 0) return;
 
 		PolyRootData data = ReadRootDataBytes(rawdata);
+
+		//Wont be able to effect code dw about hacking and stuff
+		//so dw
+
+		if (rawdata[0] != 0x7B)
+		{
+			rawdata = ZstdCompressionUtils.Decompress(rawdata);
+		}
+
+
+		string stringData = System.Text.Encoding.Default.GetString(rawdata);
+
+		if (stringData.Length > 0) 
+		{
+			int envInitial = stringData.Find("\"Name\": \"Environment\",\n");
+			if (envInitial >= 0)
+			{
+				int envPosLoc = stringData.Find("\"UsesRaycastLayer\": true,\n", envInitial);
+
+				int envChildrenPos = stringData.Find("\"Children\": [", envInitial);
+
+
+				if (envPosLoc == -1 || envPosLoc > envChildrenPos)
+				{
+					PolyObject? isEnv = Array.Find(data.Objects[0].Children, t => t.ClassName == "Environment");
+
+					if (isEnv is PolyObject env)
+					{
+						env.Properties["UsesRaycastLayer"] = false;
+					}
+				}
+			}
+		}
+
 		InternalLoadWorld(root, data, forceMigrateCords);
 	}
 

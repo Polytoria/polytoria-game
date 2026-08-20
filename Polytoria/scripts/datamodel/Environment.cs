@@ -61,7 +61,7 @@ public sealed partial class Environment : Instance
 
 	private float _partDestroyHeight;
 	private bool _autoGenerateNavMesh;
-	private bool _usesRaycastLayer;
+	private bool _usesRaycastLayer = true;
 	private Lighting.SkyboxEnum _skybox = Lighting.SkyboxEnum.Day1;
 	private bool _fogEnabled = false;
 	private Color _fogColor = new(1, 1, 1);
@@ -117,7 +117,8 @@ public sealed partial class Environment : Instance
 		}
 	}
 
-	[Editable, ScriptProperty, DefaultValue(true)]
+	//Doesnt have a default value sense that removes it from being written in the .poly
+	[Editable, ScriptProperty]
 	public bool UsesRaycastLayer
 	{
 		get => _usesRaycastLayer;
