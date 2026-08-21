@@ -347,9 +347,32 @@ public sealed partial class Environment : Instance
 
 	public RayResult? PenetrateRaycast(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null, Physical.MousePassthroughEnum passthroughMask = Physical.MousePassthroughEnum.None)
 	{
+		RayResult? rayResult = null;
+		Func<RayResult, bool> handler = ray =>
+		{
+			rayResult = ray;
+			return false;
+		};
+		PenetrateRaycastCore(origin, direction, handler, maxDistance, ignoreList, passthroughMask);
+		return rayResult;
+	}
+
+	public RayResult[] PenetrateRaycastAll(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null, Physical.MousePassthroughEnum passthroughMask = Physical.MousePassthroughEnum.None)
+	{
+		List<RayResult> rayResults = [];
+		Func<RayResult, bool> handler = ray =>
+		{
+			rayResults.Add(ray);
+			return true;
+		};
+		PenetrateRaycastCore(origin, direction, handler, maxDistance, ignoreList, passthroughMask);
+		return [.. rayResults];
+	}
+
+	private void PenetrateRaycastCore(Vector3 origin, Vector3 direction, Func<RayResult, bool> handler, float maxDistance = 10000f, Instance[]? ignoreList = null, Physical.MousePassthroughEnum passthroughMask = Physical.MousePassthroughEnum.None)
+	{
 		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
 		Godot.Collections.Array<Rid> ignoreRids = [];
-		RayResult? rayResult = null;
 
 		if (ignoreList != null)
 		{
@@ -367,8 +390,7 @@ public sealed partial class Environment : Instance
 				Exclude = ignoreRids
 			});
 
-			if (result.Count == 0)
-				break;
+			if (result.Count == 0) break;
 
 			Rid colliderRid = (Rid)result["rid"];
 			ignoreRids.Add(colliderRid);
@@ -383,7 +405,7 @@ public sealed partial class Environment : Instance
 
 			Vector3 hitPos = (Vector3)result["position"];
 			Vector3 normal = (Vector3)result["normal"];
-			rayResult = new()
+			RayResult rayResult = new()
 			{
 				Origin = origin,
 				Direction = direction.Normalized(),
@@ -392,10 +414,10 @@ public sealed partial class Environment : Instance
 				Distance = (origin - hitPos).Length(),
 				Instance = instance,
 			};
-			break;
-		}
 
-		return rayResult;
+			bool shouldContinue = handler(rayResult);
+			if (!shouldContinue) break;
+		}
 	}
 
 	private static Instance? ColliderToInstance(Node collider)
