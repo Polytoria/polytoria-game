@@ -795,10 +795,18 @@ public sealed partial class Player : NPC
 
 		if (@event.IsActionPressed("activate"))
 		{
-			Environment.RayResult? ray = Root.Environment.CurrentCamera?.ScreenPointToRay(Root.Input.MousePosition);
-			if (ray.HasValue && ray.Value.Instance is Physical p)
+			Camera? camera = Root.Environment.CurrentCamera;
+			if (camera != null)
 			{
-				p.InvokeClicked(this);
+				(Vector3 rayOrigin, Vector3 rayDirection) = camera.ProjectFromScreen(Root.Input.MousePosition);
+				Environment.RayResult[] hits = Root.Environment.PenetrateRaycastGather(rayOrigin, rayDirection, passthroughMask: Physical.MousePassthroughEnum.Click);
+				foreach (Environment.RayResult result in hits)
+				{
+					if (result.Instance is Physical p)
+					{
+						p.InvokeClicked(this);
+					}
+				}
 			}
 		}
 

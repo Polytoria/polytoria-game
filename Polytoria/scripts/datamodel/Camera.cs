@@ -966,6 +966,13 @@ public sealed partial class Camera : Dynamic
 		}
 	}
 
+	public (Vector3, Vector3) ProjectFromScreen(Vector2 screenPos)
+	{
+		Vector3 origin = Camera3D.ProjectRayOrigin(screenPos);
+		Vector3 dir = Camera3D.ProjectRayNormal(screenPos);
+		return (origin, dir);
+	}
+
 	[ScriptMethod]
 	public bool IsPositionInView(Vector3 pos)
 	{
