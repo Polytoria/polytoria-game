@@ -347,32 +347,9 @@ public sealed partial class Environment : Instance
 
 	public RayResult? PenetrateRaycast(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null, Physical.MousePassthroughEnum passthroughMask = Physical.MousePassthroughEnum.None)
 	{
-		RayResult? rayResult = null;
-		Func<RayResult, bool> handler = ray =>
-		{
-			rayResult = ray;
-			return false;
-		};
-		PenetrateRaycastCore(origin, direction, handler, maxDistance, ignoreList, passthroughMask);
-		return rayResult;
-	}
-
-	public RayResult[] PenetrateRaycastAll(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null, Physical.MousePassthroughEnum passthroughMask = Physical.MousePassthroughEnum.None)
-	{
-		List<RayResult> rayResults = [];
-		Func<RayResult, bool> handler = ray =>
-		{
-			rayResults.Add(ray);
-			return true;
-		};
-		PenetrateRaycastCore(origin, direction, handler, maxDistance, ignoreList, passthroughMask);
-		return [.. rayResults];
-	}
-
-	private void PenetrateRaycastCore(Vector3 origin, Vector3 direction, Func<RayResult, bool> handler, float maxDistance = 10000f, Instance[]? ignoreList = null, Physical.MousePassthroughEnum passthroughMask = Physical.MousePassthroughEnum.None)
-	{
 		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
 		Godot.Collections.Array<Rid> ignoreRids = [];
+		RayResult? rayResult = null;
 
 		if (ignoreList != null)
 		{
@@ -405,7 +382,7 @@ public sealed partial class Environment : Instance
 
 			Vector3 hitPos = (Vector3)result["position"];
 			Vector3 normal = (Vector3)result["normal"];
-			RayResult rayResult = new()
+			rayResult = new()
 			{
 				Origin = origin,
 				Direction = direction.Normalized(),
@@ -414,10 +391,63 @@ public sealed partial class Environment : Instance
 				Distance = (origin - hitPos).Length(),
 				Instance = instance,
 			};
-
-			bool shouldContinue = handler(rayResult);
-			if (!shouldContinue) break;
+			break;
 		}
+
+		return rayResult;
+	}
+
+	public RayResult[] PenetrateRaycastGather(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null, Physical.MousePassthroughEnum passthroughMask = Physical.MousePassthroughEnum.None)
+	{
+		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
+		Godot.Collections.Array<Rid> ignoreRids = [];
+		List<RayResult> rayResults = [];
+
+		if (ignoreList != null)
+		{
+			ignoreRids = PhysicalsToArray(ignoreList);
+		}
+
+		while (true)
+		{
+			Godot.Collections.Dictionary result = spaceState.IntersectRay(new PhysicsRayQueryParameters3D
+			{
+				From = origin,
+				To = origin + direction.Normalized() * maxDistance,
+				CollideWithAreas = true,
+				CollideWithBodies = true,
+				Exclude = ignoreRids
+			});
+
+			if (result.Count == 0) break;
+
+
+			Node collider = (Node)(GodotObject)result["collider"];
+			Instance? instance = ColliderToInstance(collider);
+			Rid colliderRid = (Rid)result["rid"];
+			ignoreRids.Add(colliderRid);
+
+			Vector3 hitPos = (Vector3)result["position"];
+			Vector3 normal = (Vector3)result["normal"];
+			rayResults.Add(new()
+			{
+				Origin = origin,
+				Direction = direction.Normalized(),
+				Position = hitPos,
+				Normal = normal,
+				Distance = (origin - hitPos).Length(),
+				Instance = instance,
+			});
+
+			if (instance is Physical p)
+			{
+				Physical.MousePassthroughEnum partPass = (Physical.MousePassthroughEnum)p.MousePassthrough;
+				if ((partPass & passthroughMask) != Physical.MousePassthroughEnum.None) continue;
+			}
+			break;
+		}
+
+		return [.. rayResults];
 	}
 
 	private static Instance? ColliderToInstance(Node collider)
