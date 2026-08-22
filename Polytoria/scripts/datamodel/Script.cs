@@ -9,6 +9,9 @@ using Polytoria.Datamodel.Services;
 using Polytoria.Scripting;
 using System;
 using System.Collections.Generic;
+#if CREATOR
+using Polytoria.Creator.UI;
+#endif
 
 namespace Polytoria.Datamodel;
 
@@ -72,6 +75,9 @@ public partial class Script : Instance
 			{
 				Stop();
 			}
+#if CREATOR
+			Explorer.RefreshTreeItem(this);
+#endif
 		}
 	}
 
