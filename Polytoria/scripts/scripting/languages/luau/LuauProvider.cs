@@ -39,6 +39,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	private static readonly Dictionary<IntPtr, PTCallbackData> _ptrToCallback = [];
 	private static readonly Dictionary<PTCallbackData, IntPtr> _callbackToPtr = [];
 	private static readonly Dictionary<IntPtr, object> _ptrToObject = [];
+	private static readonly Dictionary<(Type, int), int> _enumToRef = [];
 	private const string WeakUserdataCache = "__UDCACHE";
 	private static readonly int ThreadDataKey = 0x1247;
 
@@ -1593,37 +1594,73 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			handle.Free();
 	}
 
-	public void PushEnum(LuaState lua, Type specifyType, object value)
+	private void PushEnumMetatable(LuaState lua, Type type)
 	{
-		Script script = GetScriptInstance(lua);
+		// metatable already exists
+		if (!lua.NewMetaTable(type.Name)) return;
 
-		GCHandle handle = GCHandle.Alloc(value);
-		IntPtr handlePtr = GCHandle.ToIntPtr(handle);
-		IntPtr userdataPtr = lua.NewUserDataDTor((UIntPtr)IntPtr.Size, GarbageCollect);
-		Marshal.WriteIntPtr(userdataPtr, handlePtr);
-
-		_ptrToObject.Add(handlePtr, value);
-
-		lua.GetField(LuaState.LUA_REGISTRYINDEX, specifyType.Name);
-		if (lua.Type(-1) == LuaType.Nil)
+		int toStringFunc(IntPtr L)
 		{
-			lua.Pop(1);
-			lua.NewMetaTable(specifyType.Name);
+			LuaState state = LuaState.FromIntPtr(L);
 
-			LuaEnum enumMeta = new()
+			object? val = LuaToObject(state, 1);
+
+			if (val is int i)
 			{
-				Lua = lua,
-				TargetType = specifyType,
-				LangProvider = this,
-			};
+				state.PushString(type.Name + "." + (Enum.GetName(type, i) ?? ""));
+			}
+			else
+			{
+				state.PushString(type.Name);
+			}
 
-			enumMeta.RegisterMetamethods();
+			return 1;
 		}
+
+		int safeToStringFunc(IntPtr L)
+		{
+			Exception? caughtException;
+
+			try
+			{
+				return toStringFunc(L);
+			}
+			catch (Exception ex)
+			{
+				caughtException = ex;
+			}
+
+			if (caughtException != null)
+			{
+				LuaState state = LuaState.FromIntPtr(L);
+				return state.Error(caughtException.InnerException?.Message ?? caughtException.Message);
+			}
+
+			return 0;
+		}
+
+		lua.PushCFunction(safeToStringFunc, "__tostring");
+		lua.SetField(-2, "__tostring");
 
 		lua.PushBoolean(false);
 		lua.SetField(-2, "__metatable");
+	}
 
-		lua.SetMetaTable(-2);
+	public void PushEnum(LuaState lua, Type specifyType, int value)
+	{
+		if (_enumToRef.TryGetValue((specifyType, value), out int reference))
+		{
+			lua.GetRef(reference);
+			return;
+		}
+
+		PushNewUserdata(lua, value);
+
+		PushEnumMetatable(lua, specifyType);
+		lua.SetMetaTable(-2); // pop metatable
+
+		lua.PushValue(-1); // push copy of userdata
+		_enumToRef.Add((specifyType, value), lua.Ref()); // pop copy
 	}
 
 	private static string GetRegKeyFromObj(object obj)
