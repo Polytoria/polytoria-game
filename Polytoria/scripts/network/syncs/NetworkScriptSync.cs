@@ -74,6 +74,7 @@ public partial class NetworkScriptSync : Instance
 				{
 					if (_useNetworkLog) { PT.Print($"[Net] [ScriptSync] Recv {s.Name} source"); }
 					s.Bytecode = item.Bytecode;
+					if (s is ModuleScript ms) ms.NotifyBytecodeReceived();
 				}
 			}
 			else
@@ -120,10 +121,15 @@ public partial class NetworkScriptSync : Instance
 	private void NetRecvSource(string netID, byte[] byteCode)
 	{
 		NetworkedObject? obj = NetService.Root.GetNetObjectFromID(netID);
-		if (obj != null && obj is ClientScript script)
+		if (obj is ClientScript script)
 		{
 			script.Bytecode = byteCode;
 			script.TryRun();
+		}
+		else if (obj is ModuleScript ms)
+		{
+			ms.Bytecode = byteCode;
+			ms.NotifyBytecodeReceived();
 		}
 	}
 

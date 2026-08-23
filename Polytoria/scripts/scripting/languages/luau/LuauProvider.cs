@@ -789,6 +789,62 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		return state.Yield(1);
 	}
 
+	// Self-requires a module marked Singleton
+	public void RequireSingleton(Datamodel.ModuleScript ms)
+	{
+		if (ms.LuauState != null) return; // already required, by this path or a real caller
+
+		if (ms.Source == "" && ms.Bytecode == null) return;
+
+		string chunkName = ms.LuaPath;
+
+		LuaState co = InitalizeScript(ms);
+		co.SandboxGlobals();
+
+		bool isClient = !ms.Root.Network.IsServer;
+		co.PushBoolean(isClient);
+		co.SetGlobal("_CLIENT");
+		co.PushBoolean(!isClient);
+		co.SetGlobal("_SERVER");
+
+		try
+		{
+			ms.TryCompile();
+		}
+		catch (Exception e)
+		{
+			ms.Root.ScriptService.Logger.LogError(ms, e.Message);
+			return;
+		}
+
+		try
+		{
+			co.Load(chunkName, ms.Bytecode!);
+		}
+		catch (Exception e)
+		{
+			ms.Root.ScriptService.Logger.LogError(ms, e.Message);
+			return;
+		}
+
+		_ = HandleSingletonRequireAsync(co, chunkName, ms);
+	}
+
+	private static async Task HandleSingletonRequireAsync(LuaState co, string chunkName, Datamodel.ModuleScript ms)
+	{
+		// throwError: false; ResumeThread already logs runtime errors against `ms` itself
+		// (registered as co's internal script pointer inside InitalizeScript), so nothing
+		// further needs to happen here for a failed module body.
+		await ResumeThread(co, null, 0, throwError: false, isMainThread: false);
+
+		int top = co.GetTop();
+		if (top > 0)
+		{
+			co.PushValue(1); // duplicate the first return value onto co's own stack top
+			ms.CachedLuauResultRef = co.Ref();
+		}
+	}
+
 	private static async Task HandleRequireAsync(LuaState co, LuaState state, int coRef, string chunkName, TaskCompletionSource<int> tcs, ModuleScript ms)
 	{
 		try
