@@ -69,6 +69,15 @@ public sealed partial class NetworkPropSync : Instance
 		}
 	}
 
+	public override void PreDelete()
+	{
+		SetProcess(false);
+		_pendingProps.Clear();
+		PendingRefs.Clear();
+		_batchBroadcasts.Clear();
+		base.PreDelete();
+	}
+
 	public static byte[] SerializePropValue(object? propValue)
 	{
 		if (propValue == null)
@@ -545,12 +554,16 @@ public sealed partial class NetworkPropSync : Instance
 		if (NetService.NetInstance == null) return;
 
 		var rpcName = unreliable ? nameof(NetRecvBatchedPropsUnreliable) : nameof(NetRecvBatchedPropsReliable);
-		var data = SerializeUtils.Serialize(payload);
+		byte[] packet = BuildRpcPacket(rpcName, SerializeUtils.Serialize(payload));
+		TransferMode transferMode = unreliable ? TransferMode.Unreliable : TransferMode.Reliable;
 
-		foreach (int peerID in NetService.NetInstance.PeerIds)
+		if (excludePeer == -1)
 		{
-			if (peerID != excludePeer)
-				RpcId(peerID, rpcName, data);
+			NetService.NetInstance.BroadcastMessage(packet, transferMode);
+		}
+		else
+		{
+			NetService.NetInstance.BroadcastMessageExcept(packet, transferMode, 0, excludePeer);
 		}
 	}
 

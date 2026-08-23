@@ -130,16 +130,7 @@ public sealed partial class Globals : Node
 	{
 		NativeLibrary.SetDllImportResolver(Assembly.GetExecutingAssembly(), DllImportResolver);
 
-		// Register asset types
-		// TODO: Maybe this could be automated via source generation?
-		PTImageAsset.RegisterAsset();
-		PTAudioAsset.RegisterAsset();
-		PTMeshAsset.RegisterAsset();
-		BuiltInAudioAsset.RegisterAsset();
-		BuiltInFontAsset.RegisterAsset();
-		FileLinkAsset.RegisterAsset();
-		GradientImageAsset.RegisterAsset();
-		PTMeshAnimationAsset.RegisterAsset();
+		BaseAsset.RegisterGeneratedAssetTypes();
 	}
 
 	public override void _EnterTree()

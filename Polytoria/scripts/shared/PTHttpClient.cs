@@ -18,7 +18,7 @@ namespace Polytoria.Shared;
 
 public partial class PTHttpClient
 {
-	private const int DefaultDownloadChunkSize = 10000;
+	private const int DefaultDownloadChunkSize = 65536;
 #if USE_NATIVE_HTTP
 	private static readonly HttpClient _httpClient = new(
 		new HttpClientHandler
