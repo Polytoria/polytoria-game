@@ -48,19 +48,21 @@
 		<!-- Luau.VM -->
 		<None Include="native/Luau.VM/windows/Luau.VM.dll" Link="Luau.VM.dll" Condition="'$(GodotTargetPlatform)' == 'windows'" CopyToOutputDirectory="Always" />
 		<None Include="native/Luau.VM/macos/Luau.VM.dylib" Link="Luau.VM.dylib" Condition="'$(GodotTargetPlatform)' == 'macos'" CopyToOutputDirectory="Always" />
-		<None Include="native/Luau.VM/linux/Luau.VM.so" Link="Luau.VM.so" Condition="'$(GodotTargetPlatform)' == 'linuxbsd'" CopyToOutputDirectory="Always" />
+		<None Include="native/Luau.VM/linux/Luau.VM.so" Link="Luau.VM.so" Condition="'$(GodotTargetPlatform)' == 'linuxbsd' And '$(RuntimeIdentifier)' != 'linux-arm64'" CopyToOutputDirectory="Always" />
+		<None Include="native/Luau.VM/linux-arm64/Luau.VM.so" Link="Luau.VM.so" Condition="'$(GodotTargetPlatform)' == 'linuxbsd' And '$(RuntimeIdentifier)' == 'linux-arm64'" CopyToOutputDirectory="Always" />
 		<None Include="native/Luau.VM/android/libLuau.VM.so" Link="libLuau.VM.so" Condition="'$(GodotTargetPlatform)' == 'android'" CopyToOutputDirectory="Always" />
 
 		<!-- Luau.Compiler -->
 		<None Include="native/Luau.Compiler/windows/Luau.Compiler.dll" Link="Luau.Compiler.dll" Condition="'$(GodotTargetPlatform)' == 'windows'" CopyToOutputDirectory="Always" />
 		<None Include="native/Luau.Compiler/macos/Luau.Compiler.dylib" Link="Luau.Compiler.dylib" Condition="'$(GodotTargetPlatform)' == 'macos'" CopyToOutputDirectory="Always" />
-		<None Include="native/Luau.Compiler/linux/Luau.Compiler.so" Link="Luau.Compiler.so" Condition="'$(GodotTargetPlatform)' == 'linuxbsd'" CopyToOutputDirectory="Always" />
+		<None Include="native/Luau.Compiler/linux/Luau.Compiler.so" Link="Luau.Compiler.so" Condition="'$(GodotTargetPlatform)' == 'linuxbsd' And '$(RuntimeIdentifier)' != 'linux-arm64'" CopyToOutputDirectory="Always" />
+		<None Include="native/Luau.Compiler/linux-arm64/Luau.Compiler.so" Link="Luau.Compiler.so" Condition="'$(GodotTargetPlatform)' == 'linuxbsd' And '$(RuntimeIdentifier)' == 'linux-arm64'" CopyToOutputDirectory="Always" />
 		<None Include="native/Luau.Compiler/android/libLuau.Compiler.so" Link="libLuau.Compiler.so" Condition="'$(GodotTargetPlatform)' == 'android'" CopyToOutputDirectory="Always" />
 
 		<!-- Discord Game SDK -->
 		<None Include="native/discord/windows/discord_game_sdk.dll" Link="discord_game_sdk.dll" Condition="'$(GodotTargetPlatform)' == 'windows'" CopyToOutputDirectory="Always" />
 		<None Include="native/discord/macos/discord_game_sdk.dylib" Link="discord_game_sdk.dylib" Condition="'$(GodotTargetPlatform)' == 'macos'" CopyToOutputDirectory="Always" />
-		<None Include="native/discord/linux/discord_game_sdk.so" Link="discord_game_sdk.so" Condition="'$(GodotTargetPlatform)' == 'linuxbsd'" CopyToOutputDirectory="Always" />
+		<None Include="native/discord/linux/discord_game_sdk.so" Link="discord_game_sdk.so" Condition="'$(GodotTargetPlatform)' == 'linuxbsd' And '$(RuntimeIdentifier)' != 'linux-arm64'" CopyToOutputDirectory="Always" />
 
 		<!-- Package References -->
 		<PackageReference Include="QRCoder" Version="1.8.0" />
