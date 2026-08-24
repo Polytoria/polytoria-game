@@ -39,6 +39,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	private static readonly Dictionary<IntPtr, PTCallbackData> _ptrToCallback = [];
 	private static readonly Dictionary<PTCallbackData, IntPtr> _callbackToPtr = [];
 	private static readonly Dictionary<IntPtr, object> _ptrToObject = [];
+	private static readonly HashSet<IntPtr> _cancelledThreads = [];
 	private const string WeakUserdataCache = "__UDCACHE";
 	private static readonly int ThreadDataKey = 0x1247;
 
@@ -201,6 +202,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		state.Register("warn", LuaWarn);
 		state.Register("wait", LuaWait);
 		state.Register("spawn", LuaSpawn);
+		state.Register("delay", LuaDelay);
 		state.Register("tick", LuaTick);
 		state.Register("time", LuaTime);
 		state.Register("require", LuaRequire);
@@ -472,6 +474,19 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		return co;
 	}
 
+	/// <summary>
+	/// Schedules a thread for cancellation (which happens on 'ResumeThread').
+	/// </summary>
+	internal static void RequestCancel(LuaState thread)
+	{
+		if (thread.Parent == null) return;
+
+		LuaCoStatus status = thread.Parent.CoStatus(thread);
+		if (status == LuaCoStatus.CoFin || status == LuaCoStatus.CoErr) return;
+
+		_cancelledThreads.Add(thread.State);
+	}
+
 	public static async Task ResumeThread(LuaState thread, LuaState? from, int narg = 0, bool throwError = false, bool isMainThread = false)
 	{
 		Script script;
@@ -510,6 +525,11 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 				}
 
 				if (!script.ShouldContinue) return;
+
+				if (_cancelledThreads.Remove(thread.State))
+				{
+					break;
+				}
 
 				LuaStatus status;
 				lock (thread)
@@ -600,6 +620,10 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		_gdToProxy[target] = proxy.GetMethod(nameof(IScriptGDObject.FromGDClass), BindingFlags.Public | BindingFlags.Static);
 	}
 
+	/// <summary>
+	/// Prints all arguments to the standard output, using tab as a separator.
+	/// </summary>
+	/// <param name="...">Values to print.</param>
 	public static int LuaPrint(IntPtr L)
 	{
 		LuaState lua = LuaState.FromIntPtr(L);
@@ -631,6 +655,11 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		logger.LogInfo(script, logInfo);
 		return 0;
 	}
+
+	/// <summary>
+	/// Prints all arguments to the standard output as a warn message, using tab as a separator.
+	/// </summary>
+	/// <param name="...">Values to print.</param>
 	public static int LuaWarn(IntPtr L)
 	{
 		LuaState lua = LuaState.FromIntPtr(L);
@@ -662,9 +691,17 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		logger.LogWarning(script, logInfo);
 		return 0;
 	}
-	public static int LuaWait(IntPtr L)
+
+	/// <summary>
+	/// Yields the calling thread until the specified amount of
+	/// time has passed or until the next tick.
+	/// </summary>
+	/// <param name="time">The minimum time that must pass.</param>
+	/// <returns>The actual time elapsed.</returns>
+	public int LuaWait(IntPtr L)
 	{
 		LuaState lua = LuaState.FromIntPtr(L);
+		Script script = GetScriptInstance(lua);
 
 		double n = lua.IsNumber(1) ? lua.ToNumber(1) : 0;
 
@@ -672,21 +709,33 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 		SetYieldTask(lua, tcs.Task);
 
-		async void RunAsync()
+		Stopwatch sw = Stopwatch.StartNew();
+
+		if (n > 0)
 		{
-			Task task = n > 0 ? Globals.Singleton.WaitAsync((float)n) : Globals.Singleton.WaitPhysicsFrame();
-			Stopwatch sw = Stopwatch.StartNew();
-			await task;
-
-			lua.PushNumber(sw.Elapsed.TotalSeconds);
-			tcs.SetResult(1);
+			decimal wakeTime = script.Root.UpTime + (decimal)n;
+			script.Root.Hooks.EnqueueTimed(wakeTime, () =>
+			{
+				lua.PushNumber(sw.Elapsed.TotalSeconds);
+				tcs.SetResult(1);
+			});
 		}
-
-		RunAsync();
+		else
+		{
+			script.Root.Hooks.EnqueueNextTick(() =>
+			{
+				lua.PushNumber(sw.Elapsed.TotalSeconds);
+				tcs.SetResult(1);
+			});
+		}
 
 		return lua.Yield(1);
 	}
 
+	/// <summary>
+	/// Returns the world's accumulated uptime.
+	/// </summary>
+	/// <returns>Elapsed uptime.</returns>
 	public int LuaTime(IntPtr L)
 	{
 		LuaState lua = LuaState.FromIntPtr(L);
@@ -697,6 +746,12 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		return 1;
 	}
 
+	/// <summary>
+	/// Runs the given ModuleScript once, caching it and returning
+	/// it's result on consecutive calls.
+	/// </summary>
+	/// <param name="module">The ModuleScript to require.</param>
+	/// <returns>The module's returned result.</returns>
 	public int LuaRequire(IntPtr L)
 	{
 		LuaState state = LuaState.FromIntPtr(L);
@@ -817,27 +872,49 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 	}
 
-	public static int LuaSpawn(IntPtr L)
+	/// <summary>
+	/// Schedules a function/thread to be ran once the current resumption cycle finishes.
+	/// </summary>
+	/// <param name="scheduled">The function/thread to be ran.</param>
+	/// <param name="...">Arguments to be passed to the function/thread once it's ran.</param>
+	/// <returns><c>PTTask</c> cancellable task handle.</returns>
+	public int LuaSpawn(IntPtr L)
 	{
 		LuaState state = LuaState.FromIntPtr(L);
 
-		if (!state.IsFunction(1))
+		bool isThread = state.IsThread(1);
+		if (!state.IsFunction(1) && !isThread)
 		{
-			state.Error("spawn requires a function");
+			state.Error("'spawn' expects a 'function' or a 'thread' as its first argument.");
 			return 0;
 		}
+
+		Script script = GetScriptInstance(state);
 
 		int argCount = state.GetTop();
 		int numArgs = argCount - 1;
 
-		state.PushValue(1);
-		int funcRef = state.Ref();
+		LuaState co;
+		int coRef;
 
-		LuaState co = NewThread(state);
-		int coRef = state.Ref();
+		if (isThread)
+		{
+			co = state.ToThread(1);
+			state.PushValue(1);
+			coRef = state.Ref();
+		}
+		else
+		{
+			state.PushValue(1);
+			int funcRef = state.Ref();
 
-		state.GetRef(funcRef);
-		state.XMove(co, 1);
+			co = NewThread(state);
+			coRef = state.Ref();
+
+			state.GetRef(funcRef);
+			state.XMove(co, 1);
+			state.Unref(funcRef);
+		}
 
 		// Move arguments to the new thread
 		if (numArgs > 0)
@@ -847,26 +924,115 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			state.XMove(co, numArgs);
 		}
 
-		state.Unref(funcRef);
+		script.Root.Hooks.EnqueueSpawn(co, coRef, numArgs);
 
-		async void run()
-		{
-			try
-			{
-				await ResumeThread(co, null, numArgs);
-			}
-			finally
-			{
-				co.Unref(coRef);
-			}
-		}
-
-		run();
-
-		return 0;
+		PushCSClass(state, new PTTask { Thread = co });
+		return 1;
 	}
 
+	/// <summary>
+	/// Schedules a function/thread to be ran once the specified amount of time has passed, or
+	/// next physics update if no time is provided.
+	/// </summary>
+	/// <param name="time">The time that must pass.</param>
+	/// <param name="scheduled">The function/thread to be ran.</param>
+	/// <param name="...">Arguments to be passed to the function/thread once it's ran.</param>
+	/// <returns><c>PTTask</c> cancellable task handle.</returns>
+	public int LuaDelay(IntPtr L)
+	{
+		LuaState state = LuaState.FromIntPtr(L);
 
+		bool hasTime = state.IsNumber(1);
+		double seconds = hasTime ? state.ToNumber(1) : 0;
+
+		bool isThread = state.IsThread(2);
+		if (!state.IsFunction(2) && !isThread)
+		{
+			state.Error("'delay' expects a 'function' or a 'thread' as it's second argument.");
+			return 0;
+		}
+
+		Script script = GetScriptInstance(state);
+
+		int argCount = state.GetTop();
+		int numArgs = argCount - 2;
+
+		LuaState co;
+		int coRef;
+
+		if (isThread)
+		{
+			co = state.ToThread(2);
+			state.PushValue(2);
+			coRef = state.Ref();
+		}
+		else
+		{
+			state.PushValue(2);
+			int funcRef = state.Ref();
+
+			co = NewThread(state);
+			coRef = state.Ref();
+
+			state.GetRef(funcRef);
+			state.XMove(co, 1);
+			state.Unref(funcRef);
+		}
+
+		if (numArgs > 0)
+		{
+			for (int i = 3; i <= argCount; i++)
+			{
+				state.PushValue(i);
+			}
+			state.XMove(co, numArgs);
+		}
+
+		if (hasTime)
+		{
+			decimal wakeTime = script.Root.UpTime + (decimal)seconds;
+			script.Root.Hooks.EnqueueTimed(wakeTime, () =>
+			{
+				async void run()
+				{
+					try
+					{
+						await ResumeThread(co, null, numArgs);
+					}
+					finally
+					{
+						co.Unref(coRef);
+					}
+				}
+				run();
+			});
+		}
+		else
+		{
+			script.Root.Hooks.EnqueueNextTick(() =>
+			{
+				async void run()
+				{
+					try { await ResumeThread(co, null, numArgs); }
+					finally { co.Unref(coRef); }
+				}
+				run();
+			});
+		}
+
+		PushCSClass(state, new PTTask { Thread = co });
+		return 1;
+	}
+
+	/// <summary>
+	/// Runs a function on a new thread and catches any error it raises.
+	/// </summary>
+	/// <param name="fn">The function to call.</param>
+	/// <param name="...">Arguments to be passed to the function.</param>
+	/// <returns>
+	/// `true` followed by the function's results on success, or `false` followed
+	/// by the error message on failure.
+	/// </returns>
 	public int LuaPCall(IntPtr L)
 	{
 		LuaState state = LuaState.FromIntPtr(L);
@@ -931,6 +1097,10 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		}
 	}
 
+	/// <summary>
+	/// Returns the current Unix time, in seconds.
+	/// </summary>
+	/// <returns>Current Unix time.</returns>
 	public static int LuaTick(IntPtr L)
 	{
 		LuaState state = LuaState.FromIntPtr(L);

@@ -20,7 +20,9 @@ declare function warn(message: string)
 
 declare function wait(seconds: number?)
 
-declare function spawn(callback: () -> ())
+declare function spawn<A...>(scheduled: ((A...) -> ()) | thread, ...: A...): PTTask
+
+declare function delay<A...>(time: number?, scheduled: ((A...) -> ()) | thread, ...: A...): PTTask
 
 declare function tick(): number
 
@@ -28,7 +30,7 @@ declare function time(): number
 
 declare function require(moduleScript: (ModuleScript)): any
 
-declare function pcall(f: (...any) -> (boolean, any))
+declare function pcall<A..., R...>(fn: (A...) -> R..., ...: A...): (boolean, R...)
 
 declare world: World
 

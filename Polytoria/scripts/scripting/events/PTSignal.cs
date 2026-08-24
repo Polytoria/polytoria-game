@@ -48,8 +48,17 @@ public class PTSignal : IScriptObject
 				continue;
 			}
 
-			try { cb.InvokeDirect(args); }
-			catch (Exception ex) { GD.PushError($"PTCallback Length: {args.Length} : " + ex.ToString()); }
+			// Script-originated callbacks are batched onto the next HookService
+			// drain. Native C# subscribers still run immediately.
+			if (cb.FromScript != null)
+			{
+				cb.FromScript.Root.Hooks.EnqueueCallback(cb, args);
+			}
+			else
+			{
+				try { cb.InvokeDirect(args); }
+				catch (Exception ex) { GD.PushError($"PTCallback Length: {args.Length} : " + ex.ToString()); }
+			}
 		}
 	}
 

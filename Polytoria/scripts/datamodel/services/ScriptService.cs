@@ -246,6 +246,19 @@ public sealed partial class ScriptService : Instance
 
 	public static void FreePTCallback(PTCallback action)
 	{
+		if (action.FromScript != null)
+		{
+			action.FromScript.Root.Hooks.RequestFreeCallback(action);
+		}
+		else
+		{
+			FreePTCallbackDirect(action);
+		}
+	}
+
+	internal static void FreePTCallbackDirect(PTCallback action)
+	{
+		action.Dispose();
 		action.LangProvider?.FreePTCallback(action);
 	}
 
