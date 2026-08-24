@@ -1653,11 +1653,11 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		if (lua.IsNil(-1))
 		{
 			lua.Pop(1); // pop nil
-	
+
 			PushNewUserdata(lua, value);
 			lua.PushValue(-2); // copy metatable
 			lua.SetMetaTable(-2); // pop copy of metatable
-	
+
 			lua.PushValue(-1); // copy userdata
 			lua.RawSetInteger(-3, value); // pop copy of userdata
 		}
