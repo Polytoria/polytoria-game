@@ -339,21 +339,44 @@ public partial class Instance : NetworkedObject
 		}
 	}
 
-	[ScriptMethod]
-	public Instance[] GetDescendants()
+
+	[ScriptMethod("New")]
+	public static Instance? ScriptNew([ScriptingCaller] Script caller, string className, Instance? parent = null)
 	{
-		List<Instance> instances = [];
-
-		foreach (Instance child in Children)
-		{
-			instances.Add(child);
-
-			// Recursively add descendants
-			instances.AddRange(child.GetDescendants());
-		}
-
-		return [.. instances];
+		return NewStatic(className, parent, caller.Root);
 	}
+
+	public Instance? New(string className, Instance? parent = null)
+	{
+		return NewStatic(className, parent, Root);
+	}
+
+	public static Instance? NewStatic(string className, Instance? parent = null, World? root = null)
+	{
+		NetworkedObject obj = NewInternal(className, parent, root);
+		if (obj is not Instance)
+		{
+			obj.Destroy();
+			return null;
+		}
+		return (Instance)obj;
+	}
+
+	[ScriptLegacyMethod("New")]
+	public static Instance? LegacyNew([ScriptingCaller] Script caller, string className, Instance? parent = null)
+	{
+		Instance? i = NewStatic(XmlFormat.ConvertClassName(className), parent, caller.Root);
+		if (i != null)
+		{
+			if (parent == null)
+			{
+				i.Parent = caller.Root.Environment;
+			}
+			return i;
+		}
+		return null;
+	}
+
 
 	[ScriptMethod]
 	public Instance? FindChild(string name)
@@ -366,6 +389,26 @@ public partial class Instance : NetworkedObject
 			{
 				NameToChild[name] = child;
 				return child;
+			}
+		}
+
+		return null;
+	}
+
+	[ScriptLegacyMethod("FindChild")]
+	public Instance? LegacyFindChild(string name)
+	{
+		if (legacyChild.TryGetValue(name, out Instance? val))
+		{
+			return val;
+		}
+
+		foreach (Instance item in GetChildren())
+		{
+			if (item.LegacyName != null && item.LegacyName == name)
+			{
+				legacyChild[item.LegacyName] = item;
+				return item;
 			}
 		}
 
@@ -449,203 +492,6 @@ public partial class Instance : NetworkedObject
 		return (T?)await WaitChild(name, timeoutSec);
 	}
 
-
-	[ScriptLegacyMethod("FindChild")]
-	public Instance? LegacyFindChild(string name)
-	{
-		if (legacyChild.TryGetValue(name, out Instance? val))
-		{
-			return val;
-		}
-
-		foreach (Instance item in GetChildren())
-		{
-			if (item.LegacyName != null && item.LegacyName == name)
-			{
-				legacyChild[item.LegacyName] = item;
-				return item;
-			}
-		}
-
-		return null;
-	}
-
-	[ScriptMethod]
-	public Instance? FindChildByClass(string className)
-	{
-		foreach (Instance child in GetChildren())
-		{
-			if (child.ClassName == className)
-			{
-				return child;
-			}
-		}
-
-		return null;
-	}
-
-	[ScriptMethod]
-	public Instance? FindChildWithTag(string tag)
-	{
-		foreach (Instance child in GetChildren())
-		{
-			if (child.HasTag(tag))
-			{
-				return child;
-			}
-		}
-
-		return null;
-	}
-
-	[ScriptMethod]
-	public Instance? FindDescendant(string path)
-	{
-		string[] separatedPath = path.Split('.');
-		Instance? inst = this;
-
-		foreach (string segment in separatedPath)
-		{
-			inst = inst.FindChild(segment);
-			if (inst == null)
-			{
-				return null;
-			}
-		}
-
-		return inst;
-	}
-
-	[ScriptMethod]
-	public Instance[] GetChildrenWithTag(string tag)
-	{
-		List<Instance> childs = [];
-		foreach (Instance child in GetChildren())
-		{
-			if (child.HasTag(tag))
-			{
-				childs.Add(child);
-			}
-		}
-
-		return [.. childs];
-	}
-
-	[ScriptMethod]
-	public Instance[] GetDescendantsWithTag(string tag)
-	{
-		List<Instance> des = [];
-		foreach (Instance child in GetDescendants())
-		{
-			if (child.HasTag(tag))
-			{
-				des.Add(child);
-			}
-		}
-
-		return [.. des];
-	}
-
-	[ScriptMethod]
-	public Instance[] GetDescendantsOfClass(string className)
-	{
-		List<Instance> des = [];
-		foreach (Instance child in GetDescendants())
-		{
-			if (child.ClassName == className)
-			{
-				des.Add(child);
-			}
-		}
-
-		return [.. des];
-	}
-
-	[ScriptMethod]
-	public Instance? FindAncestorByClass(string className)
-	{
-		Instance? parent = Parent;
-		while (parent != null)
-		{
-			Type? currentType = parent.GetType();
-			// Check current type and all base types
-			while (currentType != null)
-			{
-				if (currentType.Name == className)
-					return parent;
-				currentType = currentType.BaseType;
-			}
-			parent = parent.Parent;
-		}
-		return null;
-	}
-
-	[ScriptMethod]
-	public Instance? FindAncestorByTag(string tagName)
-	{
-		Instance? parent = Parent;
-		while (parent != null)
-		{
-			if (parent.HasTag(tagName))
-				return parent;
-			parent = parent.Parent;
-		}
-		return null;
-	}
-
-	[ScriptMethod]
-	public Instance[] GetAncestorsByTag(string tagName)
-	{
-		List<Instance> instances = [];
-		Instance? parent = Parent;
-		while (parent != null)
-		{
-			if (parent.HasTag(tagName))
-			{
-				instances.Add(parent);
-			}
-			parent = parent.Parent;
-		}
-		return [.. instances];
-	}
-
-	[ScriptMethod]
-	public Instance[] GetAncestorsOfClass(string className)
-	{
-		List<Instance> instances = [];
-		Instance? parent = Parent;
-		while (parent != null)
-		{
-			if (parent.ClassName == className)
-			{
-				instances.Add(parent);
-			}
-			parent = parent.Parent;
-		}
-		return [.. instances];
-	}
-
-	[ScriptLegacyMethod("FindChildByClass")]
-	public Instance? LegacyFindChildByClass(string className)
-	{
-		foreach (Instance child in GetChildren())
-		{
-			if (child.ClassName == XmlFormat.ConvertClassName(className))
-			{
-				return child;
-			}
-		}
-
-		return null;
-	}
-
-	[ScriptMethod]
-	public Instance? FindChildByIndex(int index)
-	{
-		if (index < 0 || index >= Children.Count) return null;
-		return Children[index];
-	}
-
 	[ScriptMethod]
 	public void MoveChild(Instance child, int index)
 	{
@@ -703,6 +549,344 @@ public partial class Instance : NetworkedObject
 		child.PostIndexMove();
 	}
 
+
+	[ScriptMethod]
+	public Instance? FindChildByClass(string className)
+	{
+		foreach (Instance child in GetChildren())
+		{
+			if (child.ClassName == className)
+			{
+				return child;
+			}
+		}
+
+		return null;
+	}
+
+	[ScriptLegacyMethod("FindChildByClass")]
+	public Instance? LegacyFindChildByClass(string className)
+	{
+		foreach (Instance child in GetChildren())
+		{
+			if (child.ClassName == XmlFormat.ConvertClassName(className))
+			{
+				return child;
+			}
+		}
+
+		return null;
+	}
+
+	[ScriptMethod]
+	public Instance? FindChildWithTag(string tag)
+	{
+		foreach (Instance child in GetChildren())
+		{
+			if (child.HasTag(tag))
+			{
+				return child;
+			}
+		}
+
+		return null;
+	}
+
+	[ScriptMethod]
+	public Instance? FindChildByIndex(int index)
+	{
+		if (index < 0 || index >= Children.Count) return null;
+		return Children[index];
+	}
+
+
+	[ScriptMethod]
+	public Instance[] GetChildren()
+	{
+		return [.. Children];
+	}
+
+	[ScriptMethod]
+	public Instance[] GetChildrenOfClass(string className)
+	{
+		List<Instance> instances = [];
+
+		foreach (Instance item in GetChildren())
+		{
+			if (item.ClassName == className)
+			{
+				instances.Add(item);
+			}
+		}
+
+		return [.. instances];
+	}
+
+	[ScriptLegacyMethod("GetChildrenOfClass")]
+	public Instance[] LegacyGetChildrenOfClass(string className)
+	{
+		return GetChildrenOfClass(XmlFormat.ConvertClassName(className));
+	}
+
+	public T[] GetChildrenOfClass<T>() where T : Instance
+	{
+		List<T> instances = [];
+		foreach (Instance item in GetChildren())
+		{
+			if (item is T typedItem)
+			{
+				instances.Add(typedItem);
+			}
+		}
+		return [.. instances];
+	}
+
+	[ScriptMethod]
+	public Instance[] GetChildrenWithTag(string tag)
+	{
+		List<Instance> childs = [];
+		foreach (Instance child in GetChildren())
+		{
+			if (child.HasTag(tag))
+			{
+				childs.Add(child);
+			}
+		}
+
+		return [.. childs];
+	}
+
+
+	[ScriptMethod]
+	public Instance? FindDescendant(string path)
+	{
+		string[] separatedPath = path.Split('.');
+		Instance? inst = this;
+
+		foreach (string segment in separatedPath)
+		{
+			inst = inst.FindChild(segment);
+			if (inst == null)
+			{
+				return null;
+			}
+		}
+
+		return inst;
+	}
+
+	[ScriptMethod]
+	public bool IsDescendantOf(Instance instance)
+	{
+		Instance? parent = Parent;
+		while (parent != null)
+		{
+			if (parent == instance)
+				return true;
+			parent = parent.Parent;
+		}
+		return false;
+	}
+
+	[ScriptMethod]
+	public bool IsDescendantOfClass(string className)
+	{
+		Instance? parent = Parent;
+
+		while (parent != null)
+		{
+			Type? currentType = parent.GetType();
+			while (currentType != null && currentType != typeof(object))
+			{
+				if (currentType.Name == className)
+					return true;
+				if (currentType == typeof(NetworkedObject))
+					break;
+				currentType = currentType.BaseType;
+			}
+			parent = parent.Parent;
+		}
+		return false;
+	}
+
+	public bool IsDescendantOfClass<T>()
+	{
+		return IsDescendantOfClass(typeof(T).Name);
+	}
+
+
+	[ScriptMethod]
+	public Instance[] GetDescendants()
+	{
+		List<Instance> instances = [];
+
+		foreach (Instance child in Children)
+		{
+			instances.Add(child);
+
+			// Recursively add descendants
+			instances.AddRange(child.GetDescendants());
+		}
+
+		return [.. instances];
+	}
+
+	[ScriptMethod]
+	public Instance[] GetDescendantsOfClass(string className)
+	{
+		List<Instance> des = [];
+		foreach (Instance child in GetDescendants())
+		{
+			if (child.ClassName == className)
+			{
+				des.Add(child);
+			}
+		}
+
+		return [.. des];
+	}
+
+	[ScriptMethod]
+	public Instance[] GetDescendantsWithTag(string tag)
+	{
+		List<Instance> des = [];
+		foreach (Instance child in GetDescendants())
+		{
+			if (child.HasTag(tag))
+			{
+				des.Add(child);
+			}
+		}
+
+		return [.. des];
+	}
+
+
+	[ScriptMethod]
+	public Instance? FindAncestorByClass(string className)
+	{
+		Instance? parent = Parent;
+		while (parent != null)
+		{
+			Type? currentType = parent.GetType();
+			// Check current type and all base types
+			while (currentType != null)
+			{
+				if (currentType.Name == className)
+					return parent;
+				currentType = currentType.BaseType;
+			}
+			parent = parent.Parent;
+		}
+		return null;
+	}
+
+	[ScriptMethod]
+	public Instance? FindAncestorByTag(string tagName)
+	{
+		Instance? parent = Parent;
+		while (parent != null)
+		{
+			if (parent.HasTag(tagName))
+				return parent;
+			parent = parent.Parent;
+		}
+		return null;
+	}
+
+	[ScriptMethod]
+	public bool IsAncestorOf(Instance instance)
+	{
+		Instance? parent = instance.Parent;
+		while (parent != null)
+		{
+			if (parent == this)
+				return true;
+			parent = parent.Parent;
+		}
+		return false;
+	}
+
+
+	[ScriptMethod]
+	public Instance[] GetAncestorsOfClass(string className)
+	{
+		List<Instance> instances = [];
+		Instance? parent = Parent;
+		while (parent != null)
+		{
+			if (parent.ClassName == className)
+			{
+				instances.Add(parent);
+			}
+			parent = parent.Parent;
+		}
+		return [.. instances];
+	}
+
+	[ScriptMethod]
+	public Instance[] GetAncestorsByTag(string tagName)
+	{
+		List<Instance> instances = [];
+		Instance? parent = Parent;
+		while (parent != null)
+		{
+			if (parent.HasTag(tagName))
+			{
+				instances.Add(parent);
+			}
+			parent = parent.Parent;
+		}
+		return [.. instances];
+	}
+
+
+	[ScriptMethod]
+	public new Instance? GetParent()
+	{
+		return Parent;
+	}
+
+	[ScriptMethod]
+	public void SetParent(Instance newParent)
+	{
+		Parent = newParent;
+	}
+
+	[ScriptMethod]
+	public void Reparent(Instance to)
+	{
+		Parent = to;
+	}
+
+
+	[ScriptMethod]
+	public void AddTag(string tag)
+	{
+		if (string.IsNullOrEmpty(tag) || Tags.Contains(tag))
+			return;
+
+		Tags = [.. Tags, tag];
+		// Notified in Tags setter
+	}
+
+	[ScriptMethod]
+	public void RemoveTag(string tag)
+	{
+		if (string.IsNullOrEmpty(tag) || !Tags.Contains(tag))
+			return;
+
+		Tags = [.. Tags.Where(t => t != tag)];
+		// Notified in Tags setter
+	}
+
+	[ScriptMethod]
+	public bool HasTag(string tag)
+	{
+		return Tags.Contains(tag);
+	}
+
+
 #if CREATOR
 	public virtual void CreatorSelected() { }
 
@@ -750,47 +934,6 @@ public partial class Instance : NetworkedObject
 	/// </summary>
 	public virtual void PostIndexMove() { }
 
-	[ScriptMethod]
-	public Instance[] GetChildren()
-	{
-		return [.. Children];
-	}
-
-	[ScriptMethod]
-	public Instance[] GetChildrenOfClass(string className)
-	{
-		List<Instance> instances = [];
-
-		foreach (Instance item in GetChildren())
-		{
-			if (item.ClassName == className)
-			{
-				instances.Add(item);
-			}
-		}
-
-		return [.. instances];
-	}
-
-	[ScriptLegacyMethod("GetChildrenOfClass")]
-	public Instance[] LegacyGetChildrenOfClass(string className)
-	{
-		return GetChildrenOfClass(XmlFormat.ConvertClassName(className));
-	}
-
-	public T[] GetChildrenOfClass<T>() where T : Instance
-	{
-		List<T> instances = [];
-		foreach (Instance item in GetChildren())
-		{
-			if (item is T typedItem)
-			{
-				instances.Add(typedItem);
-			}
-		}
-		return [.. instances];
-	}
-
 	public override void Ready()
 	{
 		foreach (Instance n in GetChildren())
@@ -818,95 +961,6 @@ public partial class Instance : NetworkedObject
 	private void OnChildRemoved(Instance obj)
 	{
 		legacyChild.Remove(obj.LegacyName);
-	}
-
-	[ScriptMethod]
-	public bool IsAncestorOf(Instance instance)
-	{
-		Instance? parent = instance.Parent;
-		while (parent != null)
-		{
-			if (parent == this)
-				return true;
-			parent = parent.Parent;
-		}
-		return false;
-	}
-
-	[ScriptMethod]
-	public bool IsDescendantOf(Instance instance)
-	{
-		Instance? parent = Parent;
-		while (parent != null)
-		{
-			if (parent == instance)
-				return true;
-			parent = parent.Parent;
-		}
-		return false;
-	}
-
-	[ScriptMethod]
-	public bool IsDescendantOfClass(string className)
-	{
-		Instance? parent = Parent;
-
-		while (parent != null)
-		{
-			Type? currentType = parent.GetType();
-			while (currentType != null && currentType != typeof(object))
-			{
-				if (currentType.Name == className)
-					return true;
-				if (currentType == typeof(NetworkedObject))
-					break;
-				currentType = currentType.BaseType;
-			}
-			parent = parent.Parent;
-		}
-		return false;
-	}
-
-	public bool IsDescendantOfClass<T>()
-	{
-		return IsDescendantOfClass(typeof(T).Name);
-	}
-
-	[ScriptMethod("New")]
-	public static Instance? ScriptNew([ScriptingCaller] Script caller, string className, Instance? parent = null)
-	{
-		return NewStatic(className, parent, caller.Root);
-	}
-
-	public Instance? New(string className, Instance? parent = null)
-	{
-		return NewStatic(className, parent, Root);
-	}
-
-	public static Instance? NewStatic(string className, Instance? parent = null, World? root = null)
-	{
-		NetworkedObject obj = NewInternal(className, parent, root);
-		if (obj is not Instance)
-		{
-			obj.Destroy();
-			return null;
-		}
-		return (Instance)obj;
-	}
-
-	[ScriptLegacyMethod("New")]
-	public static Instance? LegacyNew([ScriptingCaller] Script caller, string className, Instance? parent = null)
-	{
-		Instance? i = NewStatic(XmlFormat.ConvertClassName(className), parent, caller.Root);
-		if (i != null)
-		{
-			if (parent == null)
-			{
-				i.Parent = caller.Root.Environment;
-			}
-			return i;
-		}
-		return null;
 	}
 
 	public Instance? GetModelChildFromID(string objID)
@@ -945,32 +999,6 @@ public partial class Instance : NetworkedObject
 		ModelChilds.Remove(i.ObjectID);
 	}
 
-	[ScriptMethod]
-	public void AddTag(string tag)
-	{
-		if (string.IsNullOrEmpty(tag) || Tags.Contains(tag))
-			return;
-
-		Tags = [.. Tags, tag];
-		// Notified in Tags setter
-	}
-
-	[ScriptMethod]
-	public void RemoveTag(string tag)
-	{
-		if (string.IsNullOrEmpty(tag) || !Tags.Contains(tag))
-			return;
-
-		Tags = [.. Tags.Where(t => t != tag)];
-		// Notified in Tags setter
-	}
-
-	[ScriptMethod]
-	public bool HasTag(string tag)
-	{
-		return Tags.Contains(tag);
-	}
-
 	private void InvokeHiddenChanged()
 	{
 		// Put in callable so when reparented to another hidden it doesn't stack
@@ -981,24 +1009,6 @@ public partial class Instance : NetworkedObject
 			if (IsDeleted) return;
 			HiddenChanged(_isHidden);
 		}).CallDeferred();
-	}
-
-	[ScriptMethod]
-	public void Reparent(Instance to)
-	{
-		Parent = to;
-	}
-
-	[ScriptMethod]
-	public new Instance? GetParent()
-	{
-		return Parent;
-	}
-
-	[ScriptMethod]
-	public void SetParent(Instance newParent)
-	{
-		Parent = newParent;
 	}
 
 	public virtual void HiddenChanged(bool to) { }
