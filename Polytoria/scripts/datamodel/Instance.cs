@@ -578,6 +578,22 @@ public partial class Instance : NetworkedObject
 		return null;
 	}
 
+	[ScriptMethod]
+	public Instance[] GetAncestorsByTag(string tagName)
+	{
+		List<Instance> instances = [];
+		Instance? parent = Parent;
+		while (parent != null)
+		{
+			if (parent.HasTag(tagName))
+			{
+				instances.Add(parent);
+			}
+			parent = parent.Parent;
+		}
+		return [.. instances];
+	}
+
 	[ScriptLegacyMethod("FindChildByClass")]
 	public Instance? LegacyFindChildByClass(string className)
 	{
