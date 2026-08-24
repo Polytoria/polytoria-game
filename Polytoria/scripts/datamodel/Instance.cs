@@ -547,6 +547,21 @@ public partial class Instance : NetworkedObject
 	}
 
 	[ScriptMethod]
+	public Instance[] GetDescendantsOfClass(string className)
+	{
+		List<Instance> des = [];
+		foreach (Instance child in GetDescendants())
+		{
+			if (child.ClassName == className)
+			{
+				des.Add(child);
+			}
+		}
+
+		return [.. des];
+	}
+
+	[ScriptMethod]
 	public Instance? FindAncestorByClass(string className)
 	{
 		Instance? parent = Parent;
