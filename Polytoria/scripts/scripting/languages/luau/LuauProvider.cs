@@ -39,7 +39,6 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	private static readonly Dictionary<IntPtr, PTCallbackData> _ptrToCallback = [];
 	private static readonly Dictionary<PTCallbackData, IntPtr> _callbackToPtr = [];
 	private static readonly Dictionary<IntPtr, object> _ptrToObject = [];
-	private static readonly Dictionary<(Type, int), int> _enumToRef = [];
 	private const string WeakUserdataCache = "__UDCACHE";
 	private static readonly int ThreadDataKey = 0x1247;
 
@@ -1596,8 +1595,9 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 	private void PushEnumMetatable(LuaState lua, Type type)
 	{
-		// metatable already exists
-		if (!lua.NewMetaTable(type.Name)) return;
+		// doubles as both the metatable AND the value cache for the enum
+
+		if (!lua.NewMetaTable("__enum_" + type.Name)) return; // metatable already exists
 
 		int toStringFunc(IntPtr L)
 		{
@@ -1646,21 +1646,22 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		lua.SetField(-2, "__metatable");
 	}
 
-	public void PushEnum(LuaState lua, Type specifyType, int value)
+	public void PushEnum(LuaState lua, Type type, int value)
 	{
-		if (_enumToRef.TryGetValue((specifyType, value), out int reference))
+		PushEnumMetatable(lua, type);
+		lua.RawGetInteger(-1, value);
+		if (lua.IsNil(-1))
 		{
-			lua.GetRef(reference);
-			return;
+			lua.Pop(1); // pop nil
+	
+			PushNewUserdata(lua, value);
+			lua.PushValue(-2); // copy metatable
+			lua.SetMetaTable(-2); // pop copy of metatable
+	
+			lua.PushValue(-1); // copy userdata
+			lua.RawSetInteger(-3, value); // pop copy of userdata
 		}
-
-		PushNewUserdata(lua, value);
-
-		PushEnumMetatable(lua, specifyType);
-		lua.SetMetaTable(-2); // pop metatable
-
-		lua.PushValue(-1); // push copy of userdata
-		_enumToRef.Add((specifyType, value), lua.Ref()); // pop copy
+		lua.Remove(-2); // pop metatable
 	}
 
 	private static string GetRegKeyFromObj(object obj)
