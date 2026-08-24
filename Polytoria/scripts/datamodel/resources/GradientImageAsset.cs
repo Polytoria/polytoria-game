@@ -128,11 +128,6 @@ public partial class GradientImageAsset : ImageAsset
 		base.InitOverrides();
 	}
 
-	public static void RegisterAsset()
-	{
-		RegisterType<GradientImageAsset>();
-	}
-
 	public override void LoadResource()
 	{
 		InvokeResourceLoaded(_texture);

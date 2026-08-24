@@ -7,7 +7,6 @@ using Polytoria.Scripting.Luau;
 using Polytoria.Shared;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Script = Polytoria.Datamodel.Script;
 
 namespace Polytoria.Scripting;
@@ -52,13 +51,9 @@ public class PTCallback(Action<object?[]> target) : IDisposable, IScriptObject
 		}
 		object?[] args = [.. argList];
 
-		TaskCompletionSource<int> tcs = new();
-
-		LuauProvider.SetYieldTask(state, tcs.Task);
-
 		TargetAction.Invoke(args ?? []);
 
-		return state.Yield(0);
+		return 0;
 	}
 
 	public void Dispose()
