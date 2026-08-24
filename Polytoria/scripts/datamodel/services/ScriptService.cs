@@ -29,7 +29,6 @@ public sealed partial class ScriptService : Instance
 	private const DynamicallyAccessedMemberTypes DynamicallyAccessedTypes = DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicMethods;
 
 	private static readonly Dictionary<CacheKey, MethodsCacheData> _methodsCache = [];
-	private static readonly Dictionary<CacheKey, MethodInfo?> _methodCache = [];
 	private static readonly Dictionary<CacheKey, PropertyInfo?> _propertyCache = [];
 	private static readonly Dictionary<Type, (MethodInfo, ScriptMetamethodAttribute)[]> _metaMethodCache = [];
 
@@ -247,58 +246,6 @@ public sealed partial class ScriptService : Instance
 	public static void FreePTCallback(PTCallback action)
 	{
 		action.LangProvider?.FreePTCallback(action);
-	}
-
-#pragma warning disable IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
-	internal static MethodInfo? ResolveMethod(
-#pragma warning restore IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
-		bool compatibility,
-		string key,
-		[DynamicallyAccessedMembers(DynamicallyAccessedTypes)] Type type)
-	{
-
-		CacheKey cacheKey = new() { Type = type, Key = key, IsCompatibility = compatibility };
-
-		// Try to get from cache first
-		if (_methodCache.TryGetValue(cacheKey, out MethodInfo? cachedMethod))
-			return cachedMethod;
-
-		MethodInfo[] methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-		MethodInfo? method = null;
-
-		if (compatibility)
-		{
-			// Find legacy method first
-
-			method = methods.FirstOrDefault(p =>
-				p.IsDefined(typeof(ScriptLegacyMethodAttribute)) &&
-				string.Equals(
-					p.GetCustomAttribute<ScriptLegacyMethodAttribute>()?.MethodName,
-					key,
-					StringComparison.CurrentCultureIgnoreCase)) ??
-
-				// If not found, fallback to ScriptMethodAttribute
-				methods.FirstOrDefault(p =>
-					p.IsDefined(typeof(ScriptMethodAttribute)) &&
-					(p.Name.Equals(key, StringComparison.CurrentCultureIgnoreCase) ||
-					 string.Equals(
-						 p.GetCustomAttribute<ScriptMethodAttribute>()?.MethodName,
-						 key,
-						 StringComparison.CurrentCultureIgnoreCase)));
-		}
-		else
-		{
-			// No compat, lookup normal method attribute
-			method = methods.FirstOrDefault(p =>
-				p.IsDefined(typeof(ScriptMethodAttribute)) &&
-				(p.Name == key ||
-				 p.GetCustomAttribute<ScriptMethodAttribute>()?.MethodName == key));
-		}
-
-		// Cache the result
-		_methodCache.TryAdd(cacheKey, method);
-
-		return method;
 	}
 
 #pragma warning disable IL2114 // 'DynamicallyAccessedMembersAttribute' on a type or one of its base types references a member which has 'DynamicallyAccessedMembersAttribute' requirements.
@@ -564,8 +511,9 @@ public sealed partial class ScriptService : Instance
 				m.IsDefined(typeof(ScriptLegacyMethodAttribute)) &&
 				m.GetCustomAttribute<ScriptLegacyMethodAttribute>()?.MethodName?.Equals(key, StringComparison.CurrentCultureIgnoreCase) == true)
 			: methods.Where(m =>
-				m.Name.Equals(key) ||
-				m.GetCustomAttribute<ScriptMethodAttribute>()?.MethodName == key);
+				m.IsDefined(typeof(ScriptMethodAttribute)) &&
+				(m.Name.Equals(key) ||
+				 m.GetCustomAttribute<ScriptMethodAttribute>()?.MethodName == key));
 
 		if (compatibility && !methodInfos.Any())
 		{

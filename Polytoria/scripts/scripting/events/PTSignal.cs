@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Script = Polytoria.Datamodel.Script;
 
@@ -75,6 +76,7 @@ public class PTSignal : IScriptObject
 	private void RemoveThisSignalFromScript(Script s)
 	{
 		if (!_subscribedScripts.TryGetValue(s, out List<PTSignal>? signals)) return;
+		if (_ptCallbacks?.Any(callback => callback.FromScript == s) == true) return;
 
 		signals.Remove(this);
 		if (signals.Count == 0)
@@ -176,10 +178,24 @@ public class PTSignal : IScriptObject
 	}
 
 	[ScriptMethod]
-	public async Task<object?[]> Wait()
+	public async Task<object?[]> Wait([ScriptingCaller] Script? caller = null)
 	{
 		TaskCompletionSource<object?[]> tcs = new();
-		Once(args => tcs.TrySetResult(args ?? []));
+		PTCallback? callback = null;
+		callback = new(args =>
+		{
+			if (callback != null)
+				Disconnect(callback);
+			tcs.TrySetResult(args ?? []);
+		})
+		{
+			FromScript = caller
+		};
+		Connect(callback);
+
+		CancellationToken cancellationToken = caller?.LuauCancellation?.Token ?? CancellationToken.None;
+		using CancellationTokenRegistration registration = cancellationToken.Register(
+			static state => ((TaskCompletionSource<object?[]>)state!).TrySetCanceled(), tcs);
 		return await tcs.Task;
 	}
 

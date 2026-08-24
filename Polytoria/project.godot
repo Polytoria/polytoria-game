@@ -53,7 +53,7 @@ AppCloseDimmer="*res://scripts/shared/AppCloseDimmer.cs"
 [display]
 
 window/subwindows/embed_subwindows=false
-window/handheld/orientation=1
+window/handheld/orientation=6
 window/vsync/vsync_mode=0
 
 [dotnet]

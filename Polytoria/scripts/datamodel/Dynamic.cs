@@ -819,8 +819,8 @@ public partial class Dynamic : Instance
 
 	internal void NotifySizeChange()
 	{
-		OnPropertyChanged(nameof(LocalSize));
-		OnPropertyChanged(nameof(Size));
+		OnPropertyChanged(nameof(LocalSize), false);
+		OnPropertyChanged(nameof(Size), false);
 	}
 
 	public override void HiddenChanged(bool to)
