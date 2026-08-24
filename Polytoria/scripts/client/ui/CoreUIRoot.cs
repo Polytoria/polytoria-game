@@ -97,7 +97,7 @@ public partial class CoreUIRoot : CanvasLayer
 
 	private void OnCrosshairChanged()
 	{
-		if (Service.CrosshairOverride is CursorAsset c)
+		if (Service.Crosshair is CursorAsset c)
 		{
 			void apply(Image? img)
 			{

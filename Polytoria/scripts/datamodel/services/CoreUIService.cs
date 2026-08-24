@@ -43,7 +43,7 @@ public sealed partial class CoreUIService : Instance
 	private CursorAsset? _crosshairOverride;
 	public CoreUIRoot CoreUI = null!;
 
-	[Editable, ScriptProperty, Attributes.Obsolete("Use CrosshairOverride instead.")]
+	[Editable, ScriptProperty, Attributes.Obsolete("Use Crosshair instead.")]
 	public CtrlLockCursorEnum CtrlLockCursor
 	{
 		get => _ctrlLockCursor;
@@ -57,7 +57,7 @@ public sealed partial class CoreUIService : Instance
 	}
 
 	[Editable, ScriptProperty]
-	public CursorAsset? DefaultCursorOverride
+	public CursorAsset? DefaultCursor
 	{
 		get { return _cursorOverrides[Input.CursorShape.Arrow]; }
 		set
@@ -68,7 +68,7 @@ public sealed partial class CoreUIService : Instance
 	}
 
 	[Editable, ScriptProperty]
-	public CursorAsset? PointerCursorOverride
+	public CursorAsset? PointerCursor
 	{
 		get { return _cursorOverrides[Input.CursorShape.PointingHand]; }
 		set
@@ -79,7 +79,7 @@ public sealed partial class CoreUIService : Instance
 	}
 
 	[Editable, ScriptProperty]
-	public CursorAsset? GrabCursorOverride
+	public CursorAsset? GrabCursor
 	{
 		get { return _cursorOverrides[Input.CursorShape.Drag]; }
 		set
@@ -90,7 +90,7 @@ public sealed partial class CoreUIService : Instance
 	}
 
 	[Editable, ScriptProperty]
-	public CursorAsset? GrabbingCursorOverride
+	public CursorAsset? GrabbingCursor
 	{
 		get { return _cursorOverrides[Input.CursorShape.CanDrop]; }
 		set
@@ -101,7 +101,7 @@ public sealed partial class CoreUIService : Instance
 	}
 
 	[Editable, ScriptProperty]
-	public CursorAsset? CrosshairOverride
+	public CursorAsset? Crosshair
 	{
 		get { return _crosshairOverride; }
 		set
