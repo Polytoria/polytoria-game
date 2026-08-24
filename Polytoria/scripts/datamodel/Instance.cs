@@ -782,7 +782,7 @@ public partial class Instance : NetworkedObject
 	}
 
 	[ScriptMethod]
-	public Instance? FindAncestorByTag(string tagName)
+	public Instance? FindAncestorWithTag(string tagName)
 	{
 		Instance? parent = Parent;
 		while (parent != null)
@@ -825,7 +825,7 @@ public partial class Instance : NetworkedObject
 	}
 
 	[ScriptMethod]
-	public Instance[] GetAncestorsByTag(string tagName)
+	public Instance[] GetAncestorsWithTag(string tagName)
 	{
 		List<Instance> instances = [];
 		Instance? parent = Parent;
