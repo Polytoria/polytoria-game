@@ -165,7 +165,12 @@ public partial class DatamodelBridge : Node3D
 				{
 					ChunkBatch batch = _batches[handle.Key];
 					batch.MultiMesh.SetInstanceTransform(handle.Index, part.GetGlobalTransform());
-					batch.MultiMesh.SetInstanceColor(handle.Index, part.Color.SrgbToLinear());
+					Color color = part.Color;
+					if (handle.LastColor != color)
+					{
+						handle.LastColor = color;
+						batch.MultiMesh.SetInstanceColor(handle.Index, color.SrgbToLinear());
+					}
 				}
 			}
 			else
@@ -310,9 +315,10 @@ public partial class DatamodelBridge : Node3D
 		batch.MultiMesh.VisibleInstanceCount = batch.Count;
 
 		batch.MultiMesh.SetInstanceTransform(index, part.GetGlobalTransform());
-		batch.MultiMesh.SetInstanceColor(index, part.Color.SrgbToLinear());
+		Color addColor = part.Color;
+		batch.MultiMesh.SetInstanceColor(index, addColor.SrgbToLinear());
 
-		_handles[part] = new PartHandle { Key = key, Index = index };
+		_handles[part] = new PartHandle { Key = key, Index = index, LastColor = addColor };
 	}
 
 	private void RemoveFromBatch(Part part)
@@ -426,6 +432,7 @@ public partial class DatamodelBridge : Node3D
 	{
 		public ChunkKey Key;
 		public int Index;
+		public Color LastColor;
 	}
 
 	private readonly record struct ChunkKey
