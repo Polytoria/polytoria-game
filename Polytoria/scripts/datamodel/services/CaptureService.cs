@@ -21,7 +21,7 @@ public sealed partial class CaptureService : Instance
 	private const string CaptureSoundPath = "res://assets/audio/built-in/capture.ogg";
 
 	private Vector2 _photoSizeLimit = new(2000, 2000);
-	private readonly Vector2 _photoSizeMin = new(16, 16);
+	private readonly Vector2 _photoSizeMin = new(32, 32);
 	private bool _debounce = false;
 
 	public ImageTexture? CurrentPhoto = null;
