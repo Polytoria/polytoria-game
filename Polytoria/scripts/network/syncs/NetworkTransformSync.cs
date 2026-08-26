@@ -273,31 +273,20 @@ public partial class NetworkTransformSync : Instance
 		}
 	}
 
-	private void BroadcastGroupedBatch(List<BatchTransformData> batch, string rpcName, TransferMode transferMode, int excludePeer = -1)
-	{
-		if (NetService.NetInstance == null || batch.Count == 0) return;
-
-		byte[] packet = BuildRpcPacket(rpcName, SerializeUtils.Serialize<BatchTransformData[]>([.. batch]));
-
-		if (excludePeer == -1)
-		{
-			NetService.NetInstance.BroadcastMessage(packet, transferMode);
-		}
-		else
-		{
-			NetService.NetInstance.BroadcastMessageExcept(packet, transferMode, 0, excludePeer);
-		}
-	}
+	private readonly List<BatchTransformData> _reliableScratch = [];
+	private readonly List<int> _reliableExcludeScratch = [];
+	private readonly List<BatchTransformData> _unreliableScratch = [];
+	private readonly List<int> _unreliableExcludeScratch = [];
+	private readonly List<BatchTransformData> _peerScratch = [];
 
 	private void BroadcastBatchedTransforms()
 	{
 		if (NetService.NetInstance == null || _pendingBatchUpdate.Count == 0) return;
 
-		Dictionary<int, List<BatchTransformData>> reliableExcept = [];
-		Dictionary<int, List<BatchTransformData>> unreliableExcept = [];
-
-		List<BatchTransformData> reliableAll = [];
-		List<BatchTransformData> unreliableAll = [];
+		_reliableScratch.Clear();
+		_reliableExcludeScratch.Clear();
+		_unreliableScratch.Clear();
+		_unreliableExcludeScratch.Clear();
 
 		foreach (var (k, pending) in _pendingBatchUpdate)
 		{
@@ -309,41 +298,59 @@ public partial class NetworkTransformSync : Instance
 
 			if (pending.Reliable)
 			{
-				if (pending.ExcludePeer == -1)
-				{
-					reliableAll.Add(batchData);
-				}
-				else
-				{
-					GetOrCreateBatch(reliableExcept, pending.ExcludePeer).Add(batchData);
-				}
+				_reliableScratch.Add(batchData);
+				_reliableExcludeScratch.Add(pending.ExcludePeer);
 			}
 			else
 			{
-				if (pending.ExcludePeer == -1)
-				{
-					unreliableAll.Add(batchData);
-				}
-				else
-				{
-					GetOrCreateBatch(unreliableExcept, pending.ExcludePeer).Add(batchData);
-				}
+				_unreliableScratch.Add(batchData);
+				_unreliableExcludeScratch.Add(pending.ExcludePeer);
 			}
 		}
 
-		BroadcastGroupedBatch(reliableAll, nameof(NetRecvBatchedTransformsReliable), TransferMode.Reliable);
-		BroadcastGroupedBatch(unreliableAll, nameof(NetRecvBatchedTransformsUnreliable), TransferMode.UnreliableOrdered);
+		SendBatchesPerPeer(_reliableScratch, _reliableExcludeScratch, nameof(NetRecvBatchedTransformsReliable), TransferMode.Reliable);
+		SendBatchesPerPeer(_unreliableScratch, _unreliableExcludeScratch, nameof(NetRecvBatchedTransformsUnreliable), TransferMode.UnreliableOrdered);
+	}
 
-		// Send reliable batches
-		foreach (var (peerID, batch) in reliableExcept)
-		{
-			BroadcastGroupedBatch(batch, nameof(NetRecvBatchedTransformsReliable), TransferMode.Reliable, peerID);
-		}
+	private void SendBatchesPerPeer(List<BatchTransformData> entries, List<int> excludes, string rpcName, TransferMode transferMode)
+	{
+		if (entries.Count == 0) return;
 
-		// Send unreliable batches
-		foreach (var (peerID, batch) in unreliableExcept)
+		NetworkInstance net = NetService.NetInstance;
+		byte[]? fullPacket = null;
+
+		foreach (int peerID in net.PeerIds)
 		{
-			BroadcastGroupedBatch(batch, nameof(NetRecvBatchedTransformsUnreliable), TransferMode.UnreliableOrdered, peerID);
+			bool excluded = false;
+			for (int i = 0; i < excludes.Count; i++)
+			{
+				if (excludes[i] == peerID)
+				{
+					excluded = true;
+					break;
+				}
+			}
+
+			if (!excluded)
+			{
+				fullPacket ??= BuildRpcPacket(rpcName, SerializeUtils.Serialize<BatchTransformData[]>([.. entries]));
+				net.SendMessage(peerID, fullPacket, transferMode);
+				continue;
+			}
+
+			_peerScratch.Clear();
+			for (int i = 0; i < entries.Count; i++)
+			{
+				if (excludes[i] != peerID)
+				{
+					_peerScratch.Add(entries[i]);
+				}
+			}
+
+			if (_peerScratch.Count == 0) continue;
+
+			byte[] packet = BuildRpcPacket(rpcName, SerializeUtils.Serialize<BatchTransformData[]>([.. _peerScratch]));
+			net.SendMessage(peerID, packet, transferMode);
 		}
 	}
 
@@ -384,17 +391,6 @@ public partial class NetworkTransformSync : Instance
 				dyn.UpdateTransformFromNet(TransformPayloadDto.FromArray(data.Transform), isReliable, data.Lerp);
 			}
 		}
-	}
-
-	private static List<BatchTransformData> GetOrCreateBatch(Dictionary<int, List<BatchTransformData>> dict, int excludePeer)
-	{
-		if (!dict.TryGetValue(excludePeer, out var list))
-		{
-			list = [];
-			dict[excludePeer] = list;
-		}
-
-		return list;
 	}
 
 	private struct PendingBatchTransform(TransformPayloadDto transform, bool lerpTransform, int excludePeer)
