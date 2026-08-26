@@ -100,16 +100,49 @@ public static partial class PolyFormat
 
 		switch (element.ValueKind)
 		{
+			case JsonValueKind.True:
+				if (targetType == typeof(bool)) return true;
+				break;
+			case JsonValueKind.False:
+				if (targetType == typeof(bool)) return false;
+				break;
+			case JsonValueKind.Number:
+				if (targetType == typeof(float)) return element.GetSingle();
+				if (targetType == typeof(int)) return element.GetInt32();
+				if (targetType == typeof(double)) return element.GetDouble();
+				if (targetType == typeof(uint)) return element.GetUInt32();
+				if (targetType == typeof(long)) return element.GetInt64();
+				break;
 			case JsonValueKind.String:
+				if (targetType == typeof(string)) return element.GetString();
 				if (targetType == typeof(Color))
-					return JsonSerializer.Deserialize(element.GetRawText(), PolyJSONGenerationContext.Default.Color);
+				{
+					string? hex = element.GetString();
+					return hex == null ? null : Color.FromString(hex, new Color(1, 1, 1));
+				}
 				break;
 			case JsonValueKind.Array:
 				// Handle Vector arrays
 				if (targetType == typeof(Vector2))
-					return JsonSerializer.Deserialize(element.GetRawText(), PolyJSONGenerationContext.Default.Vector2);
+				{
+					JsonElement.ArrayEnumerator e2 = element.EnumerateArray();
+					e2.MoveNext();
+					float v2x = e2.Current.GetSingle();
+					e2.MoveNext();
+					float v2y = e2.Current.GetSingle();
+					return new Vector2(v2x, v2y);
+				}
 				if (targetType == typeof(Vector3))
-					return JsonSerializer.Deserialize(element.GetRawText(), PolyJSONGenerationContext.Default.Vector3);
+				{
+					JsonElement.ArrayEnumerator e3 = element.EnumerateArray();
+					e3.MoveNext();
+					float v3x = e3.Current.GetSingle();
+					e3.MoveNext();
+					float v3y = e3.Current.GetSingle();
+					e3.MoveNext();
+					float v3z = e3.Current.GetSingle();
+					return new Vector3(v3x, v3y, v3z);
+				}
 				if (targetType == typeof(Quaternion))
 					return JsonSerializer.Deserialize(element.GetRawText(), PolyJSONGenerationContext.Default.Quaternion);
 				if (targetType == typeof(Variant))
@@ -573,6 +606,7 @@ public static partial class PolyFormat
 		Type dataModelType = netObj.GetType();
 
 		Dictionary<string, PropertyInfo> propertyCache = GetOrCreatePropertyCache(dataModelType);
+		Dictionary<PropertyInfo, Action<object, object?>> setterCache = GetOrCreateSetterCache(dataModelType);
 
 		foreach (KeyValuePair<string, object?> prop in obj.Properties)
 		{
@@ -642,13 +676,53 @@ public static partial class PolyFormat
 
 			try
 			{
-				property.SetValue(netObj, val);
+				if (setterCache.TryGetValue(property, out Action<object, object?>? setter))
+				{
+					setter(netObj, val);
+				}
+				else
+				{
+					property.SetValue(netObj, val);
+				}
 			}
 			catch (Exception ex)
 			{
 				GD.PushError(ex);
 			}
 		}
+	}
+
+	private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Type, Dictionary<PropertyInfo, Action<object, object?>>> _setterCache = [];
+
+	private static Dictionary<PropertyInfo, Action<object, object?>> GetOrCreateSetterCache(
+		[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type type)
+	{
+		return _setterCache.GetValue(type, static t =>
+		{
+			Dictionary<PropertyInfo, Action<object, object?>> map = [];
+			if (!System.Runtime.CompilerServices.RuntimeFeature.IsDynamicCodeSupported)
+			{
+				return map;
+			}
+
+			foreach (PropertyInfo prop in GetOrCreatePropertyCache(t).Values)
+			{
+				if (!prop.CanWrite || prop.SetMethod == null || prop.DeclaringType == null) continue;
+				try
+				{
+					System.Linq.Expressions.ParameterExpression objParam = System.Linq.Expressions.Expression.Parameter(typeof(object));
+					System.Linq.Expressions.ParameterExpression valParam = System.Linq.Expressions.Expression.Parameter(typeof(object));
+					System.Linq.Expressions.Expression body = System.Linq.Expressions.Expression.Assign(
+						System.Linq.Expressions.Expression.Property(System.Linq.Expressions.Expression.Convert(objParam, prop.DeclaringType), prop),
+						System.Linq.Expressions.Expression.Convert(valParam, prop.PropertyType));
+					map[prop] = System.Linq.Expressions.Expression.Lambda<Action<object, object?>>(body, objParam, valParam).Compile();
+				}
+				catch
+				{
+				}
+			}
+			return map;
+		});
 	}
 
 	private static Dictionary<string, PropertyInfo> GetOrCreatePropertyCache(
