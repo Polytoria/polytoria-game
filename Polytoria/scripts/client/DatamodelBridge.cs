@@ -21,6 +21,8 @@ public partial class DatamodelBridge : Node3D
 	private readonly Dictionary<Part, PartHandle> _handles = [];
 	private readonly Dictionary<ChunkKey, ChunkBatch> _batches = [];
 	private readonly HashSet<Part> _dirty = [];
+	private readonly Dictionary<Part, System.Action> _propertyHandlers = [];
+	private readonly List<Part> _dirtyScratch = [];
 	private Rid _scenario;
 
 	private readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materials = [];
@@ -125,7 +127,10 @@ public partial class DatamodelBridge : Node3D
 		if (!_renderingEnabled || !isGameReady) return;
 		if (_dirty.Count == 0) return;
 
-		foreach (Part part in _dirty)
+		_dirtyScratch.AddRange(_dirty);
+		_dirty.Clear();
+
+		foreach (Part part in _dirtyScratch)
 		{
 			bool inBatch = _handles.TryGetValue(part, out PartHandle? handle);
 			bool shouldBatch = IsPartEligible(part);
@@ -164,7 +169,7 @@ public partial class DatamodelBridge : Node3D
 			}
 		}
 
-		_dirty.Clear();
+		_dirtyScratch.Clear();
 	}
 
 	private static ChunkKey GetKeyForPart(Part part)
@@ -343,14 +348,10 @@ public partial class DatamodelBridge : Node3D
 		void propertyChangedHandler() { if (isGameReady) _dirty.Add(part); }
 
 		part.PropertyChanged.Connect(propertyChangedHandler);
+		_propertyHandlers[part] = propertyChangedHandler;
 
 		var key = GetKeyForPart(part);
 		AddToBatch(part, key);
-
-		if (_handles.TryGetValue(part, out var handle))
-		{
-			handle.PropertyChangedHandler = propertyChangedHandler;
-		}
 
 		_dirty.Add(part);
 	}
@@ -358,9 +359,9 @@ public partial class DatamodelBridge : Node3D
 	public void RemovePart(Part part)
 	{
 		if (!_renderingEnabled) return;
-		if (_handles.TryGetValue(part, out var handle))
+		if (_propertyHandlers.Remove(part, out System.Action? handler))
 		{
-			part.PropertyChanged.Disconnect(handle.PropertyChangedHandler);
+			part.PropertyChanged.Disconnect(handler);
 		}
 
 		part.CreateSeparateMesh();
@@ -384,7 +385,6 @@ public partial class DatamodelBridge : Node3D
 	{
 		public ChunkKey Key;
 		public int Index;
-		public System.Action PropertyChangedHandler = null!;
 	}
 
 	private struct ChunkKey
