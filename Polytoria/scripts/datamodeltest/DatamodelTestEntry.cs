@@ -33,6 +33,11 @@ public partial class DatamodelTestEntry : Node3D
 			timeoutSec = parsedTimeout;
 		}
 
+		if (cmdargs.ContainsKey("dmtest-profile"))
+		{
+			PTProfiler.Enabled = true;
+		}
+
 		// Fallsafe so test doesn't last forever
 		PT.CallDeferred(async () =>
 		{
