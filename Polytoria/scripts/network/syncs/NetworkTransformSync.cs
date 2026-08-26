@@ -231,7 +231,9 @@ public partial class NetworkTransformSync : Instance
 		SetPendingBatch(objID, new(payload, lerpTransform, excludePeer)
 		{
 			Reliable = reliable,
-			Forced = true
+			Forced = true,
+			Position = dyn.GetGlobalTransform().Origin,
+			AlwaysRelevant = dyn is Player
 		}, forced: true);
 	}
 
@@ -269,7 +271,12 @@ public partial class NetworkTransformSync : Instance
 			dyn.UpdateTransformFromNet(processed, false, lerpTransform);
 
 			// Add to batch pending
-			SetPendingBatch(objID, new(processed, lerpTransform, fromPeer) { Reliable = false });
+			SetPendingBatch(objID, new(processed, lerpTransform, fromPeer)
+			{
+				Reliable = false,
+				Position = dyn.GetGlobalTransform().Origin,
+				AlwaysRelevant = dyn is Player
+			});
 		}
 	}
 
@@ -277,6 +284,8 @@ public partial class NetworkTransformSync : Instance
 	private readonly List<int> _reliableExcludeScratch = [];
 	private readonly List<BatchTransformData> _unreliableScratch = [];
 	private readonly List<int> _unreliableExcludeScratch = [];
+	private readonly List<Vector3> _unreliablePositionScratch = [];
+	private readonly List<bool> _unreliableAlwaysScratch = [];
 	private readonly List<BatchTransformData> _peerScratch = [];
 
 	private void BroadcastBatchedTransforms()
@@ -287,6 +296,8 @@ public partial class NetworkTransformSync : Instance
 		_reliableExcludeScratch.Clear();
 		_unreliableScratch.Clear();
 		_unreliableExcludeScratch.Clear();
+		_unreliablePositionScratch.Clear();
+		_unreliableAlwaysScratch.Clear();
 
 		foreach (var (k, pending) in _pendingBatchUpdate)
 		{
@@ -305,22 +316,35 @@ public partial class NetworkTransformSync : Instance
 			{
 				_unreliableScratch.Add(batchData);
 				_unreliableExcludeScratch.Add(pending.ExcludePeer);
+				_unreliablePositionScratch.Add(pending.Position);
+				_unreliableAlwaysScratch.Add(pending.AlwaysRelevant);
 			}
 		}
 
-		SendBatchesPerPeer(_reliableScratch, _reliableExcludeScratch, nameof(NetRecvBatchedTransformsReliable), TransferMode.Reliable);
-		SendBatchesPerPeer(_unreliableScratch, _unreliableExcludeScratch, nameof(NetRecvBatchedTransformsUnreliable), TransferMode.UnreliableOrdered);
+		SendBatchesPerPeer(_reliableScratch, _reliableExcludeScratch, null, null, nameof(NetRecvBatchedTransformsReliable), TransferMode.Reliable);
+		SendBatchesPerPeer(_unreliableScratch, _unreliableExcludeScratch, _unreliablePositionScratch, _unreliableAlwaysScratch, nameof(NetRecvBatchedTransformsUnreliable), TransferMode.UnreliableOrdered);
 	}
 
-	private void SendBatchesPerPeer(List<BatchTransformData> entries, List<int> excludes, string rpcName, TransferMode transferMode)
+	private void SendBatchesPerPeer(List<BatchTransformData> entries, List<int> excludes, List<Vector3>? positions, List<bool>? alwaysRelevant, string rpcName, TransferMode transferMode)
 	{
 		if (entries.Count == 0) return;
 
 		NetworkInstance net = NetService.NetInstance;
+		float radius = NetService.ReplicationRadius;
+		bool filterByDistance = radius > 0f && positions != null && alwaysRelevant != null;
+		float radiusSq = radius * radius;
 		byte[]? fullPacket = null;
 
 		foreach (int peerID in net.PeerIds)
 		{
+			Vector3 peerPosition = default;
+			bool peerFiltered = false;
+			if (filterByDistance && NetService.Root.Players.GetPlayerFromPeerID(peerID) is { } player)
+			{
+				peerPosition = player.GetGlobalTransform().Origin;
+				peerFiltered = true;
+			}
+
 			bool excluded = false;
 			for (int i = 0; i < excludes.Count; i++)
 			{
@@ -331,7 +355,7 @@ public partial class NetworkTransformSync : Instance
 				}
 			}
 
-			if (!excluded)
+			if (!excluded && !peerFiltered)
 			{
 				fullPacket ??= BuildRpcPacket(rpcName, SerializeUtils.Serialize<BatchTransformData[]>([.. entries]));
 				net.SendMessage(peerID, fullPacket, transferMode);
@@ -341,10 +365,9 @@ public partial class NetworkTransformSync : Instance
 			_peerScratch.Clear();
 			for (int i = 0; i < entries.Count; i++)
 			{
-				if (excludes[i] != peerID)
-				{
-					_peerScratch.Add(entries[i]);
-				}
+				if (excludes[i] == peerID) continue;
+				if (peerFiltered && !alwaysRelevant![i] && peerPosition.DistanceSquaredTo(positions![i]) > radiusSq) continue;
+				_peerScratch.Add(entries[i]);
 			}
 
 			if (_peerScratch.Count == 0) continue;
@@ -400,6 +423,8 @@ public partial class NetworkTransformSync : Instance
 		public int ExcludePeer = excludePeer;
 		public bool Reliable = false;
 		public bool Forced = false;
+		public Vector3 Position = default;
+		public bool AlwaysRelevant = false;
 	}
 
 	private struct PendingTransform()

@@ -97,6 +97,9 @@ public sealed partial class NetworkService : Instance
 	public bool IsProd = false;
 	public NetworkModeEnum NetworkMode { get; set; } = NetworkModeEnum.Client;
 
+	[ScriptProperty]
+	public float ReplicationRadius { get; set; } = 0f;
+
 	private ulong placeReplicationStartTime = 0;
 	private readonly Dictionary<string, List<NetReplicateData>> _pendingReplications = [];
 	private Godot.Timer _heartbeatTimer = null!;
