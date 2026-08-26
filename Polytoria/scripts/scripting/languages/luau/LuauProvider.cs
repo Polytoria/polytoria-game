@@ -41,6 +41,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	private static readonly Dictionary<Type, MethodInfo?> _gdToProxy = [];
 	private static readonly Dictionary<IntPtr, PTCallbackData> _ptrToCallback = [];
 	private static readonly Dictionary<PTCallbackData, IntPtr> _callbackToPtr = [];
+	private static readonly Dictionary<PTCallback, PTCallbackData> _actionToCallbackData = [];
 	private static readonly Dictionary<IntPtr, object> _ptrToObject = [];
 	private const string WeakUserdataCache = "__UDCACHE";
 	private static readonly int ThreadDataKey = 0x1247;
@@ -411,6 +412,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 				}
 				func.Callback.Dispose();
 				_callbackToPtr.Remove(func);
+				_actionToCallbackData.Remove(func.Callback);
 			}
 			_ptrToCallback.Remove(funcPtr);
 		}
@@ -446,12 +448,9 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	public void CallUpdate(Script script, double delta)
 	{
 		if (script.LuauMainThread == null || !script.LuauMainThread.IsAlive) return;
-		string updateKeyword = "_Update";
+		string updateKeyword = script.Compatibility ? "_update" : "_Update";
 
-		if (script.Compatibility)
-		{
-			updateKeyword = "_update";
-		}
+		if (!HasGlobalFunction(script.LuauMainThread, updateKeyword)) return;
 
 		CallAsync(script, updateKeyword, [delta]).Wait();
 	}
@@ -459,14 +458,22 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	public void CallFixedUpdate(Script script, double delta)
 	{
 		if (script.LuauMainThread == null || !script.LuauMainThread.IsAlive) return;
-		string updateKeyword = "_FixedUpdate";
+		string updateKeyword = script.Compatibility ? "_fixed_update" : "_FixedUpdate";
 
-		if (script.Compatibility)
-		{
-			updateKeyword = "_fixed_update";
-		}
+		if (!HasGlobalFunction(script.LuauMainThread, updateKeyword)) return;
 
 		CallAsync(script, updateKeyword, [delta]).Wait();
+	}
+
+	private static bool HasGlobalFunction(LuaState mainThread, string name)
+	{
+		lock (mainThread)
+		{
+			mainThread.GetGlobal(name);
+			bool isFunction = mainThread.IsFunction(-1);
+			mainThread.Pop(1);
+			return isFunction;
+		}
 	}
 
 	private void RegisterLuaExtensions(LuaState state)
@@ -1612,6 +1619,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 			_ptrToCallback[funcPtr] = data;
 			_callbackToPtr[data] = funcPtr;
+			_actionToCallbackData[del] = data;
 			script.LuauFunctionPointers.Add(funcPtr);
 
 			return del;
@@ -1853,9 +1861,15 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		_ptrToObject.Add(handlePtr, objKey);
 	}
 
+	private static readonly Dictionary<Type, string> _metatableKeyCache = [];
+
 	private void ApplyMetatable(LuaState lua, [DynamicallyAccessedMembers(DynamicallyAccessedTypes)] Type type)
 	{
-		string metatableKey = "__metatable_" + type.Name;
+		if (!_metatableKeyCache.TryGetValue(type, out string? metatableKey))
+		{
+			metatableKey = "__metatable_" + type.Name;
+			_metatableKeyCache[type] = metatableKey;
+		}
 
 		lua.GetField(LuaState.LUA_REGISTRYINDEX, metatableKey);
 		if (lua.Type(-1) == LuaType.Nil)
@@ -1918,10 +1932,8 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 	public void FreePTCallback(PTCallback action)
 	{
-		PTCallbackData? data = _ptrToCallback.Values.FirstOrDefault(data => data.Callback == action);
-		if (data.HasValue)
+		if (_actionToCallbackData.Remove(action, out PTCallbackData callbackData))
 		{
-			PTCallbackData callbackData = data.Value;
 			LuaState lua = callbackData.State;
 			lua.Unref(callbackData.RefID);
 			lua.Unref(callbackData.HandlerRefID);
@@ -2028,7 +2040,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		{
 			return HashCode.Combine(
 				Type,
-				MethodName.ToLowerInvariant(),
+				StringComparer.CurrentCultureIgnoreCase.GetHashCode(MethodName),
 				IsCompatibility
 			);
 		}
@@ -2049,7 +2061,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 		public override readonly int GetHashCode()
 		{
-			return HashCode.Combine(FuncPtr, RefID, Callback);
+			return FuncPtr.GetHashCode();
 		}
 
 		public override readonly bool Equals(object? obj)

@@ -22,7 +22,7 @@ namespace Polytoria.Scripting.Luau;
 
 public class LuaMetatable : LuaObject
 {
-	private static readonly Dictionary<OverloadKey, (MethodInfo? methodInfo, bool hasParams)> _overloadCache = [];
+	private static readonly Dictionary<(Type DeclaringType, string MethodName), List<(Type?[] ArgTypes, MethodInfo? Method, bool HasParams)>> _overloadCache = [];
 	private static readonly Dictionary<PropertyInfo, PropertyAccessData> _propertyAccessCache = [];
 	private static readonly Dictionary<MethodInfo, MethodInvocationData> _methodInvocationCache = [];
 
@@ -960,16 +960,42 @@ public class LuaMetatable : LuaObject
 		hasParams = false;
 		if (methods.Length == 0) return null;
 
-		OverloadKey key = new(methods[0].DeclaringType!, methods[0].Name, args);
+		(Type, string) key = (methods[0].DeclaringType!, methods[0].Name);
 
-		if (_overloadCache.TryGetValue(key, out var cached))
+		if (!_overloadCache.TryGetValue(key, out List<(Type?[] ArgTypes, MethodInfo? Method, bool HasParams)>? candidates))
 		{
-			hasParams = cached.hasParams;
-			return cached.methodInfo;
+			candidates = [];
+			_overloadCache[key] = candidates;
+		}
+
+		foreach ((Type?[] argTypes, MethodInfo? method, bool cachedHasParams) in candidates)
+		{
+			if (argTypes.Length != args.Length) continue;
+
+			bool match = true;
+			for (int i = 0; i < args.Length; i++)
+			{
+				if (argTypes[i] != args[i]?.GetType())
+				{
+					match = false;
+					break;
+				}
+			}
+
+			if (match)
+			{
+				hasParams = cachedHasParams;
+				return method;
+			}
 		}
 
 		MethodInfo? result = ResolveOverloadUncached(methods, args, out hasParams);
-		_overloadCache[key] = (result, hasParams);
+		Type?[] newArgTypes = new Type?[args.Length];
+		for (int i = 0; i < args.Length; i++)
+		{
+			newArgTypes[i] = args[i]?.GetType();
+		}
+		candidates.Add((newArgTypes, result, hasParams));
 		return result;
 	}
 
@@ -1031,49 +1057,6 @@ public class LuaMetatable : LuaObject
 		}
 
 		return null;
-	}
-
-	private readonly struct OverloadKey : IEquatable<OverloadKey>
-	{
-		private readonly Type _declaringType;
-		private readonly string _methodName;
-		private readonly Type?[] _argTypes;
-		private readonly int _hashCode;
-
-		public OverloadKey(Type declaringType, string methodName, object?[] args)
-		{
-			_declaringType = declaringType;
-			_methodName = methodName;
-			_argTypes = new Type?[args.Length];
-
-			HashCode h = new();
-			h.Add(declaringType);
-			h.Add(methodName);
-
-			for (int i = 0; i < args.Length; i++)
-			{
-				Type? t = args[i]?.GetType();
-				_argTypes[i] = t;
-				h.Add(t);
-			}
-
-			_hashCode = h.ToHashCode();
-		}
-
-		public bool Equals(OverloadKey other)
-		{
-			if (_declaringType != other._declaringType) return false;
-			if (_methodName != other._methodName) return false;
-			if (_argTypes.Length != other._argTypes.Length) return false;
-
-			for (int i = 0; i < _argTypes.Length; i++)
-				if (_argTypes[i] != other._argTypes[i]) return false;
-
-			return true;
-		}
-
-		public override bool Equals(object? obj) => obj is OverloadKey k && Equals(k);
-		public override int GetHashCode() => _hashCode;
 	}
 
 	private readonly record struct PropertyAccessData(ScriptPermissionFlags Permissions, string? ObsoleteMessage);
