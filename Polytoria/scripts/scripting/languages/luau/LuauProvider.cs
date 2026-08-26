@@ -1784,14 +1784,34 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 	public void PushEnum(LuaState lua, Type specifyType, object value)
 	{
-		Script script = GetScriptInstance(lua);
+		string internKey = specifyType.Name + ":" + Convert.ToInt32(value);
+
+		lua.GetField(LuaState.LUA_REGISTRYINDEX, "__poly_enum_intern");
+		if (lua.Type(-1) == LuaType.Nil)
+		{
+			lua.Pop(1);
+			lua.NewTable();
+			lua.PushValue(-1);
+			lua.SetField(LuaState.LUA_REGISTRYINDEX, "__poly_enum_intern");
+		}
+
+		lua.GetField(-1, internKey);
+		if (lua.Type(-1) != LuaType.Nil)
+		{
+			lua.Remove(-2);
+			return;
+		}
+		lua.Pop(1);
 
 		GCHandle handle = GCHandle.Alloc(value);
 		IntPtr handlePtr = GCHandle.ToIntPtr(handle);
 		IntPtr userdataPtr = lua.NewUserDataDTor((UIntPtr)IntPtr.Size, GarbageCollect);
 		Marshal.WriteIntPtr(userdataPtr, handlePtr);
 
-		_ptrToObject.Add(handlePtr, value);
+		_ptrToObject[handlePtr] = value;
+
+		lua.PushValue(-1);
+		lua.SetField(-3, internKey);
 
 		lua.GetField(LuaState.LUA_REGISTRYINDEX, specifyType.Name);
 		if (lua.Type(-1) == LuaType.Nil)
@@ -1813,6 +1833,8 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		lua.SetField(-2, "__metatable");
 
 		lua.SetMetaTable(-2);
+
+		lua.Remove(-2);
 	}
 
 	private static string GetRegKeyFromObj(object obj)
