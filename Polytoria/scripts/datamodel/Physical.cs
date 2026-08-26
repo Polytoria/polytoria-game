@@ -219,7 +219,48 @@ public partial class Physical : Dynamic
 
 		if (!OverridePhysicsProcess)
 		{
-			SetPhysicsProcess(!_anchored);
+			SetPhysicsProcess(!_anchored && !(_bodySleeping && HasLocalTransformAuthority()));
+		}
+	}
+
+	private bool HasLocalTransformAuthority()
+	{
+		return Root != null && Root.Network != null && NetTransformAuthority == Root.Network.LocalPeerID;
+	}
+
+	private void OnBodySleepingStateChanged()
+	{
+		bool sleeping = GDNode is RigidBody3D body && body.Sleeping;
+		if (_bodySleeping == sleeping)
+		{
+			return;
+		}
+		_bodySleeping = sleeping;
+
+		if (IsDeleted || _anchored)
+		{
+			return;
+		}
+
+		if (HasLocalTransformAuthority())
+		{
+			if (sleeping)
+			{
+				UpdateNetTransformReliable();
+				if (!OverridePhysicsProcess)
+				{
+					SetPhysicsProcess(false);
+				}
+			}
+			else if (!OverridePhysicsProcess)
+			{
+				SetPhysicsProcess(true);
+			}
+
+			if (this is Part part)
+			{
+				Root!.Bridge?.MarkPartDirty(part);
+			}
 		}
 	}
 
@@ -330,6 +371,10 @@ public partial class Physical : Dynamic
 	internal bool OverrideCanCollideTo = false;
 	internal bool OverridePhysicsProcess = false;
 
+	private bool _bodySleeping;
+
+	internal bool IsBodySleeping => _bodySleeping;
+
 	public override void HiddenChanged(bool to)
 	{
 		UpdateCollision();
@@ -407,6 +452,11 @@ public partial class Physical : Dynamic
 
 		_proxyToPhysical[GDNode] = this;
 
+		if (GDNode is RigidBody3D sleepBody)
+		{
+			sleepBody.SleepingStateChanged += OnBodySleepingStateChanged;
+		}
+
 		if (this is Entity e)
 		{
 			e.GDRigidBody.GravityScale = 2;
@@ -427,6 +477,11 @@ public partial class Physical : Dynamic
 
 	public override void PreDelete()
 	{
+		if (GDNode is RigidBody3D sleepBody)
+		{
+			sleepBody.SleepingStateChanged -= OnBodySleepingStateChanged;
+		}
+
 		ClearCollisionBody();
 		Root?.Loaded.Disconnect(OnRootReady);
 		// _proxyToPhysical.Remove(PhysicalArea);
