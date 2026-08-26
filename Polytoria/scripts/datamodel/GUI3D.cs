@@ -250,6 +250,7 @@ public partial class GUI3D : Dynamic
 	{
 		_mesh.Scale = newSize;
 		_area.Scale = newSize;
+		UpdateSize();
 		base.OnNodeSizeChanged(newSize);
 	}
 
