@@ -386,16 +386,20 @@ public partial class DatamodelBridge : Node3D
 	{
 		if (!_renderingEnabled) return;
 		if (_handles.ContainsKey(part)) return;
+
+		if (!_propertyHandlers.ContainsKey(part))
+		{
+			void propertyChangedHandler() { if (isGameReady) _dirty.Add(part); }
+			part.PropertyChanged.Connect(propertyChangedHandler);
+			_propertyHandlers[part] = propertyChangedHandler;
+		}
+
 		if (!IsPartEligible(part))
 		{
 			part.CreateSeparateMesh();
+			_dirty.Add(part);
 			return;
 		}
-
-		void propertyChangedHandler() { if (isGameReady) _dirty.Add(part); }
-
-		part.PropertyChanged.Connect(propertyChangedHandler);
-		_propertyHandlers[part] = propertyChangedHandler;
 
 		var key = GetKeyForPart(part);
 		AddToBatch(part, key);
