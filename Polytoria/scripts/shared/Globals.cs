@@ -11,6 +11,7 @@ using System.IO;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Resources;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -127,7 +128,15 @@ public sealed partial class Globals : Node
 	public static event Action<double>? GodotPhysicsProcess;
 	public static event Action<int>? GodotNotification;
 
-	private readonly static ConditionalWeakTable<string, Type> _typesCache = [];
+	private readonly static ConcurrentDictionary<string, Type?> _typesCache = new(StringComparer.Ordinal);
+
+	private static readonly string[] _datamodelNamespaces =
+	[
+		"Polytoria.Datamodel.",
+		"Polytoria.Datamodel.Services.",
+		"Polytoria.Datamodel.Creator.",
+		"Polytoria.Datamodel.Resources.",
+	];
 
 	static Globals()
 	{
@@ -229,24 +238,17 @@ public sealed partial class Globals : Node
 		if (_typesCache.TryGetValue(className, out Type? t))
 			return t;
 
-		string[] namespacesToCheck =
-		[
-			"Polytoria.Datamodel.",
-		"Polytoria.Datamodel.Services.",
-		"Polytoria.Datamodel.Creator.",
-		"Polytoria.Datamodel.Resources.",
-	];
-
-		foreach (string ns in namespacesToCheck)
+		foreach (string ns in _datamodelNamespaces)
 		{
 			t = Type.GetType(ns + className);
 			if (t != null)
 			{
-				_typesCache.AddOrUpdate(className, t);
-				return t;
+				break;
 			}
 		}
-		return null;
+
+		_typesCache[className] = t;
+		return t;
 	}
 
 	public static NetworkedObject? LoadNetworkedObject(string className, World? root = null, Action<NetworkedObject>? preInit = null)
