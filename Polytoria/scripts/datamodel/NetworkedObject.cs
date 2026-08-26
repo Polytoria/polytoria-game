@@ -112,9 +112,12 @@ public partial class NetworkedObject : IScriptObject
 				preI.ChildRemoved.Invoke(selfpreI);
 			}
 
-			UnregisterName();
-			_networkParent = value;
-			ReenforceName();
+			using (PTProfiler.Scope("netparent.names"))
+			{
+				UnregisterName();
+				_networkParent = value;
+				ReenforceName();
+			}
 
 			if (_networkParent != null && this is not Instance)
 			{
@@ -125,15 +128,18 @@ public partial class NetworkedObject : IScriptObject
 			{
 				if (!InvokedEntry)
 				{
+					using var _ = PTProfiler.Scope("netparent.initentry");
 					InitEntry();
 				}
 				else
 				{
+					using var _ = PTProfiler.Scope("netparent.entertree");
 					InvokeEnterTree();
 				}
 
 				try
 				{
+					using var _ = PTProfiler.Scope("netparent.postreparent");
 					PostReparent();
 				}
 				catch (Exception ex)
@@ -374,6 +380,7 @@ public partial class NetworkedObject : IScriptObject
 
 	private Dictionary<string, NetworkedObject>? _uniqueNames;
 	internal Dictionary<string, NetworkedObject> UniqueNames => _uniqueNames ??= [];
+	internal Dictionary<string, int>? _nameHints;
 
 	[ScriptProperty] public PTSignal TreeEntered { get; private set; } = new();
 	[ScriptProperty] public PTSignal TreeExited { get; private set; } = new();
@@ -382,10 +389,14 @@ public partial class NetworkedObject : IScriptObject
 
 	public NetworkedObject()
 	{
-		InitializeRpcMethods();
+		using (PTProfiler.Scope("spawn.rpcinit"))
+		{
+			InitializeRpcMethods();
+		}
 
 		// Ignore if use node is false
 		if (!Globals.UseNodes) return;
+		using var _ = PTProfiler.Scope("spawn.gdnode");
 		Node n = CreateGDNode();
 		OverrideGDNode(n);
 		InitGDNode();
@@ -393,10 +404,19 @@ public partial class NetworkedObject : IScriptObject
 
 	internal void ReenforceName()
 	{
-		UnregisterName();
-		_name = EnforceName(_name);
+		using (PTProfiler.Scope("name.unregister"))
+		{
+			UnregisterName();
+		}
+		using (PTProfiler.Scope("name.enforce"))
+		{
+			_name = EnforceName(_name);
+		}
 		PathVersion++;
-		RegisterName();
+		using (PTProfiler.Scope("name.register"))
+		{
+			RegisterName();
+		}
 	}
 
 	public bool TrySetName(string value)
@@ -428,9 +448,24 @@ public partial class NetworkedObject : IScriptObject
 
 		int lowestAvailable = startNumber > 0 ? startNumber + 1 : 2;
 
+		Dictionary<string, int>? hints = null;
+		if (startNumber == 0)
+		{
+			hints = NetworkParent._nameHints ??= [];
+			if (hints.TryGetValue(baseName, out int hint) && hint > lowestAvailable)
+			{
+				lowestAvailable = hint;
+			}
+		}
+
 		while (uniqueNames.ContainsKey($"{baseName}{lowestAvailable}"))
 		{
 			lowestAvailable++;
+		}
+
+		if (hints != null)
+		{
+			hints[baseName] = lowestAvailable + 1;
 		}
 
 		return $"{baseName}{lowestAvailable}";
@@ -512,6 +547,16 @@ public partial class NetworkedObject : IScriptObject
 			&& ReferenceEquals(currentOwner, this))
 		{
 			NetworkParent.UniqueNames.Remove(_name);
+
+			Dictionary<string, int>? hints = NetworkParent._nameHints;
+			if (hints != null && hints.Count > 0)
+			{
+				(string baseName, int number) = GetBaseNameAndNumber(_name);
+				if (number >= 2 && hints.TryGetValue(baseName, out int hint) && number < hint)
+				{
+					hints[baseName] = number;
+				}
+			}
 		}
 	}
 
@@ -996,10 +1041,14 @@ public partial class NetworkedObject : IScriptObject
 		// Flush pending outright (for objects that may exists before, such as SunLight/Camera)
 		if (Root != null && Root.Network != null)
 		{
+			using var _ = PTProfiler.Scope("ready.flush");
 			FlushPendings();
 		}
 
-		Root?.Network?.ReplicateSync.CountInstanceLoaded(this);
+		using (PTProfiler.Scope("ready.count"))
+		{
+			Root?.Network?.ReplicateSync.CountInstanceLoaded(this);
+		}
 
 		if (IsPropReady) return;
 		IsPropReady = true;
@@ -1011,9 +1060,13 @@ public partial class NetworkedObject : IScriptObject
 			{
 				if (Root.Network.IsServer && AutoReplicate)
 				{
+					using var _ = PTProfiler.Scope("ready.broadcast");
 					BroadcastReplicate();
 				}
-				Root.ReportNetworkObjectEnterTree(this);
+				using (PTProfiler.Scope("ready.report"))
+				{
+					Root.ReportNetworkObjectEnterTree(this);
+				}
 			}
 		}
 
@@ -1027,7 +1080,10 @@ public partial class NetworkedObject : IScriptObject
 		}
 
 		NetPropertiesReady?.Invoke();
-		Ready();
+		using (PTProfiler.Scope("ready.readycall"))
+		{
+			Ready();
+		}
 		Root?.ReportNetworkedObjectReady(this);
 	}
 
@@ -1917,6 +1973,7 @@ public partial class NetworkedObject : IScriptObject
 
 	internal void SetNetworkParent(NetworkedObject newParent, bool force = false)
 	{
+		using var _ = PTProfiler.Scope("spawn.setparent");
 		if (this is Instance ri && newParent is Instance pi)
 		{
 			if (force)

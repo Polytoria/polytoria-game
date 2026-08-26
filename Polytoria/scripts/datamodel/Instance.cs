@@ -110,12 +110,18 @@ public partial class Instance : NetworkedObject
 				}
 			}
 
-			NetworkParent = value;
+			using (PTProfiler.Scope("parent.netparent"))
+			{
+				NetworkParent = value;
+			}
 
 			// If set parent, invoke ready
 			if (!isTemp && Root != null)
 			{
-				descendants ??= GetReplicateDescendants();
+				using (PTProfiler.Scope("parent.descendants"))
+				{
+					descendants ??= GetReplicateDescendants();
+				}
 
 				// Broadcast chunk if is replicated from Temporary
 				if (chunkOverride)
@@ -130,15 +136,21 @@ public partial class Instance : NetworkedObject
 				}
 
 				// Rerun name enforcement in case of reparenting from temp
-				foreach (NetworkedObject item in descendants)
+				using (PTProfiler.Scope("parent.name"))
 				{
-					item.ReenforceName();
+					foreach (NetworkedObject item in descendants)
+					{
+						item.ReenforceName();
+					}
 				}
 
 				// NOTE: It's kinda verbose having AutoInvokeReadyOnParent too, but AutoInvokeReady solely won't work with instance created with .New()
 				if (!IsPropReady && AutoInvokeReadyOnParent)
 				{
-					InvokePropReady();
+					using (PTProfiler.Scope("parent.ready"))
+					{
+						InvokePropReady();
+					}
 				}
 			}
 		}

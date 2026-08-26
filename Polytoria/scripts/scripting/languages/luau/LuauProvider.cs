@@ -1258,6 +1258,11 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			return lua.Error("quit requires an exit code");
 		}
 
+		if (Polytoria.Shared.PTProfiler.Enabled)
+		{
+			PT.Print(Polytoria.Shared.PTProfiler.Dump());
+		}
+
 		Globals.Singleton.Quit(force: true, code: (int)lua.ToNumber(1));
 
 		return 0;

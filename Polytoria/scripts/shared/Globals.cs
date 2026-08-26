@@ -256,9 +256,14 @@ public sealed partial class Globals : Node
 		Type? type = GetTypeByName(className);
 		if (type != null)
 		{
-			object? obj = Activator.CreateInstance(type);
+			object? obj;
+			using (PTProfiler.Scope("spawn.activator"))
+			{
+				obj = Activator.CreateInstance(type);
+			}
 			if (obj is NetworkedObject netObj)
 			{
+				using var _ = PTProfiler.Scope("spawn.postinit");
 				netObj.NameOverride = className;
 				preInit?.Invoke(netObj);
 				netObj.Root = root!;
