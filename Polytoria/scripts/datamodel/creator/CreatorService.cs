@@ -211,11 +211,11 @@ public sealed partial class CreatorService : Node, IScriptObject
 		// Open world
 		if (targetPlace != null)
 		{
-			session.OpenWorld(Path.GetRelativePath(folder, targetPlace).SanitizePath(), worldOverride);
+			await session.OpenWorld(Path.GetRelativePath(folder, targetPlace).SanitizePath(), worldOverride);
 		}
 		else
 		{
-			session.OpenMainWorld(worldOverride);
+			await session.OpenMainWorld(worldOverride);
 		}
 
 		Interface.LoadOverlay?.Hide();
@@ -357,7 +357,7 @@ public sealed partial class CreatorService : Node, IScriptObject
 
 		if (ext == "poly")
 		{
-			CurrentSession.OpenWorld(pathRelative);
+			_ = CurrentSession.OpenWorld(pathRelative);
 			return;
 		}
 		else if (ext == "model")
@@ -624,7 +624,7 @@ public sealed partial class CreatorService : Node, IScriptObject
 	{
 		string worldFilePath = root.WorldFilePath!;
 		root.ForceDelete();
-		root.LinkedSession.OpenWorld(worldFilePath, migrateCoords: true);
+		_ = root.LinkedSession.OpenWorld(worldFilePath, migrateCoords: true);
 	}
 
 	private void CleanupLocalTest()

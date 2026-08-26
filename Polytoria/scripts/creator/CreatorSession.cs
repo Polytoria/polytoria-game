@@ -240,7 +240,7 @@ public partial class CreatorSession : Node, IDisposable
 		StartBackupTimer();
 	}
 
-	public World OpenWorld(string filePath, World? worldOverride = null, bool migrateCoords = false)
+	public async System.Threading.Tasks.Task<World> OpenWorld(string filePath, World? worldOverride = null, bool migrateCoords = false)
 	{
 		filePath = filePath.SanitizePath();
 		if (WorldPathToRoot.ContainsKey(filePath)) throw new InvalidOperationException("World already opened");
@@ -320,7 +320,7 @@ public partial class CreatorSession : Node, IDisposable
 			// Load world
 			try
 			{
-				PolyFormat.LoadWorld(root, worldData, migrateCoords);
+				await PolyFormat.LoadWorldAsync(root, worldData, migrateCoords);
 				root.InvokeReady();
 			}
 			catch (Exception ex)
@@ -358,7 +358,7 @@ public partial class CreatorSession : Node, IDisposable
 		root.ForceDelete();
 	}
 
-	public World? OpenMainWorld(World? worldOverride = null)
+	public System.Threading.Tasks.Task<World> OpenMainWorld(World? worldOverride = null)
 	{
 		return OpenWorld(Metadata.MainWorld, worldOverride);
 	}
