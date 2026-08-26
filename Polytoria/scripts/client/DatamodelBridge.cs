@@ -176,15 +176,15 @@ public partial class DatamodelBridge : Node3D
 	{
 		uint scaleLevel = 1;
 		float size = ChunkBaseSize;
+		Vector3 partSize = part.Size;
 
-		while (part.Size.X > size || part.Size.Y > size || part.Size.Z > size)
+		while (partSize.X > size || partSize.Y > size || partSize.Z > size)
 		{
 			size *= 2;
 			scaleLevel++;
 
 			if (scaleLevel > 10) break;
 		}
-
 
 		Vector3I coord = GetChunkCoord(part.Position, scaleLevel);
 		return new ChunkKey { Coord = coord, Material = part.Material, Shape = part.Shape, IsTransparent = part.Color.A < 1f, CastShadows = part.CastShadows, ScaleLevel = scaleLevel };
@@ -226,7 +226,7 @@ public partial class DatamodelBridge : Node3D
 	{
 		if (!_batches.TryGetValue(key, out var batch))
 		{
-			(Godot.Mesh mesh, _) = Globals.LoadShape(part.Shape.ToString());
+			(Godot.Mesh mesh, _) = Globals.LoadShape(part.Shape);
 
 			MultiMesh mm = new()
 			{
@@ -387,14 +387,14 @@ public partial class DatamodelBridge : Node3D
 		public int Index;
 	}
 
-	private struct ChunkKey
+	private readonly record struct ChunkKey
 	{
-		public Vector3I Coord;
-		public Part.PartMaterialEnum Material;
-		public Part.ShapeEnum Shape;
-		public bool IsTransparent;
-		public bool CastShadows;
-		public uint ScaleLevel;
+		public Vector3I Coord { get; init; }
+		public Part.PartMaterialEnum Material { get; init; }
+		public Part.ShapeEnum Shape { get; init; }
+		public bool IsTransparent { get; init; }
+		public bool CastShadows { get; init; }
+		public uint ScaleLevel { get; init; }
 	}
 
 	private class ChunkBatch
