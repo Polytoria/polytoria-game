@@ -209,13 +209,7 @@ public class PTVector3 : IScriptGDObject
 	//public static Vector3 Scale(Vector3 a, Vector3 b) => a.Scale(b);
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float SignedAngle(PTVector3 from, PTVector3 to, PTVector3 axis) => from.vector.SignedAngleTo(to.vector, axis.vector);
 
-	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)]
-	public static PTVector3 Slerp(PTVector3 a, PTVector3 b, float t)
-	{
-		Vector3 normalizedA = a.vector.Normalized();
-		Vector3 normalizedB = b.vector.Normalized();
-		return FromGDClass(normalizedA.Slerp(normalizedB, t));
-	}
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTVector3 Slerp(PTVector3 a, PTVector3 b, float t) => FromGDClass(a.vector.Slerp(b.vector, t));
 	//public static Vector3 SlerpUnclamped(Vector3 a, Vector3 b, float t) => a.SlerpUnclamped(b, t);
 	//public static Vector3 SmoothDamp(Vector3 current, Vector3 target, ref Vector3 currentVelocity, float smoothTime, float maxSpeed, float deltaTime) => current.SmoothDamp(target, ref currentVelocity, smoothTime, maxSpeed, deltaTime);
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTVector3 Floor(PTVector3 val) => FromGDClass(val.vector.Floor());
