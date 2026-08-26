@@ -371,7 +371,7 @@ public sealed partial class NetworkPropSync : Instance
 		NetPropReplicateData[] propData = netObj.GetNetPropReplicateData();
 		string netID = netObj.NetworkedObjectID;
 
-		RpcId(toPeerId, nameof(NetRecvPropUpdateBatch), netID, JsonSerializer.Serialize(propData, NetDataGenerationContext.Default.NetPropReplicateDataArray));
+		RpcId(toPeerId, nameof(NetRecvPropUpdateBatch), netID, SerializeUtils.Serialize(propData));
 	}
 
 	public void BroadcastPropUpdateToServer(NetworkedObject netObj, string propName, object? propValue, bool unreliable)
@@ -465,10 +465,10 @@ public sealed partial class NetworkPropSync : Instance
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable, TransferChannel = 1)]
-	private void NetRecvPropUpdateBatch(string nodePath, string propDataRaw)
+	private void NetRecvPropUpdateBatch(string nodePath, byte[] propDataRaw)
 	{
 		NetworkedObject? netObj = NetService.Root.GetNetObj(nodePath);
-		NetPropReplicateData[] propReplicates = JsonSerializer.Deserialize(propDataRaw, NetDataGenerationContext.Default.NetPropReplicateDataArray)!;
+		NetPropReplicateData[] propReplicates = SerializeUtils.Deserialize<NetPropReplicateData[]>(propDataRaw)!;
 
 		if (netObj != null)
 		{
@@ -523,21 +523,41 @@ public sealed partial class NetworkPropSync : Instance
 		}
 	}
 
+	private readonly Dictionary<(int ExcludePeer, bool IsUnreliable), Dictionary<string, List<BatchPropEntry>>> _broadcastGroupScratch = [];
+
 	// Broadcast Batched Props to peers
 	private void BroadcastBatchedProps()
 	{
 		if (_batchBroadcasts.Count == 0) return;
 
-		var groups = _batchBroadcasts
-			.GroupBy(b => (b.ExcludePeer, b.IsUnreliable));
-
-		foreach (var group in groups)
+		foreach (BatchBroadcastData b in _batchBroadcasts)
 		{
-			var payload = BuildPropPayload([.. group]);
-			var (excludePeer, isUnreliable) = group.Key;
+			(int, bool) groupKey = (b.ExcludePeer, b.IsUnreliable);
+			if (!_broadcastGroupScratch.TryGetValue(groupKey, out Dictionary<string, List<BatchPropEntry>>? byNetID))
+			{
+				byNetID = [];
+				_broadcastGroupScratch[groupKey] = byNetID;
+			}
+			if (!byNetID.TryGetValue(b.NetID, out List<BatchPropEntry>? entries))
+			{
+				entries = [];
+				byNetID[b.NetID] = entries;
+			}
+			entries.Add(new BatchPropEntry { PropName = b.PropName, PropValueRaw = b.PropValueRaw, Sequence = b.Sequence });
+		}
+
+		foreach (((int excludePeer, bool isUnreliable), Dictionary<string, List<BatchPropEntry>> byNetID) in _broadcastGroupScratch)
+		{
+			BatchPropObjectData[] payload = new BatchPropObjectData[byNetID.Count];
+			int i = 0;
+			foreach ((string netID, List<BatchPropEntry> entries) in byNetID)
+			{
+				payload[i++] = new BatchPropObjectData { NetID = netID, Props = [.. entries] };
+			}
 			BroadcastBatchPropExcludePeer(payload, isUnreliable, excludePeer);
 		}
 
+		_broadcastGroupScratch.Clear();
 		_batchBroadcasts.Clear();
 	}
 
@@ -558,23 +578,6 @@ public sealed partial class NetworkPropSync : Instance
 		{
 			NetService.NetInstance.BroadcastMessageExcept(packet, transferMode, 0, excludePeer);
 		}
-	}
-
-	// Groups flat broadcast list into per-NetID objects
-	private static BatchPropObjectData[] BuildPropPayload(List<BatchBroadcastData> broadcasts)
-	{
-		return [.. broadcasts
-			.GroupBy(b => b.NetID)
-			.Select(g => new BatchPropObjectData
-			{
-				NetID = g.Key,
-				Props = [.. g.Select(b => new BatchPropEntry
-				{
-					PropName = b.PropName,
-					PropValueRaw = b.PropValueRaw,
-					Sequence = b.Sequence
-				})]
-			})];
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
