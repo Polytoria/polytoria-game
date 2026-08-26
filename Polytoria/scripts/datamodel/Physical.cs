@@ -372,6 +372,7 @@ public partial class Physical : Dynamic
 	internal bool OverridePhysicsProcess = false;
 
 	private bool _bodySleeping;
+	private int _netPumpPhase;
 
 	internal bool IsBodySleeping => _bodySleeping;
 
@@ -451,6 +452,7 @@ public partial class Physical : Dynamic
 		ApplyFreeze(true);
 
 		_proxyToPhysical[GDNode] = this;
+		_netPumpPhase = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this) % 3;
 
 		if (GDNode is RigidBody3D sleepBody)
 		{
@@ -641,7 +643,12 @@ public partial class Physical : Dynamic
 		// Sync if has authority and not anchored, if so. sync in interval
 		if (NetTransformAuthority == Root.Network.LocalPeerID && !Anchored)
 		{
-			UpdateNetTransform();
+			_netPumpPhase++;
+			if (_netPumpPhase >= 3)
+			{
+				_netPumpPhase = 0;
+				UpdateNetTransform();
+			}
 		}
 		base.PhysicsProcess(delta);
 	}
