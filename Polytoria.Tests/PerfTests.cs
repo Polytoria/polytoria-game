@@ -37,7 +37,7 @@ public class PerfTests
 	{
 		PTSignal<double> signal = new();
 		long allocated = MeasureAllocations(10_000, () => signal.Invoke(1.0));
-		Assert.True(allocated < 4_000_000, $"Allocated {allocated} bytes");
+		Assert.True(allocated < 1_000, $"Allocated {allocated} bytes");
 	}
 
 	[Fact]
@@ -47,7 +47,7 @@ public class PerfTests
 		double sum = 0;
 		signal.Connect(() => sum += 1);
 		long allocated = MeasureAllocations(10_000, () => signal.Invoke(1.0));
-		Assert.True(allocated < 8_000_000, $"Allocated {allocated} bytes");
+		Assert.True(allocated < 2_000_000, $"Allocated {allocated} bytes");
 		Assert.True(sum > 0);
 	}
 
@@ -63,7 +63,7 @@ public class PerfTests
 			child.Parent = parent;
 		}
 		long allocated = MeasureAllocations(10_000, () => parent.FindChild("DoesNotExist"));
-		Assert.True(allocated < 1_000_000, $"Allocated {allocated} bytes");
+		Assert.True(allocated < 1_000, $"Allocated {allocated} bytes");
 		parent.Delete();
 	}
 
@@ -71,14 +71,14 @@ public class PerfTests
 	public void TypeLookup_Hit_AllocationBudget()
 	{
 		long allocated = MeasureAllocations(10_000, () => Globals.GetTypeByName("Part"));
-		Assert.True(allocated < 16_000_000, $"Allocated {allocated} bytes");
+		Assert.True(allocated < 1_000, $"Allocated {allocated} bytes");
 	}
 
 	[Fact]
 	public void TypeLookup_Miss_AllocationBudget()
 	{
 		long allocated = MeasureAllocations(10_000, () => Globals.GetTypeByName("NoSuchClassEver"));
-		Assert.True(allocated < 32_000_000, $"Allocated {allocated} bytes");
+		Assert.True(allocated < 1_000, $"Allocated {allocated} bytes");
 	}
 
 	[Fact]
@@ -97,7 +97,7 @@ public class PerfTests
 		string expected = leaf.NetworkPath;
 		long allocated = MeasureAllocations(10_000, () => _ = leaf.NetworkPath);
 		Assert.Equal(expected, leaf.NetworkPath);
-		Assert.True(allocated < 64_000_000, $"Allocated {allocated} bytes");
+		Assert.True(allocated < 1_000, $"Allocated {allocated} bytes");
 		current.Delete();
 	}
 
@@ -120,7 +120,7 @@ public class PerfTests
 		}
 		Assert.Equal(930, root.GetDescendants().Length);
 		long allocated = MeasureAllocations(100, () => root.GetDescendants());
-		Assert.True(allocated < 128_000_000, $"Allocated {allocated} bytes");
+		Assert.True(allocated < 16_000_000, $"Allocated {allocated} bytes");
 		root.Delete();
 	}
 }
