@@ -377,6 +377,32 @@ public partial class Physical : Dynamic
 
 	internal static int SleepingBodyCount;
 
+	internal static (int Sleeping, int Awake, int Frozen) CountBodySleepStates()
+	{
+		int sleeping = 0;
+		int awake = 0;
+		int frozen = 0;
+		foreach (Node node in _proxyToPhysical.Keys)
+		{
+			if (node is RigidBody3D body && GodotObject.IsInstanceValid(body))
+			{
+				if (body.Freeze)
+				{
+					frozen++;
+				}
+				else if (body.Sleeping)
+				{
+					sleeping++;
+				}
+				else
+				{
+					awake++;
+				}
+			}
+		}
+		return (sleeping, awake, frozen);
+	}
+
 	internal bool IsBodySleeping => _bodySleeping;
 
 	public override void HiddenChanged(bool to)
@@ -866,17 +892,37 @@ public partial class Physical : Dynamic
 		scaleNode.Position = config is { HasOffset: true } ? config.Offset : Vector3.Zero;
 	}
 
-	private RemoteTransform3D CreateRemoteLinkNode(CollisionShape3D origin, Node target)
+	internal partial class CollisionSyncNode : Node3D
 	{
-		RemoteTransform3D rt = new()
+		internal CollisionShape3D? SyncTarget;
+
+		public override void _Ready()
 		{
-			UseGlobalCoordinates = true
-		};
+			SetNotifyTransform(true);
+			PushTransform();
+		}
 
-		AttachRemoteLinkNode(origin, rt);
+		public override void _Notification(int what)
+		{
+			if (what == NotificationTransformChanged)
+			{
+				PushTransform();
+			}
+		}
 
-		rt.RemotePath = rt.GetPathTo(target);
-		return rt;
+		private void PushTransform()
+		{
+			if (SyncTarget == null || !IsInstanceValid(SyncTarget) || !IsInsideTree() || !SyncTarget.IsInsideTree())
+			{
+				return;
+			}
+
+			Transform3D global = GlobalTransform;
+			if (!SyncTarget.GlobalTransform.IsEqualApprox(global))
+			{
+				SyncTarget.GlobalTransform = global;
+			}
+		}
 	}
 
 	private void EnsureRemoteTransform(CollisionShape3D origin)
@@ -888,8 +934,9 @@ public partial class Physical : Dynamic
 			return;
 		}
 
-		RemoteTransform3D remoteTransform = CreateRemoteLinkNode(origin, origin);
-		SetTrackedNodes(origin, static state => state.CollisionSyncNodes, [remoteTransform]);
+		CollisionSyncNode syncNode = new() { SyncTarget = origin };
+		AttachRemoteLinkNode(origin, syncNode);
+		SetTrackedNodes(origin, static state => state.CollisionSyncNodes, [syncNode]);
 	}
 
 	private void CreateAreaShapeInternal(CollisionShape3D origin)
