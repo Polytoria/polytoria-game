@@ -379,9 +379,7 @@ public sealed partial class NetworkPropSync : Instance
 		if (!netObj.IsNetworkReady) return;
 		if (!netObj.Root.IsLoaded) return;
 
-		PropertyInfo? propInfo = netObj.GetSyncProperty(propName);
-
-		if (propInfo == null) return;
+		if (netObj.GetSyncPropInfo(propName) is not { } propInfo) return;
 
 		// Check authority
 		if (!CheckPropHasAuthority(propInfo, netObj, NetService.LocalPeerID)) return;
@@ -425,10 +423,8 @@ public sealed partial class NetworkPropSync : Instance
 
 		if (netObj != null)
 		{
-			PropertyInfo? propInfo = netObj.GetSyncProperty(propName);
-
 			// Target property doesn't exist
-			if (propInfo == null) return;
+			if (netObj.GetSyncPropInfo(propName) is not { } propInfo) return;
 
 			if (CheckPropHasAuthority(propInfo, netObj, peerID))
 			{
@@ -439,9 +435,9 @@ public sealed partial class NetworkPropSync : Instance
 		}
 	}
 
-	public static bool CheckPropHasAuthority(PropertyInfo propInfo, NetworkedObject netObj, int peerID)
+	internal static bool CheckPropHasAuthority(NetworkedObject.SyncPropInfo propInfo, NetworkedObject netObj, int peerID)
 	{
-		SyncVarAttribute? sv = propInfo.GetCustomAttribute<SyncVarAttribute>();
+		SyncVarAttribute? sv = propInfo.SyncVar;
 
 		bool hasAuthority = false;
 
