@@ -224,7 +224,7 @@ public sealed partial class Globals : Node
 	}
 
 	[return: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]
-	private static Type? GetTypeByName(string className)
+	internal static Type? GetTypeByName(string className)
 	{
 		if (_typesCache.TryGetValue(className, out Type? t))
 			return t;

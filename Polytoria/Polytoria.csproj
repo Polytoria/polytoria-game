@@ -75,6 +75,10 @@
 		<ProjectReference Include="..\Polytoria.SourceGen\Polytoria.SourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<InternalsVisibleTo Include="Polytoria.Tests" />
+	</ItemGroup>
+
 	<!-- ExportRelease configuration -->
 	<PropertyGroup Condition="'$(Configuration)' == 'ExportRelease'">
 		<DefineConstants>$(DefineConstants);CLIENT</DefineConstants>
