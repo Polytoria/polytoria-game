@@ -71,10 +71,28 @@ public partial class Part : Entity
 
 	public override void Ready()
 	{
-		AddCollisionShape(_collider);
-		UpdateCollision();
-		UpdateMeshSize();
-		UpdateShape();
+		if (_collider != null)
+		{
+			(Godot.Mesh mesh, Shape3D shape) = Globals.LoadShape(_shape.ToString());
+			_collider.Shape = shape;
+			if (_isSeparateMesh && _mesh != null)
+			{
+				_mesh.Mesh = mesh;
+			}
+		}
+
+		using (PTProfiler.Scope("ready.addcollider"))
+		{
+			AddCollisionShape(_collider);
+		}
+		using (PTProfiler.Scope("ready.updatecollision"))
+		{
+			UpdateCollision();
+		}
+		using (PTProfiler.Scope("ready.meshsize"))
+		{
+			UpdateMeshSize();
+		}
 
 		base.Ready();
 	}

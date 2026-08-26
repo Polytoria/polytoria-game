@@ -472,14 +472,23 @@ public partial class Physical : Dynamic
 	{
 		RefreshCollisionBody();
 
-		foreach (CollisionShape3D shape in CollisionShapes.ToArray())
+		using (PTProfiler.Scope("ready.attachshapes"))
 		{
-			AttachCollisionShape(shape);
-			EnsureRemoteTransform(shape);
+			foreach (CollisionShape3D shape in CollisionShapes.ToArray())
+			{
+				AttachCollisionShape(shape);
+				EnsureRemoteTransform(shape);
+			}
 		}
 
-		UpdateCollision();
-		UpdateFreeze();
+		using (PTProfiler.Scope("ready.updatecollision2"))
+		{
+			UpdateCollision();
+		}
+		using (PTProfiler.Scope("ready.freeze"))
+		{
+			UpdateFreeze();
+		}
 		base.Ready();
 	}
 

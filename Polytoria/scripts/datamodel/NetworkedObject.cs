@@ -681,15 +681,30 @@ public partial class NetworkedObject : IScriptObject
 
 		if (Globals.UseNodes)
 		{
-			EnterTree();
-			Init();
-			InitDefaultValues();
+			using (PTProfiler.Scope("initentry.entertree"))
+			{
+				EnterTree();
+			}
+			using (PTProfiler.Scope("initentry.init"))
+			{
+				Init();
+			}
+			using (PTProfiler.Scope("initentry.defaults"))
+			{
+				InitDefaultValues();
+			}
 
 			if (CallInitOverrides)
+			{
+				using var _ = PTProfiler.Scope("initentry.overrides");
 				InitOverrides();
+			}
 
 #if DEBUG
-			ValidateProcessRegistration();
+			using (PTProfiler.Scope("initentry.validate"))
+			{
+				ValidateProcessRegistration();
+			}
 #endif
 
 			if (AutoInvokeReady)
