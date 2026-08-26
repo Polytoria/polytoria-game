@@ -85,7 +85,7 @@ public sealed partial class Globals : Node
 	/// <summary>
 	/// Determine RPC logging. "rpclog" can be set in feature flags to turn this on
 	/// </summary>
-	public static bool UseLogRPC { get; private set; } = false;
+	public static bool UseLogRPC { get; internal set; } = false;
 	/// <summary>
 	/// Determine network stack trace logging in network errors, useful if you want to see where RPC was called from in the origin.
 	/// "nettrace" can be set in feature flags to turn this on (only on the error issuer is needed). This do consume a portion of bandwidth

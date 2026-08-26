@@ -38,6 +38,11 @@ public partial class DatamodelTestEntry : Node3D
 			PTProfiler.Enabled = true;
 		}
 
+		if (cmdargs.ContainsKey("dmtest-rpclog"))
+		{
+			Globals.UseLogRPC = true;
+		}
+
 		// Fallsafe so test doesn't last forever
 		PT.CallDeferred(async () =>
 		{
@@ -74,8 +79,10 @@ public partial class DatamodelTestEntry : Node3D
 		};
 		NetworkService = networkService;
 
+		bool isClientMode = cmdargs.ContainsKey("dmtest-client");
+
 		networkService.Attach(Root);
-		networkService.IsServer = true;
+		networkService.IsServer = !isClientMode;
 		networkService.NetworkParent = Root;
 
 		AddChild(Root.GDNode, true);
@@ -88,10 +95,45 @@ public partial class DatamodelTestEntry : Node3D
 
 		Root.Setup();
 
-		string tempPath = Path.GetTempPath();
-		string placeFilePath = tempPath.PathJoin("pt_test_" + new DateTimeOffset(DateTime.Now).Millisecond + ".zip");
+		Root.Entry = new Client.ClientEntry
+		{
+			IsSoloTest = true,
+			TestUserID = isClientMode ? 2200 : 1100
+		};
+		networkService.Entry = Root.Entry;
 
 		IsTesting = true;
+
+		if (isClientMode)
+		{
+			string address = cmdargs.TryGetValue("dmtest-connect", out string? addr) ? addr : "127.0.0.1";
+			networkService.CreateClient(address);
+
+			PT.CallDeferred(async () =>
+			{
+				while (true)
+				{
+					await Globals.Singleton.WaitAsync(1);
+					if (IsInstanceValid(this) == false) return;
+					int parts = 0;
+					foreach (Instance inst in Root.Environment.GetDescendants())
+					{
+						if (inst is Part) parts++;
+					}
+					PT.Print($"[CLIENT] loaded={networkService.ReplicateSync.InstanceLoadedCount}/{networkService.ReplicateSync.InstanceToBeLoadedCount} done={networkService.IsPlaceReplicationDone} parts={parts}");
+					if (networkService.IsPlaceReplicationDone)
+					{
+						PT.Print($"[CLIENT] WORLD SYNCED parts={parts}");
+						Globals.Singleton.Quit(true, 0);
+						return;
+					}
+				}
+			});
+			return;
+		}
+
+		string tempPath = Path.GetTempPath();
+		string placeFilePath = tempPath.PathJoin("pt_test_" + new DateTimeOffset(DateTime.Now).Millisecond + ".zip");
 
 		await PackedFormat.PackProjectToFile(cmdargs["proj"], placeFilePath);
 
