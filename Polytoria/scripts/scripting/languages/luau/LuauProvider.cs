@@ -53,6 +53,8 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	private bool _useIncrementalUserdataGC;
 	private int _releasedThreadsSinceLastGC;
 	private readonly HashSet<Script> _activeScripts = [];
+	private readonly HashSet<Script> _updateInFlight = [];
+	private readonly HashSet<Script> _fixedUpdateInFlight = [];
 	private bool _disposed;
 
 	internal LuaState GlobalLuaState = null!;
@@ -440,6 +442,8 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		script.LuauMainThreadRef = null;
 		script.LuauStateRef = null;
 		_activeScripts.Remove(script);
+		_updateInFlight.Remove(script);
+		_fixedUpdateInFlight.Remove(script);
 
 	}
 
@@ -453,7 +457,8 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			updateKeyword = "_update";
 		}
 
-		CallAsync(script, updateKeyword, [delta]).Wait();
+		if (!_updateInFlight.Add(script)) return;
+		_ = RunTickAsync(script, updateKeyword, delta, _updateInFlight);
 	}
 
 	public void CallFixedUpdate(Script script, double delta)
@@ -466,7 +471,25 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			updateKeyword = "_fixed_update";
 		}
 
-		CallAsync(script, updateKeyword, [delta]).Wait();
+		if (!_fixedUpdateInFlight.Add(script)) return;
+		_ = RunTickAsync(script, updateKeyword, delta, _fixedUpdateInFlight);
+	}
+
+	private async Task RunTickAsync(Script script, string funcName, double delta, HashSet<Script> inFlight)
+	{
+		try
+		{
+			await CallAsync(script, funcName, [delta]);
+		}
+		catch (Exception ex)
+		{
+			if (script.ShouldContinue)
+				GetLogger(script.LuauMainThread!).LogError(script, ex.Message);
+		}
+		finally
+		{
+			inFlight.Remove(script);
+		}
 	}
 
 	private void RegisterLuaExtensions(LuaState state)

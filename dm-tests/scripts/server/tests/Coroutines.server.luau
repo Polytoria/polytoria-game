@@ -147,4 +147,33 @@ function Entry()
 		assert(ok)
 		assert(result == 10)
 	end
+
+	-- regression: yielding (wait) inside coroutine.create must not crash/deadlock (issue #758)
+	do
+		local resumed = false
+		local co = coroutine.create(function()
+			wait(0.1)
+			resumed = true
+		end)
+		coroutine.resume(co)
+		wait(0.4)
+		assert(resumed, "coroutine did not resume after wait()")
+	end
+
+	-- regression: _Update yielding must not deadlock the main thread (issue #758)
+	do
+		local ticks = 0
+		local waited = false
+		function _Update()
+			ticks += 1
+			if ticks == 2 then
+				wait(0.1)
+				waited = true
+			end
+		end
+		wait(0.6)
+		_Update = nil
+		assert(waited, "_Update never returned from wait (deadlock)")
+		assert(ticks > 3, "main thread stalled during _Update wait")
+	end
 end
