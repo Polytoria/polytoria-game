@@ -408,6 +408,31 @@ public static partial class PackedFormat
 		return LoadPackedWorldFromArchive(root, archive, entryPath);
 	}
 
+	[ThreadStatic] private static bool _pacedLoad;
+	[ThreadStatic] private static System.Threading.Tasks.Task? _pacedLoadTask;
+
+	private static async System.Threading.Tasks.Task<WorldData> LoadPackedWorldFromArchiveAsync(World root, ZipArchive archive, string? entryPath = null)
+	{
+		_pacedLoad = true;
+		WorldData data;
+		System.Threading.Tasks.Task? loadTask;
+		try
+		{
+			data = LoadPackedWorldFromArchive(root, archive, entryPath);
+			loadTask = _pacedLoadTask;
+		}
+		finally
+		{
+			_pacedLoad = false;
+			_pacedLoadTask = null;
+		}
+		if (loadTask != null)
+		{
+			await loadTask;
+		}
+		return data;
+	}
+
 	private static WorldData LoadPackedWorldFromArchive(World root, ZipArchive archive, string? entryPath = null)
 	{
 		CreatorProjectMetadata metadata;
@@ -471,7 +496,15 @@ public static partial class PackedFormat
 		// Load world
 		if (files.TryGetValue(entryPath, out byte[]? entryBytes))
 		{
-			PolyFormat.LoadWorld(root, entryBytes);
+			if (_pacedLoad)
+			{
+				System.Threading.Tasks.Task t = PolyFormat.LoadWorldAsync(root, entryBytes);
+				_pacedLoadTask = t;
+			}
+			else
+			{
+				PolyFormat.LoadWorld(root, entryBytes);
+			}
 		}
 
 		return new()
@@ -485,6 +518,13 @@ public static partial class PackedFormat
 		using FileStream fs = File.OpenRead(filePath);
 		using ZipArchive archive = new(fs, ZipArchiveMode.Read);
 		LoadPackedWorldFromArchive(root, archive, entryPath);
+	}
+
+	public static async System.Threading.Tasks.Task LoadPackedWorldFileAsync(World root, string filePath, string? entryPath = null)
+	{
+		using FileStream fs = File.OpenRead(filePath);
+		using ZipArchive archive = new(fs, ZipArchiveMode.Read);
+		await LoadPackedWorldFromArchiveAsync(root, archive, entryPath);
 	}
 
 	public static ModelData? ReadModelData(byte[] data)

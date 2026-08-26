@@ -81,7 +81,23 @@ public partial class DatamodelTestEntry : Node3D
 
 		await PackedFormat.PackProjectToFile(cmdargs["proj"], placeFilePath);
 
-		PackedFormat.LoadPackedWorldFile(Root, placeFilePath);
+		if (cmdargs.ContainsKey("dmtest-paced"))
+		{
+			ulong framesBefore = Engine.GetProcessFrames();
+			System.Diagnostics.Stopwatch loadSw = System.Diagnostics.Stopwatch.StartNew();
+			await PackedFormat.LoadPackedWorldFileAsync(Root, placeFilePath);
+			loadSw.Stop();
+			int loadedParts = 0;
+			foreach (Instance inst in Root.Environment.GetDescendants())
+			{
+				if (inst is Part) loadedParts++;
+			}
+			PT.Print($"[PACED] loadMs={loadSw.ElapsedMilliseconds} framesDuringLoad={Engine.GetProcessFrames() - framesBefore} parts={loadedParts}");
+		}
+		else
+		{
+			PackedFormat.LoadPackedWorldFile(Root, placeFilePath);
+		}
 		File.Delete(placeFilePath);
 
 		networkService.CreateServer();
