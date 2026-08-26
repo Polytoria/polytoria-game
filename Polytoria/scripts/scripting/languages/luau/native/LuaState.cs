@@ -417,6 +417,31 @@ public partial class LuaState : IDisposable
 			NativeBindings.lua_pushnumber(_state, n);
 	}
 
+	public void PushVector(float x, float y, float z)
+	{
+		lock (_lock)
+			NativeBindings.lua_pushvector(_state, x, y, z);
+	}
+
+	public unsafe bool TryToVector(int index, out float x, out float y, out float z)
+	{
+		lock (_lock)
+		{
+			float* components = NativeBindings.lua_tovector(_state, index);
+			if (components == null)
+			{
+				x = 0;
+				y = 0;
+				z = 0;
+				return false;
+			}
+			x = components[0];
+			y = components[1];
+			z = components[2];
+			return true;
+		}
+	}
+
 	public void PushString(string s)
 	{
 		lock (_lock)

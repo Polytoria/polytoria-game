@@ -154,6 +154,14 @@ internal partial class NativeBindings
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
 	internal static partial void lua_pushnumber(IntPtr L, double n);
 
+	[LibraryImport(LuaLibraryName)]
+	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+	internal static partial void lua_pushvector(IntPtr L, float x, float y, float z);
+
+	[LibraryImport(LuaLibraryName)]
+	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+	internal static unsafe partial float* lua_tovector(IntPtr L, int idx);
+
 	[LibraryImport(LuaLibraryName, StringMarshalling = StringMarshalling.Utf8)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
 	internal static partial void lua_pushstring(IntPtr L, string s);

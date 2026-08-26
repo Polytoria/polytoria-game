@@ -1459,6 +1459,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	{
 		LuaType type = state.Type(index);
 		if (type == LuaType.Number) return state.ToNumber(index);
+		if (type == LuaType.Vector && state.TryToVector(index, out float vx, out float vy, out float vz)) return Polytoria.Scripting.Datatypes.PTVector3.FromGDClass(new Godot.Vector3(vx, vy, vz));
 		if (type == LuaType.String) return state.ToString(index);
 		if (type == LuaType.Boolean) return state.ToBoolean(index);
 		if (type == LuaType.UserData)
