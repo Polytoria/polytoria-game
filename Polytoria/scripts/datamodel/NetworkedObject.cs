@@ -1519,7 +1519,12 @@ public partial class NetworkedObject : IScriptObject
 					PendingProps.Add(propName);
 					NetPropNetworkedObjectRef newRef = nref;
 					newRef.TargetProp = prop;
-					Root.Network.PropSync.PendingRefs[newRef] = this;
+					if (!Root.Network.PropSync.PendingRefs.TryGetValue(nref.NetID, out List<(NetPropNetworkedObjectRef Ref, NetworkedObject Target)>? pendingList))
+					{
+						pendingList = [];
+						Root.Network.PropSync.PendingRefs[nref.NetID] = pendingList;
+					}
+					pendingList.Add((newRef, this));
 				}
 				else
 				{

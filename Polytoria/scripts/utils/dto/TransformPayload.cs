@@ -85,6 +85,8 @@ public partial class TransformPayloadDto
 
 	public bool IsEqualApprox(TransformPayloadDto other) => Position.IsEqualApprox(other.Position) && Rotation.IsEqualApprox(other.Rotation);
 
+	public bool IsEqualApprox(Transform3D t) => Position.IsEqualApprox(t.Origin) && Rotation.IsEqualApprox(UnitQuaternionDto.FromCompressed(UnitQuaternionDto.ToCompressed(t.Basis.GetRotationQuaternion())));
+
 	// String helpers because memory pack don't like nested objects
 	public static TransformPayloadDto FromString(string str)
 	{

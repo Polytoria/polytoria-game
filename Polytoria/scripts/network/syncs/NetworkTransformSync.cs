@@ -262,7 +262,7 @@ public partial class NetworkTransformSync : Instance
 			TransformPayloadDto processed = dyn.TransformNetworkPass(fromPeer, transform);
 
 			// If is equal approx to last, return
-			if (processed.IsEqualApprox(TransformPayloadDto.FromGDTransform(dyn.GetLocalTransform())))
+			if (processed.IsEqualApprox(dyn.GetLocalTransform()))
 				return;
 
 			// Update on server

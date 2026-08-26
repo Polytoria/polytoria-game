@@ -349,14 +349,20 @@ public sealed partial class NetworkService : Instance
 				{
 					lock (_rateLimiterLock)
 					{
-						var rateLimiter = _peerRateLimiters[originFromPeer];
-						if (tfm == TransferMode.Reliable)
+						if (_peerRateLimiters.TryGetValue(originFromPeer, out var rateLimiter))
 						{
-							canSend = rateLimiter.Reliable.TryAccept();
+							if (tfm == TransferMode.Reliable)
+							{
+								canSend = rateLimiter.Reliable.TryAccept();
+							}
+							else
+							{
+								canSend = rateLimiter.Unreliable.TryAccept();
+							}
 						}
 						else
 						{
-							canSend = rateLimiter.Unreliable.TryAccept();
+							canSend = false;
 						}
 					}
 				}

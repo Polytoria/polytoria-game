@@ -29,6 +29,7 @@ public sealed partial class NetworkReplicateSync : Instance
 	public int InstanceToBeLoadedCount = 0;
 	public event Action<int, int>? InstanceLoadedProgress;
 	private readonly HashSet<string> _removedRef = [];
+	private static readonly StringName _magicAction = "magic";
 	private readonly HashSet<NetReplicateData> _worldReplicateSet = [];
 
 	private static readonly bool _useNetworkLog = false;
@@ -99,15 +100,20 @@ public sealed partial class NetworkReplicateSync : Instance
 				{
 					// Check for deleted parents
 					bool removed = false;
-					foreach (string removedParentPath in _removedRef.ToArray())
+					string? matchedRemovedRef = null;
+					foreach (string removedParentPath in _removedRef)
 					{
 						if (removedParentPath != "" && parentPath.StartsWith(removedParentPath))
 						{
-							if (_useNetworkLog) { PT.Print($"[Net] [{NetService.LocalPeerID}] {data.NodePath} Removed ref {removedParentPath}"); }
-							_removedRef.Remove(removedParentPath);
-							removed = true;
+							matchedRemovedRef = removedParentPath;
 							break;
 						}
+					}
+					if (matchedRemovedRef != null)
+					{
+						if (_useNetworkLog) { PT.Print($"[Net] [{NetService.LocalPeerID}] {data.NodePath} Removed ref {matchedRemovedRef}"); }
+						_removedRef.Remove(matchedRemovedRef);
+						removed = true;
 					}
 
 					if (removed)
@@ -149,7 +155,7 @@ public sealed partial class NetworkReplicateSync : Instance
 		base.Process(delta);
 
 		// Debugging magic key
-		if (Input.IsActionJustPressed("magic"))
+		if (Input.IsActionJustPressed(_magicAction))
 		{
 			foreach (var item in _worldReplicateSet)
 			{

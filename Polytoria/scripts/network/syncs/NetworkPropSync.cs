@@ -33,7 +33,7 @@ public sealed partial class NetworkPropSync : Instance
 	private readonly Dictionary<string, List<NetPropReplicateData>> _pendingProps = [];
 
 	// Queue of pending references (waiting for recipient to spawn)
-	public readonly Dictionary<NetPropNetworkedObjectRef, NetworkedObject> PendingRefs = [];
+	public readonly Dictionary<string, List<(NetPropNetworkedObjectRef Ref, NetworkedObject Target)>> PendingRefs = [];
 
 	// Batch broadcasts list
 	private readonly List<BatchBroadcastData> _batchBroadcasts = [];
@@ -508,20 +508,17 @@ public sealed partial class NetworkPropSync : Instance
 	// Resolve objects that point to another object
 	public void LookForResolvePending(NetworkedObject netObj)
 	{
-		foreach ((NetPropNetworkedObjectRef nref, NetworkedObject target) in PendingRefs)
+		if (!PendingRefs.Remove(netObj.NetworkedObjectID, out List<(NetPropNetworkedObjectRef Ref, NetworkedObject Target)>? refs)) return;
+
+		foreach ((NetPropNetworkedObjectRef nref, NetworkedObject target) in refs)
 		{
-			if (nref.NetID == netObj.NetworkedObjectID)
+			try
 			{
-				try
-				{
-					nref.TargetProp!.SetValue(target, netObj);
-				}
-				catch (Exception ex)
-				{
-					GD.PushError(nref.TargetProp, $" set failure (id {nref.NetID}) ", ex);
-				}
-				PendingRefs.Remove(nref);
-				break;
+				nref.TargetProp!.SetValue(target, netObj);
+			}
+			catch (Exception ex)
+			{
+				GD.PushError(nref.TargetProp, $" set failure (id {nref.NetID}) ", ex);
 			}
 		}
 	}
