@@ -672,11 +672,18 @@ public partial class Physical : Dynamic
 		// Sync if has authority and not anchored, if so. sync in interval
 		if (NetTransformAuthority == Root.Network.LocalPeerID && !Anchored)
 		{
-			_netPumpPhase++;
-			if (_netPumpPhase >= 3)
+			if (this is Player)
 			{
-				_netPumpPhase = 0;
 				UpdateNetTransform();
+			}
+			else
+			{
+				_netPumpPhase++;
+				if (_netPumpPhase >= 3)
+				{
+					_netPumpPhase = 0;
+					UpdateNetTransform();
+				}
 			}
 		}
 		base.PhysicsProcess(delta);
