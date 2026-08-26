@@ -900,7 +900,7 @@ public partial class Physical : Dynamic
 	private void AttachRemoteLinkNode(CollisionShape3D origin, Node3D scaleNode)
 	{
 		RemoteLinkConfig? config = GetRemoteLinkConfig(origin);
-		Node? target = config?.Target;
+		Node? target = config?.Target ?? GetCollisionSyncParent();
 
 		if (target != null && Node.IsInstanceValid(target))
 		{
@@ -947,11 +947,21 @@ public partial class Physical : Dynamic
 		}
 	}
 
+	protected virtual Node3D? GetCollisionSyncParent()
+	{
+		return null;
+	}
+
 	private void EnsureRemoteTransform(CollisionShape3D origin)
 	{
 		if (!Node.IsInstanceValid(origin)) return;
 
 		if (HasValidTrackedNodes(origin, static state => state.CollisionSyncNodes))
+		{
+			return;
+		}
+
+		if (origin.GetParent() == GDNode && GetRemoteLinkConfig(origin) == null)
 		{
 			return;
 		}

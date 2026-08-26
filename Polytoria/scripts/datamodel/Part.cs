@@ -20,7 +20,8 @@ public partial class Part : Entity
 	private bool _isSeparateMesh = false;
 	private bool _castShadows;
 
-	private Node3D _nRemoteAt = null!; // Remote collider proxy
+	private Node3D? _nRemoteAt; // Remote collider proxy, created on demand
+	private static readonly bool _debugFace = OS.HasFeature("debug-face");
 
 	internal Shape3D ColliderShape => _collider.Shape;
 
@@ -47,11 +48,8 @@ public partial class Part : Entity
 	{
 		base.Init();
 		GDNode3D.AddChild(_collider = new(), false, Node.InternalMode.Back);
-		GDNode3D.AddChild(_nRemoteAt = new(), false, Node.InternalMode.Back);
-		SetRemoteLinkTarget(_collider, _nRemoteAt);
-		_nRemoteAt.Rotation = Vector3.Zero;
 
-		if (OS.HasFeature("debug-face"))
+		if (_debugFace)
 		{
 			RayCast3D raycast = new()
 			{
@@ -61,6 +59,17 @@ public partial class Part : Entity
 		}
 
 		Shape = this is Truss ? ShapeEnum.Truss : ShapeEnum.Brick;
+	}
+
+	protected override Node3D? GetCollisionSyncParent()
+	{
+		if (_nRemoteAt == null)
+		{
+			GDNode3D.AddChild(_nRemoteAt = new(), false, Node.InternalMode.Back);
+			SetRemoteLinkTarget(_collider, _nRemoteAt);
+			_nRemoteAt.Scale = NodeSize;
+		}
+		return _nRemoteAt;
 	}
 
 	public override void PreDelete()
@@ -110,7 +119,14 @@ public partial class Part : Entity
 	private void UpdateMeshSize()
 	{
 		_mesh?.Scale = NodeSize;
-		_nRemoteAt?.Scale = NodeSize;
+		if (_nRemoteAt != null)
+		{
+			_nRemoteAt.Scale = NodeSize;
+		}
+		else if (_collider != null && _collider.GetParent() == GDNode)
+		{
+			_collider.Scale = NodeSize;
+		}
 	}
 
 	public void RemoveSeparateMesh()
