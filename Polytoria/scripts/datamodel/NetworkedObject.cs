@@ -45,6 +45,34 @@ public partial class NetworkedObject : IScriptObject
 	private static readonly ConcurrentDictionary<NetworkedObject, Node> _netObjToProxy = new();
 	private static readonly ConcurrentDictionary<Node, NetworkedObject> _proxyToNetObj = new();
 	private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo?>> _syncPropertyByNameCache = new();
+	private static readonly ConcurrentDictionary<Type, TypeFlags> _typeFlagsCache = new();
+
+	[Flags]
+	private enum TypeFlags
+	{
+		None = 0,
+		Static = 1,
+		Internal = 2,
+		Instantiable = 4,
+		NoSync = 8
+	}
+
+	private static TypeFlags GetTypeFlags(Type type) => _typeFlagsCache.GetOrAdd(type, static t =>
+	{
+		TypeFlags flags = TypeFlags.None;
+		if (t.IsDefined(typeof(StaticAttribute), false)) flags |= TypeFlags.Static;
+		if (t.IsDefined(typeof(InternalAttribute), false)) flags |= TypeFlags.Internal;
+		if (t.IsDefined(typeof(InstantiableAttribute), false)) flags |= TypeFlags.Instantiable;
+		if (t.IsDefined(typeof(NoSyncAttribute))) flags |= TypeFlags.NoSync;
+		return flags;
+	});
+
+	private bool HasTypeFlag(TypeFlags flag) => (GetTypeFlags(GetType()) & flag) != 0;
+
+	internal static long PathVersion;
+	private string? _cachedNetworkPath;
+	private long _cachedNetworkPathVersion = -1;
+	private string? _cachedRpcTarget;
 
 	private static readonly Dictionary<Type, Dictionary<string, int>> _typeRpcIdMap = [];
 	private static readonly Dictionary<Type, Dictionary<int, MethodInfo>> _typeRpcMethodMap = [];
@@ -128,20 +156,19 @@ public partial class NetworkedObject : IScriptObject
 	{
 		get
 		{
-			NetworkedObject? instance = this;
-			List<string> ancestors = [];
-			while (instance != null)
+			long version = PathVersion;
+			if (_cachedNetworkPath != null && _cachedNetworkPathVersion == version)
 			{
-				string name = instance.Name;
-				if (instance is not Instance)
-				{
-					name = "+" + name;
-				}
-				ancestors.Add(name);
-				instance = instance.NetworkParent;
+				return _cachedNetworkPath;
 			}
-			ancestors.Reverse();
-			return string.Join('.', ancestors);
+
+			string segment = this is Instance ? Name : "+" + Name;
+			NetworkedObject? parent = NetworkParent;
+			string path = parent == null ? segment : parent.NetworkPath + "." + segment;
+
+			_cachedNetworkPath = path;
+			_cachedNetworkPathVersion = version;
+			return path;
 		}
 	}
 
@@ -168,7 +195,7 @@ public partial class NetworkedObject : IScriptObject
 
 			string setto = value;
 
-			if (GetType().IsDefined(typeof(StaticAttribute), false))
+			if (HasTypeFlag(TypeFlags.Static))
 				throw new InvalidOperationException($"Cannot set Name on static type '{GetType().Name}'.");
 			if (string.IsNullOrWhiteSpace(setto))
 				setto = ClassName;
@@ -178,6 +205,7 @@ public partial class NetworkedObject : IScriptObject
 			}
 			UnregisterName();
 			_name = EnforceName(setto);
+			PathVersion++;
 			RegisterName();
 			if (this is Instance postI)
 			{
@@ -249,6 +277,7 @@ public partial class NetworkedObject : IScriptObject
 		internal set
 		{
 			_networkedObjectID = value;
+			_cachedRpcTarget = null;
 			Root?.RegisterNetworkedObject(this);
 		}
 	}
@@ -363,12 +392,13 @@ public partial class NetworkedObject : IScriptObject
 	{
 		UnregisterName();
 		_name = EnforceName(_name);
+		PathVersion++;
 		RegisterName();
 	}
 
 	public bool TrySetName(string value)
 	{
-		if (GetType().IsDefined(typeof(StaticAttribute), false)
+		if (HasTypeFlag(TypeFlags.Static)
 			|| string.IsNullOrWhiteSpace(value))
 			return false;
 
@@ -1545,7 +1575,7 @@ public partial class NetworkedObject : IScriptObject
 	{
 		NetworkedObject netObj = Globals.LoadNetworkedObject(className) ?? throw new Exception(className + " doesn't exist");
 
-		if (!netObj.GetType().IsDefined(typeof(InstantiableAttribute), false))
+		if ((GetTypeFlags(netObj.GetType()) & TypeFlags.Instantiable) == 0)
 		{
 			netObj.Delete();
 			throw new Exception(className + " is not Instantiable");
@@ -1721,8 +1751,9 @@ public partial class NetworkedObject : IScriptObject
 	private string ProcessRpcTarget()
 	{
 		// If this is marked as no sync, use network path instead. as ID will not be available
-		if (GetType().IsDefined(typeof(NoSyncAttribute))) return NetworkPath;
-		return string.IsNullOrEmpty(NetworkedObjectID) ? NetworkPath : "i:" + NetworkedObjectID;
+		if (HasTypeFlag(TypeFlags.NoSync)) return NetworkPath;
+		if (string.IsNullOrEmpty(NetworkedObjectID)) return NetworkPath;
+		return _cachedRpcTarget ??= "i:" + NetworkedObjectID;
 	}
 
 	public void RpcId(int id, string methodName, params object?[]? args)
@@ -1832,8 +1863,8 @@ public partial class NetworkedObject : IScriptObject
 
 	internal void InternalDestroy(bool forceDestroy)
 	{
-		if (GetType().IsDefined(typeof(StaticAttribute), false) && !forceDestroy) throw new InvalidOperationException("Cannot destroy a static class");
-		if (GetType().IsDefined(typeof(InternalAttribute), false) && !forceDestroy) throw new InvalidOperationException("Cannot destroy an internal class");
+		if (HasTypeFlag(TypeFlags.Static) && !forceDestroy) throw new InvalidOperationException("Cannot destroy a static class");
+		if (HasTypeFlag(TypeFlags.Internal) && !forceDestroy) throw new InvalidOperationException("Cannot destroy an internal class");
 		if (this is Player && !forceDestroy) throw new InvalidOperationException("Cannot destroy a player, use Kick instead.");
 		if (IsDeleted) return;
 

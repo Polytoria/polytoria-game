@@ -83,6 +83,34 @@ public class DatamodelTest
 	}
 
 	[Fact]
+	public void Test_NetworkPathCacheInvalidation()
+	{
+		var a = World.New<Part>(World.Environment);
+		a.Name = "PathA";
+		var b = World.New<Part>();
+		b.Name = "PathB";
+		b.Parent = a;
+
+		string pathBefore = b.NetworkPath;
+		Assert.EndsWith("PathA.PathB", pathBefore);
+		Assert.Equal(pathBefore, b.NetworkPath);
+
+		a.Name = "PathRenamed";
+		Assert.EndsWith("PathRenamed.PathB", b.NetworkPath);
+
+		var c = World.New<Part>(World.Environment);
+		c.Name = "PathC";
+		b.Parent = c;
+		Assert.EndsWith("PathC.PathB", b.NetworkPath);
+
+		b.Name = "PathB2";
+		Assert.EndsWith("PathC.PathB2", b.NetworkPath);
+
+		a.Delete();
+		c.Delete();
+	}
+
+	[Fact]
 	public void Test_NameEnforcement()
 	{
 		// Environment
