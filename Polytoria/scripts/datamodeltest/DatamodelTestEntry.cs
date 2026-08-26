@@ -85,5 +85,17 @@ public partial class DatamodelTestEntry : Node3D
 		File.Delete(placeFilePath);
 
 		networkService.CreateServer();
+
+		if (cmdargs.ContainsKey("dmtest-stats"))
+		{
+			PT.CallDeferred(async () =>
+			{
+				while (true)
+				{
+					await Globals.Singleton.WaitAsync(2);
+					PT.Print($"[STATS] sleeping={Datamodel.Physical.SleepingBodyCount} physicsList={Root.Environment?.PartCount}");
+				}
+			});
+		}
 	}
 }

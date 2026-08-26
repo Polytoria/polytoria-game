@@ -236,6 +236,7 @@ public partial class Physical : Dynamic
 			return;
 		}
 		_bodySleeping = sleeping;
+		SleepingBodyCount += sleeping ? 1 : -1;
 
 		if (IsDeleted || _anchored)
 		{
@@ -373,6 +374,8 @@ public partial class Physical : Dynamic
 
 	private bool _bodySleeping;
 	private int _netPumpPhase;
+
+	internal static int SleepingBodyCount;
 
 	internal bool IsBodySleeping => _bodySleeping;
 
