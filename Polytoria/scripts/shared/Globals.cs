@@ -138,11 +138,14 @@ public sealed partial class Globals : Node
 		"Polytoria.Datamodel.Resources.",
 	];
 
+	private static readonly Dictionary<Type, Func<NetworkedObject>> _instanceFactories = [];
+
 	static Globals()
 	{
 		NativeLibrary.SetDllImportResolver(Assembly.GetExecutingAssembly(), DllImportResolver);
 
 		BaseAsset.RegisterGeneratedAssetTypes();
+		GeneratedInstanceFactory.Register(_instanceFactories);
 	}
 
 	public override void _EnterTree()
@@ -259,7 +262,9 @@ public sealed partial class Globals : Node
 			object? obj;
 			using (PTProfiler.Scope("spawn.activator"))
 			{
-				obj = Activator.CreateInstance(type);
+				obj = _instanceFactories.TryGetValue(type, out Func<NetworkedObject>? factory)
+					? factory()
+					: Activator.CreateInstance(type);
 			}
 			if (obj is NetworkedObject netObj)
 			{
