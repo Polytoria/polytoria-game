@@ -1418,13 +1418,11 @@ public partial class NetworkedObject : IScriptObject
 
 	public NetPropReplicateData[] GetNetPropReplicateData()
 	{
-		IEnumerable<PropertyInfo> props = GetSyncProperties();
-
 		List<NetPropReplicateData> propData = [];
 
-		foreach (PropertyInfo prop in props)
+		foreach (SyncPropInfo info in GetSyncPropInfoMap().Values)
 		{
-			object? value = prop.GetValue(this);
+			object? value = info.Getter(this);
 
 			if (value is NetworkedObject nobj)
 			{
@@ -1437,11 +1435,12 @@ public partial class NetworkedObject : IScriptObject
 
 			if (value != null)
 			{
+				string propName = info.Prop.Name;
 				propData.Add(new NetPropReplicateData
 				{
-					Name = prop.Name,
+					Name = propName,
 					ValueRaw = NetworkPropSync.SerializePropValue(value),
-					Sequence = GetSequenceForProp(prop.Name)
+					Sequence = GetSequenceForProp(propName)
 				});
 			}
 		}
@@ -1462,7 +1461,12 @@ public partial class NetworkedObject : IScriptObject
 
 	internal SyncPropInfo? GetSyncPropInfo(string propName)
 	{
-		Dictionary<string, SyncPropInfo> nameCache = _syncPropInfoCache.GetOrAdd(GetType(), static type =>
+		return GetSyncPropInfoMap().TryGetValue(propName, out SyncPropInfo result) ? result : null;
+	}
+
+	private Dictionary<string, SyncPropInfo> GetSyncPropInfoMap()
+	{
+		return _syncPropInfoCache.GetOrAdd(GetType(), static type =>
 		{
 			Dictionary<string, SyncPropInfo> map = [];
 			foreach (PropertyInfo prop in BuildSyncProperties(type))
@@ -1471,8 +1475,6 @@ public partial class NetworkedObject : IScriptObject
 			}
 			return map;
 		});
-
-		return nameCache.TryGetValue(propName, out SyncPropInfo result) ? result : null;
 	}
 
 	private static Func<NetworkedObject, object?> CreatePropGetter(PropertyInfo prop)
