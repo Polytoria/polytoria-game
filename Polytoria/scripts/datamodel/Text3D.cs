@@ -280,7 +280,7 @@ public sealed partial class Text3D : Dynamic
 			if (!UseRichText) return;
 			Vector2 offset = Vector2.Zero;
 			Vector2I size = new(_richLabel.GetContentWidth(), _richLabel.GetContentHeight());
-			_subViewport.Size = size;
+			_subViewport.Size = new(Mathf.Max(size.X, 32), Mathf.Max(size.Y, 32));
 			switch (_horizontalAlignment)
 			{
 				case TextHorizontalAlignmentEnum.Left:

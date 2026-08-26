@@ -111,7 +111,7 @@ public partial class GUI3D : Dynamic
 
 	private void UpdateCanvasSize()
 	{
-		_subViewport.Size = new((int)(Size.X * 512), (int)(Size.Y * 512));
+		_subViewport.Size = new(Mathf.Max((int)(Size.X * 512), 32), Mathf.Max((int)(Size.Y * 512), 32));
 		RecomputeChildTransforms();
 	}
 
