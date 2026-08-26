@@ -64,6 +64,7 @@ public sealed partial class PolytorianModel : CharacterModel
 	private PhysicalBoneSimulator3D _ragdollBoneSim = null!;
 	private PhysicalBoneSimulator3D? _lastPhysicalBoneSim = null!;
 	private readonly Dictionary<string, float> _blendTargets = [];
+	private readonly Dictionary<string, (StringName Path, bool IsLook)> _blendTargetMeta = [];
 	private int _toBeLoadedCount = 0;
 	private bool _faceLoaded = false;
 	private float _lastLookBlendX = 0;
@@ -399,25 +400,20 @@ public sealed partial class PolytorianModel : CharacterModel
 
 		foreach (KeyValuePair<string, float> kvp in _blendTargets)
 		{
-			string propName = kvp.Key;
 			float target = kvp.Value;
-			float current = (float)AnimTree.Get(propName);
+			(StringName path, bool isLook) = _blendTargetMeta[kvp.Key];
+			float current = (float)AnimTree.Get(path);
 
-			float targetBlendSpeed = BlendSpeed;
-			float newValue;
-
-			if (propName.Contains("Look"))
+			if (Mathf.IsEqualApprox(current, target))
 			{
-				targetBlendSpeed = LookBlendSpeed;
-
-				newValue = Mathf.Lerp(current, target, MathUtils.ExpDecay((float)delta, targetBlendSpeed));
-			}
-			else
-			{
-				newValue = Mathf.MoveToward(current, target, (float)delta * targetBlendSpeed);
+				continue;
 			}
 
-			AnimTree.Set(propName, newValue);
+			float newValue = isLook
+				? Mathf.Lerp(current, target, MathUtils.ExpDecay((float)delta, LookBlendSpeed))
+				: Mathf.MoveToward(current, target, (float)delta * BlendSpeed);
+
+			AnimTree.Set(path, newValue);
 		}
 	}
 
@@ -641,6 +637,10 @@ public sealed partial class PolytorianModel : CharacterModel
 		if (propName != "")
 		{
 			_blendTargets[propName] = blendValue;
+			if (!_blendTargetMeta.ContainsKey(propName))
+			{
+				_blendTargetMeta[propName] = (new StringName(propName), propName.Contains("Look"));
+			}
 		}
 	}
 

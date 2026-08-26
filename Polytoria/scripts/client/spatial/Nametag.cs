@@ -13,6 +13,9 @@ public partial class Nametag : Node3D
 	private Label _titleLabel = null!;
 	private ProgressBar _healthBar = null!;
 	private Node3D _nametag = null!;
+	private string? _lastTitle;
+	private float _lastHealth = float.NaN;
+	private float _lastMaxHealth = float.NaN;
 
 	public NPC Target = null!;
 
@@ -40,7 +43,8 @@ public partial class Nametag : Node3D
 		// Check distance from camera if is with-in radius
 		if (cam != null && useNametag)
 		{
-			useNametag = (cam.Position - GlobalPosition).Length() < Target.NametagVisibleRadius;
+			float radius = Target.NametagVisibleRadius;
+			useNametag = (cam.Position - GlobalPosition).LengthSquared() < radius * radius;
 		}
 
 		// Hide if self is Target
@@ -49,10 +53,32 @@ public partial class Nametag : Node3D
 			useNametag = false;
 		}
 
-		Visible = useNametag;
-		_titleLabel.Text = Target.DisplayName != string.Empty ? Target.DisplayName : Target.Name;
-		_healthBar.Visible = (Target.Health < Target.MaxHealth);
-		_healthBar.Value = Target.Health;
-		_healthBar.MaxValue = Target.MaxHealth;
+		if (Visible != useNametag)
+		{
+			Visible = useNametag;
+		}
+
+		if (!useNametag)
+		{
+			return;
+		}
+
+		string title = Target.DisplayName != string.Empty ? Target.DisplayName : Target.Name;
+		if (_lastTitle != title)
+		{
+			_lastTitle = title;
+			_titleLabel.Text = title;
+		}
+
+		float health = Target.Health;
+		float maxHealth = Target.MaxHealth;
+		if (_lastHealth != health || _lastMaxHealth != maxHealth)
+		{
+			_lastHealth = health;
+			_lastMaxHealth = maxHealth;
+			_healthBar.Visible = health < maxHealth;
+			_healthBar.MaxValue = maxHealth;
+			_healthBar.Value = health;
+		}
 	}
 }
