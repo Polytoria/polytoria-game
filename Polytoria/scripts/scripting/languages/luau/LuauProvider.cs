@@ -102,6 +102,8 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 	public static LuauProvider Singleton { get; private set; } = null!;
 
+	internal static bool UseNativeVectors = true;
+
 	static LuauProvider()
 	{
 		foreach ((Type target, Type proxy) in ScriptService.ProxyMap)
@@ -134,6 +136,11 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 		RegisterLuaExtensions(state);
 
+		if (UseNativeVectors)
+		{
+			InstallNativeVectorSupport(state);
+		}
+
 		// Set all global library tables to read-only
 		state.PushNil();
 		while (state.Next(LuaState.LUA_GLOBALSINDEX))
@@ -154,6 +161,64 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		{
 			state.Pop(1); // pop string
 		}
+	}
+
+	private static int VectorNewIndex(IntPtr L)
+	{
+		LuaState state = LuaState.FromIntPtr(L);
+		return state.Error("Vector3 values are immutable, construct a new Vector3 instead");
+	}
+
+	private static int VectorTypeofShim(IntPtr L)
+	{
+		LuaState state = LuaState.FromIntPtr(L);
+		if (state.Type(1) == LuaType.Vector)
+		{
+			state.PushString("Vector3");
+			return 1;
+		}
+
+		state.GetField(LuaState.LUA_REGISTRYINDEX, "__poly_orig_typeof");
+		state.PushValue(1);
+		state.Call(1, 1);
+		return 1;
+	}
+
+	private void InstallNativeVectorSupport(LuaState state)
+	{
+		state.PushVector(0, 0, 0);
+		if (state.GetMetaTable(-1) != LuaType.Nil)
+		{
+			state.SetReadOnly(-1, false);
+			LuaMetatable vectorMeta = new()
+			{
+				Lua = state,
+				TargetType = typeof(Polytoria.Scripting.Datatypes.PTVector3),
+				LangProvider = this,
+			};
+			vectorMeta.RegisterMetamethods();
+
+			state.PushCFunction(vectorMeta.IndexWrapper, "__index");
+			state.SetField(-2, "__index");
+
+			state.PushCFunction(vectorMeta.NameCallWrapper, "__namecall");
+			state.SetField(-2, "__namecall");
+
+			state.PushCFunction(VectorNewIndex, "__newindex");
+			state.SetField(-2, "__newindex");
+
+			state.SetReadOnly(-1, true);
+			state.Pop(2);
+		}
+		else
+		{
+			state.Pop(1);
+		}
+
+		state.GetGlobal("typeof");
+		state.SetField(LuaState.LUA_REGISTRYINDEX, "__poly_orig_typeof");
+		state.PushCFunction(VectorTypeofShim, "typeof");
+		state.SetGlobal("typeof");
 	}
 
 	public void Run(Script script)
@@ -1362,6 +1427,14 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		{
 			state.PushBoolean(boolVal);
 		}
+		else if (UseNativeVectors && value is Polytoria.Scripting.Datatypes.PTVector3 nativeVec)
+		{
+			state.PushVector(nativeVec.X, nativeVec.Y, nativeVec.Z);
+		}
+		else if (UseNativeVectors && value is Vector3 gdVec)
+		{
+			state.PushVector(gdVec.X, gdVec.Y, gdVec.Z);
+		}
 		else if (value is byte[] byteArrayVal)
 		{
 			state.PushBuffer(byteArrayVal);
@@ -1459,7 +1532,11 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	{
 		LuaType type = state.Type(index);
 		if (type == LuaType.Number) return state.ToNumber(index);
-		if (type == LuaType.Vector && state.TryToVector(index, out float vx, out float vy, out float vz)) return Polytoria.Scripting.Datatypes.PTVector3.FromGDClass(new Godot.Vector3(vx, vy, vz));
+		if (type == LuaType.Vector && state.TryToVector(index, out float vx, out float vy, out float vz))
+		{
+			Godot.Vector3 nativeVector = new(vx, vy, vz);
+			return convertToGD ? nativeVector : Polytoria.Scripting.Datatypes.PTVector3.FromGDClass(nativeVector);
+		}
 		if (type == LuaType.String) return state.ToString(index);
 		if (type == LuaType.Boolean) return state.ToBoolean(index);
 		if (type == LuaType.UserData)
