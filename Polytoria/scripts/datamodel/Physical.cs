@@ -171,6 +171,10 @@ public partial class Physical : Dynamic
 		return _collisionLayers;
 	}
 
+	private CollisionObject3D? _lastLayerTarget;
+	private uint _lastAppliedLayer;
+	private uint _lastAppliedMask;
+
 	protected void ApplyCollisionObjectLayers()
 	{
 		CollisionObject3D? collisionObject3D = GetCollisionObject();
@@ -179,7 +183,17 @@ public partial class Physical : Dynamic
 			return;
 		}
 
-		collisionObject3D.CollisionLayer = GetAppliedCollisionLayers();
+		uint layer = GetAppliedCollisionLayers();
+		if (ReferenceEquals(collisionObject3D, _lastLayerTarget) && layer == _lastAppliedLayer && _collisionMask == _lastAppliedMask)
+		{
+			return;
+		}
+
+		_lastLayerTarget = collisionObject3D;
+		_lastAppliedLayer = layer;
+		_lastAppliedMask = _collisionMask;
+
+		collisionObject3D.CollisionLayer = layer;
 		collisionObject3D.CollisionMask = _collisionMask;
 	}
 
@@ -327,8 +341,9 @@ public partial class Physical : Dynamic
 
 	internal void SetCollisionDisabled(bool disabled)
 	{
-		foreach (CollisionShape3D c in CollisionShapes.ToArray())
+		for (int i = 0; i < CollisionShapes.Count; i++)
 		{
+			CollisionShape3D c = CollisionShapes[i];
 			if (!Node.IsInstanceValid(c)) continue;
 			c.Disabled = disabled;
 		}
