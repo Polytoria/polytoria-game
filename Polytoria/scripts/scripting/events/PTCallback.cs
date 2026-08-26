@@ -22,16 +22,17 @@ public class PTCallback(Action<object?[]> target) : IDisposable, IScriptObject
 
 	public void Invoke(params object?[] args)
 	{
-		if (_disposed) return;
-		PT.CallOnMainThread(() =>
-		{
-			TargetAction.Invoke(args);
-		});
+		InvokeDirect(args);
 	}
 
 	public void InvokeDirect(object?[] args)
 	{
 		if (_disposed) return;
+		if (PT.IsMainThread() || !Globals.GDAvailable)
+		{
+			TargetAction.Invoke(args);
+			return;
+		}
 		PT.CallOnMainThread(() =>
 		{
 			TargetAction.Invoke(args);

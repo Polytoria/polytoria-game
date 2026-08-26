@@ -30,9 +30,18 @@ public class PTSignal : IScriptObject
 
 	internal bool HasConnections => _ptCallbacks is { Count: > 0 };
 
+	private static readonly object?[] _emptyArgs = [];
+
+	public void Invoke()
+	{
+		if (!HasConnections) return;
+		InvokeDirect(_emptyArgs);
+	}
+
 	public void Invoke(params object?[]? args)
 	{
-		InvokeDirect(args ?? []);
+		if (!HasConnections) return;
+		InvokeDirect(args ?? _emptyArgs);
 	}
 
 	public void InvokeDirect(object?[] args)
@@ -336,7 +345,38 @@ public struct PTSignalConnection() : IScriptObject
 	}
 }
 
-public class PTSignal<T1> : PTSignal { }
-public class PTSignal<T1, T2> : PTSignal { }
-public class PTSignal<T1, T2, T3> : PTSignal { }
-public class PTSignal<T1, T2, T3, T4> : PTSignal { }
+public class PTSignal<T1> : PTSignal
+{
+	public void Invoke(T1 arg1)
+	{
+		if (!HasConnections) return;
+		InvokeDirect([arg1]);
+	}
+}
+
+public class PTSignal<T1, T2> : PTSignal
+{
+	public void Invoke(T1 arg1, T2 arg2)
+	{
+		if (!HasConnections) return;
+		InvokeDirect([arg1, arg2]);
+	}
+}
+
+public class PTSignal<T1, T2, T3> : PTSignal
+{
+	public void Invoke(T1 arg1, T2 arg2, T3 arg3)
+	{
+		if (!HasConnections) return;
+		InvokeDirect([arg1, arg2, arg3]);
+	}
+}
+
+public class PTSignal<T1, T2, T3, T4> : PTSignal
+{
+	public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+	{
+		if (!HasConnections) return;
+		InvokeDirect([arg1, arg2, arg3, arg4]);
+	}
+}
