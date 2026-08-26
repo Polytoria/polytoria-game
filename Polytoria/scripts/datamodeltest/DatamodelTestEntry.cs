@@ -25,14 +25,20 @@ public partial class DatamodelTestEntry : Node3D
 
 	public async void Entry()
 	{
+		var cmdargs = Globals.ReadCmdArgs();
+
+		float timeoutSec = TestTimeoutSec;
+		if (cmdargs.TryGetValue("dmtest-timeout", out string? timeoutRaw) && float.TryParse(timeoutRaw, out float parsedTimeout))
+		{
+			timeoutSec = parsedTimeout;
+		}
+
 		// Fallsafe so test doesn't last forever
 		PT.CallDeferred(async () =>
 		{
-			await Globals.Singleton.WaitAsync(TestTimeoutSec);
+			await Globals.Singleton.WaitAsync(timeoutSec);
 			Globals.Singleton.Quit(true, 1);
 		});
-
-		var cmdargs = Globals.ReadCmdArgs();
 
 		// Setup essentials 
 		ClientSettingsService settings = new()
