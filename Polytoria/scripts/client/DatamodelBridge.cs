@@ -415,7 +415,10 @@ public partial class DatamodelBridge : Node3D
 			part.PropertyChanged.Disconnect(handler);
 		}
 
-		part.CreateSeparateMesh();
+		if (!part.IsDeleted)
+		{
+			part.CreateSeparateMesh();
+		}
 		RemoveFromBatch(part);
 	}
 
