@@ -704,12 +704,15 @@ public sealed partial class Gizmos : Node
 					foreach (Rid rid in p2.GetRids())
 						excludeArray.Add(rid);
 				}
-				if (n is Dynamic d)
+				if (n is Dynamic d && d.HasBound)
 				{
 					excludeArray.Add(d.GetBoundRid());
 				}
 			}
-			excludeArray.Add(item.GetBoundRid());
+			if (item.HasBound)
+			{
+				excludeArray.Add(item.GetBoundRid());
+			}
 			item.UpdateCreatorBounds();
 		}
 

@@ -661,6 +661,12 @@ public partial class Dynamic : Instance
 		if (Root == null) return;
 		if (Root.SessionType != World.SessionTypeEnum.Creator) return;
 
+		if (this is IGroup or Camera or Physical)
+		{
+			UpdateCreatorBounds();
+			return;
+		}
+
 		_boundArea3D = new()
 		{
 			Monitorable = true,
@@ -684,7 +690,6 @@ public partial class Dynamic : Instance
 
 	internal void UpdateCreatorBounds()
 	{
-		if (_boundShape == null) return;
 		if (Root == null) return;
 		if (Root.SessionType != World.SessionTypeEnum.Creator) return;
 
@@ -692,6 +697,7 @@ public partial class Dynamic : Instance
 
 		CreatorBounds = bound;
 
+		if (_boundShape == null) return;
 		_boundShape.Size = bound.Size;
 		_boundCollider.Position = bound.GetCenter();
 	}
@@ -704,7 +710,7 @@ public partial class Dynamic : Instance
 
 	internal Rid GetBoundRid()
 	{
-		return _boundArea3D.GetRid();
+		return _boundArea3D != null ? _boundArea3D.GetRid() : default;
 	}
 
 	internal void RefreshCreatorBound()
