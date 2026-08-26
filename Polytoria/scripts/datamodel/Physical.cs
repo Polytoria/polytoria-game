@@ -223,9 +223,23 @@ public partial class Physical : Dynamic
 		}
 	}
 
-	private bool HasLocalTransformAuthority()
+	internal bool HasLocalTransformAuthority()
 	{
 		return Root != null && Root.Network != null && NetTransformAuthority == Root.Network.LocalPeerID;
+	}
+
+	internal void SetRemoteSleeping(bool sleeping)
+	{
+		if (_remoteSleeping == sleeping)
+		{
+			return;
+		}
+		_remoteSleeping = sleeping;
+
+		if (!IsDeleted && !_anchored && this is Part part)
+		{
+			Root!.Bridge?.MarkPartDirty(part);
+		}
 	}
 
 	private void OnBodySleepingStateChanged()
@@ -373,6 +387,7 @@ public partial class Physical : Dynamic
 	internal bool OverridePhysicsProcess = false;
 
 	private bool _bodySleeping;
+	private bool _remoteSleeping = true;
 	private int _netPumpPhase;
 
 	internal static int SleepingBodyCount;
@@ -403,7 +418,7 @@ public partial class Physical : Dynamic
 		return (sleeping, awake, frozen);
 	}
 
-	internal bool IsBodySleeping => _bodySleeping;
+	internal bool IsBodySleeping => HasLocalTransformAuthority() ? _bodySleeping : _remoteSleeping;
 
 	public override void HiddenChanged(bool to)
 	{
