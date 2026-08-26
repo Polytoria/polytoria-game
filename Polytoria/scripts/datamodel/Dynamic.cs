@@ -724,7 +724,7 @@ public partial class Dynamic : Instance
 
 	internal void PropagateUpdateCreatorBounds()
 	{
-		foreach (Instance item in GetChildren())
+		foreach (Instance item in Children)
 		{
 			if (item is Dynamic dyn)
 			{
@@ -750,35 +750,40 @@ public partial class Dynamic : Instance
 #endif
 
 		// Notify transform change without sync to clients
-		OnPropertyChanged(nameof(Position), false);
-		OnPropertyChanged(nameof(Rotation), false);
-		OnPropertyChanged(nameof(Size), false);
-		OnPropertyChanged(nameof(LocalPosition), false);
-		OnPropertyChanged(nameof(LocalRotation), false);
-		OnPropertyChanged(nameof(LocalSize), false);
-		OnPropertyChanged(nameof(Quaternion), false);
-		OnPropertyChanged(nameof(LocalQuaternion), false);
+		if (PropertyChanged.HasConnections)
+		{
+			PropertyChanged.Invoke(nameof(Position));
+			PropertyChanged.Invoke(nameof(Rotation));
+			PropertyChanged.Invoke(nameof(Size));
+			PropertyChanged.Invoke(nameof(LocalPosition));
+			PropertyChanged.Invoke(nameof(LocalRotation));
+			PropertyChanged.Invoke(nameof(LocalSize));
+			PropertyChanged.Invoke(nameof(Quaternion));
+			PropertyChanged.Invoke(nameof(LocalQuaternion));
+		}
 
 		TransformChanged?.Invoke();
-		foreach (Instance item in GetChildren())
+		List<Instance> children = Children;
+		for (int i = children.Count - 1; i >= 0; i--)
 		{
-			if (item is Dynamic dyn)
+			if (i >= children.Count) continue;
+			if (children[i] is Dynamic dyn)
 			{
 				dyn.InvokeTransformChanged();
 			}
 		}
 
 		// Destroy entity/rigidbodies under part destroy height
-		if (Root != null && Root.Environment != null && this is Physical physical)
+		if (this is Physical physical && !physical.Anchored && Root != null && Root.Environment != null)
 		{
-			if (Position.Y <= Root.Environment.PartDestroyHeight && !physical.Anchored)
+			// If not client, ignore PartDestroyHeight rule
+			if (Root.SessionType != World.SessionTypeEnum.Client) return;
+
+			// If network is not ready, return
+			if (!IsNetworkReady) return;
+
+			if (Position.Y <= Root.Environment.PartDestroyHeight)
 			{
-				// If not client, ignore PartDestroyHeight rule
-				if (Root.SessionType != World.SessionTypeEnum.Client) return;
-
-				// If network is not ready, return
-				if (!IsNetworkReady) return;
-
 				Delete();
 			}
 		}
@@ -786,7 +791,7 @@ public partial class Dynamic : Instance
 
 	internal void PropagateParentSizeChanged(Vector3 oldParentSize)
 	{
-		foreach (Instance item in GetChildren())
+		foreach (Instance item in Children)
 		{
 			if (item is Dynamic dyn)
 			{

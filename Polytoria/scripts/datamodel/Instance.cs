@@ -701,7 +701,7 @@ public partial class Instance : NetworkedObject
 	{
 		List<Instance> instances = [];
 
-		foreach (Instance item in GetChildren())
+		foreach (Instance item in Children)
 		{
 			if (item.ClassName == className)
 			{
@@ -721,7 +721,7 @@ public partial class Instance : NetworkedObject
 	public T[] GetChildrenOfClass<T>() where T : Instance
 	{
 		List<T> instances = [];
-		foreach (Instance item in GetChildren())
+		foreach (Instance item in Children)
 		{
 			if (item is T typedItem)
 			{
@@ -733,7 +733,7 @@ public partial class Instance : NetworkedObject
 
 	public override void Ready()
 	{
-		foreach (Instance n in GetChildren())
+		foreach (Instance n in Children)
 		{
 			legacyChild.TryAdd(n.LegacyName, n);
 		}
