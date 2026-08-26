@@ -54,6 +54,9 @@ public partial class DatamodelTestEntry : Node3D
 		settings.AddChild(new AudioSettingsApplier { Name = "AudioSettingsApplier" }, true, InternalMode.Front);
 		settings.AddChild(new GraphicsSettingsApplier { Name = GraphicsSettingsApplier.NodeName, Settings = settings }, true, InternalMode.Front);
 
+		Engine.MaxFps = 0;
+		DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
+
 		DatamodelBridge bridge = new()
 		{
 			Name = "DatamodelBridge"
