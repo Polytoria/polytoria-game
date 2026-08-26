@@ -535,9 +535,24 @@ public partial class Dynamic : Instance
 		SendNetTransformUnreliable(current, lerp);
 	}
 
+	private TransformPayloadDto? _sendPayloadA;
+	private TransformPayloadDto? _sendPayloadB;
+	private bool _sendPayloadFlip;
+
+	private TransformPayloadDto NextSendPayload(Transform3D current)
+	{
+		_sendPayloadFlip = !_sendPayloadFlip;
+		TransformPayloadDto payload = _sendPayloadFlip
+			? _sendPayloadA ??= new TransformPayloadDto(new byte[16])
+			: _sendPayloadB ??= new TransformPayloadDto(new byte[16]);
+		payload.Position = current.Origin;
+		payload.Rotation = current.Basis.GetRotationQuaternion();
+		return payload;
+	}
+
 	private void SendNetTransformUnreliable(Transform3D current, bool lerp = true)
 	{
-		TransformPayloadDto payload = TransformPayloadDto.FromGDTransform(current);
+		TransformPayloadDto payload = NextSendPayload(current);
 
 		if (!Root.Network.IsServer)
 		{
@@ -568,7 +583,7 @@ public partial class Dynamic : Instance
 
 		if (Root.Network.IsServer)
 		{
-			TransformPayloadDto payload = TransformPayloadDto.FromGDTransform(current);
+			TransformPayloadDto payload = NextSendPayload(current);
 			Root.Network.TransformSync.BroadcastTransformFromServer(this, payload, lerp, reliable: true);
 		}
 
