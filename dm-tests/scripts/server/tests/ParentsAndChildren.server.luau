@@ -13,4 +13,20 @@ function Entry()
 	assert(Three ~= nil)
 	assert(Five == nil)
 	assert(Seven == nil)
+
+	local part = Instance.New("Part")
+	part.Parent = Environment
+	local texture = Instance.New("PartTexture")
+	texture.Parent = part
+	assert(texture.Parent == part)
+
+	local other = Instance.New("Part")
+	other.Parent = Environment
+	texture.Parent = other
+	assert(texture.Parent == other)
+	assert(part:FindChild("PartTexture") == nil)
+
+	texture:Destroy()
+	other:Destroy()
+	part:Destroy()
 end
