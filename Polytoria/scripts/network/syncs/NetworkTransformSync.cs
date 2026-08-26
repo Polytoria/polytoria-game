@@ -74,6 +74,12 @@ public partial class NetworkTransformSync : Instance
 		RpcId(plr.PeerID, nameof(NetRecvChunk), rawData, false);
 	}
 
+	public void SendChunk(NetworkedObject[] netObjs, Player plr, int start, int count)
+	{
+		byte[] rawData = ZstdCompressionUtils.Compress(SerializeUtils.Serialize(PackTransforms(netObjs, start, count)));
+		RpcId(plr.PeerID, nameof(NetRecvChunk), rawData, false);
+	}
+
 	public void BroadcastChunk(NetworkedObject[] netObjs)
 	{
 		byte[] rawData = ZstdCompressionUtils.Compress(SerializeUtils.Serialize(PackTransforms(netObjs)));
@@ -82,10 +88,16 @@ public partial class NetworkTransformSync : Instance
 
 	private static NetBatchTransformData[] PackTransforms(NetworkedObject[] netObjs)
 	{
-		List<NetBatchTransformData> data = [];
-		foreach (NetworkedObject item in netObjs)
+		return PackTransforms(netObjs, 0, netObjs.Length);
+	}
+
+	private static NetBatchTransformData[] PackTransforms(NetworkedObject[] netObjs, int start, int count)
+	{
+		List<NetBatchTransformData> data = new(count);
+		int end = start + count;
+		for (int i = start; i < end; i++)
 		{
-			if (item is Dynamic dyn)
+			if (netObjs[i] is Dynamic dyn && !dyn.IsDeleted)
 			{
 				data.Add(new()
 				{
