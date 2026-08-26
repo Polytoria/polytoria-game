@@ -23,6 +23,9 @@ public partial class DatamodelBridge : Node3D
 	private readonly HashSet<Part> _dirty = [];
 	private readonly Dictionary<Part, System.Action> _propertyHandlers = [];
 	private readonly List<Part> _dirtyScratch = [];
+	private readonly Dictionary<ChunkKey, ulong> _emptyBatchExpiry = [];
+	private readonly List<ChunkKey> _expiredBatchScratch = [];
+	private const ulong EmptyBatchKeepAliveMsec = 5000;
 	private Rid _scenario;
 
 	private readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materials = [];
@@ -81,6 +84,13 @@ public partial class DatamodelBridge : Node3D
 				{
 					RemovePart(item);
 				}
+
+				foreach (ChunkBatch batch in _batches.Values)
+				{
+					RenderingServer.FreeRid(batch.Rid);
+				}
+				_batches.Clear();
+				_emptyBatchExpiry.Clear();
 			}
 
 			Root.Bridge = null!;
@@ -125,6 +135,9 @@ public partial class DatamodelBridge : Node3D
 	public override void _Process(double delta)
 	{
 		if (!_renderingEnabled || !isGameReady) return;
+
+		SweepEmptyBatches();
+
 		if (_dirty.Count == 0) return;
 
 		_dirtyScratch.AddRange(_dirty);
@@ -222,6 +235,31 @@ public partial class DatamodelBridge : Node3D
 		isGameReady = true;
 	}
 
+	private void SweepEmptyBatches()
+	{
+		if (_emptyBatchExpiry.Count == 0) return;
+
+		ulong now = Time.GetTicksMsec();
+		_expiredBatchScratch.Clear();
+		foreach ((ChunkKey key, ulong expireAt) in _emptyBatchExpiry)
+		{
+			if (now >= expireAt)
+			{
+				_expiredBatchScratch.Add(key);
+			}
+		}
+
+		foreach (ChunkKey key in _expiredBatchScratch)
+		{
+			_emptyBatchExpiry.Remove(key);
+			if (_batches.TryGetValue(key, out ChunkBatch? batch) && batch.Count == 0)
+			{
+				_batches.Remove(key);
+				RenderingServer.FreeRid(batch.Rid);
+			}
+		}
+	}
+
 	private void AddToBatch(Part part, ChunkKey key)
 	{
 		if (!_batches.TryGetValue(key, out var batch))
@@ -256,6 +294,10 @@ public partial class DatamodelBridge : Node3D
 			};
 
 			_batches.Add(key, batch);
+		}
+		else
+		{
+			_emptyBatchExpiry.Remove(key);
 		}
 
 		part.RemoveSeparateMesh();
@@ -305,8 +347,7 @@ public partial class DatamodelBridge : Node3D
 
 		if (batch.Count == 0)
 		{
-			RenderingServer.FreeRid(batch.Rid);
-			_batches.Remove(handle.Key);
+			_emptyBatchExpiry[handle.Key] = Time.GetTicksMsec() + EmptyBatchKeepAliveMsec;
 		}
 
 		_handles.Remove(part);
