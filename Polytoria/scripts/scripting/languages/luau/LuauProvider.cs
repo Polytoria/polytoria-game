@@ -103,6 +103,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	public static LuauProvider Singleton { get; private set; } = null!;
 
 	internal static bool UseNativeVectors = true;
+	internal static bool UseCodegen = true;
 
 	static LuauProvider()
 	{
@@ -115,8 +116,13 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	public LuauProvider()
 	{
 		Singleton = this;
+		LuaState.EnableUpstreamFFlags();
 		LuaState state = new();
 		GlobalLuaState = state;
+		if (UseCodegen)
+		{
+			state.EnableCodegen();
+		}
 		InitializeCache(state);
 		state.OpenLibs();
 
@@ -252,6 +258,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		try
 		{
 			state.Load(script.LuaPath, script.Bytecode!);
+			state.CodegenCompile(-1);
 
 			async void run()
 			{
@@ -966,6 +973,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		try
 		{
 			co.Load(chunkName, ms.Bytecode!);
+			co.CodegenCompile(-1);
 		}
 		catch (Exception ex)
 		{
