@@ -111,6 +111,49 @@ public class DatamodelTest
 	}
 
 	[Fact]
+	public void Test_FindChildAfterRename()
+	{
+		var parent = World.New<Part>(World.Environment);
+		parent.Name = "RenameParent";
+		var child = World.New<Part>();
+		child.Name = "OldName";
+		child.Parent = parent;
+
+		Assert.Equal(child, parent.FindChild("OldName"));
+
+		child.Name = "NewName";
+		Assert.Null(parent.FindChild("OldName"));
+		Assert.Equal(child, parent.FindChild("NewName"));
+
+		parent.Delete();
+	}
+
+	[Fact]
+	public void Test_FindChildDuplicatePromotion()
+	{
+		var holder = World.New<Part>();
+		holder.Name = "DupHolder";
+		holder.Parent = World.TemporaryContainer;
+
+		var first = World.New<Part>();
+		first.Name = "Dup";
+		first.Parent = holder;
+
+		var second = World.New<Part>();
+		second.Name = "Dup";
+		second.Parent = holder;
+
+		Assert.Equal("Dup", first.Name);
+		Assert.Equal("Dup", second.Name);
+		Assert.Equal(first, holder.FindChild("Dup"));
+
+		first.Delete();
+		Assert.Equal(second, holder.FindChild("Dup"));
+
+		holder.Delete();
+	}
+
+	[Fact]
 	public void Test_NameEnforcement()
 	{
 		// Environment

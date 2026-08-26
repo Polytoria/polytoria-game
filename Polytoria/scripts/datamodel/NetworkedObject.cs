@@ -1352,7 +1352,12 @@ public partial class NetworkedObject : IScriptObject
 	internal NetworkedObject[] GetNetworkDescendants()
 	{
 		List<NetworkedObject> instances = [];
+		CollectNetworkDescendants(instances);
+		return [.. instances];
+	}
 
+	private void CollectNetworkDescendants(List<NetworkedObject> instances)
+	{
 		if (_nonInstanceChildren != null) instances.AddRange(_nonInstanceChildren);
 
 		if (this is Instance i)
@@ -1360,19 +1365,21 @@ public partial class NetworkedObject : IScriptObject
 			foreach (Instance child in i.Children)
 			{
 				instances.Add(child);
-				// Recursively add descendants
-				instances.AddRange(child.GetNetworkDescendants());
+				child.CollectNetworkDescendants(instances);
 			}
 		}
-
-		return [.. instances];
 	}
 
 	internal NetworkedObject[] GetReplicateDescendants()
 	{
 		List<NetworkedObject> instances = [];
+		CollectReplicateDescendants(instances);
+		return [.. instances];
+	}
 
-		if (!ShouldReplicateChild) return [];
+	private void CollectReplicateDescendants(List<NetworkedObject> instances)
+	{
+		if (!ShouldReplicateChild) return;
 
 		if (_nonInstanceChildren != null) instances.AddRange(_nonInstanceChildren);
 
@@ -1381,12 +1388,9 @@ public partial class NetworkedObject : IScriptObject
 			foreach (Instance child in i.Children)
 			{
 				instances.Add(child);
-				// Recursively add descendants
-				instances.AddRange(child.GetReplicateDescendants());
+				child.CollectReplicateDescendants(instances);
 			}
 		}
-
-		return [.. instances];
 	}
 
 	internal NetworkedObject[] GetNetworkedChildren()
