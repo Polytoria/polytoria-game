@@ -442,6 +442,8 @@ pointing/android/enable_pan_and_scale_gestures=true
 2d/physics_engine="Dummy"
 3d/physics_engine="Jolt Physics"
 jolt_physics_3d/simulation/generate_all_kinematic_contacts=true
+jolt_physics_3d/simulation/sleep_velocity_threshold=0.15
+jolt_physics_3d/simulation/sleep_time_threshold=0.4
 jolt_physics_3d/limits/max_bodies=131070
 3d/default_gravity=17.0
 

@@ -99,6 +99,8 @@
 	<!-- Server Docker flag -->
 	<PropertyGroup Condition="'$(PT_DOCKER)' == 'TRUE'">
 		<DefineConstants>$(DefineConstants);PT_DOCKER</DefineConstants>
+		<ServerGarbageCollection>true</ServerGarbageCollection>
+		<ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
 	</PropertyGroup>
 
 	<!-- ExportDebug build (Build all) -->
