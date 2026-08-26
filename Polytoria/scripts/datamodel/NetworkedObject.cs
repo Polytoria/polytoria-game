@@ -36,8 +36,11 @@ public partial class NetworkedObject : IScriptObject
 	private bool _isReplicating = true;
 	private bool _isDeleted = false;
 
-	private bool _processRegistered = false;
-	private bool _physicsProcessRegistered = false;
+	private static readonly List<NetworkedObject> _processList = [];
+	private static readonly List<NetworkedObject> _physicsProcessList = [];
+	private static bool _dispatchHooked;
+	private int _processIndex = -1;
+	private int _physicsProcessIndex = -1;
 
 	private static readonly ConditionalWeakTable<Type, PropertyInfo[]> _editablePropertiesCache = [];
 	private static readonly ConditionalWeakTable<Type, PropertyInfo[]> _scriptPropertiesCache = [];
@@ -305,8 +308,8 @@ public partial class NetworkedObject : IScriptObject
 		}
 	}
 
-	public bool IsProcessRegistered => _processRegistered;
-	public bool IsPhysicsProcessRegistered => _physicsProcessRegistered;
+	public bool IsProcessRegistered => _processIndex != -1;
+	public bool IsPhysicsProcessRegistered => _physicsProcessIndex != -1;
 
 	/// <summary>
 	/// Set to false if InvokePropReady is called manually (eg. after properties set)
@@ -1945,21 +1948,70 @@ public partial class NetworkedObject : IScriptObject
 		InitGDNode();
 	}
 
+	private static void EnsureDispatchHooked()
+	{
+		if (_dispatchHooked) return;
+		_dispatchHooked = true;
+		Globals.GodotProcess += DispatchProcess;
+		Globals.GodotPhysicsProcess += DispatchPhysicsProcess;
+	}
+
+	private static void DispatchProcess(double delta)
+	{
+		for (int i = 0; i < _processList.Count; i++)
+		{
+			_processList[i].Process(delta);
+		}
+	}
+
+	private static void DispatchPhysicsProcess(double delta)
+	{
+		for (int i = 0; i < _physicsProcessList.Count; i++)
+		{
+			_physicsProcessList[i].PhysicsProcess(delta);
+		}
+	}
+
+	private static void RegistryAdd(List<NetworkedObject> list, NetworkedObject obj, ref int index)
+	{
+		if (index != -1) return;
+		EnsureDispatchHooked();
+		index = list.Count;
+		list.Add(obj);
+	}
+
+	private static void RegistryRemove(List<NetworkedObject> list, ref int index, bool physics)
+	{
+		if (index == -1) return;
+		int lastIndex = list.Count - 1;
+		if (index != lastIndex)
+		{
+			NetworkedObject moved = list[lastIndex];
+			list[index] = moved;
+			if (physics)
+			{
+				moved._physicsProcessIndex = index;
+			}
+			else
+			{
+				moved._processIndex = index;
+			}
+		}
+		list.RemoveAt(lastIndex);
+		index = -1;
+	}
+
 	public void SetProcess(bool enabled)
 	{
 		if (IsDeleted) return;
 
 		if (enabled)
 		{
-			if (_processRegistered) return;
-			Globals.GodotProcess += Process;
-			_processRegistered = true;
+			RegistryAdd(_processList, this, ref _processIndex);
 		}
 		else
 		{
-			if (!_processRegistered) return;
-			Globals.GodotProcess -= Process;
-			_processRegistered = false;
+			RegistryRemove(_processList, ref _processIndex, false);
 		}
 	}
 
@@ -1969,15 +2021,11 @@ public partial class NetworkedObject : IScriptObject
 
 		if (enabled)
 		{
-			if (_physicsProcessRegistered) return;
-			Globals.GodotPhysicsProcess += PhysicsProcess;
-			_physicsProcessRegistered = true;
+			RegistryAdd(_physicsProcessList, this, ref _physicsProcessIndex);
 		}
 		else
 		{
-			if (!_physicsProcessRegistered) return;
-			Globals.GodotPhysicsProcess -= PhysicsProcess;
-			_physicsProcessRegistered = false;
+			RegistryRemove(_physicsProcessList, ref _physicsProcessIndex, true);
 		}
 	}
 
