@@ -458,7 +458,7 @@ public partial class Instance : NetworkedObject
 			return val;
 		}
 
-		foreach (Instance item in GetChildren())
+		foreach (Instance item in Children)
 		{
 			if (item.LegacyName != null && item.LegacyName == name)
 			{
@@ -473,7 +473,7 @@ public partial class Instance : NetworkedObject
 	[ScriptMethod]
 	public Instance? FindChildByClass(string className)
 	{
-		foreach (Instance child in GetChildren())
+		foreach (Instance child in Children)
 		{
 			if (child.ClassName == className)
 			{
@@ -487,7 +487,7 @@ public partial class Instance : NetworkedObject
 	[ScriptMethod]
 	public Instance? FindChildWithTag(string tag)
 	{
-		foreach (Instance child in GetChildren())
+		foreach (Instance child in Children)
 		{
 			if (child.HasTag(tag))
 			{
@@ -520,7 +520,7 @@ public partial class Instance : NetworkedObject
 	public Instance[] GetChildrenWithTag(string tag)
 	{
 		List<Instance> childs = [];
-		foreach (Instance child in GetChildren())
+		foreach (Instance child in Children)
 		{
 			if (child.HasTag(tag))
 			{
@@ -568,7 +568,7 @@ public partial class Instance : NetworkedObject
 	[ScriptLegacyMethod("FindChildByClass")]
 	public Instance? LegacyFindChildByClass(string className)
 	{
-		foreach (Instance child in GetChildren())
+		foreach (Instance child in Children)
 		{
 			if (child.ClassName == XmlFormat.ConvertClassName(className))
 			{

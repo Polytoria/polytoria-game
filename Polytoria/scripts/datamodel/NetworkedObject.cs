@@ -814,9 +814,11 @@ public partial class NetworkedObject : IScriptObject
 	{
 		if (this is Instance i)
 		{
-			foreach (Instance item in i.GetChildren())
+			List<Instance> children = i.Children;
+			for (int c = children.Count - 1; c >= 0; c--)
 			{
-				item.InvokeEnterTree();
+				if (c >= children.Count) continue;
+				children[c].InvokeEnterTree();
 			}
 		}
 
@@ -842,9 +844,11 @@ public partial class NetworkedObject : IScriptObject
 		{
 			if (this is Instance i)
 			{
-				foreach (Instance item in i.GetChildren())
+				List<Instance> children = i.Children;
+				for (int c = children.Count - 1; c >= 0; c--)
 				{
-					item.InvokeExitTree();
+					if (c >= children.Count) continue;
+					children[c].InvokeExitTree();
 				}
 			}
 

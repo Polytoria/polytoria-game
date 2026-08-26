@@ -101,7 +101,7 @@ public partial class GUI : Instance
 
 	protected void RecomputeChildTransforms()
 	{
-		foreach (Instance item in GetChildren())
+		foreach (Instance item in Children)
 		{
 			if (item is UIField uifield)
 			{

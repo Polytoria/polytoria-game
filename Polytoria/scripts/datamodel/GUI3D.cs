@@ -185,7 +185,7 @@ public partial class GUI3D : Dynamic
 
 	protected void RecomputeChildTransforms()
 	{
-		foreach (Instance item in GetChildren())
+		foreach (Instance item in Children)
 		{
 			if (item is UIField uifield)
 			{
