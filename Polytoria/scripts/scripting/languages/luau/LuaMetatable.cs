@@ -918,7 +918,9 @@ public class LuaMetatable : LuaObject
 		}
 		else
 		{
-			object? result = targetMethod.Invoke(targetObject, invokeArgs);
+			object? result = invocationData.Invoker != null
+				? invocationData.Invoker(targetObject, invokeArgs)
+				: targetMethod.Invoke(targetObject, invokeArgs);
 			LangProvider.PushValueToLua(state, result);
 			return 1;
 		}
@@ -991,9 +993,55 @@ public class LuaMetatable : LuaObject
 			Array.FindIndex(parameters, p => p.IsDefined(typeof(ScriptingCallerAttribute))),
 			scriptAttribute?.Permissions ?? ScriptPermissionFlags.None,
 			obsoleteAttribute?.Message,
-			ScriptService.IsAsyncMethod(method));
+			ScriptService.IsAsyncMethod(method),
+			CompileMethodInvoker(method));
 		_methodInvocationCache[method] = result;
 		return result;
+	}
+
+	private static Func<object?, object?[], object?>? CompileMethodInvoker(MethodInfo method)
+	{
+		if (method.DeclaringType == null || method.IsGenericMethodDefinition || method.ContainsGenericParameters)
+		{
+			return null;
+		}
+
+		ParameterInfo[] parameters = method.GetParameters();
+		foreach (ParameterInfo parameter in parameters)
+		{
+			if (parameter.ParameterType.IsByRef || parameter.ParameterType.IsPointer)
+			{
+				return null;
+			}
+		}
+
+		try
+		{
+			var targetParam = System.Linq.Expressions.Expression.Parameter(typeof(object), "target");
+			var argsParam = System.Linq.Expressions.Expression.Parameter(typeof(object?[]), "args");
+			var callArgs = new System.Linq.Expressions.Expression[parameters.Length];
+			for (int i = 0; i < parameters.Length; i++)
+			{
+				callArgs[i] = System.Linq.Expressions.Expression.Convert(
+					System.Linq.Expressions.Expression.ArrayIndex(argsParam, System.Linq.Expressions.Expression.Constant(i)),
+					parameters[i].ParameterType);
+			}
+
+			System.Linq.Expressions.Expression call = method.IsStatic
+				? System.Linq.Expressions.Expression.Call(method, callArgs)
+				: System.Linq.Expressions.Expression.Call(
+					System.Linq.Expressions.Expression.Convert(targetParam, method.DeclaringType), method, callArgs);
+
+			System.Linq.Expressions.Expression body = method.ReturnType == typeof(void)
+				? System.Linq.Expressions.Expression.Block(call, System.Linq.Expressions.Expression.Constant(null, typeof(object)))
+				: System.Linq.Expressions.Expression.Convert(call, typeof(object));
+
+			return System.Linq.Expressions.Expression.Lambda<Func<object?, object?[], object?>>(body, targetParam, argsParam).Compile();
+		}
+		catch
+		{
+			return null;
+		}
 	}
 
 	private static bool IsNullableType(Type type)
@@ -1116,5 +1164,6 @@ public class LuaMetatable : LuaObject
 		int CallerParamIndex,
 		ScriptPermissionFlags Permissions,
 		string? ObsoleteMessage,
-		bool IsAsync);
+		bool IsAsync,
+		Func<object?, object?[], object?>? Invoker);
 }
