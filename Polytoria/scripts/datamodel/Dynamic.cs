@@ -870,14 +870,18 @@ public partial class Dynamic : Instance
 
 	internal Transform3D GetGlobalTransform()
 	{
-		var t = GDNode3D.GlobalTransform;
-		return t * Transform3D.Identity.Scaled(NodeSize);
+		Transform3D t = GDNode3D.GlobalTransform;
+		Vector3 size = NodeSize;
+		t.Basis = new Basis(t.Basis.Column0 * size.X, t.Basis.Column1 * size.Y, t.Basis.Column2 * size.Z);
+		return t;
 	}
 
 	internal Transform3D GetLocalTransform()
 	{
-		var t = GDNode3D.Transform;
-		return t * Transform3D.Identity.Scaled(NodeSize / GetParentScale());
+		Transform3D t = GDNode3D.Transform;
+		Vector3 size = NodeSize / GetParentScale();
+		t.Basis = new Basis(t.Basis.Column0 * size.X, t.Basis.Column1 * size.Y, t.Basis.Column2 * size.Z);
+		return t;
 	}
 
 	internal void SetGlobalTransformRaw(Transform3D to)

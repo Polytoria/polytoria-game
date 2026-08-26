@@ -132,7 +132,8 @@ public partial class DatamodelBridge : Node3D
 
 			if (shouldBatch)
 			{
-				ChunkKey newKey = GetKeyForPart(part);
+				Transform3D globalTransform = part.GetGlobalTransform();
+				ChunkKey newKey = GetKeyForPart(part, in globalTransform);
 
 				if (!inBatch)
 				{
@@ -146,7 +147,7 @@ public partial class DatamodelBridge : Node3D
 				else
 				{
 					ChunkBatch batch = _batches[handle.Key];
-					batch.MultiMesh.SetInstanceTransform(handle.Index, part.GetGlobalTransform());
+					batch.MultiMesh.SetInstanceTransform(handle.Index, globalTransform);
 					batch.MultiMesh.SetInstanceColor(handle.Index, part.Color.SrgbToLinear());
 				}
 			}
@@ -169,10 +170,20 @@ public partial class DatamodelBridge : Node3D
 
 	private static ChunkKey GetKeyForPart(Part part)
 	{
+		Transform3D globalTransform = part.GetGlobalTransform();
+		return GetKeyForPart(part, in globalTransform);
+	}
+
+	private static ChunkKey GetKeyForPart(Part part, in Transform3D globalTransform)
+	{
 		uint scaleLevel = 1;
 		float size = ChunkBaseSize;
+		Vector3 partSize = new(
+			globalTransform.Basis.Column0.Length(),
+			globalTransform.Basis.Column1.Length(),
+			globalTransform.Basis.Column2.Length());
 
-		while (part.Size.X > size || part.Size.Y > size || part.Size.Z > size)
+		while (partSize.X > size || partSize.Y > size || partSize.Z > size)
 		{
 			size *= 2;
 			scaleLevel++;
@@ -180,8 +191,7 @@ public partial class DatamodelBridge : Node3D
 			if (scaleLevel > 10) break;
 		}
 
-
-		Vector3I coord = GetChunkCoord(part.Position, scaleLevel);
+		Vector3I coord = GetChunkCoord(globalTransform.Origin, scaleLevel);
 		return new ChunkKey { Coord = coord, Material = part.Material, Shape = part.Shape, IsTransparent = part.Color.A < 1f, CastShadows = part.CastShadows, ScaleLevel = scaleLevel };
 	}
 
