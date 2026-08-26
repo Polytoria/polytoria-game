@@ -151,6 +151,22 @@ public partial class Grabbable : Instance
 		}
 	}
 
+	[ScriptMethod]
+	public void LetGo()
+	{
+		if (_dragger == null) return;
+		RpcId(_dragger.PeerID, nameof(NetLetGo));
+	}
+
+	[NetRpc(AuthorityMode.Any, TransferMode = TransferMode.Reliable)]
+	private void NetLetGo()
+	{
+		if (_dragging)
+		{
+			ReleaseDrag();
+		}
+	}
+
 	private async void OnClicked(Player by)
 	{
 		if (_dragger != null) return;
