@@ -356,16 +356,18 @@ public sealed partial class Environment : Instance
 			ignoreRids = PhysicalsToArray(ignoreList);
 		}
 
+		PhysicsRayQueryParameters3D query = new()
+		{
+			From = origin,
+			To = origin + direction.Normalized() * maxDistance,
+			CollideWithAreas = true,
+			CollideWithBodies = true,
+		};
+
 		while (true)
 		{
-			Godot.Collections.Dictionary result = spaceState.IntersectRay(new PhysicsRayQueryParameters3D
-			{
-				From = origin,
-				To = origin + direction.Normalized() * maxDistance,
-				CollideWithAreas = true,
-				CollideWithBodies = true,
-				Exclude = ignoreRids
-			});
+			query.Exclude = ignoreRids;
+			Godot.Collections.Dictionary result = spaceState.IntersectRay(query);
 
 			if (result.Count == 0) break;
 
@@ -408,16 +410,18 @@ public sealed partial class Environment : Instance
 			ignoreRids = PhysicalsToArray(ignoreList);
 		}
 
+		PhysicsRayQueryParameters3D query = new()
+		{
+			From = origin,
+			To = origin + direction.Normalized() * maxDistance,
+			CollideWithAreas = true,
+			CollideWithBodies = true,
+		};
+
 		while (true)
 		{
-			Godot.Collections.Dictionary result = spaceState.IntersectRay(new PhysicsRayQueryParameters3D
-			{
-				From = origin,
-				To = origin + direction.Normalized() * maxDistance,
-				CollideWithAreas = true,
-				CollideWithBodies = true,
-				Exclude = ignoreRids
-			});
+			query.Exclude = ignoreRids;
+			Godot.Collections.Dictionary result = spaceState.IntersectRay(query);
 
 			if (result.Count == 0) break;
 
