@@ -285,7 +285,7 @@ public partial class Grabbable : Instance
 					}
 					else
 					{
-						RayResult? hit = Root.Environment.PenetrateRaycast(rayOrigin, rayDir, ignoreList: [Parent], passthroughMask: Physical.MousePassthroughEnum.Grabbable);
+						RayResult? hit = Root.Environment.PenetrateRaycast(rayOrigin, rayDir, ignoreList: [Parent], passthrough: 1<<2);
 						if (hit != null)
 						{
 							targetPos = hit.Value.Position;

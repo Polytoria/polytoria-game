@@ -44,7 +44,7 @@ public partial class Physical : Dynamic
 	private uint _collisionLayers = 1, _collisionMask = 1;
 	private Vector3 _velocity = Vector3.Zero;
 	private Vector3 _angularVelocity = Vector3.Zero;
-	private MousePassthroughEnum _mousePassthrough = MousePassthroughEnum.None;
+	private uint _rayPassthrough = 0;
 
 	private bool _netEnsureTouchArea = false;
 
@@ -326,12 +326,12 @@ public partial class Physical : Dynamic
 	}
 
 	[Editable(CustomPropertyControl = "Bitmap32"), ScriptProperty]
-	public uint MousePassthrough
+	public uint RayPassthrough
 	{
-		get => (uint)_mousePassthrough;
+		get => (uint)_rayPassthrough;
 		set
 		{
-			_mousePassthrough = (MousePassthroughEnum)value;
+			_rayPassthrough = value;
 			OnPropertyChanged();
 		}
 	}
@@ -1273,14 +1273,5 @@ public partial class Physical : Dynamic
 		Acceleration,
 		Impulse,
 		VelocityChange
-	}
-
-	[ScriptEnum("MousePassthrough"), Flags]
-	public enum MousePassthroughEnum : uint
-	{
-		None = 0,
-		Hover = 1,
-		Click = 2,
-		Grabbable = 4,
 	}
 }
