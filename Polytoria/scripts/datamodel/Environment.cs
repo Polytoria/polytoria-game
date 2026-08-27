@@ -260,31 +260,43 @@ public sealed partial class Environment : Instance
 	}
 
 	[ScriptMethod]
-	public RayResult? Raycast(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null)
+	public RayResult? Raycast(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null, uint passthroughMask = 0)
 	{
 		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
+		Godot.Collections.Array<Rid> ignoreRids = [];
+
+		if (ignoreList != null)
+		{
+			ignoreRids = PhysicalsToArray(ignoreList);
+		}
 
 		PhysicsRayQueryParameters3D query = new()
 		{
 			From = origin,
 			To = origin + direction.Normalized() * maxDistance,
 			CollideWithAreas = true,
-			CollideWithBodies = true
+			CollideWithBodies = true,
 		};
 
-		if (ignoreList != null)
+		while (true)
 		{
-			query.Exclude = PhysicalsToArray(ignoreList);
-		}
+			query.Exclude = ignoreRids;
+			Godot.Collections.Dictionary result = spaceState.IntersectRay(query);
 
-		Godot.Collections.Dictionary result = spaceState.IntersectRay(query);
+			if (result.Count == 0) break;
 
-		if (result.Count > 0)
-		{
+			Rid colliderRid = (Rid)result["rid"];
+			ignoreRids.Add(colliderRid);
+
+			Node collider = (Node)(GodotObject)result["collider"];
+			Instance? instance = ColliderToInstance(collider);
+			if (instance is Physical p)
+			{
+				if ((p.RayPassthrough & passthroughMask) != 0) continue;
+			}
+
 			Vector3 hitPos = (Vector3)result["position"];
 			Vector3 normal = (Vector3)result["normal"];
-			Node collider = (Node)(GodotObject)result["collider"];
-
 			return new()
 			{
 				Origin = origin,
@@ -292,7 +304,7 @@ public sealed partial class Environment : Instance
 				Position = hitPos,
 				Normal = normal,
 				Distance = (origin - hitPos).Length(),
-				Instance = ColliderToInstance(collider)
+				Instance = instance,
 			};
 		}
 
@@ -345,60 +357,7 @@ public sealed partial class Environment : Instance
 		return [.. rayResults];
 	}
 
-	public RayResult? PenetrateRaycast(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null, uint passthrough = 0)
-	{
-		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
-		Godot.Collections.Array<Rid> ignoreRids = [];
-		RayResult? rayResult = null;
-
-		if (ignoreList != null)
-		{
-			ignoreRids = PhysicalsToArray(ignoreList);
-		}
-
-		PhysicsRayQueryParameters3D query = new()
-		{
-			From = origin,
-			To = origin + direction.Normalized() * maxDistance,
-			CollideWithAreas = true,
-			CollideWithBodies = true,
-		};
-
-		while (true)
-		{
-			query.Exclude = ignoreRids;
-			Godot.Collections.Dictionary result = spaceState.IntersectRay(query);
-
-			if (result.Count == 0) break;
-
-			Rid colliderRid = (Rid)result["rid"];
-			ignoreRids.Add(colliderRid);
-
-			Node collider = (Node)(GodotObject)result["collider"];
-			Instance? instance = ColliderToInstance(collider);
-			if (instance is Physical p)
-			{
-				if ((p.RayPassthrough & passthrough) != 0) continue;
-			}
-
-			Vector3 hitPos = (Vector3)result["position"];
-			Vector3 normal = (Vector3)result["normal"];
-			rayResult = new()
-			{
-				Origin = origin,
-				Direction = direction.Normalized(),
-				Position = hitPos,
-				Normal = normal,
-				Distance = (origin - hitPos).Length(),
-				Instance = instance,
-			};
-			break;
-		}
-
-		return rayResult;
-	}
-
-	public RayResult[] PenetrateRaycastGather(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null, uint passthrough = 0)
+	public RayResult[] RaycastGather(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null, uint passthroughMask = 0)
 	{
 		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
 		Godot.Collections.Array<Rid> ignoreRids = [];
@@ -448,7 +407,7 @@ public sealed partial class Environment : Instance
 
 			if (instance is Physical p)
 			{
-				if ((p.RayPassthrough & passthrough) != 0) continue;
+				if ((p.RayPassthrough & passthroughMask) != 0) continue;
 			}
 			break;
 		}

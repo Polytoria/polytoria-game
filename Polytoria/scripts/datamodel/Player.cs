@@ -799,7 +799,7 @@ public sealed partial class Player : NPC
 			if (camera != null)
 			{
 				(Vector3 rayOrigin, Vector3 rayDirection) = camera.ProjectFromScreen(Root.Input.MousePosition);
-				Environment.RayResult[] hits = Root.Environment.PenetrateRaycastGather(rayOrigin, rayDirection, passthrough: 1<<1);
+				Environment.RayResult[] hits = Root.Environment.RaycastGather(rayOrigin, rayDirection, passthroughMask: 1<<1);
 				foreach (Environment.RayResult result in hits)
 				{
 					if (result.Instance is Physical p)
