@@ -191,7 +191,7 @@ public class APIReferenceGenerator
 					IsAsync = false,
 					Parameters =
 					[
-						new() { Name = "indexer", Type = "any" }
+						new() { Name = "self", Type = nameof(Instance) },
 					],
 					IsObsolete = false,
 					IsStatic = false,
@@ -203,7 +203,8 @@ public class APIReferenceGenerator
 					IsAsync = false,
 					Parameters =
 					[
-						new() { Name = "indexer", Type = "any" }
+						new() { Name = "self", Type = nameof(Instance) },
+						new() { Name = "val", Type = "any" },
 					],
 					IsObsolete = false,
 					IsStatic = false,
