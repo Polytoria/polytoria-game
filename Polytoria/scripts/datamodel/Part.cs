@@ -12,6 +12,7 @@ namespace Polytoria.Datamodel;
 public partial class Part : Entity
 {
 	private MeshInstance3D? _mesh;
+	private MultiMeshInstance3D? _trussSeparateMesh;
 	private CollisionShape3D _collider = null!;
 	private Material _meshMaterial = null!;
 	private ShapeEnum _shape;
@@ -26,6 +27,13 @@ public partial class Part : Entity
 
 	public bool IsMeshSeparated => _isSeparateMesh;
 	public int BridgeID = -1;
+
+	private float _lastTrussCrossSection = -1f;
+	private float TrussCrossSection => NodeSize.X;
+	internal bool OverrideNoMultiMesh = false;
+
+	private const float MinTrussScale = 0.0001f;
+	internal const float TrussRingBandFraction = 0.1f;
 
 	public override void EnterTree()
 	{
@@ -90,6 +98,24 @@ public partial class Part : Entity
 		{
 			Root.Bridge.SeparatedPartCount++;
 		}
+
+		if (Shape is ShapeEnum.Truss or ShapeEnum.Frame)
+		{
+			(Godot.Mesh mesh, _) = Globals.LoadShape(_shape.ToString());
+			MultiMesh mm = new()
+			{
+				Mesh = mesh,
+				TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+				UseColors = true
+			};
+			GDNode3D.AddChild(_trussSeparateMesh = new() { Multimesh = mm }, false);
+			_meshMaterial = Globals.LoadMaterial(_material, Color.A);
+			_trussSeparateMesh.MaterialOverride = _meshMaterial;
+			UpdateShadow();
+			RefreshSeparateTrussMesh();
+			return;
+		}
+
 		GDNode3D.AddChild(_mesh = new(), false);
 		UpdateMeshSize();
 		UpdateShape();
@@ -101,10 +127,62 @@ public partial class Part : Entity
 		UpdateShadow();
 	}
 
+	// Pushes GetLocalTrussInstances() into the separate mesh's own private
+	// multimesh. Local-space so it follows this part's own transform via
+	// normal scene-tree parenting, no per-frame recompute needed.
+	private void RefreshSeparateTrussMesh()
+	{
+		if (_trussSeparateMesh == null) return;
+
+		Transform3D[] instances = GetLocalTrussInstances();
+		MultiMesh mm = _trussSeparateMesh.Multimesh;
+		mm.InstanceCount = Mathf.Max(1, instances.Length);
+		mm.VisibleInstanceCount = instances.Length;
+
+		Color linearColor = _color.SrgbToLinear();
+		for (int i = 0; i < instances.Length; i++)
+		{
+			mm.SetInstanceTransform(i, instances[i]);
+			mm.SetInstanceColor(i, linearColor);
+		}
+	}
+
 	internal override void OnNodeSizeChanged(Vector3 newSize)
 	{
+		if (Shape is ShapeEnum.Truss or ShapeEnum.Frame)
+		{
+			EnforceTrussCrossSectionSquare(newSize);
+		}
 		UpdateMeshSize();
+		RefreshSeparateTrussMesh();
 		base.OnNodeSizeChanged(newSize);
+	}
+
+	private void EnforceTrussCrossSectionSquare(Vector3 newSize)
+	{
+		float x = newSize.X;
+		float z = newSize.Z;
+
+		if (Mathf.IsEqualApprox(x, z))
+		{
+			_lastTrussCrossSection = x;
+			EnforceTrussMinLength();
+			return;
+		}
+
+		bool xChanged = !Mathf.IsEqualApprox(x, _lastTrussCrossSection);
+		float cross = xChanged ? x : z;
+
+		NodeSize = new Vector3(cross, newSize.Y, cross);
+		_lastTrussCrossSection = cross;
+		EnforceTrussMinLength();
+	}
+
+	// Y can't go below one segment's own length, or no valid segment fits.
+	private void EnforceTrussMinLength()
+	{
+		if (NodeSize.Y >= NodeSize.X) return;
+		NodeSize = new Vector3(NodeSize.X, NodeSize.X, NodeSize.Z);
 	}
 
 	private void UpdateMeshSize()
@@ -123,6 +201,8 @@ public partial class Part : Entity
 		Root.Bridge.SeparatedPartCount--;
 		_mesh?.Free();
 		_mesh = null;
+		_trussSeparateMesh?.Free();
+		_trussSeparateMesh = null;
 	}
 
 	[Editable, ScriptProperty, DefaultValue(ShapeEnum.Brick)]
@@ -198,12 +278,88 @@ public partial class Part : Entity
 		}
 	}
 
-	// Override this to be excluded from MutliMesh
-	internal bool OverrideNoMultiMesh = false;
+	internal virtual Transform3D[] GetBatchInstances()
+	{
+		if (Shape is not (ShapeEnum.Truss or ShapeEnum.Frame))
+		{
+			return [GetGlobalTransform()];
+		}
+
+		TrussSegment[]? segments = BuildTrussSegments();
+		if (segments == null) return [GetGlobalTransform()];
+
+		Transform3D transform = GDNode3D.GlobalTransform;
+
+		return BuildInstancesFrom(transform.Origin, transform.Basis, segments);
+	}
+
+	private Transform3D[] GetLocalTrussInstances()
+	{
+		TrussSegment[]? segments = BuildTrussSegments();
+		if (segments == null) return [];
+
+		return BuildInstancesFrom(Vector3.Zero, Basis.Identity, segments);
+	}
+
+	private Transform3D[] BuildInstancesFrom(Vector3 origin, Basis rotationBasis, TrussSegment[] segments)
+	{
+		float crossSection = TrussCrossSection;
+		var result = new Transform3D[segments.Length];
+		for (int i = 0; i < segments.Length; i++)
+		{
+			Basis basis = new(rotationBasis.X * crossSection, rotationBasis.Y * segments[i].SegLen, rotationBasis.Z * crossSection);
+			result[i] = new Transform3D(basis, origin + rotationBasis.Y * segments[i].OffsetY);
+		}
+		return result;
+	}
+
+	private readonly struct TrussSegment(float offsetY, float segLen)
+	{
+		public readonly float OffsetY = offsetY;
+		public readonly float SegLen = segLen;
+	}
+
+	private TrussSegment[]? BuildTrussSegments()
+	{
+		float crossSection = TrussCrossSection;
+		float length = NodeSize.Y;
+		if (crossSection <= MinTrussScale || length <= 0f) return null;
+
+		// Round to nearest cell count so N stretched cells fill `length` exactly.
+		int N = Mathf.Max(1, Mathf.RoundToInt(length / crossSection));
+
+		float denom = N - (N - 1) * TrussRingBandFraction;
+		float segLen = length / Mathf.Max(denom, MinTrussScale);
+
+		// Adjacent segment centres are spaced by the non-overlapping visible length.
+		float stepY = segLen * (1f - TrussRingBandFraction);
+
+		TrussSegment[] result = new TrussSegment[N];
+		for (int i = 0; i < N; i++)
+		{
+			float offsetY = -length / 2f + segLen / 2f + i * stepY;
+			result[i] = new TrussSegment(offsetY, segLen);
+		}
+		return result;
+	}
+
+	private void NormalizeTrussOnShapeSet()
+	{
+		float cross = Mathf.Min(NodeSize.X, NodeSize.Z);
+		float y = Mathf.Max(NodeSize.Y, cross);
+		NodeSize = new Vector3(cross, y, cross);
+		_lastTrussCrossSection = cross;
+	}
 
 	internal void UpdateShape()
 	{
 		if (_collider == null) return;
+
+		if (_shape is ShapeEnum.Truss or ShapeEnum.Frame)
+		{
+			NormalizeTrussOnShapeSet();
+		}
+
 		(Godot.Mesh mesh, Shape3D shape) = Globals.LoadShape(_shape.ToString());
 		if (_isSeparateMesh)
 		{
@@ -219,7 +375,17 @@ public partial class Part : Entity
 
 	internal void UpdateMaterial()
 	{
-		if (!_isSeparateMesh || _mesh == null)
+		if (!_isSeparateMesh) return;
+
+		if (_trussSeparateMesh != null)
+		{
+			_meshMaterial = Globals.LoadMaterial(_material, Color.A);
+			_trussSeparateMesh.MaterialOverride = _meshMaterial;
+			UpdateColor();
+			return;
+		}
+
+		if (_mesh == null)
 		{
 			return;
 		}
@@ -232,6 +398,13 @@ public partial class Part : Entity
 
 	internal void UpdateColor()
 	{
+		if (_trussSeparateMesh != null)
+		{
+			RefreshSeparateTrussMesh();
+			UpdateCamLayer();
+			return;
+		}
+
 		if (_isSeparateMesh && _mesh != null)
 		{
 			Material targetMat = Globals.LoadMaterial(_material, Color.A);
@@ -249,6 +422,11 @@ public partial class Part : Entity
 
 	internal void UpdateShadow()
 	{
+		if (_trussSeparateMesh != null)
+		{
+			_trussSeparateMesh.CastShadow = _castShadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
+			return;
+		}
 		if (_isSeparateMesh)
 		{
 			_mesh?.CastShadow = _castShadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;

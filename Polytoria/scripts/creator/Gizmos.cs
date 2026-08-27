@@ -169,6 +169,19 @@ public sealed partial class Gizmos : Node
 
 		Transform3D newTransform = new(newBasis, oldOrigin + totalOriginOffset);
 		selectedItem.SetGlobalTransform(newTransform);
+
+		// If the part clamped its own size (e.g. a truss), the origin we computed was for
+		// the unclamped length. Recompute it so the non-dragged face stays fixed.
+		if (!isAltPressed)
+		{
+			float actualLen = selectedItem.Size[column];
+			if (!Mathf.IsEqualApprox(actualLen, newLength))
+			{
+				Vector3 axisNorm = _pivotStart.Basis[column].Normalized();
+				Vector3 fixedFace = oldOrigin - globalDirection * axisNorm * (oldScaleVector.Length() / 2f);
+				selectedItem.SetGlobalPosition(fixedFace + globalDirection * axisNorm * (actualLen / 2f));
+			}
+		}
 	}
 
 	private void OnResizeDragEnded()

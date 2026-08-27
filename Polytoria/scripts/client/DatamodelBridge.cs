@@ -120,6 +120,12 @@ public partial class DatamodelBridge : Node3D
 		return mat;
 	}
 
+	private void RebuildPartBatch(Part part, ChunkKey key)
+	{
+		RemoveFromBatch(part);
+		AddToBatch(part, key);
+	}
+
 	public override void _Process(double delta)
 	{
 		if (!_renderingEnabled || !isGameReady) return;
@@ -140,14 +146,27 @@ public partial class DatamodelBridge : Node3D
 				}
 				else if (!newKey.Equals(handle!.Key))
 				{
-					RemoveFromBatch(part);
-					AddToBatch(part, newKey);
+					RebuildPartBatch(part, newKey);
 				}
 				else
 				{
 					ChunkBatch batch = _batches[handle.Key];
-					batch.MultiMesh.SetInstanceTransform(handle.Index, part.GetGlobalTransform());
-					batch.MultiMesh.SetInstanceColor(handle.Index, part.Color.SrgbToLinear());
+					Transform3D[] instances = part.GetBatchInstances();
+
+					if (instances.Length != handle.Indices.Count)
+					{
+						// Segment count changed (e.g. Truss resized), rebuild.
+						RebuildPartBatch(part, newKey);
+					}
+					else
+					{
+						Color linearColor = part.Color.SrgbToLinear();
+						for (int i = 0; i < instances.Length; i++)
+						{
+							batch.MultiMesh.SetInstanceTransform(handle.Indices[i], instances[i]);
+							batch.MultiMesh.SetInstanceColor(handle.Indices[i], linearColor);
+						}
+					}
 				}
 			}
 			else
@@ -255,17 +274,26 @@ public partial class DatamodelBridge : Node3D
 
 		part.RemoveSeparateMesh();
 
-		int index = batch.Count;
-		ResizeBatch(batch, index + 1);
+		Transform3D[] instances = part.GetBatchInstances();
+		Color linearColor = part.Color.SrgbToLinear();
+		List<int> indices = new(instances.Length);
 
-		batch.Parts.Add(part);
-		batch.Count++;
-		batch.MultiMesh.VisibleInstanceCount = batch.Count;
+		foreach (Transform3D transform in instances)
+		{
+			int index = batch.Count;
+			ResizeBatch(batch, index + 1);
 
-		batch.MultiMesh.SetInstanceTransform(index, part.GetGlobalTransform());
-		batch.MultiMesh.SetInstanceColor(index, part.Color.SrgbToLinear());
+			batch.Parts.Add(part);
+			batch.Count++;
+			batch.MultiMesh.VisibleInstanceCount = batch.Count;
 
-		_handles[part] = new PartHandle { Key = key, Index = index };
+			batch.MultiMesh.SetInstanceTransform(index, transform);
+			batch.MultiMesh.SetInstanceColor(index, linearColor);
+
+			indices.Add(index);
+		}
+
+		_handles[part] = new PartHandle { Key = key, Indices = indices };
 	}
 
 	private void RemoveFromBatch(Part part)
@@ -273,30 +301,19 @@ public partial class DatamodelBridge : Node3D
 		if (!_handles.TryGetValue(part, out PartHandle? handle)) return;
 		if (!_batches.TryGetValue(handle.Key, out var batch))
 		{
+			_handles.Remove(part);
 			return;
 		}
 
-		int index = handle.Index;
-		int lastIndex = batch.Count - 1;
+		// Remove highest index first so earlier indices stay valid mid-loop
+		List<int> indices = [.. handle.Indices];
+		indices.Sort();
+		indices.Reverse();
 
-		if (index != lastIndex)
+		foreach (int index in indices)
 		{
-			var lastPart = batch.Parts[lastIndex];
-			batch.Parts[index] = lastPart;
-
-			_handles[lastPart] = new PartHandle { Key = handle.Key, Index = index };
-
-			// prevents a bunch of error spam. idk why these nodes often arent in the tree but this kept spamming errors
-			if (lastPart.GDNode3D.IsInsideTree())
-			{
-				batch.MultiMesh.SetInstanceTransform(index, lastPart.GetGlobalTransform());
-			}
-			batch.MultiMesh.SetInstanceColor(index, lastPart.Color.SrgbToLinear());
+			RemoveSlot(batch, index, part);
 		}
-
-		batch.Parts.RemoveAt(lastIndex);
-		batch.Count--;
-		batch.MultiMesh.VisibleInstanceCount = batch.Count;
 
 		if (batch.Count == 0)
 		{
@@ -307,7 +324,43 @@ public partial class DatamodelBridge : Node3D
 		_handles.Remove(part);
 	}
 
-	private static void ResizeBatch(ChunkBatch batch, int target)
+	// Swap-remove one slot (fixes up only the moved part's specific segment, not its whole handle)
+	private void RemoveSlot(ChunkBatch batch, int index, Part removingPart)
+	{
+		int lastIndex = batch.Count - 1;
+
+		if (index != lastIndex)
+		{
+			Part lastPart = batch.Parts[lastIndex];
+			batch.Parts[index] = lastPart;
+
+			if (!ReferenceEquals(lastPart, removingPart) && _handles.TryGetValue(lastPart, out PartHandle? movedHandle))
+			{
+				int segmentIdx = movedHandle.Indices.IndexOf(lastIndex);
+				if (segmentIdx >= 0)
+				{
+					movedHandle.Indices[segmentIdx] = index;
+
+					// prevents a bunch of error spam. idk why these nodes often arent in the tree but this kept spamming errors
+					if (lastPart.GDNode3D.IsInsideTree())
+					{
+						Transform3D[] transforms = lastPart.GetBatchInstances();
+						if (segmentIdx < transforms.Length)
+						{
+							batch.MultiMesh.SetInstanceTransform(index, transforms[segmentIdx]);
+						}
+					}
+					batch.MultiMesh.SetInstanceColor(index, lastPart.Color.SrgbToLinear());
+				}
+			}
+		}
+
+		batch.Parts.RemoveAt(lastIndex);
+		batch.Count--;
+		batch.MultiMesh.VisibleInstanceCount = batch.Count;
+	}
+
+	private void ResizeBatch(ChunkBatch batch, int target)
 	{
 		if (target <= batch.MultiMesh.InstanceCount) return;
 
@@ -321,12 +374,37 @@ public partial class DatamodelBridge : Node3D
 
 		batch.MultiMesh.InstanceCount = newCap;
 
-		// changing instancecount wipes multimesh data
+		Part? cachedPart = null;
+		Transform3D[]? cachedInstances = null;
+
 		for (int i = 0; i < oldUsedCount; i++)
 		{
-			var p = batch.Parts[i];
+			Part p = batch.Parts[i];
+			Color linearColor = p.Color.SrgbToLinear();
+
+			if (_handles.TryGetValue(p, out PartHandle? h))
+			{
+				int segmentIdx = h.Indices.IndexOf(i);
+				if (segmentIdx >= 0)
+				{
+					if (!ReferenceEquals(cachedPart, p))
+					{
+						cachedPart = p;
+						cachedInstances = p.GetBatchInstances();
+					}
+
+					if (segmentIdx < cachedInstances!.Length)
+					{
+						batch.MultiMesh.SetInstanceTransform(i, cachedInstances[segmentIdx]);
+						batch.MultiMesh.SetInstanceColor(i, linearColor);
+						continue;
+					}
+				}
+			}
+
+			// Fallback
 			batch.MultiMesh.SetInstanceTransform(i, p.GetGlobalTransform());
-			batch.MultiMesh.SetInstanceColor(i, p.Color.SrgbToLinear());
+			batch.MultiMesh.SetInstanceColor(i, linearColor);
 		}
 	}
 
@@ -383,7 +461,7 @@ public partial class DatamodelBridge : Node3D
 	private class PartHandle
 	{
 		public ChunkKey Key;
-		public int Index;
+		public List<int> Indices = [];
 		public System.Action PropertyChangedHandler = null!;
 	}
 
