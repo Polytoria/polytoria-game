@@ -401,6 +401,7 @@ public sealed partial class Environment : Instance
 		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
 		Godot.Collections.Array<Rid> ignoreRids = [];
 		List<RayResult> rayResults = [];
+		Instance? prevInstance = null;
 
 		if (ignoreList != null)
 		{
@@ -420,11 +421,14 @@ public sealed partial class Environment : Instance
 
 			if (result.Count == 0) break;
 
-
 			Node collider = (Node)(GodotObject)result["collider"];
 			Instance? instance = ColliderToInstance(collider);
 			Rid colliderRid = (Rid)result["rid"];
 			ignoreRids.Add(colliderRid);
+
+			// possibly janky workaround for CanCollide=true parts being hit twice
+			if (instance == prevInstance) continue;
+			prevInstance = instance;
 
 			Vector3 hitPos = (Vector3)result["position"];
 			Vector3 normal = (Vector3)result["normal"];
