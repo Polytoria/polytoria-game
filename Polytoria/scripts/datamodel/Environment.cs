@@ -357,6 +357,7 @@ public sealed partial class Environment : Instance
 		return [.. rayResults];
 	}
 
+	[ScriptMethod]
 	public RayResult[] RaycastGather(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null, uint passthroughMask = 0)
 	{
 		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
