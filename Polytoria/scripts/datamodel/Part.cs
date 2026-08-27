@@ -21,6 +21,7 @@ public partial class Part : Entity
 	private bool _castShadows;
 	private bool _hasFaceTextures;
 	private ShaderMaterial? _faceTextureOverlay;
+	private Vector3 _faceTextureSize;
 	private static Shader? _faceTextureShader;
 
 	private Node3D _nRemoteAt = null!; // Remote collider proxy
@@ -112,6 +113,11 @@ public partial class Part : Entity
 	internal override void OnNodeSizeChanged(Vector3 newSize)
 	{
 		UpdateMeshSize();
+		if (_hasFaceTextures && newSize != _faceTextureSize)
+		{
+			_faceTextureSize = newSize;
+			_faceTextureOverlay?.SetShaderParameter("part_size", newSize);
+		}
 		base.OnNodeSizeChanged(newSize);
 	}
 
@@ -329,6 +335,9 @@ public partial class Part : Entity
 		_faceTextureOverlay ??= new ShaderMaterial { Shader = _faceTextureShader };
 		_mesh.MaterialOverlay = _faceTextureOverlay;
 
+		_faceTextureSize = Size;
+		_faceTextureOverlay.SetShaderParameter("part_size", _faceTextureSize);
+
 		for (int i = 0; i < slots.Length; i++)
 		{
 			PartTexture? slot = slots[i];
@@ -338,6 +347,13 @@ public partial class Part : Entity
 				? new Vector4(0f, 1f, 1f, 0f)
 				: new Vector4(slot.Exposure, slot.Contrast, slot.Saturation, slot.Temperature));
 			_faceTextureOverlay.SetShaderParameter($"face_state_{i}", new Vector2(texture != null ? 1f : 0f, slot?.Transparency ?? 0f));
+
+			Vector4 tile = Vector4.Zero;
+			if (slot != null && slot.Mode == PartTexture.TextureModeEnum.Tile && slot.TileSize.X > 0f && slot.TileSize.Y > 0f)
+			{
+				tile = new Vector4(slot.TileSize.X, slot.TileSize.Y, slot.Offset.X, slot.Offset.Y);
+			}
+			_faceTextureOverlay.SetShaderParameter($"face_tile_{i}", tile);
 		}
 	}
 

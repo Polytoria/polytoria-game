@@ -26,6 +26,14 @@ function Entry()
 	assert(texture.Parent == other)
 	assert(part:FindChild("PartTexture") == nil)
 
+	assert(texture.Mode == Enums.TextureMode.Stretch)
+	texture.Mode = Enums.TextureMode.Tile
+	assert(texture.Mode == Enums.TextureMode.Tile)
+	texture.TileSize = Vector2.New(4, 2)
+	assert(texture.TileSize.X == 4 and texture.TileSize.Y == 2)
+	texture.Offset = Vector2.New(1, 0.5)
+	assert(texture.Offset.X == 1 and texture.Offset.Y == 0.5)
+
 	texture:Destroy()
 	other:Destroy()
 	part:Destroy()

@@ -1,29 +1,37 @@
 shader_type spatial;
 render_mode blend_mix, cull_back, diffuse_burley, specular_schlick_ggx;
 
-uniform sampler2D face_texture_0 : source_color, filter_linear_mipmap;
+uniform sampler2D face_texture_0 : source_color, filter_linear_mipmap, repeat_enable;
 uniform vec4 face_adjust_0 = vec4(0.0, 1.0, 1.0, 0.0);
 uniform vec2 face_state_0 = vec2(0.0);
+uniform vec4 face_tile_0 = vec4(0.0);
 
-uniform sampler2D face_texture_1 : source_color, filter_linear_mipmap;
+uniform sampler2D face_texture_1 : source_color, filter_linear_mipmap, repeat_enable;
 uniform vec4 face_adjust_1 = vec4(0.0, 1.0, 1.0, 0.0);
 uniform vec2 face_state_1 = vec2(0.0);
+uniform vec4 face_tile_1 = vec4(0.0);
 
-uniform sampler2D face_texture_2 : source_color, filter_linear_mipmap;
+uniform sampler2D face_texture_2 : source_color, filter_linear_mipmap, repeat_enable;
 uniform vec4 face_adjust_2 = vec4(0.0, 1.0, 1.0, 0.0);
 uniform vec2 face_state_2 = vec2(0.0);
+uniform vec4 face_tile_2 = vec4(0.0);
 
-uniform sampler2D face_texture_3 : source_color, filter_linear_mipmap;
+uniform sampler2D face_texture_3 : source_color, filter_linear_mipmap, repeat_enable;
 uniform vec4 face_adjust_3 = vec4(0.0, 1.0, 1.0, 0.0);
 uniform vec2 face_state_3 = vec2(0.0);
+uniform vec4 face_tile_3 = vec4(0.0);
 
-uniform sampler2D face_texture_4 : source_color, filter_linear_mipmap;
+uniform sampler2D face_texture_4 : source_color, filter_linear_mipmap, repeat_enable;
 uniform vec4 face_adjust_4 = vec4(0.0, 1.0, 1.0, 0.0);
 uniform vec2 face_state_4 = vec2(0.0);
+uniform vec4 face_tile_4 = vec4(0.0);
 
-uniform sampler2D face_texture_5 : source_color, filter_linear_mipmap;
+uniform sampler2D face_texture_5 : source_color, filter_linear_mipmap, repeat_enable;
 uniform vec4 face_adjust_5 = vec4(0.0, 1.0, 1.0, 0.0);
 uniform vec2 face_state_5 = vec2(0.0);
+uniform vec4 face_tile_5 = vec4(0.0);
+
+uniform vec3 part_size = vec3(1.0);
 
 varying vec3 v_local_pos;
 varying vec3 v_local_normal;
@@ -57,6 +65,35 @@ vec2 face_uv(int face, vec3 pos) {
 	return vec2(pos.x, -pos.y) + 0.5;
 }
 
+vec4 face_tile(int face) {
+	if (face == 0) {
+		return face_tile_0;
+	}
+	if (face == 1) {
+		return face_tile_1;
+	}
+	if (face == 2) {
+		return face_tile_2;
+	}
+	if (face == 3) {
+		return face_tile_3;
+	}
+	if (face == 4) {
+		return face_tile_4;
+	}
+	return face_tile_5;
+}
+
+vec2 face_dims(int face, vec3 s) {
+	if (face <= 1) {
+		return vec2(s.x, s.z);
+	}
+	if (face <= 3) {
+		return vec2(s.z, s.y);
+	}
+	return vec2(s.x, s.y);
+}
+
 void vertex() {
 	v_local_pos = VERTEX;
 	v_local_normal = normalize(NORMAL);
@@ -66,6 +103,14 @@ void fragment() {
 	vec3 n = normalize(v_local_normal);
 	int face = face_index(n);
 	vec2 uv = face_uv(face, v_local_pos);
+
+	vec4 tile = face_tile(face);
+	if (tile.x > 0.0 && tile.y > 0.0) {
+		uv = (uv * face_dims(face, part_size) + tile.zw) / tile.xy;
+	} else {
+		vec2 m = max(fwidth(uv) * 0.5, vec2(0.002));
+		uv = clamp(uv, m, vec2(1.0) - m);
+	}
 
 	vec4 tex;
 	vec4 adjust;

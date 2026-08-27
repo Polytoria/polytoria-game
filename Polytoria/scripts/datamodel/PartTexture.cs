@@ -14,6 +14,9 @@ public sealed partial class PartTexture : Instance
 	private ImageAsset? _asset;
 	private Texture2D? _texture;
 	private FaceEnum _face;
+	private TextureModeEnum _mode;
+	private Vector2 _tileSize = new(2f, 2f);
+	private Vector2 _offset;
 	private float _transparency;
 	private float _exposure;
 	private float _contrast = 1f;
@@ -65,6 +68,58 @@ public sealed partial class PartTexture : Instance
 			}
 
 			_face = value;
+			NotifyParent();
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue(TextureModeEnum.Stretch)]
+	public TextureModeEnum Mode
+	{
+		get => _mode;
+		set
+		{
+			if (_mode == value)
+			{
+				return;
+			}
+
+			_mode = value;
+			NotifyParent();
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public Vector2 TileSize
+	{
+		get => _tileSize;
+		set
+		{
+			Vector2 clamped = new(Mathf.Max(value.X, 0.01f), Mathf.Max(value.Y, 0.01f));
+			if (_tileSize == clamped)
+			{
+				return;
+			}
+
+			_tileSize = clamped;
+			NotifyParent();
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public Vector2 Offset
+	{
+		get => _offset;
+		set
+		{
+			if (_offset == value)
+			{
+				return;
+			}
+
+			_offset = value;
 			NotifyParent();
 			OnPropertyChanged();
 		}
@@ -206,6 +261,13 @@ public sealed partial class PartTexture : Instance
 			_texture = texture;
 			NotifyParent();
 		}
+	}
+
+	[ScriptEnum("TextureMode")]
+	public enum TextureModeEnum
+	{
+		Stretch = 0,
+		Tile = 1
 	}
 
 	[ScriptEnum("Face")]
