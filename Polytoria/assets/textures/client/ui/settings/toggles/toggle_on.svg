@@ -1,6 +1,0 @@
-<svg width="71" height="34" viewBox="0 0 71 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="71" height="34" rx="8" fill="#333333"/>
-<rect x="40" y="3" width="28" height="28" rx="8" fill="#4FE883"/>
-<circle opacity="0.3" cx="54" cy="17" r="5" stroke="black" stroke-width="2"/>
-<path opacity="0.2" d="M68 23C68 27.4183 64.4183 31 60 31H48C43.5817 31 40 27.4183 40 23V20C40 24.4183 43.5817 28 48 28H60C64.4183 28 68 24.4183 68 20V23Z" fill="black"/>
-</svg>

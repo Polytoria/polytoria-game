@@ -1,5 +1,0 @@
-[gd_resource type="SphereMesh" format=3 uid="uid://uxarcjn854qf"]
-
-[resource]
-resource_name = "Sphere"
-radial_segments = 32

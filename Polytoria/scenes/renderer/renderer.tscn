@@ -1,6 +1,0 @@
-[gd_scene format=3 uid="uid://rfcmjnlt4ls7"]
-
-[ext_resource type="Script" uid="uid://d3dl26fovirtr" path="res://scripts/renderer/RendererEntry.cs" id="1_k6ggo"]
-
-[node name="Renderer" type="Node" unique_id=631707161]
-script = ExtResource("1_k6ggo")

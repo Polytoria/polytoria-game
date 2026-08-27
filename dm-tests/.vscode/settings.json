@@ -1,9 +1,0 @@
-{
-    "luau-lsp.platform.type": "standard",
-    "luau-lsp.types.definitionFiles": {
-        "@poly": "./.poly/luau/def.d.luau",
-    },
-	"files.exclude": {
-        "**/*.meta": true
-    }
-}

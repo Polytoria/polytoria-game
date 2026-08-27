@@ -1,7 +1,0 @@
-[gd_resource type="CylinderMesh" format=3 uid="uid://x4t80wdhl1gf"]
-
-[resource]
-resource_name = "Cone"
-top_radius = 0.0
-height = 1.0
-radial_segments = 32

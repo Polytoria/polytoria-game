@@ -1,6 +1,0 @@
-[gd_resource type="CylinderMesh" format=3 uid="uid://cufhsc2tevtt"]
-
-[resource]
-resource_name = "Cylinder"
-height = 1.0
-radial_segments = 32

@@ -1,5 +1,0 @@
-[gd_scene format=3 uid="uid://drxlefow7d0li"]
-
-[node name="Animator" type="Node" unique_id=1882527681]
-
-[node name="AnimationTree" type="AnimationTree" parent="." unique_id=1616696677]

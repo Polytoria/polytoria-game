@@ -1,9 +1,0 @@
-[gd_scene format=3 uid="uid://hpsbifai4u2e"]
-
-[ext_resource type="Script" uid="uid://busbwjdywfafh" path="res://scripts/creator/properties/StringProperty.cs" id="1_ms5sm"]
-
-[node name="String" type="LineEdit" unique_id=794683536]
-custom_minimum_size = Vector2(0, 24)
-size_flags_horizontal = 3
-alignment = 1
-script = ExtResource("1_ms5sm")

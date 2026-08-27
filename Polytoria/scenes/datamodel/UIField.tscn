@@ -1,5 +1,0 @@
-[gd_scene format=3 uid="uid://bdkfreyyxq3cm"]
-
-[node name="UIField" type="Control" unique_id=2087989828]
-layout_mode = 3
-anchors_preset = 0
