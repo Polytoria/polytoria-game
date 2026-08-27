@@ -30,6 +30,9 @@ public sealed partial class Gizmos : Node
 	private SelectionBox _paintBox = null!;
 	private SelectionBox _hoverBox = null!;
 
+	private Vector3 _dragStartNormal;
+	private Vector3 _dragStartOrigin;
+
 	public bool HoveringGizmos { get; set; }
 	public bool HoveringUIGizmo { get; set; }
 	public bool IsDraggingDynamic => _isDraggingDyn;
@@ -423,9 +426,9 @@ public sealed partial class Gizmos : Node
 		Vector2 mousePos = _camera.GetViewport().GetMousePosition();
 
 		Vector3 rayOrigin = _camera.ProjectRayOrigin(mousePos);
-		Vector3 rayNormal = rayOrigin + _camera.ProjectRayNormal(mousePos) * 1000;
+		Vector3 rayTarget = rayOrigin + _camera.ProjectRayNormal(mousePos) * 1000;
 
-		PhysicsRayQueryParameters3D query = PhysicsRayQueryParameters3D.Create(rayOrigin, rayNormal);
+		PhysicsRayQueryParameters3D query = PhysicsRayQueryParameters3D.Create(rayOrigin, rayTarget);
 		query.CollideWithAreas = true;
 		query.CollideWithBodies = true;
 		query.CollisionMask = (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3);
@@ -472,8 +475,13 @@ public sealed partial class Gizmos : Node
 			_hoverBox.Target = null;
 		}
 
-		// Select shortcuts
-		if (toolMode == ToolModeEnum.Select)
+		// Select and transform shortcuts
+		if (
+			toolMode == ToolModeEnum.Scale ||
+			toolMode == ToolModeEnum.Move ||
+			toolMode == ToolModeEnum.Rotate ||
+			toolMode == ToolModeEnum.Select
+		)
 		{
 			if (@event.IsActionPressed("gizmo_rotate"))
 			{
@@ -573,6 +581,7 @@ public sealed partial class Gizmos : Node
 				if (distance >= DragThreshold)
 				{
 					_isDraggingDyn = true;
+					OnDragStart();
 					_isDragPending = false;
 					_history.NewAction("Select Drag Transform");
 					RecordHistoryUndo();
@@ -586,6 +595,73 @@ public sealed partial class Gizmos : Node
 		}
 	}
 
+	private void OnDragStart()
+	{
+		// prepare _dragStartNormal and _dragStartOrigin
+		Vector2 mousePos = _camera.GetViewport().GetMousePosition();
+		Vector3 rayOrigin = _camera.ProjectRayOrigin(mousePos);
+		Vector3 rayTarget = rayOrigin + _camera.ProjectRayNormal(mousePos) * 1000;
+
+		PhysicsRayQueryParameters3D query = PhysicsRayQueryParameters3D.Create(rayTarget, rayOrigin); // backwards ray
+		query.CollideWithBodies = true;
+		query.CollideWithAreas = false;
+		query.CollisionMask = (1 << 4);
+
+		List<Physical> dragged = [];
+
+		foreach (Dynamic item in DragSelected)
+		{
+			if (item is Physical p)
+			{
+				dragged.Add(p);
+			}
+			// Add Descendants
+			foreach (Instance n in item.GetDescendants())
+			{
+				if (n is Physical p2)
+				{
+					dragged.Add(p2);
+				}
+			}
+		}
+
+		foreach (Physical p in dragged)
+		{
+			p.SetCollisionLayer(5, true);
+		}
+
+		Godot.Collections.Dictionary intersection = Root.World3D.DirectSpaceState.IntersectRay(query);
+
+		foreach (Physical p in dragged)
+		{
+			p.SetCollisionLayer(5, false);
+		}
+
+		if (intersection.Count > 0)
+		{
+			_dragStartOrigin = (Vector3)intersection["position"];
+			_dragStartNormal = (Vector3)intersection["normal"];
+			{
+				Transform3D trans = ((Node3D)intersection["collider"]).GlobalTransform;
+				Vector3 dragCenter = trans.Origin;
+				Quaternion dragRotation = trans.Basis.GetRotationQuaternion();
+				Vector3 posdiff = (_dragStartOrigin - dragCenter);
+				Vector3 surfaceSnap = posdiff.Dot(_dragStartNormal) * _dragStartNormal;
+				Quaternion verticalize = new Quaternion(_dragStartNormal * dragRotation, Vector3.Up);
+				Vector3 plane = verticalize * ((posdiff - surfaceSnap) * dragRotation);
+				float snapAmount = CreatorService.Interface.MoveSnapping;
+				float halfsnap = snapAmount * 0.5f;
+				Vector3 snapped = new Vector3(
+					Mathf.Snapped(plane.X + halfsnap, snapAmount) - halfsnap,
+					0,
+					Mathf.Snapped(plane.Z + halfsnap, snapAmount) - halfsnap
+				);
+				Vector3 rotatedSnappedPlane = dragRotation * (snapped * verticalize);
+				_dragStartOrigin = surfaceSnap + rotatedSnappedPlane + dragCenter;
+			}
+		}
+	}
+
 	private void RotateSelectedAround(float angle)
 	{
 		Transform3D t = GetCenterPivot([.. Selected]);
@@ -595,11 +671,11 @@ public sealed partial class Gizmos : Node
 		foreach (Dynamic item in Selected)
 		{
 			Vector3 relativePos = item.GetGlobalPosition() - pivotPosition;
-			Transform3D rotation = Transform3D.Identity.Rotated(Vector3.Up, rotateAngle);
+			Transform3D rotation = Transform3D.Identity.Rotated(_dragStartNormal, -rotateAngle);
 			Vector3 rotatedPos = rotation * relativePos;
 
 			item.SetGlobalPosition(pivotPosition + rotatedPos);
-			item.GDNode3D.Rotation += new Vector3(0, rotateAngle, 0);
+			item.Quaternion = new Quaternion(_dragStartNormal, -rotateAngle) * item.Quaternion;
 
 			if (_selectionBoxes.TryGetValue(item, out var box)) box.InvalidateBoundCache();
 			item.UpdateCurrentTransformCache();
@@ -680,9 +756,9 @@ public sealed partial class Gizmos : Node
 	{
 		Vector2 mousePos = _camera.GetViewport().GetMousePosition();
 		Vector3 rayOrigin = _camera.ProjectRayOrigin(mousePos);
-		Vector3 rayNormal = rayOrigin + _camera.ProjectRayNormal(mousePos) * 1000;
+		Vector3 rayTarget = rayOrigin + _camera.ProjectRayNormal(mousePos) * 1000;
 
-		PhysicsRayQueryParameters3D query = PhysicsRayQueryParameters3D.Create(rayOrigin, rayNormal);
+		PhysicsRayQueryParameters3D query = PhysicsRayQueryParameters3D.Create(rayOrigin, rayTarget);
 		query.CollideWithBodies = true;
 		query.CollideWithAreas = true;
 		query.CollisionMask = (1 << 0) | (1 << 1) | (1 << 3);
@@ -725,29 +801,37 @@ public sealed partial class Gizmos : Node
 
 			foreach (Dynamic item in DragSelected)
 			{
-				Aabb bounds = item.CreatorBounds;
-				Vector3 center = bounds.GetCenter();
-
-				Vector3 surfacePoint = center;
-
-				if (Mathf.Abs(hitNormal.X) > 0.5f)
-					surfacePoint.X = hitNormal.X > 0 ? bounds.Position.X : bounds.End.X;
-
-				if (Mathf.Abs(hitNormal.Y) > 0.5f)
-					surfacePoint.Y = hitNormal.Y > 0 ? bounds.Position.Y : bounds.End.Y;
-
-				if (Mathf.Abs(hitNormal.Z) > 0.5f)
-					surfacePoint.Z = hitNormal.Z > 0 ? bounds.Position.Z : bounds.End.Z;
-
-				Vector3 pivotOffset = item.GetGlobalPosition() - surfacePoint;
-
-				Vector3 snappedHitPos = new(
-					Mathf.Abs(hitNormal.X) > 0.9f ? pos.X : Mathf.Snapped(pos.X, snapAmount),
-					Mathf.Abs(hitNormal.Y) > 0.9f ? pos.Y : Mathf.Snapped(pos.Y, snapAmount),
-					Mathf.Abs(hitNormal.Z) > 0.9f ? pos.Z : Mathf.Snapped(pos.Z, snapAmount)
-				);
-
-				item.SetGlobalPosition(snappedHitPos + pivotOffset);
+				Vector3 offset = pos - _dragStartOrigin;
+				if (offset.LengthSquared() < 1e-6f) continue;
+				Vector3 arcOffset = Vector3.Zero;
+				if (CreatorService.Interface.RotateAlignEnabled)
+				{
+					Quaternion q = new Quaternion(-_dragStartNormal, hitNormal);
+					item.Quaternion = q * item.Quaternion;
+					Vector3 leg = item.Position - _dragStartOrigin;
+					arcOffset = leg * q.Inverse() - leg;
+					_dragStartNormal = -hitNormal;
+				}
+				Vector3 newpos = item.Position + offset;
+				{
+					Transform3D trans = ((Node3D)intersection["collider"]).GlobalTransform;
+					Vector3 dragCenter = trans.Origin;
+					Quaternion dragRotation = trans.Basis.GetRotationQuaternion();
+					Vector3 posdiff = (newpos - dragCenter);
+					Vector3 surfaceSnap = posdiff.Dot(hitNormal) * hitNormal;
+					Quaternion verticalize = new Quaternion(hitNormal * dragRotation, Vector3.Up);
+					Vector3 plane = verticalize * ((posdiff - surfaceSnap) * dragRotation);
+					Vector3 snapped = new Vector3(
+						Mathf.Snapped(plane.X, snapAmount),
+						0,
+						Mathf.Snapped(plane.Z, snapAmount)
+					);
+					Vector3 rotatedSnappedPlane = dragRotation * (snapped * verticalize);
+					newpos = surfaceSnap + rotatedSnappedPlane + dragCenter;
+				}
+				Vector3 realoffset = newpos - item.Position;
+				_dragStartOrigin += realoffset;
+				item.SetGlobalPosition(newpos + arcOffset);
 				item.UpdateCurrentTransformCache();
 			}
 		}

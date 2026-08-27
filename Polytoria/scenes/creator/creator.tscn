@@ -631,7 +631,6 @@ button_pressed = true
 action_mode = 0
 button_group = SubResource("ButtonGroup_v0rtd")
 script = ExtResource("8_c8w7j")
-ToolMode = null
 
 [node name="Icon" type="TextureRect" parent="GUI/Ribbon/Buttons/Select" unique_id=75873074]
 layout_mode = 1
@@ -756,7 +755,7 @@ vertical_alignment = 2
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Snapping" type="VBoxContainer" parent="GUI/Ribbon/Buttons" unique_id=2133884039 node_paths=PackedStringArray("_moveCheck", "_moveValue", "_rotateCheck", "_rotateValue")]
+[node name="Snapping" type="VBoxContainer" parent="GUI/Ribbon/Buttons" unique_id=2133884039 node_paths=PackedStringArray("_moveCheck", "_moveValue", "_rotateCheck", "_rotateValue", "_rotateAlignCheck")]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
@@ -765,6 +764,7 @@ _moveCheck = NodePath("Move/Check")
 _moveValue = NodePath("Move/Value")
 _rotateCheck = NodePath("Rotate/Check")
 _rotateValue = NodePath("Rotate/Value")
+_rotateAlignCheck = NodePath("../Alignment/Check")
 
 [node name="Move" type="HBoxContainer" parent="GUI/Ribbon/Buttons/Snapping" unique_id=1273399493]
 layout_mode = 2
@@ -825,6 +825,29 @@ horizontal_alignment = 1
 vertical_alignment = 2
 
 [node name="Separator2" type="VSeparator" parent="GUI/Ribbon/Buttons" unique_id=204083408]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Alignment" type="VBoxContainer" parent="GUI/Ribbon/Buttons" unique_id=1434806598]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Check" type="CheckBox" parent="GUI/Ribbon/Buttons/Alignment" unique_id=1337395454]
+custom_minimum_size = Vector2(87, 56)
+layout_mode = 2
+size_flags_horizontal = 3
+action_mode = 0
+text = "Rotate"
+
+[node name="Label" type="Label" parent="GUI/Ribbon/Buttons/Alignment" unique_id=205097386]
+layout_mode = 2
+size_flags_vertical = 8
+text = "Alignment"
+horizontal_alignment = 1
+vertical_alignment = 2
+
+[node name="Separator3" type="VSeparator" parent="GUI/Ribbon/Buttons" unique_id=1661999198]
 layout_mode = 2
 mouse_filter = 2
 
@@ -1000,7 +1023,7 @@ anchor_top = 1.0
 anchor_bottom = 1.0
 grow_vertical = 0
 
-[node name="Separator3" type="VSeparator" parent="GUI/Ribbon/Buttons" unique_id=1661999198]
+[node name="Separator4" type="VSeparator" parent="GUI/Ribbon/Buttons" unique_id=1646011575]
 layout_mode = 2
 mouse_filter = 2
 
