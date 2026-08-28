@@ -31,6 +31,18 @@ public sealed partial class DockRegion : Control
 
 	public override void _ExitTree() => DockManager.UnregisterRegion(this);
 
+	public override void _Input(InputEvent @event)
+	{
+		if (!Visible || @event is not InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } button)
+			return;
+
+		Control? focusOwner = GetViewport().GuiGetFocusOwner();
+		if (focusOwner == null || !GetGlobalRect().HasPoint(button.Position) || focusOwner.GetGlobalRect().HasPoint(button.Position))
+			return;
+
+		focusOwner.ReleaseFocus();
+	}
+
 	public static bool CanReadDockData(Variant data)
 	{
 		return data.VariantType == Variant.Type.Dictionary
