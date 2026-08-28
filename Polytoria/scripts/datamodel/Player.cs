@@ -677,7 +677,7 @@ public sealed partial class Player : NPC
 			return;
 		}
 
-		Environment.RayResult? ray = Root.Environment.CurrentCamera?.ScreenPointToRay(Root.Input.MousePosition, passthroughMask: 1<<0);
+		Environment.RayResult? ray = Root.Environment.CurrentCamera?.ScreenPointToRay(Root.Input.MousePosition, passthroughMask: 1 << 0);
 		if (ray.HasValue && ray.Value.Instance is Physical p)
 		{
 			if (_mouseHoveringOn != null && _mouseHoveringOn != p)
@@ -795,7 +795,7 @@ public sealed partial class Player : NPC
 
 		if (@event.IsActionPressed("activate"))
 		{
-			Environment.RayResult? ray = Root.Environment.CurrentCamera?.ScreenPointToRay(Root.Input.MousePosition, passthroughMask: 1<<1);
+			Environment.RayResult? ray = Root.Environment.CurrentCamera?.ScreenPointToRay(Root.Input.MousePosition, passthroughMask: 1 << 1);
 			if (ray.HasValue && ray.Value.Instance is Physical p)
 			{
 				p.InvokeClicked(this);

@@ -285,7 +285,7 @@ public partial class Grabbable : Instance
 					}
 					else
 					{
-						RayResult? hit = Root.Environment.Raycast(rayOrigin, rayDir, ignoreList: [Parent], passthroughMask: 1<<2);
+						RayResult? hit = Root.Environment.Raycast(rayOrigin, rayDir, ignoreList: [Parent], passthroughMask: 1 << 2);
 						if (hit != null)
 						{
 							targetPos = hit.Value.Position;

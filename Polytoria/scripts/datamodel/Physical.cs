@@ -328,7 +328,7 @@ public partial class Physical : Dynamic
 	[Editable(CustomPropertyControl = "Bitmap32"), ScriptProperty]
 	public uint RayPassthrough
 	{
-		get => (uint)_rayPassthrough;
+		get => _rayPassthrough;
 		set
 		{
 			_rayPassthrough = value;

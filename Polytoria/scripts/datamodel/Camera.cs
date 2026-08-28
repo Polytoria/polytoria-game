@@ -966,13 +966,6 @@ public sealed partial class Camera : Dynamic
 		}
 	}
 
-	public (Vector3, Vector3) ProjectFromScreen(Vector2 screenPos)
-	{
-		Vector3 origin = Camera3D.ProjectRayOrigin(screenPos);
-		Vector3 dir = Camera3D.ProjectRayNormal(screenPos);
-		return (origin, dir);
-	}
-
 	[ScriptMethod]
 	public bool IsPositionInView(Vector3 pos)
 	{
@@ -1158,7 +1151,7 @@ public sealed partial class Camera : Dynamic
 		}
 	}
 
-	public RayResult? GetPlacementRay(Instance[]? ignoreList = null, uint passthroughMask = 0)
+	public RayResult? GetPlacementRay(Instance[]? ignoreList = null)
 	{
 		if (World.Current == null) throw new InvalidOperationException("World is null");
 		Transform3D globalTransform = GetGlobalTransform();
@@ -1166,7 +1159,7 @@ public sealed partial class Camera : Dynamic
 		// In GoDot the Z axis points to the Camera
 		Vector3 direction = -globalTransform.Basis.Z;
 
-		return World.Current.Environment.Raycast(origin, direction, 20, ignoreList, passthroughMask);
+		return World.Current.Environment.Raycast(origin, direction, 20, ignoreList);
 	}
 #endif
 }
