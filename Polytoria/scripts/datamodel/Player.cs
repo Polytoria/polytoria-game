@@ -680,12 +680,20 @@ public sealed partial class Player : NPC
 		Environment.RayResult? ray = Root.Environment.CurrentCamera?.ScreenPointToRay(Root.Input.MousePosition);
 		if (ray.HasValue && ray.Value.Instance is Physical p)
 		{
-			if (_mouseHoveringOn != null && _mouseHoveringOn != p)
+			if (_mouseHoveringOn != p)
 			{
-				_mouseHoveringOn.MouseExit.Invoke();
+				if (_mouseHoveringOn != null)
+				{
+					_mouseHoveringOn.MouseExit.Invoke();
+				}
+				_mouseHoveringOn = p;
+				_mouseHoveringOn.MouseEnter.Invoke();
 			}
-			_mouseHoveringOn = p;
-			_mouseHoveringOn.MouseEnter.Invoke();
+		}
+		else if (_mouseHoveringOn != null)
+		{
+			_mouseHoveringOn.MouseExit.Invoke();
+			_mouseHoveringOn = null;
 		}
 
 		if (FootFwdRaycast.IsColliding())
