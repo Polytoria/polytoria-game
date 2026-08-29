@@ -391,7 +391,7 @@ public sealed partial class Environment : Instance
 			ignoreRids.Add(colliderRid);
 
 			// possibly janky workaround for CanCollide=true parts being hit twice
-			if (instance == prevInstance) continue;
+			if (instance != null && instance == prevInstance) continue;
 			prevInstance = instance;
 
 			Vector3 hitPos = (Vector3)result["position"];
