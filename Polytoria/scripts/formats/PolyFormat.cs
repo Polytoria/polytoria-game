@@ -15,6 +15,7 @@ using Semver;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
@@ -99,16 +100,49 @@ public static partial class PolyFormat
 
 		switch (element.ValueKind)
 		{
+			case JsonValueKind.True:
+				if (targetType == typeof(bool)) return true;
+				break;
+			case JsonValueKind.False:
+				if (targetType == typeof(bool)) return false;
+				break;
+			case JsonValueKind.Number:
+				if (targetType == typeof(float)) return element.GetSingle();
+				if (targetType == typeof(int)) return element.GetInt32();
+				if (targetType == typeof(double)) return element.GetDouble();
+				if (targetType == typeof(uint)) return element.GetUInt32();
+				if (targetType == typeof(long)) return element.GetInt64();
+				break;
 			case JsonValueKind.String:
+				if (targetType == typeof(string)) return element.GetString();
 				if (targetType == typeof(Color))
-					return JsonSerializer.Deserialize(element.GetRawText(), PolyJSONGenerationContext.Default.Color);
+				{
+					string? hex = element.GetString();
+					return hex == null ? null : Color.FromString(hex, new Color(1, 1, 1));
+				}
 				break;
 			case JsonValueKind.Array:
 				// Handle Vector arrays
 				if (targetType == typeof(Vector2))
-					return JsonSerializer.Deserialize(element.GetRawText(), PolyJSONGenerationContext.Default.Vector2);
+				{
+					JsonElement.ArrayEnumerator e2 = element.EnumerateArray();
+					e2.MoveNext();
+					float v2x = e2.Current.GetSingle();
+					e2.MoveNext();
+					float v2y = e2.Current.GetSingle();
+					return new Vector2(v2x, v2y);
+				}
 				if (targetType == typeof(Vector3))
-					return JsonSerializer.Deserialize(element.GetRawText(), PolyJSONGenerationContext.Default.Vector3);
+				{
+					JsonElement.ArrayEnumerator e3 = element.EnumerateArray();
+					e3.MoveNext();
+					float v3x = e3.Current.GetSingle();
+					e3.MoveNext();
+					float v3y = e3.Current.GetSingle();
+					e3.MoveNext();
+					float v3z = e3.Current.GetSingle();
+					return new Vector3(v3x, v3y, v3z);
+				}
 				if (targetType == typeof(Quaternion))
 					return JsonSerializer.Deserialize(element.GetRawText(), PolyJSONGenerationContext.Default.Quaternion);
 				if (targetType == typeof(Variant))
@@ -153,6 +187,25 @@ public static partial class PolyFormat
 		}
 	}
 
+	public sealed class LoadPacing
+	{
+		private readonly long _budgetTicks;
+		private long _sliceStart;
+
+		public LoadPacing(double budgetMs)
+		{
+			_budgetTicks = (long)(Stopwatch.Frequency * budgetMs / 1000.0);
+			Begin();
+		}
+
+		public void Begin()
+		{
+			_sliceStart = Stopwatch.GetTimestamp();
+		}
+
+		public bool Exceeded => Stopwatch.GetTimestamp() - _sliceStart > _budgetTicks;
+	}
+
 	public static Instance? LoadModel(World root, byte[] content, NetworkedObject? parent = null, PolyObject? overrides = null, PolyLoadContext? globalLoadContext = null, PolyLoadContext? subLoadContext = null)
 	{
 		PolyRootData data = ReadRootDataBytes(content);
@@ -161,8 +214,13 @@ public static partial class PolyFormat
 
 	public static Instance? LoadModelFromRootData(World root, PolyRootData data, NetworkedObject? parent = null, PolyObject? overrides = null, PolyLoadContext? globalLoadContext = null, PolyLoadContext? subLoadContext = null)
 	{
+		return RunSync(LoadModelFromRootDataAsync(root, data, parent, overrides, globalLoadContext, subLoadContext));
+	}
+
+	private static async ValueTask<Instance?> LoadModelFromRootDataAsync(World root, PolyRootData data, NetworkedObject? parent = null, PolyObject? overrides = null, PolyLoadContext? globalLoadContext = null, PolyLoadContext? subLoadContext = null)
+	{
 		parent ??= root.TemporaryContainer;
-		PolyLoadContext context = new() { RootData = data, Root = root, LoadType = data.FileType, IndexToFile = subLoadContext?.IndexToFile ?? [], AssignModelRoot = globalLoadContext?.AssignModelRoot ?? true };
+		PolyLoadContext context = new() { RootData = data, Root = root, LoadType = data.FileType, IndexToFile = subLoadContext?.IndexToFile ?? [], AssignModelRoot = globalLoadContext?.AssignModelRoot ?? true, Pacing = globalLoadContext?.Pacing };
 
 		if (globalLoadContext != null)
 		{
@@ -173,7 +231,7 @@ public static partial class PolyFormat
 		{
 			foreach (PolyObject item in data.NonInstanceObjects)
 			{
-				FromPolyObject(item, context);
+				await FromPolyObjectAsync(item, context);
 			}
 
 			context.IsRootHint = true;
@@ -184,7 +242,7 @@ public static partial class PolyFormat
 
 			PolyObject rootObj = data.Objects[0];
 
-			NetworkedObject? netObj = FromPolyObject(rootObj, context, parent);
+			NetworkedObject? netObj = await FromPolyObjectAsync(rootObj, context, parent);
 
 			if (netObj is Instance rootInstance)
 			{
@@ -197,7 +255,7 @@ public static partial class PolyFormat
 				// Add childs
 				foreach (PolyObject child in rootObj.Children)
 				{
-					FromPolyObject(child, context, netObj);
+					await FromPolyObjectAsync(child, context, netObj);
 				}
 			}
 
@@ -205,7 +263,7 @@ public static partial class PolyFormat
 			{
 				if (overrides != null && globalLoadContext != null)
 				{
-					LoadEditableOverrides(overrides, i, context, globalLoadContext);
+					await LoadEditableOverridesAsync(overrides, i, context, globalLoadContext);
 				}
 				if (rootObj.LinkedModel != null)
 				{
@@ -266,14 +324,37 @@ public static partial class PolyFormat
 		if (rawdata.Length == 0) return;
 
 		PolyRootData data = ReadRootDataBytes(rawdata);
-		InternalLoadWorld(root, data, forceMigrateCords);
+		RunSync(InternalLoadWorldAsync(root, data, forceMigrateCords, null));
 	}
 
-	private static void InternalLoadWorld(World root, PolyRootData data, bool forceMigrateCords = false)
+	public static async Task LoadWorldAsync(World root, byte[] rawdata, bool forceMigrateCords = false, double sliceBudgetMs = 12)
+	{
+		// Empty world file
+		if (rawdata.Length == 0) return;
+
+		PolyRootData data = ReadRootDataBytes(rawdata);
+		await InternalLoadWorldAsync(root, data, forceMigrateCords, new LoadPacing(sliceBudgetMs));
+	}
+
+	private static void RunSync(ValueTask task)
+	{
+		if (!task.IsCompleted)
+			throw new InvalidOperationException("Paced load requires the async load path");
+		task.GetAwaiter().GetResult();
+	}
+
+	private static T RunSync<T>(ValueTask<T> task)
+	{
+		if (!task.IsCompleted)
+			throw new InvalidOperationException("Paced load requires the async load path");
+		return task.Result;
+	}
+
+	private static async ValueTask InternalLoadWorldAsync(World root, PolyRootData data, bool forceMigrateCords, LoadPacing? pacing)
 	{
 		Stopwatch sw = new();
 		sw.Start();
-		PolyLoadContext context = new() { RootData = data, Root = root, ForceCordMigration = forceMigrateCords };
+		PolyLoadContext context = new() { RootData = data, Root = root, ForceCordMigration = forceMigrateCords, Pacing = pacing };
 
 		// Empty world
 		if (data.Objects == null || data.Objects.Length == 0) return;
@@ -284,17 +365,28 @@ public static partial class PolyFormat
 
 		foreach (PolyObject item in data.NonInstanceObjects)
 		{
-			FromPolyObject(item, context);
+			await FromPolyObjectAsync(item, context);
 		}
 
 		foreach (PolyObject item in rootObj.Children)
 		{
-			FromPolyObject(item, context, root);
+			await FromPolyObjectAsync(item, context, root);
 		}
 	}
 
 	public static NetworkedObject? FromPolyObject(PolyObject obj, PolyLoadContext loadContext, NetworkedObject? parent = null)
 	{
+		return RunSync(FromPolyObjectAsync(obj, loadContext, parent));
+	}
+
+	private static async ValueTask<NetworkedObject?> FromPolyObjectAsync(PolyObject obj, PolyLoadContext loadContext, NetworkedObject? parent = null)
+	{
+		if (loadContext.Pacing is { Exceeded: true } pacing)
+		{
+			await Globals.Singleton.WaitFrame();
+			pacing.Begin();
+		}
+
 		string className = ConvertClassName(obj.ClassName);
 
 		// Prevent spawning player
@@ -339,7 +431,7 @@ public static partial class PolyFormat
 
 			try
 			{
-				netObj = LoadModelFromRootData(loadContext.Root, data, parent, obj, loadContext);
+				netObj = await LoadModelFromRootDataAsync(loadContext.Root, data, parent, obj, loadContext);
 			}
 			finally
 			{
@@ -414,7 +506,7 @@ public static partial class PolyFormat
 			// Load child
 			foreach (PolyObject child in obj.Children)
 			{
-				FromPolyObject(child, loadContext, netObj);
+				await FromPolyObjectAsync(child, loadContext, netObj);
 			}
 		}
 
@@ -431,7 +523,7 @@ public static partial class PolyFormat
 		return netObj;
 	}
 
-	private static void LoadEditableOverrides(PolyObject obj, Instance rootInstance, PolyLoadContext loadContext, PolyLoadContext globalLoadContext)
+	private static async ValueTask LoadEditableOverridesAsync(PolyObject obj, Instance rootInstance, PolyLoadContext loadContext, PolyLoadContext globalLoadContext)
 	{
 		// NOTE: Retrieve via ID doesn't work for some reason
 		foreach (PolyObject child in GetDescendants(obj))
@@ -455,7 +547,7 @@ public static partial class PolyFormat
 			if (rootInstance.FindChild(child.Name) == null)
 			{
 				// Add extra children
-				FromPolyObject(child, globalLoadContext, rootInstance);
+				await FromPolyObjectAsync(child, globalLoadContext, rootInstance);
 			}
 		}
 	}
@@ -514,6 +606,7 @@ public static partial class PolyFormat
 		Type dataModelType = netObj.GetType();
 
 		Dictionary<string, PropertyInfo> propertyCache = GetOrCreatePropertyCache(dataModelType);
+		Dictionary<PropertyInfo, Action<object, object?>> setterCache = GetOrCreateSetterCache(dataModelType);
 
 		foreach (KeyValuePair<string, object?> prop in obj.Properties)
 		{
@@ -583,13 +676,53 @@ public static partial class PolyFormat
 
 			try
 			{
-				property.SetValue(netObj, val);
+				if (setterCache.TryGetValue(property, out Action<object, object?>? setter))
+				{
+					setter(netObj, val);
+				}
+				else
+				{
+					property.SetValue(netObj, val);
+				}
 			}
 			catch (Exception ex)
 			{
 				GD.PushError(ex);
 			}
 		}
+	}
+
+	private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Type, Dictionary<PropertyInfo, Action<object, object?>>> _setterCache = [];
+
+	private static Dictionary<PropertyInfo, Action<object, object?>> GetOrCreateSetterCache(
+		[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type type)
+	{
+		return _setterCache.GetValue(type, static t =>
+		{
+			Dictionary<PropertyInfo, Action<object, object?>> map = [];
+			if (!System.Runtime.CompilerServices.RuntimeFeature.IsDynamicCodeSupported)
+			{
+				return map;
+			}
+
+			foreach (PropertyInfo prop in GetOrCreatePropertyCache(t).Values)
+			{
+				if (!prop.CanWrite || prop.SetMethod == null || prop.DeclaringType == null) continue;
+				try
+				{
+					System.Linq.Expressions.ParameterExpression objParam = System.Linq.Expressions.Expression.Parameter(typeof(object));
+					System.Linq.Expressions.ParameterExpression valParam = System.Linq.Expressions.Expression.Parameter(typeof(object));
+					System.Linq.Expressions.Expression body = System.Linq.Expressions.Expression.Assign(
+						System.Linq.Expressions.Expression.Property(System.Linq.Expressions.Expression.Convert(objParam, prop.DeclaringType), prop),
+						System.Linq.Expressions.Expression.Convert(valParam, prop.PropertyType));
+					map[prop] = System.Linq.Expressions.Expression.Lambda<Action<object, object?>>(body, objParam, valParam).Compile();
+				}
+				catch
+				{
+				}
+			}
+			return map;
+		});
 	}
 
 	private static Dictionary<string, PropertyInfo> GetOrCreatePropertyCache(
@@ -894,6 +1027,7 @@ public static partial class PolyFormat
 		public bool DoParentCheck = true;
 		public PolyFileType LoadType = PolyFileType.World;
 		public bool InsertChild = true;
+		public LoadPacing? Pacing;
 		public HashSet<string> LoadingModelChain = [];
 		public Dictionary<string, string> IndexToFile = [];
 		public Dictionary<string, PolyRootData> LoadedModel = [];
