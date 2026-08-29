@@ -162,6 +162,8 @@ public class LuaMetatable : LuaObject
 			return 1;
 		}
 
+		string? stringKey = null;
+
 		if (targetObject is Instance instance)
 		{
 			LuaType t = state.Type(2);
@@ -171,17 +173,17 @@ public class LuaMetatable : LuaObject
 
 			if (t == LuaType.String)
 			{
-				string? indexK = state.ToString(2);
+				stringKey ??= state.ToString(2);
 
-				if (indexK != null)
+				if (stringKey != null)
 				{
 					if (script.Compatibility)
 					{
-						child = instance.LegacyFindChild(indexK);
+						child = instance.LegacyFindChild(stringKey);
 					}
 					else
 					{
-						child = instance.FindChild(indexK);
+						child = instance.FindChild(stringKey);
 					}
 				}
 			}
@@ -200,7 +202,7 @@ public class LuaMetatable : LuaObject
 
 		// stack[1] = table
 		// stack[2] = key
-		string? key = state.ToString(2);
+		string? key = stringKey ?? state.ToString(2);
 
 		if (key == null) { return 0; }
 

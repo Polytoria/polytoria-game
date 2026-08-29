@@ -65,7 +65,7 @@ public sealed partial class InteractionPrompt : Physical
 			_uiMode = value;
 			_prompt.GetNode<Sprite3D>("Sprite3D").Visible = _uiMode == UIModeEnum.Default;
 			_gui3Ds.Clear();
-			foreach (var child in GetChildren())
+			foreach (var child in Children)
 			{
 				if (child is GUI3D)
 				{

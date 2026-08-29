@@ -83,6 +83,77 @@ public class DatamodelTest
 	}
 
 	[Fact]
+	public void Test_NetworkPathCacheInvalidation()
+	{
+		var a = World.New<Part>(World.Environment);
+		a.Name = "PathA";
+		var b = World.New<Part>();
+		b.Name = "PathB";
+		b.Parent = a;
+
+		string pathBefore = b.NetworkPath;
+		Assert.EndsWith("PathA.PathB", pathBefore);
+		Assert.Equal(pathBefore, b.NetworkPath);
+
+		a.Name = "PathRenamed";
+		Assert.EndsWith("PathRenamed.PathB", b.NetworkPath);
+
+		var c = World.New<Part>(World.Environment);
+		c.Name = "PathC";
+		b.Parent = c;
+		Assert.EndsWith("PathC.PathB", b.NetworkPath);
+
+		b.Name = "PathB2";
+		Assert.EndsWith("PathC.PathB2", b.NetworkPath);
+
+		a.Delete();
+		c.Delete();
+	}
+
+	[Fact]
+	public void Test_FindChildAfterRename()
+	{
+		var parent = World.New<Part>(World.Environment);
+		parent.Name = "RenameParent";
+		var child = World.New<Part>();
+		child.Name = "OldName";
+		child.Parent = parent;
+
+		Assert.Equal(child, parent.FindChild("OldName"));
+
+		child.Name = "NewName";
+		Assert.Null(parent.FindChild("OldName"));
+		Assert.Equal(child, parent.FindChild("NewName"));
+
+		parent.Delete();
+	}
+
+	[Fact]
+	public void Test_FindChildDuplicatePromotion()
+	{
+		var holder = World.New<Part>();
+		holder.Name = "DupHolder";
+		holder.Parent = World.TemporaryContainer;
+
+		var first = World.New<Part>();
+		first.Name = "Dup";
+		first.Parent = holder;
+
+		var second = World.New<Part>();
+		second.Name = "Dup";
+		second.Parent = holder;
+
+		Assert.Equal("Dup", first.Name);
+		Assert.Equal("Dup", second.Name);
+		Assert.Equal(first, holder.FindChild("Dup"));
+
+		first.Delete();
+		Assert.Equal(second, holder.FindChild("Dup"));
+
+		holder.Delete();
+	}
+
+	[Fact]
 	public void Test_NameEnforcement()
 	{
 		// Environment

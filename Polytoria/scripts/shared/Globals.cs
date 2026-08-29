@@ -11,6 +11,7 @@ using System.IO;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Resources;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -85,7 +86,7 @@ public sealed partial class Globals : Node
 	/// <summary>
 	/// Determine RPC logging. "rpclog" can be set in feature flags to turn this on
 	/// </summary>
-	public static bool UseLogRPC { get; private set; } = false;
+	public static bool UseLogRPC { get; internal set; } = false;
 	/// <summary>
 	/// Determine network stack trace logging in network errors, useful if you want to see where RPC was called from in the origin.
 	/// "nettrace" can be set in feature flags to turn this on (only on the error issuer is needed). This do consume a portion of bandwidth
@@ -127,13 +128,24 @@ public sealed partial class Globals : Node
 	public static event Action<double>? GodotPhysicsProcess;
 	public static event Action<int>? GodotNotification;
 
-	private readonly static ConditionalWeakTable<string, Type> _typesCache = [];
+	private readonly static ConcurrentDictionary<string, Type?> _typesCache = new(StringComparer.Ordinal);
+
+	private static readonly string[] _datamodelNamespaces =
+	[
+		"Polytoria.Datamodel.",
+		"Polytoria.Datamodel.Services.",
+		"Polytoria.Datamodel.Creator.",
+		"Polytoria.Datamodel.Resources.",
+	];
+
+	private static readonly Dictionary<Type, Func<NetworkedObject>> _instanceFactories = [];
 
 	static Globals()
 	{
 		NativeLibrary.SetDllImportResolver(Assembly.GetExecutingAssembly(), DllImportResolver);
 
 		BaseAsset.RegisterGeneratedAssetTypes();
+		GeneratedInstanceFactory.Register(_instanceFactories);
 	}
 
 	public override void _EnterTree()
@@ -224,29 +236,22 @@ public sealed partial class Globals : Node
 	}
 
 	[return: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]
-	private static Type? GetTypeByName(string className)
+	internal static Type? GetTypeByName(string className)
 	{
 		if (_typesCache.TryGetValue(className, out Type? t))
 			return t;
 
-		string[] namespacesToCheck =
-		[
-			"Polytoria.Datamodel.",
-		"Polytoria.Datamodel.Services.",
-		"Polytoria.Datamodel.Creator.",
-		"Polytoria.Datamodel.Resources.",
-	];
-
-		foreach (string ns in namespacesToCheck)
+		foreach (string ns in _datamodelNamespaces)
 		{
 			t = Type.GetType(ns + className);
 			if (t != null)
 			{
-				_typesCache.AddOrUpdate(className, t);
-				return t;
+				break;
 			}
 		}
-		return null;
+
+		_typesCache[className] = t;
+		return t;
 	}
 
 	public static NetworkedObject? LoadNetworkedObject(string className, World? root = null, Action<NetworkedObject>? preInit = null)
@@ -254,9 +259,16 @@ public sealed partial class Globals : Node
 		Type? type = GetTypeByName(className);
 		if (type != null)
 		{
-			object? obj = Activator.CreateInstance(type);
+			object? obj;
+			using (PTProfiler.Scope("spawn.activator"))
+			{
+				obj = _instanceFactories.TryGetValue(type, out Func<NetworkedObject>? factory)
+					? factory()
+					: Activator.CreateInstance(type);
+			}
 			if (obj is NetworkedObject netObj)
 			{
+				using var _ = PTProfiler.Scope("spawn.postinit");
 				netObj.NameOverride = className;
 				preInit?.Invoke(netObj);
 				netObj.Root = root!;

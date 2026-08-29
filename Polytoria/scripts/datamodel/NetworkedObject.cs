@@ -36,8 +36,11 @@ public partial class NetworkedObject : IScriptObject
 	private bool _isReplicating = true;
 	private bool _isDeleted = false;
 
-	private bool _processRegistered = false;
-	private bool _physicsProcessRegistered = false;
+	private static readonly List<NetworkedObject> _processList = [];
+	private static readonly List<NetworkedObject> _physicsProcessList = [];
+	private static bool _dispatchHooked;
+	private int _processIndex = -1;
+	private int _physicsProcessIndex = -1;
 
 	private static readonly ConditionalWeakTable<Type, PropertyInfo[]> _editablePropertiesCache = [];
 	private static readonly ConditionalWeakTable<Type, PropertyInfo[]> _scriptPropertiesCache = [];
@@ -45,6 +48,34 @@ public partial class NetworkedObject : IScriptObject
 	private static readonly ConcurrentDictionary<NetworkedObject, Node> _netObjToProxy = new();
 	private static readonly ConcurrentDictionary<Node, NetworkedObject> _proxyToNetObj = new();
 	private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo?>> _syncPropertyByNameCache = new();
+	private static readonly ConcurrentDictionary<Type, TypeFlags> _typeFlagsCache = new();
+
+	[Flags]
+	private enum TypeFlags
+	{
+		None = 0,
+		Static = 1,
+		Internal = 2,
+		Instantiable = 4,
+		NoSync = 8
+	}
+
+	private static TypeFlags GetTypeFlags(Type type) => _typeFlagsCache.GetOrAdd(type, static t =>
+	{
+		TypeFlags flags = TypeFlags.None;
+		if (t.IsDefined(typeof(StaticAttribute), false)) flags |= TypeFlags.Static;
+		if (t.IsDefined(typeof(InternalAttribute), false)) flags |= TypeFlags.Internal;
+		if (t.IsDefined(typeof(InstantiableAttribute), false)) flags |= TypeFlags.Instantiable;
+		if (t.IsDefined(typeof(NoSyncAttribute))) flags |= TypeFlags.NoSync;
+		return flags;
+	});
+
+	private bool HasTypeFlag(TypeFlags flag) => (GetTypeFlags(GetType()) & flag) != 0;
+
+	internal static long PathVersion;
+	private string? _cachedNetworkPath;
+	private long _cachedNetworkPathVersion = -1;
+	private string? _cachedRpcTarget;
 
 	private static readonly Dictionary<Type, Dictionary<string, int>> _typeRpcIdMap = [];
 	private static readonly Dictionary<Type, Dictionary<int, MethodInfo>> _typeRpcMethodMap = [];
@@ -81,9 +112,12 @@ public partial class NetworkedObject : IScriptObject
 				preI.ChildRemoved.Invoke(selfpreI);
 			}
 
-			UnregisterName();
-			_networkParent = value;
-			ReenforceName();
+			using (PTProfiler.Scope("netparent.names"))
+			{
+				UnregisterName();
+				_networkParent = value;
+				ReenforceName();
+			}
 
 			if (_networkParent != null && this is not Instance)
 			{
@@ -94,15 +128,18 @@ public partial class NetworkedObject : IScriptObject
 			{
 				if (!InvokedEntry)
 				{
+					using var _ = PTProfiler.Scope("netparent.initentry");
 					InitEntry();
 				}
 				else
 				{
+					using var _ = PTProfiler.Scope("netparent.entertree");
 					InvokeEnterTree();
 				}
 
 				try
 				{
+					using var _ = PTProfiler.Scope("netparent.postreparent");
 					PostReparent();
 				}
 				catch (Exception ex)
@@ -128,20 +165,19 @@ public partial class NetworkedObject : IScriptObject
 	{
 		get
 		{
-			NetworkedObject? instance = this;
-			List<string> ancestors = [];
-			while (instance != null)
+			long version = PathVersion;
+			if (_cachedNetworkPath != null && _cachedNetworkPathVersion == version)
 			{
-				string name = instance.Name;
-				if (instance is not Instance)
-				{
-					name = "+" + name;
-				}
-				ancestors.Add(name);
-				instance = instance.NetworkParent;
+				return _cachedNetworkPath;
 			}
-			ancestors.Reverse();
-			return string.Join('.', ancestors);
+
+			string segment = this is Instance ? Name : "+" + Name;
+			NetworkedObject? parent = NetworkParent;
+			string path = parent == null ? segment : parent.NetworkPath + "." + segment;
+
+			_cachedNetworkPath = path;
+			_cachedNetworkPathVersion = version;
+			return path;
 		}
 	}
 
@@ -168,7 +204,7 @@ public partial class NetworkedObject : IScriptObject
 
 			string setto = value;
 
-			if (GetType().IsDefined(typeof(StaticAttribute), false))
+			if (HasTypeFlag(TypeFlags.Static))
 				throw new InvalidOperationException($"Cannot set Name on static type '{GetType().Name}'.");
 			if (string.IsNullOrWhiteSpace(setto))
 				setto = ClassName;
@@ -178,6 +214,7 @@ public partial class NetworkedObject : IScriptObject
 			}
 			UnregisterName();
 			_name = EnforceName(setto);
+			PathVersion++;
 			RegisterName();
 			if (this is Instance postI)
 			{
@@ -249,6 +286,7 @@ public partial class NetworkedObject : IScriptObject
 		internal set
 		{
 			_networkedObjectID = value;
+			_cachedRpcTarget = null;
 			Root?.RegisterNetworkedObject(this);
 		}
 	}
@@ -276,8 +314,8 @@ public partial class NetworkedObject : IScriptObject
 		}
 	}
 
-	public bool IsProcessRegistered => _processRegistered;
-	public bool IsPhysicsProcessRegistered => _physicsProcessRegistered;
+	public bool IsProcessRegistered => _processIndex != -1;
+	public bool IsPhysicsProcessRegistered => _physicsProcessIndex != -1;
 
 	/// <summary>
 	/// Set to false if InvokePropReady is called manually (eg. after properties set)
@@ -342,6 +380,7 @@ public partial class NetworkedObject : IScriptObject
 
 	private Dictionary<string, NetworkedObject>? _uniqueNames;
 	internal Dictionary<string, NetworkedObject> UniqueNames => _uniqueNames ??= [];
+	internal Dictionary<string, int>? _nameHints;
 
 	[ScriptProperty] public PTSignal TreeEntered { get; private set; } = new();
 	[ScriptProperty] public PTSignal TreeExited { get; private set; } = new();
@@ -350,10 +389,14 @@ public partial class NetworkedObject : IScriptObject
 
 	public NetworkedObject()
 	{
-		InitializeRpcMethods();
+		using (PTProfiler.Scope("spawn.rpcinit"))
+		{
+			InitializeRpcMethods();
+		}
 
 		// Ignore if use node is false
 		if (!Globals.UseNodes) return;
+		using var _ = PTProfiler.Scope("spawn.gdnode");
 		Node n = CreateGDNode();
 		OverrideGDNode(n);
 		InitGDNode();
@@ -361,14 +404,24 @@ public partial class NetworkedObject : IScriptObject
 
 	internal void ReenforceName()
 	{
-		UnregisterName();
-		_name = EnforceName(_name);
-		RegisterName();
+		using (PTProfiler.Scope("name.unregister"))
+		{
+			UnregisterName();
+		}
+		using (PTProfiler.Scope("name.enforce"))
+		{
+			_name = EnforceName(_name);
+		}
+		PathVersion++;
+		using (PTProfiler.Scope("name.register"))
+		{
+			RegisterName();
+		}
 	}
 
 	public bool TrySetName(string value)
 	{
-		if (GetType().IsDefined(typeof(StaticAttribute), false)
+		if (HasTypeFlag(TypeFlags.Static)
 			|| string.IsNullOrWhiteSpace(value))
 			return false;
 
@@ -395,9 +448,24 @@ public partial class NetworkedObject : IScriptObject
 
 		int lowestAvailable = startNumber > 0 ? startNumber + 1 : 2;
 
+		Dictionary<string, int>? hints = null;
+		if (startNumber == 0)
+		{
+			hints = NetworkParent._nameHints ??= [];
+			if (hints.TryGetValue(baseName, out int hint) && hint > lowestAvailable)
+			{
+				lowestAvailable = hint;
+			}
+		}
+
 		while (uniqueNames.ContainsKey($"{baseName}{lowestAvailable}"))
 		{
 			lowestAvailable++;
+		}
+
+		if (hints != null)
+		{
+			hints[baseName] = lowestAvailable + 1;
 		}
 
 		return $"{baseName}{lowestAvailable}";
@@ -479,6 +547,16 @@ public partial class NetworkedObject : IScriptObject
 			&& ReferenceEquals(currentOwner, this))
 		{
 			NetworkParent.UniqueNames.Remove(_name);
+
+			Dictionary<string, int>? hints = NetworkParent._nameHints;
+			if (hints != null && hints.Count > 0)
+			{
+				(string baseName, int number) = GetBaseNameAndNumber(_name);
+				if (number >= 2 && hints.TryGetValue(baseName, out int hint) && number < hint)
+				{
+					hints[baseName] = number;
+				}
+			}
 		}
 	}
 
@@ -603,15 +681,30 @@ public partial class NetworkedObject : IScriptObject
 
 		if (Globals.UseNodes)
 		{
-			EnterTree();
-			Init();
-			InitDefaultValues();
+			using (PTProfiler.Scope("initentry.entertree"))
+			{
+				EnterTree();
+			}
+			using (PTProfiler.Scope("initentry.init"))
+			{
+				Init();
+			}
+			using (PTProfiler.Scope("initentry.defaults"))
+			{
+				InitDefaultValues();
+			}
 
 			if (CallInitOverrides)
+			{
+				using var _ = PTProfiler.Scope("initentry.overrides");
 				InitOverrides();
+			}
 
 #if DEBUG
-			ValidateProcessRegistration();
+			using (PTProfiler.Scope("initentry.validate"))
+			{
+				ValidateProcessRegistration();
+			}
 #endif
 
 			if (AutoInvokeReady)
@@ -784,9 +877,11 @@ public partial class NetworkedObject : IScriptObject
 	{
 		if (this is Instance i)
 		{
-			foreach (Instance item in i.GetChildren())
+			List<Instance> children = i.Children;
+			for (int c = children.Count - 1; c >= 0; c--)
 			{
-				item.InvokeEnterTree();
+				if (c >= children.Count) continue;
+				children[c].InvokeEnterTree();
 			}
 		}
 
@@ -812,9 +907,11 @@ public partial class NetworkedObject : IScriptObject
 		{
 			if (this is Instance i)
 			{
-				foreach (Instance item in i.GetChildren())
+				List<Instance> children = i.Children;
+				for (int c = children.Count - 1; c >= 0; c--)
 				{
-					item.InvokeExitTree();
+					if (c >= children.Count) continue;
+					children[c].InvokeExitTree();
 				}
 			}
 
@@ -959,10 +1056,14 @@ public partial class NetworkedObject : IScriptObject
 		// Flush pending outright (for objects that may exists before, such as SunLight/Camera)
 		if (Root != null && Root.Network != null)
 		{
+			using var _ = PTProfiler.Scope("ready.flush");
 			FlushPendings();
 		}
 
-		Root?.Network?.ReplicateSync.CountInstanceLoaded(this);
+		using (PTProfiler.Scope("ready.count"))
+		{
+			Root?.Network?.ReplicateSync.CountInstanceLoaded(this);
+		}
 
 		if (IsPropReady) return;
 		IsPropReady = true;
@@ -974,9 +1075,13 @@ public partial class NetworkedObject : IScriptObject
 			{
 				if (Root.Network.IsServer && AutoReplicate)
 				{
+					using var _ = PTProfiler.Scope("ready.broadcast");
 					BroadcastReplicate();
 				}
-				Root.ReportNetworkObjectEnterTree(this);
+				using (PTProfiler.Scope("ready.report"))
+				{
+					Root.ReportNetworkObjectEnterTree(this);
+				}
 			}
 		}
 
@@ -990,7 +1095,10 @@ public partial class NetworkedObject : IScriptObject
 		}
 
 		NetPropertiesReady?.Invoke();
-		Ready();
+		using (PTProfiler.Scope("ready.readycall"))
+		{
+			Ready();
+		}
 		Root?.ReportNetworkedObjectReady(this);
 	}
 
@@ -1322,7 +1430,12 @@ public partial class NetworkedObject : IScriptObject
 	internal NetworkedObject[] GetNetworkDescendants()
 	{
 		List<NetworkedObject> instances = [];
+		CollectNetworkDescendants(instances);
+		return [.. instances];
+	}
 
+	private void CollectNetworkDescendants(List<NetworkedObject> instances)
+	{
 		if (_nonInstanceChildren != null) instances.AddRange(_nonInstanceChildren);
 
 		if (this is Instance i)
@@ -1330,19 +1443,21 @@ public partial class NetworkedObject : IScriptObject
 			foreach (Instance child in i.Children)
 			{
 				instances.Add(child);
-				// Recursively add descendants
-				instances.AddRange(child.GetNetworkDescendants());
+				child.CollectNetworkDescendants(instances);
 			}
 		}
-
-		return [.. instances];
 	}
 
 	internal NetworkedObject[] GetReplicateDescendants()
 	{
 		List<NetworkedObject> instances = [];
+		CollectReplicateDescendants(instances);
+		return [.. instances];
+	}
 
-		if (!ShouldReplicateChild) return [];
+	private void CollectReplicateDescendants(List<NetworkedObject> instances)
+	{
+		if (!ShouldReplicateChild) return;
 
 		if (_nonInstanceChildren != null) instances.AddRange(_nonInstanceChildren);
 
@@ -1351,12 +1466,9 @@ public partial class NetworkedObject : IScriptObject
 			foreach (Instance child in i.Children)
 			{
 				instances.Add(child);
-				// Recursively add descendants
-				instances.AddRange(child.GetReplicateDescendants());
+				child.CollectReplicateDescendants(instances);
 			}
 		}
-
-		return [.. instances];
 	}
 
 	internal NetworkedObject[] GetNetworkedChildren()
@@ -1545,7 +1657,7 @@ public partial class NetworkedObject : IScriptObject
 	{
 		NetworkedObject netObj = Globals.LoadNetworkedObject(className) ?? throw new Exception(className + " doesn't exist");
 
-		if (!netObj.GetType().IsDefined(typeof(InstantiableAttribute), false))
+		if ((GetTypeFlags(netObj.GetType()) & TypeFlags.Instantiable) == 0)
 		{
 			netObj.Delete();
 			throw new Exception(className + " is not Instantiable");
@@ -1721,8 +1833,9 @@ public partial class NetworkedObject : IScriptObject
 	private string ProcessRpcTarget()
 	{
 		// If this is marked as no sync, use network path instead. as ID will not be available
-		if (GetType().IsDefined(typeof(NoSyncAttribute))) return NetworkPath;
-		return string.IsNullOrEmpty(NetworkedObjectID) ? NetworkPath : "i:" + NetworkedObjectID;
+		if (HasTypeFlag(TypeFlags.NoSync)) return NetworkPath;
+		if (string.IsNullOrEmpty(NetworkedObjectID)) return NetworkPath;
+		return _cachedRpcTarget ??= "i:" + NetworkedObjectID;
 	}
 
 	public void RpcId(int id, string methodName, params object?[]? args)
@@ -1832,8 +1945,8 @@ public partial class NetworkedObject : IScriptObject
 
 	internal void InternalDestroy(bool forceDestroy)
 	{
-		if (GetType().IsDefined(typeof(StaticAttribute), false) && !forceDestroy) throw new InvalidOperationException("Cannot destroy a static class");
-		if (GetType().IsDefined(typeof(InternalAttribute), false) && !forceDestroy) throw new InvalidOperationException("Cannot destroy an internal class");
+		if (HasTypeFlag(TypeFlags.Static) && !forceDestroy) throw new InvalidOperationException("Cannot destroy a static class");
+		if (HasTypeFlag(TypeFlags.Internal) && !forceDestroy) throw new InvalidOperationException("Cannot destroy an internal class");
 		if (this is Player && !forceDestroy) throw new InvalidOperationException("Cannot destroy a player, use Kick instead.");
 		if (IsDeleted) return;
 
@@ -1875,6 +1988,7 @@ public partial class NetworkedObject : IScriptObject
 
 	internal void SetNetworkParent(NetworkedObject newParent, bool force = false)
 	{
+		using var _ = PTProfiler.Scope("spawn.setparent");
 		if (this is Instance ri && newParent is Instance pi)
 		{
 			if (force)
@@ -1906,21 +2020,70 @@ public partial class NetworkedObject : IScriptObject
 		InitGDNode();
 	}
 
+	private static void EnsureDispatchHooked()
+	{
+		if (_dispatchHooked) return;
+		_dispatchHooked = true;
+		Globals.GodotProcess += DispatchProcess;
+		Globals.GodotPhysicsProcess += DispatchPhysicsProcess;
+	}
+
+	private static void DispatchProcess(double delta)
+	{
+		for (int i = 0; i < _processList.Count; i++)
+		{
+			_processList[i].Process(delta);
+		}
+	}
+
+	private static void DispatchPhysicsProcess(double delta)
+	{
+		for (int i = 0; i < _physicsProcessList.Count; i++)
+		{
+			_physicsProcessList[i].PhysicsProcess(delta);
+		}
+	}
+
+	private static void RegistryAdd(List<NetworkedObject> list, NetworkedObject obj, ref int index)
+	{
+		if (index != -1) return;
+		EnsureDispatchHooked();
+		index = list.Count;
+		list.Add(obj);
+	}
+
+	private static void RegistryRemove(List<NetworkedObject> list, ref int index, bool physics)
+	{
+		if (index == -1) return;
+		int lastIndex = list.Count - 1;
+		if (index != lastIndex)
+		{
+			NetworkedObject moved = list[lastIndex];
+			list[index] = moved;
+			if (physics)
+			{
+				moved._physicsProcessIndex = index;
+			}
+			else
+			{
+				moved._processIndex = index;
+			}
+		}
+		list.RemoveAt(lastIndex);
+		index = -1;
+	}
+
 	public void SetProcess(bool enabled)
 	{
 		if (IsDeleted) return;
 
 		if (enabled)
 		{
-			if (_processRegistered) return;
-			Globals.GodotProcess += Process;
-			_processRegistered = true;
+			RegistryAdd(_processList, this, ref _processIndex);
 		}
 		else
 		{
-			if (!_processRegistered) return;
-			Globals.GodotProcess -= Process;
-			_processRegistered = false;
+			RegistryRemove(_processList, ref _processIndex, false);
 		}
 	}
 
@@ -1930,15 +2093,11 @@ public partial class NetworkedObject : IScriptObject
 
 		if (enabled)
 		{
-			if (_physicsProcessRegistered) return;
-			Globals.GodotPhysicsProcess += PhysicsProcess;
-			_physicsProcessRegistered = true;
+			RegistryAdd(_physicsProcessList, this, ref _physicsProcessIndex);
 		}
 		else
 		{
-			if (!_physicsProcessRegistered) return;
-			Globals.GodotPhysicsProcess -= PhysicsProcess;
-			_physicsProcessRegistered = false;
+			RegistryRemove(_physicsProcessList, ref _physicsProcessIndex, true);
 		}
 	}
 
@@ -1987,7 +2146,12 @@ public partial class NetworkedObject : IScriptObject
 	}
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Eq)]
-	public static bool MetamethodEquals(object? a, object? b) => a is NetworkedObject netobj && netobj.Equals(b);
+	public static bool MetamethodEquals(object? a, object? b) =>
+		a is NetworkedObject na &&
+		(ReferenceEquals(na, b) ||
+		(b is NetworkedObject nb &&
+		na.ExistInNetwork == nb.ExistInNetwork &&
+		(na.ExistInNetwork ? na.NetworkedObjectID == nb.NetworkedObjectID : na.ObjectID == nb.ObjectID)));
 
 	internal IEnumerable<PropertyInfo> GetEditableProperties()
 	{
@@ -2020,16 +2184,6 @@ public partial class NetworkedObject : IScriptObject
 			)]
 		);
 #pragma warning restore IL2070 // 'this' argument does not satisfy 'DynamicallyAccessedMembersAttribute' in call to target method. The parameter of method does not have matching annotations.
-	}
-
-	public override bool Equals(object? obj) =>
-		obj is NetworkedObject netobj &&
-		ExistInNetwork == netobj.ExistInNetwork &&
-		(ExistInNetwork ? NetworkedObjectID == netobj.NetworkedObjectID : ObjectID == netobj.ObjectID);
-
-	public override int GetHashCode()
-	{
-		return base.GetHashCode();
 	}
 
 #if DEBUG

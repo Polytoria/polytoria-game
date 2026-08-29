@@ -92,7 +92,7 @@ public partial class Instance : NetworkedObject
 			bool isTemp = false;
 			bool chunkOverride = false;
 			bool oldParentIsTemp = false;
-			NetworkedObject[]? descendants = GetReplicateDescendants();
+			NetworkedObject[]? descendants = null;
 
 			if (Root != null && value != null)
 			{
@@ -104,37 +104,53 @@ public partial class Instance : NetworkedObject
 				{
 					if (chunkOverride)
 					{
+						descendants = GetReplicateDescendants();
 						NetworkReplicateSync.MarkChunkOverride([this, .. descendants]);
 					}
 				}
 			}
 
-			NetworkParent = value;
+			using (PTProfiler.Scope("parent.netparent"))
+			{
+				NetworkParent = value;
+			}
 
 			// If set parent, invoke ready
 			if (!isTemp && Root != null)
 			{
+				using (PTProfiler.Scope("parent.descendants"))
+				{
+					descendants ??= GetReplicateDescendants();
+				}
+
 				// Broadcast chunk if is replicated from Temporary
 				if (chunkOverride)
 				{
 					// Call on next frame for descendants to finish initialize
 					// this is kinda hacky
+					NetworkedObject[] chunkDescendants = descendants;
 					Callable.From(() =>
 					{
-						Root.Network.ReplicateSync.BroadcastChunk([this, .. descendants]);
+						Root.Network.ReplicateSync.BroadcastChunk([this, .. chunkDescendants]);
 					}).CallDeferred();
 				}
 
 				// Rerun name enforcement in case of reparenting from temp
-				foreach (NetworkedObject item in descendants)
+				using (PTProfiler.Scope("parent.name"))
 				{
-					item.ReenforceName();
+					foreach (NetworkedObject item in descendants)
+					{
+						item.ReenforceName();
+					}
 				}
 
 				// NOTE: It's kinda verbose having AutoInvokeReadyOnParent too, but AutoInvokeReady solely won't work with instance created with .New()
 				if (!IsPropReady && AutoInvokeReadyOnParent)
 				{
-					InvokePropReady();
+					using (PTProfiler.Scope("parent.ready"))
+					{
+						InvokePropReady();
+					}
 				}
 			}
 		}
@@ -319,7 +335,10 @@ public partial class Instance : NetworkedObject
 	{
 		if (_legacyName != null && Parent != null)
 		{
-			Parent.legacyChild.Remove(_legacyName);
+			if (Parent.legacyChild.TryGetValue(_legacyName, out Instance? mapped) && mapped == this)
+			{
+				Parent.legacyChild.Remove(_legacyName);
+			}
 		}
 	}
 
@@ -335,7 +354,18 @@ public partial class Instance : NetworkedObject
 	{
 		if (Parent != null && Name != null)
 		{
-			Parent.NameToChild.Remove(Name);
+			if (Parent.NameToChild.TryGetValue(Name, out Instance? mapped) && mapped == this)
+			{
+				Parent.NameToChild.Remove(Name);
+				foreach (Instance sibling in Parent.Children)
+				{
+					if (sibling != this && sibling.Name == Name)
+					{
+						Parent.NameToChild[Name] = sibling;
+						break;
+					}
+				}
+			}
 		}
 	}
 
@@ -343,46 +373,28 @@ public partial class Instance : NetworkedObject
 	public Instance[] GetDescendants()
 	{
 		List<Instance> instances = [];
+		CollectDescendants(instances);
+		return [.. instances];
+	}
 
+	private void CollectDescendants(List<Instance> instances)
+	{
 		foreach (Instance child in Children)
 		{
 			instances.Add(child);
-
-			// Recursively add descendants
-			instances.AddRange(child.GetDescendants());
+			child.CollectDescendants(instances);
 		}
-
-		return [.. instances];
 	}
 
 	[ScriptMethod]
 	public Instance? FindChild(string name)
 	{
-		if (NameToChild.TryGetValue(name, out Instance? instance)) return instance;
-
-		foreach (Instance child in Children)
-		{
-			if (child.Name == name)
-			{
-				NameToChild[name] = child;
-				return child;
-			}
-		}
-
-		return null;
+		return NameToChild.TryGetValue(name, out Instance? instance) ? instance : null;
 	}
 
 	public T? FindChild<T>(string name) where T : Instance
 	{
-		foreach (Instance child in Children)
-		{
-			if (child.Name == name)
-			{
-				return (T)child;
-			}
-		}
-
-		return default;
+		return (T?)FindChild(name);
 	}
 
 	[ScriptMethod]
@@ -458,7 +470,7 @@ public partial class Instance : NetworkedObject
 			return val;
 		}
 
-		foreach (Instance item in GetChildren())
+		foreach (Instance item in Children)
 		{
 			if (item.LegacyName != null && item.LegacyName == name)
 			{
@@ -473,7 +485,7 @@ public partial class Instance : NetworkedObject
 	[ScriptMethod]
 	public Instance? FindChildByClass(string className)
 	{
-		foreach (Instance child in GetChildren())
+		foreach (Instance child in Children)
 		{
 			if (child.ClassName == className)
 			{
@@ -487,7 +499,7 @@ public partial class Instance : NetworkedObject
 	[ScriptMethod]
 	public Instance? FindChildWithTag(string tag)
 	{
-		foreach (Instance child in GetChildren())
+		foreach (Instance child in Children)
 		{
 			if (child.HasTag(tag))
 			{
@@ -520,7 +532,7 @@ public partial class Instance : NetworkedObject
 	public Instance[] GetChildrenWithTag(string tag)
 	{
 		List<Instance> childs = [];
-		foreach (Instance child in GetChildren())
+		foreach (Instance child in Children)
 		{
 			if (child.HasTag(tag))
 			{
@@ -568,7 +580,7 @@ public partial class Instance : NetworkedObject
 	[ScriptLegacyMethod("FindChildByClass")]
 	public Instance? LegacyFindChildByClass(string className)
 	{
-		foreach (Instance child in GetChildren())
+		foreach (Instance child in Children)
 		{
 			if (child.ClassName == XmlFormat.ConvertClassName(className))
 			{
@@ -701,7 +713,7 @@ public partial class Instance : NetworkedObject
 	{
 		List<Instance> instances = [];
 
-		foreach (Instance item in GetChildren())
+		foreach (Instance item in Children)
 		{
 			if (item.ClassName == className)
 			{
@@ -721,7 +733,7 @@ public partial class Instance : NetworkedObject
 	public T[] GetChildrenOfClass<T>() where T : Instance
 	{
 		List<T> instances = [];
-		foreach (Instance item in GetChildren())
+		foreach (Instance item in Children)
 		{
 			if (item is T typedItem)
 			{
@@ -733,7 +745,7 @@ public partial class Instance : NetworkedObject
 
 	public override void Ready()
 	{
-		foreach (Instance n in GetChildren())
+		foreach (Instance n in Children)
 		{
 			legacyChild.TryAdd(n.LegacyName, n);
 		}
@@ -757,7 +769,19 @@ public partial class Instance : NetworkedObject
 
 	private void OnChildRemoved(Instance obj)
 	{
-		legacyChild.Remove(obj.LegacyName);
+		string key = obj.LegacyName;
+		if (legacyChild.TryGetValue(key, out Instance? mapped) && mapped == obj)
+		{
+			legacyChild.Remove(key);
+			foreach (Instance sibling in Children)
+			{
+				if (sibling != obj && sibling.LegacyName == key)
+				{
+					legacyChild[key] = sibling;
+					break;
+				}
+			}
+		}
 	}
 
 	[ScriptMethod]
@@ -809,7 +833,14 @@ public partial class Instance : NetworkedObject
 
 	public bool IsDescendantOfClass<T>()
 	{
-		return IsDescendantOfClass(typeof(T).Name);
+		Instance? parent = Parent;
+		while (parent != null)
+		{
+			if (parent is T)
+				return true;
+			parent = parent.Parent;
+		}
+		return false;
 	}
 
 	[ScriptMethod("New")]

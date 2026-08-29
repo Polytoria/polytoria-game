@@ -256,6 +256,18 @@ public static class StringExtension
 		if (string.IsNullOrEmpty(s))
 			return s;
 
+		bool clean = true;
+		foreach (char c in s)
+		{
+			if (!char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c) && c != '_' && c != '-')
+			{
+				clean = false;
+				break;
+			}
+		}
+		if (clean)
+			return s;
+
 		return new string([.. s.Where(c => char.IsLetterOrDigit(c) || char.IsWhiteSpace(c) || c == '_' || c == '-')]);
 	}
 }
