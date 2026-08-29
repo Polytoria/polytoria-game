@@ -26,8 +26,14 @@ public struct LuauCompileOptions
 	internal IntPtr vectorCtor;
 	internal IntPtr vectorType;
 
+	internal int vectorPrecision;
+
 	internal IntPtr mutableGlobals;
 	internal IntPtr userdataTypes;
+	internal IntPtr librariesWithKnownMembers;
+	internal IntPtr libraryMemberTypeCb;
+	internal IntPtr libraryMemberConstantCb;
+	internal IntPtr disabledBuiltins;
 
 	public LuauCompileOptions()
 	{
@@ -55,6 +61,26 @@ internal partial class NativeBindings
 	[LibraryImport(LuaLibraryName, StringMarshalling = StringMarshalling.Utf8)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
 	internal static partial int luau_load(IntPtr L, string name, byte[] bytecode, long size, int flags);
+
+	[LibraryImport(LuaLibraryName, EntryPoint = "luau_enable_fflags")]
+	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+	internal static partial void luau_enable_fflags_vm();
+
+	[LibraryImport(CompilerLibraryName, EntryPoint = "luau_enable_fflags")]
+	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+	internal static partial void luau_enable_fflags_compiler();
+
+	[LibraryImport(LuaLibraryName)]
+	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+	internal static partial int luau_codegen_supported();
+
+	[LibraryImport(LuaLibraryName)]
+	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+	internal static partial void luau_codegen_create(IntPtr L);
+
+	[LibraryImport(LuaLibraryName)]
+	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+	internal static partial void luau_codegen_compile(IntPtr L, int idx);
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -153,6 +179,14 @@ internal partial class NativeBindings
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
 	internal static partial void lua_pushnumber(IntPtr L, double n);
+
+	[LibraryImport(LuaLibraryName)]
+	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+	internal static partial void lua_pushvector(IntPtr L, float x, float y, float z);
+
+	[LibraryImport(LuaLibraryName)]
+	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+	internal static unsafe partial float* lua_tovector(IntPtr L, int idx);
 
 	[LibraryImport(LuaLibraryName, StringMarshalling = StringMarshalling.Utf8)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]

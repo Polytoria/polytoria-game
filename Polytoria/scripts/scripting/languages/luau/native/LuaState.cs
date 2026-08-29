@@ -36,6 +36,70 @@ public partial class LuaState : IDisposable
 	private static readonly Dictionary<LuaUserdataDestructor, GCHandle> _pinnedDestructors = [];
 	private static readonly Dictionary<IntPtr, LuaFunction> _pinnedFunctions = [];
 
+	private static int _codegenSupport;
+	private static bool _fflagsEnabled;
+	private bool _codegenActive;
+
+	public static void EnableUpstreamFFlags()
+	{
+		if (_fflagsEnabled)
+			return;
+		_fflagsEnabled = true;
+		try
+		{
+			NativeBindings.luau_enable_fflags_vm();
+			NativeBindings.luau_enable_fflags_compiler();
+		}
+		catch (EntryPointNotFoundException)
+		{
+		}
+		catch (DllNotFoundException)
+		{
+		}
+	}
+
+	public static bool CodegenSupported
+	{
+		get
+		{
+			if (_codegenSupport == 0)
+			{
+				try
+				{
+					_codegenSupport = NativeBindings.luau_codegen_supported() != 0 ? 1 : -1;
+				}
+				catch (EntryPointNotFoundException)
+				{
+					_codegenSupport = -1;
+				}
+				catch (DllNotFoundException)
+				{
+					_codegenSupport = -1;
+				}
+			}
+			return _codegenSupport == 1;
+		}
+	}
+
+	public bool CodegenActive => _codegenActive || _parent?.CodegenActive == true;
+
+	public void EnableCodegen()
+	{
+		if (!CodegenSupported || _codegenActive)
+			return;
+		lock (_lock)
+			NativeBindings.luau_codegen_create(_state);
+		_codegenActive = true;
+	}
+
+	public void CodegenCompile(int index)
+	{
+		if (!CodegenActive)
+			return;
+		lock (_lock)
+			NativeBindings.luau_codegen_compile(_state, index);
+	}
+
 	public LuaState()
 	{
 		_ownsState = true;
@@ -63,15 +127,35 @@ public partial class LuaState : IDisposable
 		return s;
 	}
 
+	private static readonly IntPtr _compileOptions = BuildCompileOptions();
+
+	private static IntPtr BuildCompileOptions()
+	{
+		try
+		{
+			LuauCompileOptions options = new()
+			{
+				optimizationLevel = 2,
+				debugLevel = 1,
+				typeInfoLevel = 1,
+				vectorLib = Marshal.StringToHGlobalAnsi("Vector3"),
+				vectorCtor = Marshal.StringToHGlobalAnsi("New"),
+				vectorType = Marshal.StringToHGlobalAnsi("Vector3"),
+			};
+			IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf<LuauCompileOptions>());
+			Marshal.StructureToPtr(options, ptr, false);
+			return ptr;
+		}
+		catch
+		{
+			return IntPtr.Zero;
+		}
+	}
+
 	public static byte[] Compile(string sourceCode)
 	{
-		/*
-		IntPtr optionsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(options));
-		Marshal.StructureToPtr(options, optionsPtr, false);
-		*/
-
 		IntPtr size = new(Encoding.UTF8.GetByteCount(sourceCode));
-		IntPtr bytecodePtr = NativeBindings.luau_compile(sourceCode, size, IntPtr.Zero, out nint outSize);
+		IntPtr bytecodePtr = NativeBindings.luau_compile(sourceCode, size, _compileOptions, out nint outSize);
 		if (bytecodePtr == IntPtr.Zero)
 		{
 			//Marshal.FreeHGlobal(optionsPtr);
@@ -415,6 +499,31 @@ public partial class LuaState : IDisposable
 	{
 		lock (_lock)
 			NativeBindings.lua_pushnumber(_state, n);
+	}
+
+	public void PushVector(float x, float y, float z)
+	{
+		lock (_lock)
+			NativeBindings.lua_pushvector(_state, x, y, z);
+	}
+
+	public unsafe bool TryToVector(int index, out float x, out float y, out float z)
+	{
+		lock (_lock)
+		{
+			float* components = NativeBindings.lua_tovector(_state, index);
+			if (components == null)
+			{
+				x = 0;
+				y = 0;
+				z = 0;
+				return false;
+			}
+			x = components[0];
+			y = components[1];
+			z = components[2];
+			return true;
+		}
 	}
 
 	public void PushString(string s)

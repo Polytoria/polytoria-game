@@ -41,6 +41,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	private static readonly Dictionary<Type, MethodInfo?> _gdToProxy = [];
 	private static readonly Dictionary<IntPtr, PTCallbackData> _ptrToCallback = [];
 	private static readonly Dictionary<PTCallbackData, IntPtr> _callbackToPtr = [];
+	private static readonly Dictionary<PTCallback, PTCallbackData> _actionToCallbackData = [];
 	private static readonly Dictionary<IntPtr, object> _ptrToObject = [];
 	private const string WeakUserdataCache = "__UDCACHE";
 	private static readonly int ThreadDataKey = 0x1247;
@@ -101,6 +102,9 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 	public static LuauProvider Singleton { get; private set; } = null!;
 
+	internal static bool UseNativeVectors = true;
+	internal static bool UseCodegen = true;
+
 	static LuauProvider()
 	{
 		foreach ((Type target, Type proxy) in ScriptService.ProxyMap)
@@ -112,8 +116,13 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	public LuauProvider()
 	{
 		Singleton = this;
+		LuaState.EnableUpstreamFFlags();
 		LuaState state = new();
 		GlobalLuaState = state;
+		if (UseCodegen)
+		{
+			state.EnableCodegen();
+		}
 		InitializeCache(state);
 		state.OpenLibs();
 
@@ -132,6 +141,11 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		state.SetField(-2, "wrap");
 
 		RegisterLuaExtensions(state);
+
+		if (UseNativeVectors)
+		{
+			InstallNativeVectorSupport(state);
+		}
 
 		// Set all global library tables to read-only
 		state.PushNil();
@@ -153,6 +167,64 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		{
 			state.Pop(1); // pop string
 		}
+	}
+
+	private static int VectorNewIndex(IntPtr L)
+	{
+		LuaState state = LuaState.FromIntPtr(L);
+		return state.Error("Vector3 values are immutable, construct a new Vector3 instead");
+	}
+
+	private static int VectorTypeofShim(IntPtr L)
+	{
+		LuaState state = LuaState.FromIntPtr(L);
+		if (state.Type(1) == LuaType.Vector)
+		{
+			state.PushString("Vector3");
+			return 1;
+		}
+
+		state.GetField(LuaState.LUA_REGISTRYINDEX, "__poly_orig_typeof");
+		state.PushValue(1);
+		state.Call(1, 1);
+		return 1;
+	}
+
+	private void InstallNativeVectorSupport(LuaState state)
+	{
+		state.PushVector(0, 0, 0);
+		if (state.GetMetaTable(-1) != LuaType.Nil)
+		{
+			state.SetReadOnly(-1, false);
+			LuaMetatable vectorMeta = new()
+			{
+				Lua = state,
+				TargetType = typeof(Polytoria.Scripting.Datatypes.PTVector3),
+				LangProvider = this,
+			};
+			vectorMeta.RegisterMetamethods();
+
+			state.PushCFunction(vectorMeta.IndexWrapper, "__index");
+			state.SetField(-2, "__index");
+
+			state.PushCFunction(vectorMeta.NameCallWrapper, "__namecall");
+			state.SetField(-2, "__namecall");
+
+			state.PushCFunction(VectorNewIndex, "__newindex");
+			state.SetField(-2, "__newindex");
+
+			state.SetReadOnly(-1, true);
+			state.Pop(2);
+		}
+		else
+		{
+			state.Pop(1);
+		}
+
+		state.GetGlobal("typeof");
+		state.SetField(LuaState.LUA_REGISTRYINDEX, "__poly_orig_typeof");
+		state.PushCFunction(VectorTypeofShim, "typeof");
+		state.SetGlobal("typeof");
 	}
 
 	public void Run(Script script)
@@ -186,6 +258,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		try
 		{
 			state.Load(script.LuaPath, script.Bytecode!);
+			state.CodegenCompile(-1);
 
 			async void run()
 			{
@@ -411,6 +484,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 				}
 				func.Callback.Dispose();
 				_callbackToPtr.Remove(func);
+				_actionToCallbackData.Remove(func.Callback);
 			}
 			_ptrToCallback.Remove(funcPtr);
 		}
@@ -446,12 +520,9 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	public void CallUpdate(Script script, double delta)
 	{
 		if (script.LuauMainThread == null || !script.LuauMainThread.IsAlive) return;
-		string updateKeyword = "_Update";
+		string updateKeyword = script.Compatibility ? "_update" : "_Update";
 
-		if (script.Compatibility)
-		{
-			updateKeyword = "_update";
-		}
+		if (!HasGlobalFunction(script.LuauMainThread, updateKeyword)) return;
 
 		CallAsync(script, updateKeyword, [delta]).Wait();
 	}
@@ -459,14 +530,22 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	public void CallFixedUpdate(Script script, double delta)
 	{
 		if (script.LuauMainThread == null || !script.LuauMainThread.IsAlive) return;
-		string updateKeyword = "_FixedUpdate";
+		string updateKeyword = script.Compatibility ? "_fixed_update" : "_FixedUpdate";
 
-		if (script.Compatibility)
-		{
-			updateKeyword = "_fixed_update";
-		}
+		if (!HasGlobalFunction(script.LuauMainThread, updateKeyword)) return;
 
 		CallAsync(script, updateKeyword, [delta]).Wait();
+	}
+
+	private static bool HasGlobalFunction(LuaState mainThread, string name)
+	{
+		lock (mainThread)
+		{
+			mainThread.GetGlobal(name);
+			bool isFunction = mainThread.IsFunction(-1);
+			mainThread.Pop(1);
+			return isFunction;
+		}
 	}
 
 	private void RegisterLuaExtensions(LuaState state)
@@ -894,6 +973,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		try
 		{
 			co.Load(chunkName, ms.Bytecode!);
+			co.CodegenCompile(-1);
 		}
 		catch (Exception ex)
 		{
@@ -1355,6 +1435,14 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		{
 			state.PushBoolean(boolVal);
 		}
+		else if (UseNativeVectors && value is Polytoria.Scripting.Datatypes.PTVector3 nativeVec)
+		{
+			state.PushVector(nativeVec.X, nativeVec.Y, nativeVec.Z);
+		}
+		else if (UseNativeVectors && value is Vector3 gdVec)
+		{
+			state.PushVector(gdVec.X, gdVec.Y, gdVec.Z);
+		}
 		else if (value is byte[] byteArrayVal)
 		{
 			state.PushBuffer(byteArrayVal);
@@ -1452,6 +1540,11 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	{
 		LuaType type = state.Type(index);
 		if (type == LuaType.Number) return state.ToNumber(index);
+		if (type == LuaType.Vector && state.TryToVector(index, out float vx, out float vy, out float vz))
+		{
+			Godot.Vector3 nativeVector = new(vx, vy, vz);
+			return convertToGD ? nativeVector : Polytoria.Scripting.Datatypes.PTVector3.FromGDClass(nativeVector);
+		}
 		if (type == LuaType.String) return state.ToString(index);
 		if (type == LuaType.Boolean) return state.ToBoolean(index);
 		if (type == LuaType.UserData)
@@ -1612,6 +1705,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 			_ptrToCallback[funcPtr] = data;
 			_callbackToPtr[data] = funcPtr;
+			_actionToCallbackData[del] = data;
 			script.LuauFunctionPointers.Add(funcPtr);
 
 			return del;
@@ -1891,9 +1985,15 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		_ptrToObject.Add(handlePtr, objKey);
 	}
 
+	private static readonly Dictionary<Type, string> _metatableKeyCache = [];
+
 	private void ApplyMetatable(LuaState lua, [DynamicallyAccessedMembers(DynamicallyAccessedTypes)] Type type)
 	{
-		string metatableKey = "__metatable_" + type.Name;
+		if (!_metatableKeyCache.TryGetValue(type, out string? metatableKey))
+		{
+			metatableKey = "__metatable_" + type.Name;
+			_metatableKeyCache[type] = metatableKey;
+		}
 
 		lua.GetField(LuaState.LUA_REGISTRYINDEX, metatableKey);
 		if (lua.Type(-1) == LuaType.Nil)
@@ -1956,10 +2056,8 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 	public void FreePTCallback(PTCallback action)
 	{
-		PTCallbackData? data = _ptrToCallback.Values.FirstOrDefault(data => data.Callback == action);
-		if (data.HasValue)
+		if (_actionToCallbackData.Remove(action, out PTCallbackData callbackData))
 		{
-			PTCallbackData callbackData = data.Value;
 			LuaState lua = callbackData.State;
 			lua.Unref(callbackData.RefID);
 			lua.Unref(callbackData.HandlerRefID);
@@ -2066,7 +2164,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		{
 			return HashCode.Combine(
 				Type,
-				MethodName.ToLowerInvariant(),
+				StringComparer.CurrentCultureIgnoreCase.GetHashCode(MethodName),
 				IsCompatibility
 			);
 		}
@@ -2087,7 +2185,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 		public override readonly int GetHashCode()
 		{
-			return HashCode.Combine(FuncPtr, RefID, Callback);
+			return FuncPtr.GetHashCode();
 		}
 
 		public override readonly bool Equals(object? obj)

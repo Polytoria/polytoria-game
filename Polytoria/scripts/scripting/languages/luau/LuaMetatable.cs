@@ -22,7 +22,7 @@ namespace Polytoria.Scripting.Luau;
 
 public class LuaMetatable : LuaObject
 {
-	private static readonly Dictionary<OverloadKey, (MethodInfo? methodInfo, bool hasParams)> _overloadCache = [];
+	private static readonly Dictionary<(Type DeclaringType, string MethodName), List<(Type?[] ArgTypes, MethodInfo? Method, bool HasParams)>> _overloadCache = [];
 	private static readonly Dictionary<PropertyInfo, PropertyAccessData> _propertyAccessCache = [];
 	private static readonly Dictionary<MethodInfo, MethodInvocationData> _methodInvocationCache = [];
 
@@ -299,7 +299,7 @@ public class LuaMetatable : LuaObject
 				PT.PrintWarn($"{prop.Name} is obsolete. {accessData.ObsoleteMessage}");
 			}
 
-			object? value = prop.GetValue(targetObject);
+			object? value = accessData.Getter != null ? accessData.Getter(targetObject) : prop.GetValue(targetObject);
 			LangProvider.PushValueToLua(state, value);
 
 			return 1;
@@ -420,7 +420,15 @@ public class LuaMetatable : LuaObject
 					throw new Exception("member " + prop.Name + " cannot be assigned to nil.");
 				}
 
-				prop.SetValue(targetObject, convertedValue);
+				Action<object, object?>? compiledSetter = GetPropertyAccessData(prop).Setter;
+				if (compiledSetter != null)
+				{
+					compiledSetter(targetObject, convertedValue);
+				}
+				else
+				{
+					prop.SetValue(targetObject, convertedValue);
+				}
 				return 0;
 			}
 			else
@@ -910,9 +918,53 @@ public class LuaMetatable : LuaObject
 		}
 		else
 		{
-			object? result = targetMethod.Invoke(targetObject, invokeArgs);
+			object? result = invocationData.Invoker != null
+				? invocationData.Invoker(targetObject, invokeArgs)
+				: targetMethod.Invoke(targetObject, invokeArgs);
 			LangProvider.PushValueToLua(state, result);
 			return 1;
+		}
+	}
+
+	private static Func<object, object?>? CompilePropertyGetter(PropertyInfo property)
+	{
+		if (property.DeclaringType == null || property.GetGetMethod() is not { IsStatic: false })
+		{
+			return null;
+		}
+		try
+		{
+			var target = System.Linq.Expressions.Expression.Parameter(typeof(object), "target");
+			var body = System.Linq.Expressions.Expression.Convert(
+				System.Linq.Expressions.Expression.Property(System.Linq.Expressions.Expression.Convert(target, property.DeclaringType), property),
+				typeof(object));
+			return System.Linq.Expressions.Expression.Lambda<Func<object, object?>>(body, target).Compile();
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
+	private static Action<object, object?>? CompilePropertySetter(PropertyInfo property)
+	{
+		if (property.DeclaringType == null || property.GetSetMethod() is not { IsStatic: false } setter)
+		{
+			return null;
+		}
+		try
+		{
+			var target = System.Linq.Expressions.Expression.Parameter(typeof(object), "target");
+			var value = System.Linq.Expressions.Expression.Parameter(typeof(object), "value");
+			var body = System.Linq.Expressions.Expression.Call(
+				System.Linq.Expressions.Expression.Convert(target, property.DeclaringType),
+				setter,
+				System.Linq.Expressions.Expression.Convert(value, property.PropertyType));
+			return System.Linq.Expressions.Expression.Lambda<Action<object, object?>>(body, target, value).Compile();
+		}
+		catch
+		{
+			return null;
 		}
 	}
 
@@ -923,7 +975,7 @@ public class LuaMetatable : LuaObject
 
 		ScriptPropertyAttribute? scriptAttribute = property.GetCustomAttribute<ScriptPropertyAttribute>();
 		Attributes.ObsoleteAttribute? obsoleteAttribute = property.GetCustomAttribute<Attributes.ObsoleteAttribute>();
-		PropertyAccessData result = new(scriptAttribute?.Permissions ?? ScriptPermissionFlags.None, obsoleteAttribute?.Message);
+		PropertyAccessData result = new(scriptAttribute?.Permissions ?? ScriptPermissionFlags.None, obsoleteAttribute?.Message, CompilePropertyGetter(property), CompilePropertySetter(property));
 		_propertyAccessCache[property] = result;
 		return result;
 	}
@@ -941,9 +993,55 @@ public class LuaMetatable : LuaObject
 			Array.FindIndex(parameters, p => p.IsDefined(typeof(ScriptingCallerAttribute))),
 			scriptAttribute?.Permissions ?? ScriptPermissionFlags.None,
 			obsoleteAttribute?.Message,
-			ScriptService.IsAsyncMethod(method));
+			ScriptService.IsAsyncMethod(method),
+			CompileMethodInvoker(method));
 		_methodInvocationCache[method] = result;
 		return result;
+	}
+
+	private static Func<object?, object?[], object?>? CompileMethodInvoker(MethodInfo method)
+	{
+		if (method.DeclaringType == null || method.IsGenericMethodDefinition || method.ContainsGenericParameters)
+		{
+			return null;
+		}
+
+		ParameterInfo[] parameters = method.GetParameters();
+		foreach (ParameterInfo parameter in parameters)
+		{
+			if (parameter.ParameterType.IsByRef || parameter.ParameterType.IsPointer)
+			{
+				return null;
+			}
+		}
+
+		try
+		{
+			var targetParam = System.Linq.Expressions.Expression.Parameter(typeof(object), "target");
+			var argsParam = System.Linq.Expressions.Expression.Parameter(typeof(object?[]), "args");
+			var callArgs = new System.Linq.Expressions.Expression[parameters.Length];
+			for (int i = 0; i < parameters.Length; i++)
+			{
+				callArgs[i] = System.Linq.Expressions.Expression.Convert(
+					System.Linq.Expressions.Expression.ArrayIndex(argsParam, System.Linq.Expressions.Expression.Constant(i)),
+					parameters[i].ParameterType);
+			}
+
+			System.Linq.Expressions.Expression call = method.IsStatic
+				? System.Linq.Expressions.Expression.Call(method, callArgs)
+				: System.Linq.Expressions.Expression.Call(
+					System.Linq.Expressions.Expression.Convert(targetParam, method.DeclaringType), method, callArgs);
+
+			System.Linq.Expressions.Expression body = method.ReturnType == typeof(void)
+				? System.Linq.Expressions.Expression.Block(call, System.Linq.Expressions.Expression.Constant(null, typeof(object)))
+				: System.Linq.Expressions.Expression.Convert(call, typeof(object));
+
+			return System.Linq.Expressions.Expression.Lambda<Func<object?, object?[], object?>>(body, targetParam, argsParam).Compile();
+		}
+		catch
+		{
+			return null;
+		}
 	}
 
 	private static bool IsNullableType(Type type)
@@ -960,16 +1058,42 @@ public class LuaMetatable : LuaObject
 		hasParams = false;
 		if (methods.Length == 0) return null;
 
-		OverloadKey key = new(methods[0].DeclaringType!, methods[0].Name, args);
+		(Type, string) key = (methods[0].DeclaringType!, methods[0].Name);
 
-		if (_overloadCache.TryGetValue(key, out var cached))
+		if (!_overloadCache.TryGetValue(key, out List<(Type?[] ArgTypes, MethodInfo? Method, bool HasParams)>? candidates))
 		{
-			hasParams = cached.hasParams;
-			return cached.methodInfo;
+			candidates = [];
+			_overloadCache[key] = candidates;
+		}
+
+		foreach ((Type?[] argTypes, MethodInfo? method, bool cachedHasParams) in candidates)
+		{
+			if (argTypes.Length != args.Length) continue;
+
+			bool match = true;
+			for (int i = 0; i < args.Length; i++)
+			{
+				if (argTypes[i] != args[i]?.GetType())
+				{
+					match = false;
+					break;
+				}
+			}
+
+			if (match)
+			{
+				hasParams = cachedHasParams;
+				return method;
+			}
 		}
 
 		MethodInfo? result = ResolveOverloadUncached(methods, args, out hasParams);
-		_overloadCache[key] = (result, hasParams);
+		Type?[] newArgTypes = new Type?[args.Length];
+		for (int i = 0; i < args.Length; i++)
+		{
+			newArgTypes[i] = args[i]?.GetType();
+		}
+		candidates.Add((newArgTypes, result, hasParams));
 		return result;
 	}
 
@@ -1033,55 +1157,13 @@ public class LuaMetatable : LuaObject
 		return null;
 	}
 
-	private readonly struct OverloadKey : IEquatable<OverloadKey>
-	{
-		private readonly Type _declaringType;
-		private readonly string _methodName;
-		private readonly Type?[] _argTypes;
-		private readonly int _hashCode;
-
-		public OverloadKey(Type declaringType, string methodName, object?[] args)
-		{
-			_declaringType = declaringType;
-			_methodName = methodName;
-			_argTypes = new Type?[args.Length];
-
-			HashCode h = new();
-			h.Add(declaringType);
-			h.Add(methodName);
-
-			for (int i = 0; i < args.Length; i++)
-			{
-				Type? t = args[i]?.GetType();
-				_argTypes[i] = t;
-				h.Add(t);
-			}
-
-			_hashCode = h.ToHashCode();
-		}
-
-		public bool Equals(OverloadKey other)
-		{
-			if (_declaringType != other._declaringType) return false;
-			if (_methodName != other._methodName) return false;
-			if (_argTypes.Length != other._argTypes.Length) return false;
-
-			for (int i = 0; i < _argTypes.Length; i++)
-				if (_argTypes[i] != other._argTypes[i]) return false;
-
-			return true;
-		}
-
-		public override bool Equals(object? obj) => obj is OverloadKey k && Equals(k);
-		public override int GetHashCode() => _hashCode;
-	}
-
-	private readonly record struct PropertyAccessData(ScriptPermissionFlags Permissions, string? ObsoleteMessage);
+	private readonly record struct PropertyAccessData(ScriptPermissionFlags Permissions, string? ObsoleteMessage, Func<object, object?>? Getter, Action<object, object?>? Setter);
 
 	private readonly record struct MethodInvocationData(
 		ParameterInfo[] Parameters,
 		int CallerParamIndex,
 		ScriptPermissionFlags Permissions,
 		string? ObsoleteMessage,
-		bool IsAsync);
+		bool IsAsync,
+		Func<object?, object?[], object?>? Invoker);
 }
