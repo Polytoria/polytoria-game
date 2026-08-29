@@ -727,6 +727,12 @@ public sealed partial class PolytorianModel : CharacterModel
 
 	private static Color MeshGetAlbedo(GeometryInstance3D mesh) => (Color)mesh.GetInstanceShaderParameter(_albedoParam);
 
+	private static Color KeepAlpha(Color current, Color loaded)
+	{
+		loaded.A = current.A;
+		return loaded;
+	}
+
 	internal async Task<AvatarLoadResponse> InternalLoadAppearance(int userID, bool loadTool = false, bool loadToolNpc = false)
 	{
 		_loadAppearanceCount++;
@@ -742,13 +748,13 @@ public sealed partial class PolytorianModel : CharacterModel
 			throw new OperationCanceledException("The avatar is deleted");
 		}
 
-		// Apply body color
-		HeadColor = Color.FromString(avatarData.Colors.Head, _defaultBodyColor);
-		TorsoColor = Color.FromString(avatarData.Colors.Torso, _defaultBodyColor);
-		LeftArmColor = Color.FromString(avatarData.Colors.LeftArm, _defaultBodyColor);
-		RightArmColor = Color.FromString(avatarData.Colors.RightArm, _defaultBodyColor);
-		LeftLegColor = Color.FromString(avatarData.Colors.LeftLeg, _defaultBodyColor);
-		RightLegColor = Color.FromString(avatarData.Colors.RightLeg, _defaultBodyColor);
+		// Apply body color, keeping any alpha the game already set on each limb
+		HeadColor = KeepAlpha(HeadColor, Color.FromString(avatarData.Colors.Head, _defaultBodyColor));
+		TorsoColor = KeepAlpha(TorsoColor, Color.FromString(avatarData.Colors.Torso, _defaultBodyColor));
+		LeftArmColor = KeepAlpha(LeftArmColor, Color.FromString(avatarData.Colors.LeftArm, _defaultBodyColor));
+		RightArmColor = KeepAlpha(RightArmColor, Color.FromString(avatarData.Colors.RightArm, _defaultBodyColor));
+		LeftLegColor = KeepAlpha(LeftLegColor, Color.FromString(avatarData.Colors.LeftLeg, _defaultBodyColor));
+		RightLegColor = KeepAlpha(RightLegColor, Color.FromString(avatarData.Colors.RightLeg, _defaultBodyColor));
 
 		bool hasTool = false;
 

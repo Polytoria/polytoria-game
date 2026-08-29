@@ -1850,7 +1850,14 @@ public partial class NetworkedObject : IScriptObject
 		foreach (NetworkedObject item in GetNetworkedChildren())
 		{
 			item.DeletedAsChild = true;
-			item.InternalDestroy(forceDestroy);
+			try
+			{
+				item.InternalDestroy(forceDestroy);
+			}
+			catch (Exception ex)
+			{
+				PT.PrintErr(ex);
+			}
 		}
 
 		InvokeDeleted();

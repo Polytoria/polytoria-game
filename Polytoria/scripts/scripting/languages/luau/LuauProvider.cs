@@ -53,6 +53,8 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	private bool _useIncrementalUserdataGC;
 	private int _releasedThreadsSinceLastGC;
 	private readonly HashSet<Script> _activeScripts = [];
+	private readonly HashSet<Script> _updateInFlight = [];
+	private readonly HashSet<Script> _fixedUpdateInFlight = [];
 	private bool _disposed;
 
 	internal LuaState GlobalLuaState = null!;
@@ -440,6 +442,8 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		script.LuauMainThreadRef = null;
 		script.LuauStateRef = null;
 		_activeScripts.Remove(script);
+		_updateInFlight.Remove(script);
+		_fixedUpdateInFlight.Remove(script);
 
 	}
 
@@ -453,7 +457,8 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			updateKeyword = "_update";
 		}
 
-		CallAsync(script, updateKeyword, [delta]).Wait();
+		if (!_updateInFlight.Add(script)) return;
+		_ = RunTickAsync(script, updateKeyword, delta, _updateInFlight);
 	}
 
 	public void CallFixedUpdate(Script script, double delta)
@@ -466,7 +471,25 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			updateKeyword = "_fixed_update";
 		}
 
-		CallAsync(script, updateKeyword, [delta]).Wait();
+		if (!_fixedUpdateInFlight.Add(script)) return;
+		_ = RunTickAsync(script, updateKeyword, delta, _fixedUpdateInFlight);
+	}
+
+	private async Task RunTickAsync(Script script, string funcName, double delta, HashSet<Script> inFlight)
+	{
+		try
+		{
+			await CallAsync(script, funcName, [delta]);
+		}
+		catch (Exception ex)
+		{
+			if (script.ShouldContinue)
+				GetLogger(script.LuauMainThread!).LogError(script, ex.Message);
+		}
+		finally
+		{
+			inFlight.Remove(script);
+		}
 	}
 
 	private void RegisterLuaExtensions(LuaState state)
@@ -1761,14 +1784,34 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 	public void PushEnum(LuaState lua, Type specifyType, object value)
 	{
-		Script script = GetScriptInstance(lua);
+		string internKey = specifyType.Name + ":" + Convert.ToInt32(value);
+
+		lua.GetField(LuaState.LUA_REGISTRYINDEX, "__poly_enum_intern");
+		if (lua.Type(-1) == LuaType.Nil)
+		{
+			lua.Pop(1);
+			lua.NewTable();
+			lua.PushValue(-1);
+			lua.SetField(LuaState.LUA_REGISTRYINDEX, "__poly_enum_intern");
+		}
+
+		lua.GetField(-1, internKey);
+		if (lua.Type(-1) != LuaType.Nil)
+		{
+			lua.Remove(-2);
+			return;
+		}
+		lua.Pop(1);
 
 		GCHandle handle = GCHandle.Alloc(value);
 		IntPtr handlePtr = GCHandle.ToIntPtr(handle);
 		IntPtr userdataPtr = lua.NewUserDataDTor((UIntPtr)IntPtr.Size, GarbageCollect);
 		Marshal.WriteIntPtr(userdataPtr, handlePtr);
 
-		_ptrToObject.Add(handlePtr, value);
+		_ptrToObject[handlePtr] = value;
+
+		lua.PushValue(-1);
+		lua.SetField(-3, internKey);
 
 		lua.GetField(LuaState.LUA_REGISTRYINDEX, specifyType.Name);
 		if (lua.Type(-1) == LuaType.Nil)
@@ -1790,6 +1833,8 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		lua.SetField(-2, "__metatable");
 
 		lua.SetMetaTable(-2);
+
+		lua.Remove(-2);
 	}
 
 	private static string GetRegKeyFromObj(object obj)

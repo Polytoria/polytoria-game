@@ -15,7 +15,7 @@ public partial class UIViewport : UIField
 
 	public override Node CreateGDNode()
 	{
-		SubViewportContainer container = new() { FocusMode = Control.FocusModeEnum.None };
+		SubViewportContainer container = new() { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new(32, 32) };
 		_subViewport = new() { HandleInputLocally = false, TransparentBg = true, OwnWorld3D = true };
 
 		_worldEnv = new();

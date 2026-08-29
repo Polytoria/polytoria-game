@@ -20,6 +20,8 @@ public partial class ExplorerTree : Tree
 	public readonly Dictionary<Instance, TreeItem> InstanceToItem = [];
 	public readonly Dictionary<TreeItem, Instance> ItemToInstance = [];
 	public TreeItem? ScrollToTarget = null!;
+	private TreeItem? _pendingActivatedItem;
+	private ulong _pendingActivatedFrame;
 
 	public override void _Ready()
 	{
@@ -53,7 +55,12 @@ public partial class ExplorerTree : Tree
 	{
 		if (@event is InputEventMouseButton mouseEvent)
 		{
-			if (mouseEvent is { ButtonIndex: MouseButton.Right, Pressed: true })
+			if (mouseEvent is { ButtonIndex: MouseButton.Left, DoubleClick: true })
+			{
+				_pendingActivatedItem = GetItemAtPosition(mouseEvent.Position);
+				_pendingActivatedFrame = Engine.GetProcessFrames();
+			}
+			else if (mouseEvent is { ButtonIndex: MouseButton.Right, Pressed: true })
 			{
 				TreeItem clickedItem = GetItemAtPosition(mouseEvent.Position);
 				if (clickedItem != null)
@@ -88,16 +95,17 @@ public partial class ExplorerTree : Tree
 
 	private void OnItemActivated()
 	{
-		TreeItem target = GetSelected();
+		TreeItem? target = _pendingActivatedItem != null && _pendingActivatedFrame == Engine.GetProcessFrames()
+			? _pendingActivatedItem
+			: GetSelected();
+		_pendingActivatedItem = null;
 
-		if (target == null)
+		if (target == null || !ItemToInstance.TryGetValue(target, out Instance? clickedInstance))
 		{
 			return;
 		}
 
-		Instance clickedInstance = ItemToInstance[target];
-
-		if (clickedInstance != null && clickedInstance is Datamodel.Script script)
+		if (clickedInstance is Script script)
 		{
 			CreatorService.OpenScript(script);
 		}

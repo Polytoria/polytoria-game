@@ -1026,6 +1026,20 @@
                   "Children": [],
                   "LinkedModel": null,
                   "IsLinkedChild": false
+                },
+                {
+                  "Name": "Gui3D",
+                  "ClassName": "ServerScript",
+                  "ID": "6a4f2c91-8d3e-45b7-9c02-51e8f7a3d914",
+                  "Properties": {
+                    "IsEnabled": true,
+                    "LinkedScript": "b10b3ced-0175-4e27-8ad4-fe5184104edd",
+                    "Compatibility": false,
+                    "Tags": []
+                  },
+                  "Children": [],
+                  "LinkedModel": null,
+                  "IsLinkedChild": false
                 }
               ],
               "LinkedModel": null,

@@ -22,6 +22,8 @@ public partial class FileBrowserTree : Tree
 	public readonly HashSet<string> AutoSelects = [];
 	public FileItemContextMenu? ItemContextMenu;
 	public Dictionary<string, TreeItem> SearchItems = [];
+	private TreeItem? _pendingActivatedItem;
+	private ulong _pendingActivatedFrame;
 
 	public override void _Ready()
 	{
@@ -75,7 +77,12 @@ public partial class FileBrowserTree : Tree
 	{
 		if (@event is InputEventMouseButton mouseEvent)
 		{
-			if (mouseEvent.ButtonIndex == MouseButton.Right && mouseEvent.Pressed)
+			if (mouseEvent is { ButtonIndex: MouseButton.Left, DoubleClick: true })
+			{
+				_pendingActivatedItem = GetItemAtPosition(mouseEvent.Position);
+				_pendingActivatedFrame = Engine.GetProcessFrames();
+			}
+			else if (mouseEvent.ButtonIndex == MouseButton.Right && mouseEvent.Pressed)
 			{
 				TreeItem clickedItem = GetItemAtPosition(mouseEvent.Position);
 				if (clickedItem != null)
@@ -107,14 +114,15 @@ public partial class FileBrowserTree : Tree
 
 	private async void OnItemActivated()
 	{
-		TreeItem target = GetSelected();
+		TreeItem? target = _pendingActivatedItem != null && _pendingActivatedFrame == Engine.GetProcessFrames()
+			? _pendingActivatedItem
+			: GetSelected();
+		_pendingActivatedItem = null;
 
-		if (target == null)
+		if (target == null || !ItemToFile.TryGetValue(target, out string? clickedFile))
 		{
 			return;
 		}
-
-		string clickedFile = ItemToFile[target];
 
 		if (Session.GetFileAttributes(clickedFile) == FileAttributes.Directory)
 		{

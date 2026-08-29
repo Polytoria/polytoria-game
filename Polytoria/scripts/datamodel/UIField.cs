@@ -333,8 +333,11 @@ public partial class UIField : Instance
 		_styleBox.CornerRadiusBottomLeft = Mathf.RoundToInt(bl);
 		_styleBox.CornerRadiusBottomRight = Mathf.RoundToInt(br);
 		SyncCornerPanel();
+		OnCornerRadiusChanged();
 		OnPropertyChanged(CornerRadiusPropName, syncToNet: false);
 	}
+
+	protected virtual void OnCornerRadiusChanged() { }
 
 	internal void InternalSetStroke(int width, Color color)
 	{

@@ -33,10 +33,29 @@ public partial class UIImage : UIField
     uniform vec2 texture_scale = vec2(1.0, 1.0);
     uniform vec2 texture_offset = vec2(0.0, 0.0);
     uniform vec4 modulate_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
+    uniform vec2 rect_size = vec2(0.0, 0.0);
+    uniform vec4 corner_radius = vec4(0.0, 0.0, 0.0, 0.0);
 
     void fragment() {
         vec2 uv = (UV * texture_scale) + texture_offset;
-        COLOR = texture(TEXTURE, uv) * modulate_color;
+        vec4 col = texture(TEXTURE, uv) * modulate_color;
+
+        if ((corner_radius.x + corner_radius.y + corner_radius.z + corner_radius.w) > 0.0 && rect_size.x > 0.0 && rect_size.y > 0.0) {
+            vec2 p = UV * rect_size;
+            float r = (UV.x < 0.5)
+                ? ((UV.y < 0.5) ? corner_radius.x : corner_radius.w)
+                : ((UV.y < 0.5) ? corner_radius.y : corner_radius.z);
+            r = min(r, min(rect_size.x, rect_size.y) * 0.5);
+            if (r > 0.0) {
+                vec2 c = vec2((UV.x < 0.5) ? r : rect_size.x - r, (UV.y < 0.5) ? r : rect_size.y - r);
+                bool inX = (UV.x < 0.5) ? (p.x < r) : (p.x > rect_size.x - r);
+                bool inY = (UV.y < 0.5) ? (p.y < r) : (p.y > rect_size.y - r);
+                if (inX && inY) {
+                    col.a *= 1.0 - smoothstep(r - 1.0, r + 1.0, length(p - c));
+                }
+            }
+        }
+        COLOR = col;
     }
     """;
 
@@ -226,13 +245,17 @@ public partial class UIImage : UIField
 		base.Init();
 		IgnoreMouse = true;
 		StretchMode = ImageStretchModeEnum.Stretch;
+		GDTextureRect.Resized += OnControlResized;
 	}
 
 	private void ApplyTexture()
 	{
-		if (_loadedTexture == null) return;
+		if (GDTextureRect == null || _loadedTexture == null) return;
 
-		if (_textureScale == Vector2.One && _textureOffset == Vector2.Zero)
+		(float tl, float tr, float bl, float br) = InternalGetCorners();
+		bool hasCorners = tl > 0 || tr > 0 || bl > 0 || br > 0;
+
+		if (_textureScale == Vector2.One && _textureOffset == Vector2.Zero && !hasCorners)
 		{
 			GDTextureRect.Material = null;
 			GDTextureRect.Texture = _loadedTexture;
@@ -251,10 +274,25 @@ public partial class UIImage : UIField
 		_shaderMaterial.SetShaderParameter("texture_scale", _textureScale);
 		_shaderMaterial.SetShaderParameter("texture_offset", _textureOffset);
 		_shaderMaterial.SetShaderParameter("modulate_color", _color);
+		_shaderMaterial.SetShaderParameter("corner_radius", new Vector4(tl, tr, br, bl));
+		_shaderMaterial.SetShaderParameter("rect_size", GDTextureRect.Size);
 		GDTextureRect.SelfModulate = new Color(1, 1, 1, 1);
 		GDTextureRect.Texture = _loadedTexture;
 		GDTextureRect.TextureRepeat = CanvasItem.TextureRepeatEnum.Enabled;
 		GDTextureRect.Material = _shaderMaterial;
+	}
+
+	protected override void OnCornerRadiusChanged()
+	{
+		ApplyTexture();
+	}
+
+	private void OnControlResized()
+	{
+		if (_shaderMaterial != null && GDTextureRect?.Material == _shaderMaterial)
+		{
+			_shaderMaterial.SetShaderParameter("rect_size", GDTextureRect.Size);
+		}
 	}
 
 	private void SetToDefaultImage()

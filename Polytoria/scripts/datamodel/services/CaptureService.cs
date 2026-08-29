@@ -21,6 +21,7 @@ public sealed partial class CaptureService : Instance
 	private const string CaptureSoundPath = "res://assets/audio/built-in/capture.ogg";
 
 	private Vector2 _photoSizeLimit = new(2000, 2000);
+	private readonly Vector2 _photoSizeMin = new(32, 32);
 	private bool _debounce = false;
 
 	public ImageTexture? CurrentPhoto = null;
@@ -178,74 +179,86 @@ public sealed partial class CaptureService : Instance
 
 		CurrentPhotoPath = null;
 		SubViewport subview = new();
-		Node3D pivot = new();
-		Camera3D cam = new();
-
-		Camera3D activeCam = GDNode.GetViewport().GetCamera3D();
-
-		cam.Fov = activeCam.Fov;
-		cam.Projection = activeCam.Projection;
-
-		pivot.AddChild(cam);
-		subview.AddChild(pivot);
-		GDNode.AddChild(subview, @internal: Node.InternalMode.Back);
-
 		GUI? guiOverlay = null;
 
-		if (overlay != null)
+		try
 		{
-			guiOverlay = New<GUI>();
-			UIField clone = (UIField)overlay.Clone();
-			clone.Visible = true;
-			clone.Parent = guiOverlay;
-			guiOverlay.Parent = this;
+			Node3D pivot = new();
+			Camera3D cam = new();
 
-			// Wait one frame for all node control to init
-			await Globals.Singleton.WaitFrame();
+			Camera3D activeCam = GDNode.GetViewport().GetCamera3D();
 
-			// Override parent check for visible
-			foreach (Instance des in guiOverlay.GetDescendants())
+			cam.Fov = activeCam.Fov;
+			cam.Projection = activeCam.Projection;
+
+			pivot.AddChild(cam);
+			subview.AddChild(pivot);
+			GDNode.AddChild(subview, @internal: Node.InternalMode.Back);
+
+			if (overlay != null)
 			{
-				if (des is UIField field)
+				guiOverlay = New<GUI>();
+				UIField clone = (UIField)overlay.Clone();
+				clone.Visible = true;
+				clone.Parent = guiOverlay;
+				guiOverlay.Parent = this;
+
+				// Wait one frame for all node control to init
+				await Globals.Singleton.WaitFrame();
+
+				// Override parent check for visible
+				foreach (Instance des in guiOverlay.GetDescendants())
 				{
-					field.OverrideParentCheck = true;
-					field.RecomputeVisible();
+					if (des is UIField field)
+					{
+						field.OverrideParentCheck = true;
+						field.RecomputeVisible();
+					}
 				}
+
+				guiOverlay.GDNode.Reparent(subview);
 			}
 
-			guiOverlay.GDNode.Reparent(subview);
-		}
+			pivot.GlobalPosition = pos;
+			pivot.GlobalRotationDegrees = rot;
+			cam.RotationDegrees = new Vector3(0, 0, 0);
+			if (photoSize != null && photoSize != Vector2.Zero)
+			{
+				subview.Size = (Vector2I)photoSize.Value.Clamp(_photoSizeMin, _photoSizeLimit);
+			}
+			else
+			{
+				subview.Size = Globals.Singleton.GetWindow().Size;
+			}
 
-		pivot.GlobalPosition = pos;
-		pivot.GlobalRotationDegrees = rot;
-		cam.RotationDegrees = new Vector3(0, 0, 0);
-		if (photoSize != null && photoSize != Vector2.Zero && !(photoSize > _photoSizeLimit))
+			subview.RenderTargetClearMode = SubViewport.ClearMode.Once;
+			subview.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+
+			await Globals.Singleton.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+
+			guiOverlay?.Delete();
+			guiOverlay = null;
+
+			Image img = subview.GetTexture().GetImage();
+			img.FixAlphaEdges();
+			img.GenerateMipmaps();
+
+
+			CurrentPhoto?.Dispose();
+			CurrentPhoto = ImageTexture.CreateFromImage(img);
+
+			PostPhotoTaken();
+		}
+		catch (Exception ex)
 		{
-			subview.Size = (Vector2I)photoSize;
+			_debounce = false;
+			guiOverlay?.Delete();
+			PT.PrintErr("[Capture] TakePhotoAt failed: ", ex);
 		}
-		else
+		finally
 		{
-			subview.Size = Globals.Singleton.GetWindow().Size;
+			subview.QueueFree();
 		}
-
-		subview.RenderTargetClearMode = SubViewport.ClearMode.Once;
-		subview.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
-
-		await Globals.Singleton.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-
-		guiOverlay?.Delete();
-
-		Image img = subview.GetTexture().GetImage();
-		img.FixAlphaEdges();
-		img.GenerateMipmaps();
-
-
-		CurrentPhoto?.Dispose();
-		CurrentPhoto = ImageTexture.CreateFromImage(img);
-
-		subview.QueueFree();
-
-		PostPhotoTaken();
 	}
 
 	private async void PostPhotoTaken()

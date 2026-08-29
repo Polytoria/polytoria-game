@@ -620,6 +620,7 @@ public partial class Dynamic : Instance
 	internal void UpdateTransformFromNet(TransformPayloadDto transform, bool isReliable, bool lerpTransform)
 	{
 		if (OverrideNetworkTransform) return;
+		if (this is NPC { IsSitting: true }) return;
 		Vector3 scale = GetLocalTransform().Basis.Scale;
 		_netTransform = new Transform3D(
 			new Basis(transform.Rotation).ScaledLocal(scale),

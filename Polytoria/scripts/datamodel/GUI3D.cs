@@ -49,6 +49,10 @@ public partial class GUI3D : Dynamic
 			_material.BillboardMode = value ? BaseMaterial3D.BillboardModeEnum.Enabled : BaseMaterial3D.BillboardModeEnum.Disabled;
 			UpdateSize();
 			SetProcess(value);
+			if (!value && _area != null)
+			{
+				_area.Rotation = Vector3.Zero;
+			}
 			OnPropertyChanged();
 		}
 	}
@@ -99,6 +103,7 @@ public partial class GUI3D : Dynamic
 		TransformChanged += UpdateCanvasSize;
 
 		_area.MouseEntered += OnAreaMouseEnter;
+		_area.MouseExited += OnAreaMouseExit;
 
 		base.Init();
 	}
@@ -111,13 +116,14 @@ public partial class GUI3D : Dynamic
 
 	private void UpdateCanvasSize()
 	{
-		_subViewport.Size = new((int)(Size.X * 512), (int)(Size.Y * 512));
+		_subViewport.Size = new(Mathf.Max((int)(Size.X * 512), 32), Mathf.Max((int)(Size.Y * 512), 32));
 		RecomputeChildTransforms();
 	}
 
 	public override void PreDelete()
 	{
 		_area.MouseEntered -= OnAreaMouseEnter;
+		_area.MouseExited -= OnAreaMouseExit;
 		TransformChanged -= UpdateCanvasSize;
 		base.PreDelete();
 	}
@@ -138,13 +144,13 @@ public partial class GUI3D : Dynamic
 	{
 		if (_mouseInArea)
 		{
-			GDNode.GetViewport().SetInputAsHandled();
 			if (@event is InputEventMouse m)
 			{
 				HandleMouse(m);
 			}
 			else
 			{
+				GDNode.GetViewport().SetInputAsHandled();
 				_subViewport.PushInput(@event);
 			}
 		}
@@ -153,7 +159,9 @@ public partial class GUI3D : Dynamic
 	private void HandleMouse(InputEventMouse @event)
 	{
 		Vector3? pre = FindMouse(@event.GlobalPosition);
-		if (pre == null) { _mouseInArea = false; return; }
+		if (pre == null) { _mouseInArea = false; _lastPos = null; return; }
+
+		GDNode.GetViewport().SetInputAsHandled();
 
 		Vector3 mousePos3D = pre.Value;
 		mousePos3D = _area.GlobalTransform.AffineInverse() * mousePos3D;
@@ -183,6 +191,12 @@ public partial class GUI3D : Dynamic
 		_mouseInArea = true;
 	}
 
+	private void OnAreaMouseExit()
+	{
+		_mouseInArea = false;
+		_lastPos = null;
+	}
+
 	protected void RecomputeChildTransforms()
 	{
 		foreach (Instance item in GetChildren())
@@ -197,7 +211,11 @@ public partial class GUI3D : Dynamic
 	// https://github.com/godotengine/godot-demo-projects/blob/3.5-9e68af3/viewport/gui_in_3d/gui_3d.gd#L61
 	private Vector3? FindMouse(Vector2 globalPosition)
 	{
-		Camera3D camera = Globals.Singleton.GetViewport().GetCamera3D();
+		Camera3D? camera = Globals.Singleton.GetViewport().GetCamera3D();
+		if (camera == null)
+		{
+			return null;
+		}
 		Vector3 from = camera.ProjectRayOrigin(globalPosition);
 		float dist = FindFurtherDistanceTo(camera.Transform.Origin);
 		Vector3 to = from + camera.ProjectRayNormal(globalPosition) * dist;
@@ -250,6 +268,7 @@ public partial class GUI3D : Dynamic
 	{
 		_mesh.Scale = newSize;
 		_area.Scale = newSize;
+		UpdateSize();
 		base.OnNodeSizeChanged(newSize);
 	}
 
@@ -271,15 +290,19 @@ public partial class GUI3D : Dynamic
 
 		if (FaceCamera)
 		{
-			Camera3D cam = Globals.Singleton.GetViewport().GetCamera3D();
-			Vector3 look = cam.ToGlobal(new(0, 0, -100)) - cam.GlobalTransform.Origin;
+			if (IsHidden || !GDNode3D.IsInsideTree())
+			{
+				return;
+			}
 
-			_area.LookAt(look);
-			_area.RotateObjectLocal(Vector3.Back, cam.Rotation.Z);
-		}
-		else
-		{
-			_area.Rotation = Vector3.Zero;
+			Camera3D? cam = Globals.Singleton.GetViewport().GetCamera3D();
+			if (cam == null)
+			{
+				return;
+			}
+
+			Vector3 forward = -cam.GlobalTransform.Basis.Z;
+			_area.LookAt(_area.GlobalPosition - forward, cam.GlobalTransform.Basis.Y);
 		}
 	}
 }
