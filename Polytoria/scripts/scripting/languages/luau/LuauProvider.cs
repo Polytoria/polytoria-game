@@ -266,19 +266,13 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		state.PushBoolean(true);
 		state.SetGlobal("_POLY_2");
 
-		Assembly assembly = Assembly.GetExecutingAssembly();
-#pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
-		Type[] types = assembly.GetTypes();
-#pragma warning restore IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
-
 		// Expose all instantiatables
-		foreach (var t in types)
+		foreach ((string name, Type type) in TypeRegistry.InstantiableTypes)
 		{
-			if (!t.IsDefined(typeof(InstantiableAttribute), false)) continue;
 #pragma warning disable IL2072 // Datamodel types has the reflections
-			PushCSClass(state, t);
+			PushCSClass(state, type);
 #pragma warning restore IL2072 // Target parameter argument does not satisfy 'DynamicallyAccessedMembersAttribute' in call to target method. The return value of the source method does not have matching annotations.
-			state.SetGlobal(t.Name);
+			state.SetGlobal(name);
 		}
 
 		Dictionary<string, IScriptObject?> staticObjects = ScriptService.GetStaticObjects(script.Root, script);

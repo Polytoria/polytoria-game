@@ -10,6 +10,7 @@ using System.IO;
 #endif
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Resources;
+using Polytoria.Scripting.Luau;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -134,6 +135,7 @@ public sealed partial class Globals : Node
 		NativeLibrary.SetDllImportResolver(Assembly.GetExecutingAssembly(), DllImportResolver);
 
 		BaseAsset.RegisterGeneratedAssetTypes();
+		ScriptInterfaceInvokers.RegisterGenerated();
 	}
 
 	public override void _EnterTree()
@@ -228,6 +230,12 @@ public sealed partial class Globals : Node
 	{
 		if (_typesCache.TryGetValue(className, out Type? t))
 			return t;
+
+		if (TypeRegistry.InstantiableTypes.TryGetValue(className, out t))
+		{
+			_typesCache.AddOrUpdate(className, t);
+			return t;
+		}
 
 		string[] namespacesToCheck =
 		[

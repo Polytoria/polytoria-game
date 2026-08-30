@@ -430,7 +430,10 @@ public partial class Physical : Dynamic
 		ClearCollisionBody();
 		Root?.Loaded.Disconnect(OnRootReady);
 		// _proxyToPhysical.Remove(PhysicalArea);
-		_proxyToPhysical.Remove(GDNode);
+		if (GDNode != null)
+		{
+			_proxyToPhysical.Remove(GDNode);
+		}
 
 		if (PhysicalArea != null)
 		{

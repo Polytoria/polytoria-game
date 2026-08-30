@@ -35,12 +35,14 @@ public class LuaMetatable : LuaObject
 	public bool HasCustomNewIndex = false;
 	public bool HasToString = false;
 
-	private async void AsyncExec(Script script, object? targetObject, LuaState state, MethodInfo targetMethod, object?[] args, TaskCompletionSource<int> tcs)
+	private async void AsyncExec(Script script, object? targetObject, LuaState state, MethodInfo targetMethod, Func<object?, object?[], object?>? invoker, object?[] args, TaskCompletionSource<int> tcs)
 	{
 		object invokeResult;
 		try
 		{
-			invokeResult = targetMethod.Invoke(targetObject, args)!;
+			invokeResult = (script.Compatibility
+				? targetMethod.Invoke(targetObject, args)
+				: (invoker ?? throw new InvalidOperationException($"{targetMethod.Name} has no generated invoker"))(targetObject, args))!;
 		}
 		catch (Exception ex)
 		{
@@ -299,7 +301,9 @@ public class LuaMetatable : LuaObject
 				PT.PrintWarn($"{prop.Name} is obsolete. {accessData.ObsoleteMessage}");
 			}
 
-			object? value = prop.GetValue(targetObject);
+			object? value = script.Compatibility
+				? prop.GetValue(targetObject)
+				: (accessData.Getter ?? throw new InvalidOperationException($"{prop.Name} has no generated getter"))(targetObject!);
 			LangProvider.PushValueToLua(state, value);
 
 			return 1;
@@ -420,7 +424,19 @@ public class LuaMetatable : LuaObject
 					throw new Exception("member " + prop.Name + " cannot be assigned to nil.");
 				}
 
-				prop.SetValue(targetObject, convertedValue);
+				if (script.Compatibility)
+				{
+					prop.SetValue(targetObject, convertedValue);
+				}
+				else
+				{
+					PropertyAccessData accessData = GetPropertyAccessData(prop);
+					if (accessData.Setter == null)
+					{
+						throw new Exception("member " + prop.Name + " cannot be assigned to.");
+					}
+					accessData.Setter(targetObject!, convertedValue);
+				}
 				return 0;
 			}
 			else
@@ -905,12 +921,14 @@ public class LuaMetatable : LuaObject
 		{
 			TaskCompletionSource<int> tcs = new();
 			LuauProvider.SetYieldTask(state, tcs.Task);
-			AsyncExec(script, targetObject, state, targetMethod, invokeArgs, tcs);
+			AsyncExec(script, targetObject, state, targetMethod, invocationData.Invoker, invokeArgs, tcs);
 			return state.Yield(1);
 		}
 		else
 		{
-			object? result = targetMethod.Invoke(targetObject, invokeArgs);
+			object? result = script.Compatibility
+				? targetMethod.Invoke(targetObject, invokeArgs)
+				: (invocationData.Invoker ?? throw new InvalidOperationException($"{targetMethod.Name} has no generated invoker"))(targetObject, invokeArgs);
 			LangProvider.PushValueToLua(state, result);
 			return 1;
 		}
@@ -923,7 +941,11 @@ public class LuaMetatable : LuaObject
 
 		ScriptPropertyAttribute? scriptAttribute = property.GetCustomAttribute<ScriptPropertyAttribute>();
 		Attributes.ObsoleteAttribute? obsoleteAttribute = property.GetCustomAttribute<Attributes.ObsoleteAttribute>();
-		PropertyAccessData result = new(scriptAttribute?.Permissions ?? ScriptPermissionFlags.None, obsoleteAttribute?.Message);
+		PropertyAccessData result = new(
+			scriptAttribute?.Permissions ?? ScriptPermissionFlags.None,
+			obsoleteAttribute?.Message,
+			ScriptInterfaceInvokers.TryGetGetter(property),
+			ScriptInterfaceInvokers.TryGetSetter(property));
 		_propertyAccessCache[property] = result;
 		return result;
 	}
@@ -941,7 +963,8 @@ public class LuaMetatable : LuaObject
 			Array.FindIndex(parameters, p => p.IsDefined(typeof(ScriptingCallerAttribute))),
 			scriptAttribute?.Permissions ?? ScriptPermissionFlags.None,
 			obsoleteAttribute?.Message,
-			ScriptService.IsAsyncMethod(method));
+			ScriptService.IsAsyncMethod(method),
+			ScriptInterfaceInvokers.TryGetInvoker(method));
 		_methodInvocationCache[method] = result;
 		return result;
 	}
@@ -1076,12 +1099,17 @@ public class LuaMetatable : LuaObject
 		public override int GetHashCode() => _hashCode;
 	}
 
-	private readonly record struct PropertyAccessData(ScriptPermissionFlags Permissions, string? ObsoleteMessage);
+	private readonly record struct PropertyAccessData(
+		ScriptPermissionFlags Permissions,
+		string? ObsoleteMessage,
+		Func<object, object?>? Getter,
+		Action<object, object?>? Setter);
 
 	private readonly record struct MethodInvocationData(
 		ParameterInfo[] Parameters,
 		int CallerParamIndex,
 		ScriptPermissionFlags Permissions,
 		string? ObsoleteMessage,
-		bool IsAsync);
+		bool IsAsync,
+		Func<object?, object?[], object?>? Invoker);
 }
