@@ -934,6 +934,11 @@ public partial class NPC : Physical
 
 	private void InternalSit(Seat seat)
 	{
+		if (IsSitting && SittingIn != null)
+		{
+			SittingIn.Occupant = null;
+			SittingIn.InvokeVacated(this);
+		}
 		IsSitting = true;
 		OverrideNetworkTransform = true;
 		SittingIn = seat;

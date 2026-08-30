@@ -96,7 +96,7 @@ public static class APIReferenceGenerator
 						isEditable || isScriptProperty,
 						isScriptProperty && property.GetSetMethod(false) == null,
 						property.GetGetMethod(true)?.IsStatic ?? false,
-						obsoleteAttribute != null ? new(obsoleteAttribute) : null
+						obsoleteAttribute?.Info
 					));
 				}
 			}
@@ -154,7 +154,7 @@ public static class APIReferenceGenerator
 					asyncFunc,
 					method.IsStatic,
 					method.IsStatic && (methodAttribute?.SemiStatic ?? false),
-					obsoleteAttribute != null ? new(obsoleteAttribute) : null
+					obsoleteAttribute?.Info
 				));
 			}
 
@@ -522,60 +522,13 @@ public static class APIReferenceGenerator
 		};
 	}
 
-	public readonly record struct ScriptObsoletionInfo(string? Reason = null, string? UseInstead = null)
-	{
-		public ScriptObsoletionInfo(Attributes.ObsoleteAttribute obsoleteAttribute) : this(obsoleteAttribute.Reason, obsoleteAttribute.UseInstead) { }
-
-		public override readonly string ToString()
-		{
-			if (UseInstead != null)
-			{
-				string result = $"Use `{UseInstead}` instead";
-				return Reason != null ? $"{result}. {Reason}" : result;
-			}
-			return Reason ?? "";
-		}
-
-		/// <summary>
-		/// Generates a Luau <c>@deprecated</c> attribute for functions:
-		/// <see href="https://luau.org/attributes/#deprecated" />
-		/// </summary>
-		public readonly string GetAttribute()
-		{
-			List<string> args = [];
-			if (Reason != null)
-			{
-				args.Add($"reason = \"{Reason}\"");
-			}
-			if (UseInstead != null)
-			{
-				args.Add($"use = \"{UseInstead}\"");
-			}
-			if (args.Count > 0)
-			{
-				return $"@[deprecated {{ {string.Join(", ", args)} }}]";
-			}
-			return "@deprecated";
-		}
-
-		/// <summary>
-		/// Generates a moonwave <c>@deprecated</c> comment for non-functions:
-		/// <see href="https://eryn.io/moonwave/docs/TagList/#deprecated" />
-		/// </summary>
-		public readonly string GetWarningComment()
-		{
-			string content = ToString();
-			return content.Length != 0 ? $"--- @deprecated -- {content}" : "--- @deprecated";
-		}
-	}
-
-	public readonly record struct ScriptMethod(string Name, string? ReturnType, ScriptParameter[] Parameters, bool IsAsync = false, bool IsStatic = false, bool IsSemiStatic = false, ScriptObsoletionInfo? ObsoletionInfo = null)
+	public readonly record struct ScriptMethod(string Name, string? ReturnType, ScriptParameter[] Parameters, bool IsAsync = false, bool IsStatic = false, bool IsSemiStatic = false, ObsoletionInfo? ObsoletionInfo = null)
 	{
 		[JsonIgnore]
-		public readonly bool IsMetamethod => Name.StartsWith("__");
+		public readonly bool IsMetamethod = Name.StartsWith("__");
 	}
 
-	public readonly record struct ScriptProperty(string Name, string Type, bool IsAccessibleByScripts, bool IsReadOnly, bool IsStatic, ScriptObsoletionInfo? ObsoletionInfo = null)
+	public readonly record struct ScriptProperty(string Name, string Type, bool IsAccessibleByScripts, bool IsReadOnly, bool IsStatic, ObsoletionInfo? ObsoletionInfo = null)
 	{
 		public readonly override string ToString() => $"{Name}: {Type}";
 	}
@@ -595,7 +548,7 @@ public static class APIReferenceGenerator
 [JsonSerializable(typeof(ScriptEnum))]
 [JsonSerializable(typeof(ScriptEvent))]
 [JsonSerializable(typeof(ScriptProperty))]
-[JsonSerializable(typeof(ScriptObsoletionInfo))]
+[JsonSerializable(typeof(ObsoletionInfo))]
 [JsonSerializable(typeof(ScriptMethod))]
 [JsonSerializable(typeof(ScriptParameter))]
 [JsonSerializable(typeof(string))]

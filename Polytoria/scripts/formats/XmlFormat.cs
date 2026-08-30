@@ -3,7 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
-using Polytoria.Attributes;
 using Polytoria.Datamodel;
 using Polytoria.Enums;
 using Polytoria.Shared;
@@ -14,7 +13,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using TurboXml;
 using static Polytoria.Datamodel.Part;
@@ -79,7 +77,6 @@ public static class XmlFormat
 		{typeof(Datamodel.PlayerGUI), nameof(Datamodel.PlayerGUI) },
 	};
 
-	private static readonly ConditionalWeakTable<Type, Dictionary<string, PropertyInfo>> _editablePropertyCache = [];
 	private static readonly Assembly _datamodelAssembly = typeof(World).Assembly;
 	private static readonly ConcurrentDictionary<string, Type?> _datamodelTypeCache = new(StringComparer.Ordinal);
 
@@ -88,7 +85,7 @@ public static class XmlFormat
 		[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)]
 		public Type? Class;
 		public string? Name;
-		public List<(PropertyInfo Property, object Value)> Properties = new(12);
+		public List<(DatamodelMetaProp Property, object Value)> Properties = new(12);
 		public List<GameItem> Children = new(4);
 	}
 
@@ -376,7 +373,7 @@ public static class XmlFormat
 							}
 						}
 
-						PropertyInfo? property = GetEditableProperty(item.Class, _propName);
+						DatamodelMetaProp? property = GetEditableProperty(item.Class, _propName);
 
 						if (property == null)
 						{
@@ -399,7 +396,7 @@ public static class XmlFormat
 		}
 	}
 
-	private static void SetProperty(GameItem item, PropertyInfo property, object value)
+	private static void SetProperty(GameItem item, DatamodelMetaProp property, object value)
 	{
 		for (int i = 0; i < item.Properties.Count; i++)
 		{
@@ -413,29 +410,18 @@ public static class XmlFormat
 		item.Properties.Add((property, value));
 	}
 
-	private static PropertyInfo? GetEditableProperty([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type type, string propertyName)
+	private static DatamodelMetaProp? GetEditableProperty(Type type, string propertyName)
 	{
-		Dictionary<string, PropertyInfo> properties = _editablePropertyCache.GetValue(type, static targetType =>
+		Dictionary<string, DatamodelMetaProp> properties = DatamodelMetaRegistry.GetProps(type);
+
+		DatamodelMetaProp? property = properties.GetValueOrDefault(propertyName);
+
+		if (property != null && !property.IsEditable)
 		{
-			Dictionary<string, PropertyInfo> result = new(StringComparer.Ordinal);
-#pragma warning disable IL2070 // Already guaranteed to be editable
-			PropertyInfo[] allProps = targetType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
-#pragma warning restore IL2070
+			return null;
+		}
 
-			foreach (PropertyInfo property in allProps)
-			{
-				if (!property.IsDefined(typeof(EditableAttribute)))
-				{
-					continue;
-				}
-
-				result[property.Name] = property;
-			}
-
-			return result;
-		});
-
-		return properties.GetValueOrDefault(propertyName);
+		return property;
 	}
 
 	private static Type? GetDatamodelType(string className)
@@ -580,7 +566,7 @@ public static class XmlFormat
 		}
 
 		// Apply properties
-		foreach ((PropertyInfo Property, object Value) in item.Properties)
+		foreach ((DatamodelMetaProp Property, object Value) in item.Properties)
 		{
 			try
 			{
@@ -595,7 +581,7 @@ public static class XmlFormat
 					(float floatVal, Type t) when t == typeof(int) => (int)floatVal,
 					_ => val
 				};
-				Property.SetValue(instance, val);
+				Property.Set(instance, val);
 			}
 			catch (Exception ex)
 			{

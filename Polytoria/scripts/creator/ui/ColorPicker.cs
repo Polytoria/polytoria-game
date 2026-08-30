@@ -27,11 +27,28 @@ public sealed partial class ColorPicker : PanelContainer
 
 		GetViewport().GuiFocusChanged += focus =>
 		{
-			if (Visible && !IsAncestorOf(focus) && focus.Name != "Color")
-			{
-				Hide();
-			}
+			if (!Visible || focus == null)
+				return;
+
+			if (IsAncestorOf(focus) || focus == _button)
+				return;
+
+			Hide();
 		};
+	}
+
+	public override void _Input(InputEvent @event)
+	{
+		if (!Visible || @event is not InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } mouseButton)
+			return;
+
+		if (GetGlobalRect().HasPoint(mouseButton.Position))
+			return;
+
+		if (_button != null && _button.GetGlobalRect().HasPoint(mouseButton.Position))
+			return;
+
+		Hide();
 	}
 
 	public void SwitchTo(Button button, Color current, ColorChangedEventHandler callback, Action? finishedCallback = null)

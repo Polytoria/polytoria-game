@@ -70,6 +70,7 @@ public sealed partial class Player : NPC
 	private RemoteTransform3D _remoteCamAttach = null!;
 	internal Dynamic CamAttach = null!;
 	private Physical? _mouseHoveringOn;
+	private Physical? _grabbing;
 
 	private Vector3 DefaultSpawnLocation = new(0, 5, 0);
 	internal event Action<APIUserInfo>? UserInfoReady;
@@ -101,6 +102,12 @@ public sealed partial class Player : NPC
 
 	[ScriptProperty]
 	public PTSignal Respawned { get; private set; } = new();
+
+	[ScriptProperty]
+	public PTSignal<Physical> Grabbed { get; private set; } = new();
+
+	[ScriptProperty]
+	public PTSignal<Physical> Ungrabbed { get; private set; } = new();
 
 	[SyncVar, ScriptProperty]
 	public int UserID
@@ -311,6 +318,21 @@ public sealed partial class Player : NPC
 			_rotationMode = value;
 			OnPropertyChanged();
 		}
+	}
+
+	[ScriptProperty]
+	public Physical? Grabbing => _grabbing;
+
+	public void SetGrabbing(Physical phy)
+	{
+		_grabbing = phy;
+		Grabbed.Invoke(phy);
+	}
+
+	public void ReleaseGrabbing()
+	{
+		Ungrabbed.Invoke(_grabbing);
+		_grabbing = null;
 	}
 
 	[ScriptProperty]
@@ -658,12 +680,20 @@ public sealed partial class Player : NPC
 		Environment.RayResult? ray = Root.Environment.CurrentCamera?.ScreenPointToRay(Root.Input.MousePosition);
 		if (ray.HasValue && ray.Value.Instance is Physical p)
 		{
-			if (_mouseHoveringOn != null && _mouseHoveringOn != p)
+			if (_mouseHoveringOn != p)
 			{
-				_mouseHoveringOn.MouseExit.Invoke();
+				if (_mouseHoveringOn != null)
+				{
+					_mouseHoveringOn.MouseExit.Invoke();
+				}
+				_mouseHoveringOn = p;
+				_mouseHoveringOn.MouseEnter.Invoke();
 			}
-			_mouseHoveringOn = p;
-			_mouseHoveringOn.MouseEnter.Invoke();
+		}
+		else if (_mouseHoveringOn != null)
+		{
+			_mouseHoveringOn.MouseExit.Invoke();
+			_mouseHoveringOn = null;
 		}
 
 		if (FootFwdRaycast.IsColliding())

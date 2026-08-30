@@ -21,6 +21,7 @@ public partial class Explosion : Dynamic
 	private bool _affectAnchored = false;
 	private float _damage = 100000;
 	private bool _affectWelds;
+	private bool _useEffects = true;
 
 	[Editable, ScriptProperty]
 	public float Radius
@@ -77,6 +78,17 @@ public partial class Explosion : Dynamic
 		}
 	}
 
+	[Editable, ScriptProperty]
+	public bool UseEffects
+	{
+		get => _useEffects;
+		set
+		{
+			_useEffects = value;
+			OnPropertyChanged();
+		}
+	}
+
 	[ScriptProperty] public PTFunction? AffectPredicate { get; set; }
 
 	[ScriptProperty] public PTSignal<Instance> Touched { get; private set; } = new();
@@ -108,22 +120,25 @@ public partial class Explosion : Dynamic
 	private async void TryIgnite()
 	{
 		if (!IsNetworkReady || IsHidden) return;
-		_particle.Scale = Vector3.One * _radius / 15;
-		_particle.Visible = true;
-		_particle.Emitting = true;
-
-		BuiltInAudioAsset audio = New<BuiltInAudioAsset>();
-		audio.AudioPreset = BuiltInAudioAsset.BuiltInAudioPresetEnum.Explosion;
 
 		Sound? s = null;
-
-		if (!Root.Network.IsServer)
+		if (_useEffects)
 		{
-			s = New<Sound>();
-			s.Audio = audio;
-			s.PlayInWorld = true;
-			s.Parent = this;
-			s.LocalPosition = Vector3.Zero;
+			_particle.Scale = Vector3.One * _radius / 15;
+			_particle.Visible = true;
+			_particle.Emitting = true;
+
+			if (!Root.Network.IsServer)
+			{
+				BuiltInAudioAsset audio = New<BuiltInAudioAsset>();
+				audio.AudioPreset = BuiltInAudioAsset.BuiltInAudioPresetEnum.Explosion;
+
+				s = New<Sound>();
+				s.Audio = audio;
+				s.PlayInWorld = true;
+				s.Parent = this;
+				s.LocalPosition = Vector3.Zero;
+			}
 		}
 
 		Instance[] overlaps = Root.Environment.OverlapSphere(Position, Radius);

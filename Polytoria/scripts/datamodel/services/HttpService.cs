@@ -122,13 +122,19 @@ public sealed partial class HttpService : Instance
 				}
 			}
 		}
-		msg.Headers.Add("PT-World-ID", Root.WorldID.ToString());
+		msg.Headers.Add("PT-Game-ID", Root.WorldID.ToString());
 
 		using HttpResponseMessage res = await _client.SendAsync(msg);
 		Dictionary<string, string> headers = [];
 
 		foreach ((string key, IEnumerable<string> val) in res.Headers)
 		{
+			string normalized = key.ToLowerInvariant().Replace("-", "").Replace("_", "").Replace(" ", "");
+			if (normalized.Contains("ptgameid"))
+			{
+				continue;
+			}
+
 			headers[key] = string.Join(",", val);
 		}
 
@@ -338,6 +344,12 @@ public sealed partial class HttpService : Instance
 		{
 			foreach ((string key, string val) in headers)
 			{
+				string normalized = key.ToLowerInvariant().Replace("-", "").Replace("_", "").Replace(" ", "");
+				if (normalized.Contains("ptgameid"))
+				{
+					continue;
+				}
+
 				if (string.Equals(key, "Content-Type", StringComparison.OrdinalIgnoreCase))
 				{
 					msg.Content?.Headers.ContentType = new MediaTypeHeaderValue(val);

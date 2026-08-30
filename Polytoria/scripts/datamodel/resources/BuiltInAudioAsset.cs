@@ -32,11 +32,6 @@ public partial class BuiltInAudioAsset : AudioAsset
 		{ BuiltInAudioPresetEnum.Explosion, "explosion.ogg" },
 	};
 
-	public static void RegisterAsset()
-	{
-		RegisterType<BuiltInAudioAsset>();
-	}
-
 	public override void LoadResource()
 	{
 		InvokeResourceLoaded(GD.Load<AudioStream>(Globals.BuiltInAudioLocation.PathJoin(AudioMapping[_audioPreset])));

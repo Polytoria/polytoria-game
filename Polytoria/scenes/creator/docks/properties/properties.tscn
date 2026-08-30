@@ -2,24 +2,6 @@
 
 [ext_resource type="Script" uid="uid://ck1wafcqw3h2k" path="res://scripts/creator/ui/docks/properties/Properties.cs" id="1_n0wlv"]
 
-[sub_resource type="FontVariation" id="FontVariation_khfyn"]
-variation_opentype = {
-2003265652: 700
-}
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_f05cx"]
-content_margin_left = 10.0
-content_margin_top = 5.0
-content_margin_right = 10.0
-content_margin_bottom = 5.0
-bg_color = Color(0.0862745, 0.0862745, 0.0862745, 1)
-
-[sub_resource type="Theme" id="Theme_khfyn"]
-resource_name = "HeaderTheme"
-Label/font_sizes/font_size = 14
-Label/fonts/font = SubResource("FontVariation_khfyn")
-PanelContainer/styles/panel = SubResource("StyleBoxFlat_f05cx")
-
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_byekl"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1f7jh"]
@@ -32,18 +14,6 @@ TabContainer/styles/panel = SubResource("StyleBoxEmpty_1f7jh")
 [node name="Properties" type="VBoxContainer" unique_id=2034223215]
 mouse_filter = 2
 theme_override_constants/separation = 0
-
-[node name="Header" type="PanelContainer" parent="." unique_id=1381643661]
-custom_minimum_size = Vector2(0, 30)
-layout_mode = 2
-mouse_filter = 2
-theme = SubResource("Theme_khfyn")
-
-[node name="Label" type="Label" parent="Header" unique_id=1729874311]
-layout_mode = 2
-size_flags_vertical = 1
-text = "Properties"
-vertical_alignment = 1
 
 [node name="Tabs" type="TabContainer" parent="." unique_id=469721165]
 layout_mode = 2

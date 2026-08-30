@@ -93,7 +93,7 @@ public static class LuaDefinitionGenerator
 				continue;
 			}
 
-			// properties cannot be marked with attributes
+			// only functions can have attributes
 			if (p.ObsoletionInfo.HasValue)
 			{
 				builder.AppendLine($"\t{p.ObsoletionInfo.Value.GetWarningComment()}");
@@ -194,19 +194,22 @@ public static class LuaDefinitionGenerator
 
 			if (p.ObsoletionInfo.HasValue)
 			{
-				// properties cannot be marked with attributes
+				// only functions can have attributes
 				builder.AppendLine($"\t{p.ObsoletionInfo.Value.GetWarningComment()}");
 			}
 			if (p.IsReadOnly)
 			{
-				// properties cannot be marked with 'read' in the old type solver
+				// only extern types can have 'read' or 'write' in poly's old
+				// luau-lsp
 				// https://eryn.io/moonwave/docs/TagList/#readonly
 				builder.AppendLine("\t--- @readonly");
 			}
 			builder.AppendLine($"\t{p},");
 		}
 
-		// function types cannot be marked with attributes nor documented
+		// overloaded function types cannot have attributes and cannot be
+		// documented individually, skip obsolete methods entirely to discourage
+		// usage
 		foreach (IGrouping<string, string> g in c.Methods
 			.Where(m => m.IsStatic && !m.IsMetamethod && !m.ObsoletionInfo.HasValue)
 			.GroupBy(

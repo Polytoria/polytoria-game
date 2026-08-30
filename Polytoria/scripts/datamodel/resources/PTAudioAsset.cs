@@ -24,11 +24,6 @@ public partial class PTAudioAsset : AudioAsset
 		}
 	}
 
-	public static void RegisterAsset()
-	{
-		RegisterType<PTAudioAsset>();
-	}
-
 	public override void LoadResource()
 	{
 		if (AudioID == 0) return;

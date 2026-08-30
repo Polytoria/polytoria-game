@@ -3,34 +3,78 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using System;
-using System.Runtime.CompilerServices;
+using System.Collections.Generic;
 
 namespace Polytoria.Attributes;
 
 /// <summary>
-/// Mark this as obsolete. Maps to Luau's <c>@deprecated</c> attribute:
+/// Maps to Luau's <c>@deprecated</c> attribute:
 /// <see href="https://luau.org/attributes/#deprecated" />
 /// </summary>
-/// <param name="reason">The reason for obsoletion</param>
-/// <param name="use">What should be used instead</param>
-[AttributeUsage(AttributeTargets.All)]
-public sealed class ObsoleteAttribute(string? reason = null, string? use = null, [CallerMemberName] string name = "") : Attribute
+public readonly struct ObsoletionInfo
 {
-	public readonly string Name = name;
-	public readonly string? Reason = reason;
-	public readonly string? UseInstead = use;
+	private readonly string _cachedWarningPart;
 
-	public string GetWarning()
+	/// <summary>
+	/// The reason for obsoletion
+	/// </summary>
+	public readonly string? Reason;
+	/// <summary>
+	/// What should be used instead
+	/// </summary>
+	public readonly string? UseInstead;
+
+	public ObsoletionInfo(string? reason = null, string? use = null)
 	{
-		string result = $"'{Name}' is obsolete";
-		if (UseInstead != null)
+		Reason = reason;
+		UseInstead = use;
+		_cachedWarningPart = use != null ? $", use '{use}' instead" : "";
+		if (reason != null)
 		{
-			result += $", use '{UseInstead}' instead";
+			_cachedWarningPart += $". {reason}";
 		}
+	}
+
+	public string GetWarning() => "Obsolete" + _cachedWarningPart;
+
+	public string GetWarning(string name) => $"'{name}' is obsolete" + _cachedWarningPart;
+
+	/// <summary>
+	/// Generates a Luau <c>@deprecated</c> attribute:
+	/// <see href="https://luau.org/attributes/#deprecated" />
+	/// </summary>
+	public readonly string GetAttribute()
+	{
+		List<string> args = [];
 		if (Reason != null)
 		{
-			result += $". {Reason}";
+			args.Add($"reason = \"{Reason}\"");
 		}
-		return result;
+		if (UseInstead != null)
+		{
+			args.Add($"use = \"{UseInstead}\"");
+		}
+		return args.Count != 0 ? $"@[deprecated {{ {string.Join(", ", args)} }}]" : "@deprecated";
 	}
+
+	/// <summary>
+	/// Generates a moonwave <c>@deprecated</c> comment for non-functions:
+	/// <see href="https://eryn.io/moonwave/docs/TagList/#deprecated" />
+	/// </summary>
+	public readonly string GetWarningComment()
+	{
+		string content = GetWarning();
+		return content.Length != 0 ? $"--- @deprecated -- {content}" : "--- @deprecated";
+	}
+}
+
+/// <summary>
+/// Mark this as obsolete.
+/// </summary>
+[AttributeUsage(AttributeTargets.All)]
+public sealed class ObsoleteAttribute(ObsoletionInfo info) : Attribute
+{
+	public readonly ObsoletionInfo Info = info;
+
+	public ObsoleteAttribute(string? reason = null, string? use = null) : this(new(reason, use)) { }
 }
