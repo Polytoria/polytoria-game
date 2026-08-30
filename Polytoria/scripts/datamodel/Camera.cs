@@ -458,11 +458,11 @@ public sealed partial class Camera : Dynamic
 			{
 				if (Input.IsActionPressed("zoom_in"))
 				{
-					_targetZoom -= ScrollSensitivity / 5;
+					_targetZoom -= ScrollSensitivity / 0.4f*(float)delta;
 				}
 				if (Input.IsActionPressed("zoom_out"))
 				{
-					_targetZoom += ScrollSensitivity / 5;
+					_targetZoom += ScrollSensitivity / 0.4f*(float)delta;
 				}
 
 				// Handle Controller Right stick input
