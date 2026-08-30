@@ -29,6 +29,7 @@ public sealed partial class NetworkReplicateSync : Instance
 	public int InstanceToBeLoadedCount = 0;
 	public event Action<int, int>? InstanceLoadedProgress;
 	private readonly HashSet<string> _removedRef = [];
+	private static readonly StringName _magicAction = "magic";
 	private readonly HashSet<NetReplicateData> _worldReplicateSet = [];
 
 	private static readonly bool _useNetworkLog = false;
@@ -44,22 +45,52 @@ public sealed partial class NetworkReplicateSync : Instance
 		base.Init();
 	}
 
-	public void SyncPlaceToPlayer(Player plr)
+	private const int PlaceSendSliceSize = 4000;
+	private bool _placeFinalChunkSeen;
+
+	public async void SyncPlaceToPlayer(Player plr)
 	{
 		World game = NetService.Root;
 		NetworkedObject[] netObjs = game.GetReplicateDescendants();
 
 		game.NetSendAllPropUpdate(plr.PeerID);
 
-		SendChunk(netObjs, plr, true);
+		int total = netObjs.Length;
+		if (total == 0)
+		{
+			RpcId(plr.PeerID, nameof(NetRecvChunk), ZstdCompressionUtils.Compress(SerializeUtils.Serialize(System.Array.Empty<NetReplicateData>())), true, true);
+			return;
+		}
+
+		for (int start = 0; start < total; start += PlaceSendSliceSize)
+		{
+			if (plr.IsDeleted) return;
+
+			int count = Math.Min(PlaceSendSliceSize, total - start);
+			bool isFinal = start + count >= total;
+
+			NetService.TransformSync.SendChunk(netObjs, plr, start, count);
+			byte[] rawData = ZstdCompressionUtils.Compress(SerializeUtils.Serialize(PackNetObjs(netObjs, start, count)));
+			RpcId(plr.PeerID, nameof(NetRecvChunk), rawData, true, isFinal);
+
+			if (!isFinal)
+			{
+				await Globals.Singleton.WaitFrame();
+			}
+		}
 	}
 
 	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Reliable)]
-	private async void NetRecvChunk(byte[] rawBytes, bool isPlaceReplicate)
+	private async void NetRecvChunk(byte[] rawBytes, bool isPlaceReplicate, bool isFinal)
 	{
 		// Wait frame for all deletion to finish
 		await Globals.Singleton.WaitFrame();
 		await Globals.Singleton.WaitFrame();
+
+		if (isPlaceReplicate && isFinal)
+		{
+			_placeFinalChunkSeen = true;
+		}
 
 		NetReplicateData[] netObjsData = SerializeUtils.Deserialize<NetReplicateData[]>(ZstdCompressionUtils.Decompress(rawBytes))!;
 		NetReplicateData[][] chunked = ArrayUtils.Chunk(netObjsData, PlaceReplicationChunkSize);
@@ -99,15 +130,20 @@ public sealed partial class NetworkReplicateSync : Instance
 				{
 					// Check for deleted parents
 					bool removed = false;
-					foreach (string removedParentPath in _removedRef.ToArray())
+					string? matchedRemovedRef = null;
+					foreach (string removedParentPath in _removedRef)
 					{
 						if (removedParentPath != "" && parentPath.StartsWith(removedParentPath))
 						{
-							if (_useNetworkLog) { PT.Print($"[Net] [{NetService.LocalPeerID}] {data.NodePath} Removed ref {removedParentPath}"); }
-							_removedRef.Remove(removedParentPath);
-							removed = true;
+							matchedRemovedRef = removedParentPath;
 							break;
 						}
+					}
+					if (matchedRemovedRef != null)
+					{
+						if (_useNetworkLog) { PT.Print($"[Net] [{NetService.LocalPeerID}] {data.NodePath} Removed ref {matchedRemovedRef}"); }
+						_removedRef.Remove(matchedRemovedRef);
+						removed = true;
 					}
 
 					if (removed)
@@ -133,6 +169,12 @@ public sealed partial class NetworkReplicateSync : Instance
 			// hope and prayers
 			await Globals.Singleton.WaitFrame();
 		}
+
+		if (isPlaceReplicate && _placeFinalChunkSeen && !NetService.IsPlaceReplicationDone
+			&& InstanceToBeLoadedCount != 0 && _worldReplicateSet.Count == 0)
+		{
+			NetService.NetWorldSyncd();
+		}
 	}
 
 	public void SendChunk(NetworkedObject[] netObjs, Player plr, bool isPlaceReplicate = false)
@@ -140,7 +182,7 @@ public sealed partial class NetworkReplicateSync : Instance
 		NetService.TransformSync.SendChunk(netObjs, plr);
 		byte[] rawData = ZstdCompressionUtils.Compress(SerializeUtils.Serialize(PackNetObjs(netObjs)));
 
-		RpcId(plr.PeerID, nameof(NetRecvChunk), rawData, isPlaceReplicate);
+		RpcId(plr.PeerID, nameof(NetRecvChunk), rawData, isPlaceReplicate, true);
 	}
 
 	// Fallsafe for pending replicates
@@ -149,7 +191,7 @@ public sealed partial class NetworkReplicateSync : Instance
 		base.Process(delta);
 
 		// Debugging magic key
-		if (Input.IsActionJustPressed("magic"))
+		if (Input.IsActionJustPressed(_magicAction))
 		{
 			foreach (var item in _worldReplicateSet)
 			{
@@ -187,7 +229,7 @@ public sealed partial class NetworkReplicateSync : Instance
 
 		//GD.PushWarning("Broadcast chunk ", netObjs.Length);
 
-		Rpc(nameof(NetRecvChunk), rawData, false);
+		Rpc(nameof(NetRecvChunk), rawData, false, true);
 	}
 
 	public static void MarkChunkOverride(NetworkedObject[] netObjs)
@@ -211,6 +253,7 @@ public sealed partial class NetworkReplicateSync : Instance
 		for (int i = start; i < end; i++)
 		{
 			NetworkedObject netObj = netObjs[i];
+			if (netObj.IsDeleted) continue;
 			// If no sync, continue
 			if (netObj.GetType().IsDefined(typeof(NoSyncAttribute), false)) continue;
 
@@ -263,7 +306,7 @@ public sealed partial class NetworkReplicateSync : Instance
 		{
 			InstanceLoadedProgress?.Invoke(InstanceLoadedCount, InstanceToBeLoadedCount);
 
-			if (_worldReplicateSet.Count == 0)
+			if (_worldReplicateSet.Count == 0 && _placeFinalChunkSeen)
 			{
 				NetService.NetWorldSyncd();
 			}

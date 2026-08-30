@@ -97,6 +97,9 @@ public sealed partial class NetworkService : Instance
 	public bool IsProd = false;
 	public NetworkModeEnum NetworkMode { get; set; } = NetworkModeEnum.Client;
 
+	[ScriptProperty]
+	public float ReplicationRadius { get; set; } = 0f;
+
 	private ulong placeReplicationStartTime = 0;
 	private readonly Dictionary<string, List<NetReplicateData>> _pendingReplications = [];
 	private Godot.Timer _heartbeatTimer = null!;
@@ -349,14 +352,20 @@ public sealed partial class NetworkService : Instance
 				{
 					lock (_rateLimiterLock)
 					{
-						var rateLimiter = _peerRateLimiters[originFromPeer];
-						if (tfm == TransferMode.Reliable)
+						if (_peerRateLimiters.TryGetValue(originFromPeer, out var rateLimiter))
 						{
-							canSend = rateLimiter.Reliable.TryAccept();
+							if (tfm == TransferMode.Reliable)
+							{
+								canSend = rateLimiter.Reliable.TryAccept();
+							}
+							else
+							{
+								canSend = rateLimiter.Unreliable.TryAccept();
+							}
 						}
 						else
 						{
-							canSend = rateLimiter.Unreliable.TryAccept();
+							canSend = false;
 						}
 					}
 				}

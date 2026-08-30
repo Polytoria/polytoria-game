@@ -74,6 +74,12 @@ public partial class NetworkTransformSync : Instance
 		RpcId(plr.PeerID, nameof(NetRecvChunk), rawData, false);
 	}
 
+	public void SendChunk(NetworkedObject[] netObjs, Player plr, int start, int count)
+	{
+		byte[] rawData = ZstdCompressionUtils.Compress(SerializeUtils.Serialize(PackTransforms(netObjs, start, count)));
+		RpcId(plr.PeerID, nameof(NetRecvChunk), rawData, false);
+	}
+
 	public void BroadcastChunk(NetworkedObject[] netObjs)
 	{
 		byte[] rawData = ZstdCompressionUtils.Compress(SerializeUtils.Serialize(PackTransforms(netObjs)));
@@ -82,10 +88,16 @@ public partial class NetworkTransformSync : Instance
 
 	private static NetBatchTransformData[] PackTransforms(NetworkedObject[] netObjs)
 	{
-		List<NetBatchTransformData> data = [];
-		foreach (NetworkedObject item in netObjs)
+		return PackTransforms(netObjs, 0, netObjs.Length);
+	}
+
+	private static NetBatchTransformData[] PackTransforms(NetworkedObject[] netObjs, int start, int count)
+	{
+		List<NetBatchTransformData> data = new(count);
+		int end = start + count;
+		for (int i = start; i < end; i++)
 		{
-			if (item is Dynamic dyn)
+			if (netObjs[i] is Dynamic dyn && !dyn.IsDeleted)
 			{
 				data.Add(new()
 				{
@@ -231,7 +243,9 @@ public partial class NetworkTransformSync : Instance
 		SetPendingBatch(objID, new(payload, lerpTransform, excludePeer)
 		{
 			Reliable = reliable,
-			Forced = true
+			Forced = true,
+			Position = dyn.GetGlobalTransform().Origin,
+			AlwaysRelevant = dyn is Player
 		}, forced: true);
 	}
 
@@ -262,42 +276,40 @@ public partial class NetworkTransformSync : Instance
 			TransformPayloadDto processed = dyn.TransformNetworkPass(fromPeer, transform);
 
 			// If is equal approx to last, return
-			if (processed.IsEqualApprox(TransformPayloadDto.FromGDTransform(dyn.GetLocalTransform())))
+			if (processed.IsEqualApprox(dyn.GetLocalTransform()))
 				return;
 
 			// Update on server
 			dyn.UpdateTransformFromNet(processed, false, lerpTransform);
 
 			// Add to batch pending
-			SetPendingBatch(objID, new(processed, lerpTransform, fromPeer) { Reliable = false });
+			SetPendingBatch(objID, new(processed, lerpTransform, fromPeer)
+			{
+				Reliable = false,
+				Position = dyn.GetGlobalTransform().Origin,
+				AlwaysRelevant = dyn is Player
+			});
 		}
 	}
 
-	private void BroadcastGroupedBatch(List<BatchTransformData> batch, string rpcName, TransferMode transferMode, int excludePeer = -1)
-	{
-		if (NetService.NetInstance == null || batch.Count == 0) return;
-
-		byte[] packet = BuildRpcPacket(rpcName, SerializeUtils.Serialize<BatchTransformData[]>([.. batch]));
-
-		if (excludePeer == -1)
-		{
-			NetService.NetInstance.BroadcastMessage(packet, transferMode);
-		}
-		else
-		{
-			NetService.NetInstance.BroadcastMessageExcept(packet, transferMode, 0, excludePeer);
-		}
-	}
+	private readonly List<BatchTransformData> _reliableScratch = [];
+	private readonly List<int> _reliableExcludeScratch = [];
+	private readonly List<BatchTransformData> _unreliableScratch = [];
+	private readonly List<int> _unreliableExcludeScratch = [];
+	private readonly List<Vector3> _unreliablePositionScratch = [];
+	private readonly List<bool> _unreliableAlwaysScratch = [];
+	private readonly List<BatchTransformData> _peerScratch = [];
 
 	private void BroadcastBatchedTransforms()
 	{
 		if (NetService.NetInstance == null || _pendingBatchUpdate.Count == 0) return;
 
-		Dictionary<int, List<BatchTransformData>> reliableExcept = [];
-		Dictionary<int, List<BatchTransformData>> unreliableExcept = [];
-
-		List<BatchTransformData> reliableAll = [];
-		List<BatchTransformData> unreliableAll = [];
+		_reliableScratch.Clear();
+		_reliableExcludeScratch.Clear();
+		_unreliableScratch.Clear();
+		_unreliableExcludeScratch.Clear();
+		_unreliablePositionScratch.Clear();
+		_unreliableAlwaysScratch.Clear();
 
 		foreach (var (k, pending) in _pendingBatchUpdate)
 		{
@@ -309,41 +321,71 @@ public partial class NetworkTransformSync : Instance
 
 			if (pending.Reliable)
 			{
-				if (pending.ExcludePeer == -1)
-				{
-					reliableAll.Add(batchData);
-				}
-				else
-				{
-					GetOrCreateBatch(reliableExcept, pending.ExcludePeer).Add(batchData);
-				}
+				_reliableScratch.Add(batchData);
+				_reliableExcludeScratch.Add(pending.ExcludePeer);
 			}
 			else
 			{
-				if (pending.ExcludePeer == -1)
-				{
-					unreliableAll.Add(batchData);
-				}
-				else
-				{
-					GetOrCreateBatch(unreliableExcept, pending.ExcludePeer).Add(batchData);
-				}
+				_unreliableScratch.Add(batchData);
+				_unreliableExcludeScratch.Add(pending.ExcludePeer);
+				_unreliablePositionScratch.Add(pending.Position);
+				_unreliableAlwaysScratch.Add(pending.AlwaysRelevant);
 			}
 		}
 
-		BroadcastGroupedBatch(reliableAll, nameof(NetRecvBatchedTransformsReliable), TransferMode.Reliable);
-		BroadcastGroupedBatch(unreliableAll, nameof(NetRecvBatchedTransformsUnreliable), TransferMode.UnreliableOrdered);
+		SendBatchesPerPeer(_reliableScratch, _reliableExcludeScratch, null, null, nameof(NetRecvBatchedTransformsReliable), TransferMode.Reliable);
+		SendBatchesPerPeer(_unreliableScratch, _unreliableExcludeScratch, _unreliablePositionScratch, _unreliableAlwaysScratch, nameof(NetRecvBatchedTransformsUnreliable), TransferMode.UnreliableOrdered);
+	}
 
-		// Send reliable batches
-		foreach (var (peerID, batch) in reliableExcept)
-		{
-			BroadcastGroupedBatch(batch, nameof(NetRecvBatchedTransformsReliable), TransferMode.Reliable, peerID);
-		}
+	private void SendBatchesPerPeer(List<BatchTransformData> entries, List<int> excludes, List<Vector3>? positions, List<bool>? alwaysRelevant, string rpcName, TransferMode transferMode)
+	{
+		if (entries.Count == 0) return;
 
-		// Send unreliable batches
-		foreach (var (peerID, batch) in unreliableExcept)
+		NetworkInstance net = NetService.NetInstance;
+		float radius = NetService.ReplicationRadius;
+		bool filterByDistance = radius > 0f && positions != null && alwaysRelevant != null;
+		float radiusSq = radius * radius;
+		byte[]? fullPacket = null;
+
+		foreach (int peerID in net.PeerIds)
 		{
-			BroadcastGroupedBatch(batch, nameof(NetRecvBatchedTransformsUnreliable), TransferMode.UnreliableOrdered, peerID);
+			Vector3 peerPosition = default;
+			bool peerFiltered = false;
+			if (filterByDistance && NetService.Root.Players.GetPlayerFromPeerID(peerID) is { } player)
+			{
+				peerPosition = player.GetGlobalTransform().Origin;
+				peerFiltered = true;
+			}
+
+			bool excluded = false;
+			for (int i = 0; i < excludes.Count; i++)
+			{
+				if (excludes[i] == peerID)
+				{
+					excluded = true;
+					break;
+				}
+			}
+
+			if (!excluded && !peerFiltered)
+			{
+				fullPacket ??= BuildRpcPacket(rpcName, SerializeUtils.Serialize<BatchTransformData[]>([.. entries]));
+				net.SendMessage(peerID, fullPacket, transferMode);
+				continue;
+			}
+
+			_peerScratch.Clear();
+			for (int i = 0; i < entries.Count; i++)
+			{
+				if (excludes[i] == peerID) continue;
+				if (peerFiltered && !alwaysRelevant![i] && peerPosition.DistanceSquaredTo(positions![i]) > radiusSq) continue;
+				_peerScratch.Add(entries[i]);
+			}
+
+			if (_peerScratch.Count == 0) continue;
+
+			byte[] packet = BuildRpcPacket(rpcName, SerializeUtils.Serialize<BatchTransformData[]>([.. _peerScratch]));
+			net.SendMessage(peerID, packet, transferMode);
 		}
 	}
 
@@ -386,17 +428,6 @@ public partial class NetworkTransformSync : Instance
 		}
 	}
 
-	private static List<BatchTransformData> GetOrCreateBatch(Dictionary<int, List<BatchTransformData>> dict, int excludePeer)
-	{
-		if (!dict.TryGetValue(excludePeer, out var list))
-		{
-			list = [];
-			dict[excludePeer] = list;
-		}
-
-		return list;
-	}
-
 	private struct PendingBatchTransform(TransformPayloadDto transform, bool lerpTransform, int excludePeer)
 	{
 		public TransformPayloadDto Transform = transform;
@@ -404,6 +435,8 @@ public partial class NetworkTransformSync : Instance
 		public int ExcludePeer = excludePeer;
 		public bool Reliable = false;
 		public bool Forced = false;
+		public Vector3 Position = default;
+		public bool AlwaysRelevant = false;
 	}
 
 	private struct PendingTransform()

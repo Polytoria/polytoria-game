@@ -44,7 +44,14 @@ public partial class NetworkedObject : IScriptObject
 	private static readonly ConditionalWeakTable<Type, PropertyInfo[]> _syncPropertiesCache = [];
 	private static readonly ConcurrentDictionary<NetworkedObject, Node> _netObjToProxy = new();
 	private static readonly ConcurrentDictionary<Node, NetworkedObject> _proxyToNetObj = new();
-	private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo?>> _syncPropertyByNameCache = new();
+	private static readonly ConcurrentDictionary<Type, Dictionary<string, SyncPropInfo>> _syncPropInfoCache = new();
+
+	internal readonly struct SyncPropInfo(PropertyInfo prop, SyncVarAttribute? syncVar, Func<NetworkedObject, object?> getter)
+	{
+		public readonly PropertyInfo Prop = prop;
+		public readonly SyncVarAttribute? SyncVar = syncVar;
+		public readonly Func<NetworkedObject, object?> Getter = getter;
+	}
 
 	private static readonly Dictionary<Type, Dictionary<string, int>> _typeRpcIdMap = [];
 	private static readonly Dictionary<Type, Dictionary<int, MethodInfo>> _typeRpcMethodMap = [];
@@ -1097,11 +1104,9 @@ public partial class NetworkedObject : IScriptObject
 		// If during replication process, return
 		if (!_isReplicating) return;
 
-		PropertyInfo? prop = GetSyncProperty(propertyName);
-
-		if (prop != null)
+		if (GetSyncPropInfo(propertyName) is { } prop)
 		{
-			SyncVarAttribute? syncvar = prop.GetCustomAttribute<SyncVarAttribute>();
+			SyncVarAttribute? syncvar = prop.SyncVar;
 
 			bool shouldBroadcast =
 				// If no SyncVar at all -> always broadcast
@@ -1126,7 +1131,7 @@ public partial class NetworkedObject : IScriptObject
 				}
 			}
 
-			object? current = prop.GetValue(this);
+			object? current = prop.Getter(this);
 
 			// Check if last sync value is the same, or else skip if unreliable is on
 			if (!broadcastUnreliable && _lastSyncedValues?.TryGetValue(propertyName, out object? lastValue) == true)
@@ -1162,12 +1167,12 @@ public partial class NetworkedObject : IScriptObject
 				if (Root.Network.IsServer)
 				{
 					// Broadcast to all on server
-					BroadcastPropUpdate(prop.Name, current, broadcastUnreliable);
+					BroadcastPropUpdate(prop.Prop.Name, current, broadcastUnreliable);
 				}
 				else
 				{
 					// Broadcast to server if client
-					BroadcastPropUpdateToServer(prop.Name, current, broadcastUnreliable);
+					BroadcastPropUpdateToServer(prop.Prop.Name, current, broadcastUnreliable);
 				}
 			}
 		}
@@ -1413,13 +1418,11 @@ public partial class NetworkedObject : IScriptObject
 
 	public NetPropReplicateData[] GetNetPropReplicateData()
 	{
-		IEnumerable<PropertyInfo> props = GetSyncProperties();
-
 		List<NetPropReplicateData> propData = [];
 
-		foreach (PropertyInfo prop in props)
+		foreach (SyncPropInfo info in GetSyncPropInfoMap().Values)
 		{
-			object? value = prop.GetValue(this);
+			object? value = info.Getter(this);
 
 			if (value is NetworkedObject nobj)
 			{
@@ -1432,11 +1435,12 @@ public partial class NetworkedObject : IScriptObject
 
 			if (value != null)
 			{
+				string propName = info.Prop.Name;
 				propData.Add(new NetPropReplicateData
 				{
-					Name = prop.Name,
+					Name = propName,
 					ValueRaw = NetworkPropSync.SerializePropValue(value),
-					Sequence = GetSequenceForProp(prop.Name)
+					Sequence = GetSequenceForProp(propName)
 				});
 			}
 		}
@@ -1452,13 +1456,33 @@ public partial class NetworkedObject : IScriptObject
 
 	internal PropertyInfo? GetSyncProperty(string propName)
 	{
-		// Get sync property from cache
-		Dictionary<string, PropertyInfo?> nameCache = _syncPropertyByNameCache
-			.GetOrAdd(GetType(), type =>
-				GetSyncProperties().ToDictionary(p => p.Name, p => (PropertyInfo?)p));
+		return GetSyncPropInfo(propName)?.Prop;
+	}
 
-		nameCache.TryGetValue(propName, out PropertyInfo? result);
-		return result;
+	internal SyncPropInfo? GetSyncPropInfo(string propName)
+	{
+		return GetSyncPropInfoMap().TryGetValue(propName, out SyncPropInfo result) ? result : null;
+	}
+
+	private Dictionary<string, SyncPropInfo> GetSyncPropInfoMap()
+	{
+		return _syncPropInfoCache.GetOrAdd(GetType(), static type =>
+		{
+			Dictionary<string, SyncPropInfo> map = [];
+			foreach (PropertyInfo prop in BuildSyncProperties(type))
+			{
+				map[prop.Name] = new SyncPropInfo(prop, prop.GetCustomAttribute<SyncVarAttribute>(), CreatePropGetter(prop));
+			}
+			return map;
+		});
+	}
+
+	private static Func<NetworkedObject, object?> CreatePropGetter(PropertyInfo prop)
+	{
+		var targetParam = System.Linq.Expressions.Expression.Parameter(typeof(NetworkedObject), "target");
+		var cast = System.Linq.Expressions.Expression.Convert(targetParam, prop.DeclaringType!);
+		var body = System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.Property(cast, prop), typeof(object));
+		return System.Linq.Expressions.Expression.Lambda<Func<NetworkedObject, object?>>(body, targetParam).Compile();
 	}
 
 	internal void RecvPropUpdate(string propName, byte[] propValueRaw, long sequence)
@@ -1497,7 +1521,12 @@ public partial class NetworkedObject : IScriptObject
 					PendingProps.Add(propName);
 					NetPropNetworkedObjectRef newRef = nref;
 					newRef.TargetProp = prop;
-					Root.Network.PropSync.PendingRefs[newRef] = this;
+					if (!Root.Network.PropSync.PendingRefs.TryGetValue(nref.NetID, out List<(NetPropNetworkedObjectRef Ref, NetworkedObject Target)>? pendingList))
+					{
+						pendingList = [];
+						Root.Network.PropSync.PendingRefs[nref.NetID] = pendingList;
+					}
+					pendingList.Add((newRef, this));
 				}
 				else
 				{
@@ -2009,8 +2038,13 @@ public partial class NetworkedObject : IScriptObject
 
 	internal IEnumerable<PropertyInfo> GetSyncProperties()
 	{
+		return BuildSyncProperties(GetType());
+	}
+
+	private static PropertyInfo[] BuildSyncProperties(Type targetType)
+	{
 #pragma warning disable IL2070 // Reflection access is already defined
-		return _syncPropertiesCache.GetOrAdd(GetType(), static type =>
+		return _syncPropertiesCache.GetOrAdd(targetType, static type =>
 		[.. type.GetProperties(BindingFlags.Public | BindingFlags.Instance| BindingFlags.FlattenHierarchy)
 			.Where(p =>
 				// Editable or SyncVar, but not NoSync
