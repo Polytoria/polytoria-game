@@ -18,6 +18,7 @@ namespace Polytoria.Datamodel;
 public sealed partial class Tool : RigidBody
 {
 	private bool _droppable = true;
+	private string _tooltip = "";
 	private ImageAsset? _iconImage;
 	private NPC? _holder = null;
 
@@ -31,6 +32,17 @@ public sealed partial class Tool : RigidBody
 		set
 		{
 			_droppable = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue("")]
+	public string Tooltip
+	{
+		get => _tooltip;
+		set
+		{
+			_tooltip = value;
 			OnPropertyChanged();
 		}
 	}
