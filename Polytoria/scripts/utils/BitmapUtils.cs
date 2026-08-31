@@ -4,6 +4,13 @@ namespace Polytoria.Utils;
 
 public static class BitmapUtils
 {
+	//Gets assuming preshifted
+	public static bool GetRaw(uint value, uint valueOfPos)
+	{
+		return (value & valueOfPos) != 0;
+	}
+
+
 	public static bool Get(uint value, int index)
 	{
 		if (index < 1 || index > 32)
@@ -12,6 +19,21 @@ public static class BitmapUtils
 		}
 
 		return (value & 1u << (index - 1)) != 0;
+	}
+
+	//Sets assuming preshifted
+	public static uint SetRaw(uint value, uint valueOfPos, bool setTo)
+	{
+		if (setTo)
+		{
+			value |= valueOfPos;
+		}
+		else
+		{
+			value &= ~valueOfPos;
+		}
+
+		return value;
 	}
 
 	public static uint Set(uint value, int index, bool setTo)

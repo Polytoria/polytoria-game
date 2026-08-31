@@ -4,6 +4,7 @@
 
 using Godot;
 using Polytoria.Attributes;
+using Polytoria.Enums;
 using Polytoria.Scripting;
 using Polytoria.Shared;
 using Polytoria.Utils;
@@ -60,6 +61,7 @@ public sealed partial class Environment : Instance
 
 	private float _partDestroyHeight;
 	private bool _autoGenerateNavMesh;
+	private bool _usesRaycastLayer = true;
 	private Lighting.SkyboxEnum _skybox = Lighting.SkyboxEnum.Day1;
 	private bool _fogEnabled = false;
 	private Color _fogColor = new(1, 1, 1);
@@ -114,6 +116,19 @@ public sealed partial class Environment : Instance
 			OnPropertyChanged();
 		}
 	}
+
+	//Doesnt have a default value sense that removes it from being written in the .poly
+	[Editable, ScriptProperty]
+	public bool UsesRaycastLayer
+	{
+		get => _usesRaycastLayer;
+		set
+		{
+			_usesRaycastLayer = value;
+			OnPropertyChanged();
+		}
+	}
+
 
 	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with Lighting.Skybox")]
 	public Lighting.SkyboxEnum Skybox
@@ -260,16 +275,25 @@ public sealed partial class Environment : Instance
 	}
 
 	[ScriptMethod]
-	public RayResult? Raycast(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null)
+	public RayResult? Raycast(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null, uint? collisionMask = null)
 	{
 		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
+
+		uint usedCollisionMask = UsesRaycastLayer ? (uint)PhysicsLayerEnum.RaycastCollision : uint.MaxValue;
+
+		if (collisionMask != null)
+		{
+			usedCollisionMask = (uint)collisionMask;
+		}
+
 
 		PhysicsRayQueryParameters3D query = new()
 		{
 			From = origin,
 			To = origin + direction.Normalized() * maxDistance,
 			CollideWithAreas = true,
-			CollideWithBodies = true
+			CollideWithBodies = true,
+			CollisionMask = usedCollisionMask
 		};
 
 		if (ignoreList != null)
@@ -300,7 +324,7 @@ public sealed partial class Environment : Instance
 	}
 
 	[ScriptMethod]
-	public RayResult[] RaycastAll(Vector3 origin, Vector3 direction, float maxDistance = 1000, Instance[]? ignoreList = null)
+	public RayResult[] RaycastAll(Vector3 origin, Vector3 direction, float maxDistance = 1000, Instance[]? ignoreList = null, uint mask = (uint)PhysicsLayerEnum.RaycastCollision)
 	{
 		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
 		Godot.Collections.Array<Rid> ignoreRids = [];
@@ -319,6 +343,7 @@ public sealed partial class Environment : Instance
 				To = origin + direction.Normalized() * maxDistance,
 				CollideWithAreas = true,
 				CollideWithBodies = true,
+				CollisionMask = mask,
 				Exclude = ignoreRids
 			});
 

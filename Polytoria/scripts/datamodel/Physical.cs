@@ -5,6 +5,7 @@
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Datamodel.Data;
+using Polytoria.Enums;
 using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
@@ -41,7 +42,7 @@ public partial class Physical : Dynamic
 	private const float TouchedGapCheck = 20f;
 	private bool _anchored = true;
 	private bool _canCollide = true;
-	private uint _collisionLayers = 1, _collisionMask = 1;
+	private uint _collisionLayers = (uint)PhysicsLayerEnum.Default | (uint)PhysicsLayerEnum.RaycastCollision, _collisionMask = (uint)PhysicsLayerEnum.Default;
 	private Vector3 _velocity = Vector3.Zero;
 	private Vector3 _angularVelocity = Vector3.Zero;
 
@@ -178,6 +179,8 @@ public partial class Physical : Dynamic
 		{
 			return;
 		}
+		PhysicalArea?.CollisionLayer = GetAppliedCollisionLayers();
+		PhysicalArea?.CollisionMask = _collisionMask;
 
 		collisionObject3D.CollisionLayer = GetAppliedCollisionLayers();
 		collisionObject3D.CollisionMask = _collisionMask;
@@ -486,6 +489,12 @@ public partial class Physical : Dynamic
 		base.Ready();
 	}
 
+	public virtual void SetInitCollision()
+	{
+		CollisionLayers = Root.Environment.UsesRaycastLayer ? (uint)PhysicsLayerEnum.Default | (uint)PhysicsLayerEnum.RaycastCollision
+															: (uint)PhysicsLayerEnum.Default;
+	}
+
 	private CollisionObject3D? GetCollisionObject()
 	{
 		return GDNode as CollisionObject3D;
@@ -548,6 +557,7 @@ public partial class Physical : Dynamic
 	private void OnRootReady()
 	{
 		UpdateFreeze();
+		SetInitCollision();
 	}
 
 	internal void EnableCanTouch()
@@ -1143,7 +1153,8 @@ public partial class Physical : Dynamic
 			Scale = new(1.01f, 1.01f, 1.01f)
 		};
 
-		SetCollisionMask(2, true);
+		SetCollisionMaskEnum(PhysicsLayerEnum.Player, true);
+		SetCollisionMaskEnum(PhysicsLayerEnum.RaycastCollision, true);
 
 		PhysicalArea.AreaEntered += AreaEntered;
 		PhysicalArea.AreaExited += AreaExited;
@@ -1166,10 +1177,20 @@ public partial class Physical : Dynamic
 		CollisionLayers = BitmapUtils.Set(CollisionLayers, layer, value);
 	}
 
+	public void SetCollisionLayerEnum(PhysicsLayerEnum layerName, bool value)
+	{
+		CollisionLayers = BitmapUtils.SetRaw(CollisionMask, (uint)layerName, value);
+	}
+
 	[ScriptMethod]
 	public void SetCollisionMask(int layer, bool value)
 	{
 		CollisionMask = BitmapUtils.Set(CollisionMask, layer, value);
+	}
+
+	public void SetCollisionMaskEnum(PhysicsLayerEnum layerName, bool value)
+	{
+		CollisionMask = BitmapUtils.SetRaw(CollisionMask, (uint)layerName, value);
 	}
 
 	[ScriptMethod]
@@ -1178,10 +1199,20 @@ public partial class Physical : Dynamic
 		return BitmapUtils.Get(CollisionLayers, layer);
 	}
 
+	public bool GetCollisionLayerEnum(PhysicsLayerEnum layerName)
+	{
+		return BitmapUtils.GetRaw(CollisionLayers, (uint)layerName);
+	}
+
 	[ScriptMethod]
 	public bool GetCollisionMask(int layer)
 	{
 		return BitmapUtils.Get(CollisionMask, layer);
+	}
+
+	public bool GetCollisionMaskEnum(PhysicsLayerEnum layerName)
+	{
+		return BitmapUtils.GetRaw(CollisionMask, (uint)layerName);
 	}
 
 	[ScriptMethod]

@@ -6,6 +6,7 @@ using Godot;
 using Godot.Collections;
 using Polytoria.Attributes;
 using Polytoria.Client;
+using Polytoria.Enums;
 using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
@@ -455,6 +456,7 @@ public partial class NPC : Physical
 	public override void Init()
 	{
 		base.Init();
+		SetCollisionLayerEnum(PhysicsLayerEnum.RaycastCollision, true);
 		EnsureTouchArea();
 		OverridePhysicsProcess = true;
 
@@ -767,11 +769,14 @@ public partial class NPC : Physical
 
 	private void TriggerNPCDead()
 	{
+
 		if (IsDead) return;
 		if (Root.SessionType != World.SessionTypeEnum.Client) return;
 		Anchored = true;
 		OverrideCanCollide = true;
 		OverrideCanCollideTo = false;
+		CollisionLayers = Root.Environment.UsesRaycastLayer ? CollisionLayers & ~(uint)PhysicsLayerEnum.RaycastCollision
+															: CollisionLayers;
 		Unsit(false);
 		UpdateCollision();
 
