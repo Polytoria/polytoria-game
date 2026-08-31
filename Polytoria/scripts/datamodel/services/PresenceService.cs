@@ -218,7 +218,7 @@ public sealed partial class PresenceService : Instance
 				Size =
 				{
 					CurrentSize = Root.Players.PlayersCount,
-					MaxSize = 20,
+					MaxSize = Root.WorldInfo?.MaxPlayers ?? 8
 				},
 			},
 			Instance = true
