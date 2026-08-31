@@ -187,6 +187,18 @@ public partial class Physical : Dynamic
 	{
 		bool finalVal = _anchored;
 
+		if (this is RigidBody part && part.Assembly != null)
+		{
+			if (part.Assembly.Root == part)
+			{
+				finalVal = part.Assembly.Anchored;
+			}
+			else
+			{
+				finalVal = true;
+			}
+		}
+
 		if (Root != null && Root.Network != null)
 		{
 			if (Root.SessionType == World.SessionTypeEnum.Creator || !Root.IsLoaded)
@@ -219,7 +231,7 @@ public partial class Physical : Dynamic
 
 		if (!OverridePhysicsProcess)
 		{
-			SetPhysicsProcess(!_anchored);
+			SetPhysicsProcess(!finalVal);
 		}
 	}
 
@@ -325,10 +337,26 @@ public partial class Physical : Dynamic
 	}
 
 	public Physical? PhysicalRoot { get; private set; }
+	internal Physical? AssemblyCollisionRoot { get; private set; }
 
 	internal bool OverrideCanCollide = false;
 	internal bool OverrideCanCollideTo = false;
 	internal bool OverridePhysicsProcess = false;
+
+	internal void SetAssemblyCollisionRoot(Physical? root)
+	{
+		if (AssemblyCollisionRoot == root)
+		{
+			return;
+		}
+
+		AssemblyCollisionRoot = root;
+
+		foreach (CollisionShape3D shape in CollisionShapes.ToArray())
+		{
+			PostCollisionShapeUpdate(shape);
+		}
+	}
 
 	public override void HiddenChanged(bool to)
 	{
@@ -899,6 +927,11 @@ public partial class Physical : Dynamic
 
 	private Node GetCollisionShapeRoot()
 	{
+		if (AssemblyCollisionRoot != null && Node.IsInstanceValid(AssemblyCollisionRoot.GDNode))
+		{
+			return AssemblyCollisionRoot.GDNode;
+		}
+
 		if (PhysicalRoot != null)
 		{
 			return PhysicalRoot.GDNode;
@@ -953,8 +986,8 @@ public partial class Physical : Dynamic
 	internal void ApplyForceFromPlayer(Vector3 force)
 	{
 		if (Anchored) return;
-		if (this is not Entity) return;
-		((RigidBody3D)GDNode).ApplyCentralImpulse(force);
+		if (this is not Entity e) return;
+		e.ApplyAddForce(force);
 	}
 
 	private void AreaEntered(Area3D area)
@@ -1256,6 +1289,14 @@ public partial class Physical : Dynamic
 	}
 
 	internal virtual void ApplyAddRelativeTorque(Vector3 torque, ForceModeEnum mode) { throw new NotImplementedException(ClassName + " does not support this force function"); }
+
+	[ScriptMethod]
+	public void AddRelativeForceAtPosition(Vector3 force, Vector3 position, ForceModeEnum mode = ForceModeEnum.Force)
+	{
+		ApplyAddRelativeForceAtPosition(force, position, mode);
+	}
+
+	internal virtual void ApplyAddRelativeForceAtPosition(Vector3 force, Vector3 position, ForceModeEnum mode) { throw new NotImplementedException(ClassName + " does not support this force function"); }
 
 	[ScriptEnum("ForceMode")]
 	public enum ForceModeEnum

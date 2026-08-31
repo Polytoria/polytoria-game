@@ -90,7 +90,7 @@ public partial class NetworkTransformSync : Instance
 				data.Add(new()
 				{
 					NetID = dyn.NetworkedObjectID,
-					Value = TransformPayloadDto.ToArray(dyn.GetLocalTransform())
+					Value = TransformPayloadDto.ToArray(dyn.GetReplicationLocalTransform())
 				});
 			}
 		}
@@ -126,6 +126,11 @@ public partial class NetworkTransformSync : Instance
 
 		// Check if self has the network authority
 		if (!CheckDynAuthor(dyn, NetService.LocalPeerID)) return;
+
+		if (dyn is RigidBody part && part.Assembly != null && part.Assembly.Physicalized && part.Assembly.Root != part)
+		{
+			return;
+		}
 
 		TransformPayloadDto payload = TransformPayloadDto.FromGDTransform(dyn.GetLocalTransform());
 		string objID = dyn.NetworkedObjectID;
@@ -226,6 +231,11 @@ public partial class NetworkTransformSync : Instance
 	{
 		if (!NetService.IsServer) return;
 		if (!dyn.IsNetworkReady) return;
+		if (dyn is RigidBody part && part.Assembly != null && part.Assembly.Physicalized && part.Assembly.Root != part)
+		{
+			return;
+		}
+
 		string objID = dyn.NetworkedObjectID;
 
 		SetPendingBatch(objID, new(payload, lerpTransform, excludePeer)

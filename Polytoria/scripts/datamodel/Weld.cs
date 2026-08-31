@@ -5,31 +5,21 @@
 using System.Collections.Generic;
 using Godot;
 using Polytoria.Attributes;
+using Polytoria.Physics;
 
 namespace Polytoria.Datamodel;
 
 [Instantiable]
 public partial class Weld : Instance
 {
-	static readonly Dictionary<Instance, List<Weld>> _connections = new();
-	static readonly Dictionary<Instance, System.Action> _handlers = new();
+	private Instance? _part0;
+	private Instance? _part1;
 
-	Instance? _part0;
-	Instance? _part1;
-	Transform3D _c0 = Transform3D.Identity;
-	Transform3D _c1 = Transform3D.Identity;
-	bool _enabled = true;
-	bool _needsRebuild;
-	Generic6DofJoint3D? _joint;
+	private RigidBody? _registered0;
+	private RigidBody? _registered1;
 
-	public static IEnumerable<Weld> GetWeldsFor(Instance part)
-	{
-		if (part == null || part.IsDeleted)
-			return System.Array.Empty<Weld>();
-		if (_connections.TryGetValue(part, out List<Weld>? list))
-			return list.ToArray();
-		return System.Array.Empty<Weld>();
-	}
+	private bool _refreshQueued;
+	private bool _waitQueued;
 
 	[Editable, ScriptProperty]
 	public Instance? Part0
@@ -39,11 +29,11 @@ public partial class Weld : Instance
 		{
 			if (_part0 == value) return;
 			if (value != null && value == _part1) return;
-			Unregister(_part0);
+
 			_part0 = value;
-			Register(_part0);
 			OnPropertyChanged();
-			RequestRebuild();
+
+			RefreshRegistration();
 		}
 	}
 
@@ -55,59 +45,24 @@ public partial class Weld : Instance
 		{
 			if (_part1 == value) return;
 			if (value != null && value == _part0) return;
-			Unregister(_part1);
+
 			_part1 = value;
-			Register(_part1);
 			OnPropertyChanged();
-			RequestRebuild();
-		}
-	}
 
-	[SyncVar]
-	public Transform3D C0
-	{
-		get => _c0;
-		set
-		{
-			if (_c0 == value) return;
-			_c0 = value;
-			OnPropertyChanged();
-			RequestRebuild();
-		}
-	}
-
-	[SyncVar]
-	public Transform3D C1
-	{
-		get => _c1;
-		set
-		{
-			if (_c1 == value) return;
-			_c1 = value;
-			OnPropertyChanged();
-			RequestRebuild();
-		}
-	}
-
-	[Editable, ScriptProperty, DefaultValue(true)]
-	public bool Enabled
-	{
-		get => _enabled;
-		set
-		{
-			if (_enabled == value) return;
-			_enabled = value;
-			OnPropertyChanged();
-			RequestRebuild();
+			RefreshRegistration();
 		}
 	}
 
 	[ScriptMethod]
 	public void Break()
 	{
-		Enabled = false;
-		Part0 = null;
-		Part1 = null;
+		_part0 = null;
+		_part1 = null;
+
+		OnPropertyChanged(nameof(Part0));
+		OnPropertyChanged(nameof(Part1));
+
+		RefreshRegistration();
 	}
 
 	public override void EnterTree()
@@ -116,194 +71,148 @@ public partial class Weld : Instance
 
 		if (_part0 == null && Parent is Physical)
 		{
-			Part0 = Parent;
+			_part0 = Parent;
+			OnPropertyChanged(nameof(Part0));
 		}
 
-		if (_needsRebuild)
-		{
-			RebuildJoint();
-		}
+		RefreshRegistration();
 	}
 
-	public override void ExitTree()
+	public override void PostReparent()
 	{
-		DestroyJoint();
-		_needsRebuild = true;
-		base.ExitTree();
+		base.PostReparent();
+		RefreshRegistration();
 	}
 
 	public override void PreDelete()
 	{
-		DestroyJoint();
-		Unregister(_part0);
-		Unregister(_part1);
+		Unregister();
 		base.PreDelete();
 	}
 
-
-	void Register(Instance? part)
+	public override void Ready()
 	{
-		if (part == null || part.IsDeleted) return;
-		if (!_connections.TryGetValue(part, out List<Weld>? list))
-		{
-			list = new List<Weld>();
-			_connections[part] = list;
-			System.Action handler = () => OnPartDeleted(part);
-			part.Deleted += handler;
-			_handlers[part] = handler;
-		}
-		if (!list.Contains(this))
-			list.Add(this);
+		base.Ready();
+		QueueRefresh();
 	}
 
-	void Unregister(Instance? part)
+	private void RefreshRegistration()
 	{
-		if (part == null) return;
-		if (_connections.TryGetValue(part, out List<Weld>? list))
-		{
-			list.Remove(this);
-			if (list.Count == 0)
-			{
-				_connections.Remove(part);
-				if (_handlers.TryGetValue(part, out var handler))
-				{
-					part.Deleted -= handler;
-					_handlers.Remove(part);
-				}
-			}
-		}
-	}
+		RigidBody? active0 = null;
+		RigidBody? active1 = null;
 
-	static void OnPartDeleted(Instance part)
-	{
-		if (_handlers.TryGetValue(part, out var handler))
+		if (IsActiveWeld())
 		{
-			part.Deleted -= handler;
-			_handlers.Remove(part);
+			active0 = _part0 as RigidBody;
+			active1 = _part1 as RigidBody;
 		}
 
-		if (_connections.TryGetValue(part, out var list))
+		if (_registered0 == active0 && _registered1 == active1)
 		{
-			foreach (var weld in list.ToArray())
-			{
-				var other = weld._part0 == part ? weld._part1 : weld._part0;
-				if (other != null && _connections.TryGetValue(other, out var otherList))
-				{
-					otherList.Remove(weld);
-					if (otherList.Count == 0)
-					{
-						_connections.Remove(other);
-						if (_handlers.TryGetValue(other, out var otherHandler))
-						{
-							other.Deleted -= otherHandler;
-							_handlers.Remove(other);
-						}
-					}
-				}
-
-				weld._enabled = false;
-				weld._part0 = null;
-				weld._part1 = null;
-				weld.DestroyJoint();
-			}
-			_connections.Remove(part);
-		}
-	}
-
-	void RequestRebuild()
-	{
-		if (GDNode.IsInsideTree())
-		{
-			RebuildJoint();
-		}
-		else
-		{
-			_needsRebuild = true;
-		}
-	}
-
-	void RebuildJoint()
-	{
-		_needsRebuild = false;
-		DestroyJoint();
-
-		if (!_enabled) return;
-		if (_part0 == null || _part1 == null) return;
-		if (_part0 == _part1) return;
-		if (_part0.IsDeleted || _part1.IsDeleted) return;
-		if (_part0 is not Dynamic dyn0 || _part1 is not Dynamic dyn1) return;
-
-		Node3D node0 = dyn0.GDNode3D;
-		Node3D node1 = dyn1.GDNode3D;
-
-		if (node0 == null || node1 == null) return;
-		if (!node0.IsInsideTree() || !node1.IsInsideTree())
-		{
-			_needsRebuild = true;
 			return;
 		}
 
-		if (node0 is not PhysicsBody3D body0 || node1 is not PhysicsBody3D body1) return;
+		Unregister();
 
-		Transform3D part0Transform = node0.GlobalTransform;
-		TryAutoComputeC0(part0Transform, node1.GlobalTransform);
-
-		Transform3D targetPart1 = part0Transform * _c0 * _c1.AffineInverse();
-
-		Vector3 part1Size = dyn1.Size;
-		dyn1.SetGlobalTransform(new Transform3D(
-			targetPart1.Basis.Orthonormalized().Scaled(part1Size),
-			targetPart1.Origin));
-
-		_joint = new Generic6DofJoint3D();
-		GDNode.AddChild(_joint);
-		_joint.GlobalTransform = part0Transform * _c0;
-		_joint.NodeA = body0.GetPath();
-		_joint.NodeB = body1.GetPath();
-
-		LockLinearAxis("linear_limit_x");
-		LockLinearAxis("linear_limit_y");
-		LockLinearAxis("linear_limit_z");
-		LockAngularAxis("angular_limit_x");
-		LockAngularAxis("angular_limit_y");
-		LockAngularAxis("angular_limit_z");
-	}
-
-	void TryAutoComputeC0(Transform3D part0Transform, Transform3D part1Transform)
-	{
-		if (_c0 == Transform3D.Identity && _c1 == Transform3D.Identity)
+		if (active0 != null && active1 != null)
 		{
-			_c0 = part0Transform.AffineInverse() * part1Transform;
-			OnPropertyChanged("C0");
+			_registered0 = active0;
+			_registered1 = active1;
+			WeldAssemblyManager.OnWeldAdded(this, active0, active1);
 		}
 	}
 
-	void LockLinearAxis(string axis)
+	private void Unregister()
 	{
-		if (_joint == null) return;
-		_joint.Set($"{axis}/enabled", true);
-		_joint.Set($"{axis}/lower_distance", 0f);
-		_joint.Set($"{axis}/upper_distance", 0f);
-	}
-
-	void LockAngularAxis(string axis)
-	{
-		if (_joint == null) return;
-		_joint.Set($"{axis}/enabled", true);
-		_joint.Set($"{axis}/lower_angle", 0f);
-		_joint.Set($"{axis}/upper_angle", 0f);
-	}
-
-	void DestroyJoint()
-	{
-		if (_joint != null)
+		if (_registered0 == null || _registered1 == null)
 		{
-			if (Node.IsInstanceValid(_joint))
+			_registered0 = null;
+			_registered1 = null;
+			return;
+		}
+
+		RigidBody old0 = _registered0;
+		RigidBody old1 = _registered1;
+
+		_registered0 = null;
+		_registered1 = null;
+
+		WeldAssemblyManager.OnWeldRemoved(this, old0, old1);
+	}
+
+	private bool IsActiveWeld()
+	{
+		if (IsDeleted) return false;
+		if (Parent == null) return false;
+		if (IsInTemporary) return false;
+
+		if (Root == null) return false;
+
+		if (Root.SessionType != World.SessionTypeEnum.Creator && !Root.IsLoaded)
+		{
+			WaitForLoad();
+			return false;
+		}
+
+		if (Root.Network != null && Root.SessionType == World.SessionTypeEnum.Client && !Root.Network.IsServer && !Root.Network.IsTransformReplicateDone)
+		{
+			QueueRefresh();
+			return false;
+		}
+
+		if (!IsPropReady)
+		{
+			QueueRefresh();
+			return false;
+		}
+
+		if (_part0 is not RigidBody p0) return false;
+		if (_part1 is not RigidBody p1) return false;
+		if (p0 == p1) return false;
+
+		if (!p0.IsPropReady || !p1.IsPropReady)
+		{
+			QueueRefresh();
+			return false;
+		}
+
+		if (!p0.GDNode3D.IsInsideTree() || !p1.GDNode3D.IsInsideTree())
+		{
+			QueueRefresh();
+			return false;
+		}
+
+		if (p0.IsDeleted || p1.IsDeleted) return false;
+		if (p0.IsInTemporary || p1.IsInTemporary) return false;
+
+		return true;
+	}
+
+	private void QueueRefresh()
+	{
+		if (_refreshQueued) return;
+		_refreshQueued = true;
+
+		Callable.From(() =>
+		{
+			_refreshQueued = false;
+			RefreshRegistration();
+		}).CallDeferred();
+	}
+
+
+	private void WaitForLoad()
+	{
+		if (_waitQueued) return;
+		_waitQueued = true;
+
+		Root.Loaded.Once(() =>
+		{
+			Callable.From(() =>
 			{
-				_joint.QueueFree();
-			}
-
-			_joint = null;
-		}
+				_waitQueued = false;
+				RefreshRegistration();
+			}).CallDeferred();
+		});
 	}
 }

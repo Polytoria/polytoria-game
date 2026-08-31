@@ -23,6 +23,7 @@ public partial class DatamodelBridge : Node3D
 	private readonly HashSet<Part> _dirty = [];
 	private Rid _scenario;
 
+	// (material, isTransparent)
 	private readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materials = [];
 
 	private bool isGameReady = false;
@@ -118,6 +119,11 @@ public partial class DatamodelBridge : Node3D
 		_materials.Add((partMaterial, isTransparent), mat);
 
 		return mat;
+	}
+
+	public override void _PhysicsProcess(double delta)
+	{
+		_Process(delta);
 	}
 
 	public override void _Process(double delta)

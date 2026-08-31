@@ -149,6 +149,8 @@ public partial class NetworkedObject : IScriptObject
 	/// </summary>
 	internal Node SlotNode = null!;
 
+	internal Node? GodotParentOverride { get; set; }
+
 	[Editable, ScriptProperty, SaveIgnore]
 	public string Name
 	{
@@ -841,6 +843,16 @@ public partial class NetworkedObject : IScriptObject
 	public virtual void CreatorInserted() { }
 #endif
 
+	internal Node GetGodotParent()
+	{
+		if (GodotParentOverride != null && Node.IsInstanceValid(GodotParentOverride))
+		{
+			return GodotParentOverride;
+		}
+
+		return NetworkParent!.SlotNode;
+	}
+
 	private void EnterTreeRecheck()
 	{
 		if (IsDeleted) return;
@@ -879,13 +891,16 @@ public partial class NetworkedObject : IScriptObject
 		{
 			if (!Node.IsInstanceValid(NetworkParent.SlotNode)) return;
 			Node? parent = GDNode.GetParentOrNull<Node>();
+
+			Node targetParent = GetGodotParent();
+
 			if (parent == null)
 			{
-				NetworkParent.SlotNode.AddChild(GDNode);
+				targetParent.AddChild(GDNode);
 			}
-			else if (parent != NetworkParent.SlotNode)
+			else if (parent != targetParent)
 			{
-				GDNode.Reparent(NetworkParent.SlotNode);
+				GDNode.Reparent(targetParent, keepGlobalTransform: true);
 			}
 		}
 	}

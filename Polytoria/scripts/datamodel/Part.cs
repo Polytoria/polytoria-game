@@ -4,6 +4,7 @@
 
 using Godot;
 using Polytoria.Attributes;
+using Polytoria.Physics;
 using Polytoria.Shared;
 
 namespace Polytoria.Datamodel;
@@ -20,12 +21,13 @@ public partial class Part : Entity
 	private bool _isSeparateMesh = false;
 	private bool _castShadows;
 
-	private Node3D _nRemoteAt = null!; // Remote collider proxy
-
 	internal Shape3D ColliderShape => _collider.Shape;
 
 	public bool IsMeshSeparated => _isSeparateMesh;
 	public int BridgeID = -1;
+
+	private Node? _originalMeshParent;
+	protected Node3D _nRemoteAt = null!; // Remote collider proxy
 
 	public override void EnterTree()
 	{
@@ -198,7 +200,7 @@ public partial class Part : Entity
 		}
 	}
 
-	// Override this to be excluded from MutliMesh
+	// Override this to be excluded from MultiMesh
 	internal bool OverrideNoMultiMesh = false;
 
 	internal void UpdateShape()
@@ -253,6 +255,68 @@ public partial class Part : Entity
 		{
 			_mesh?.CastShadow = _castShadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
 		}
+	}
+
+	internal override void AttachToAssembly(WeldAssembly ass, RigidBody root, Transform3D localTrans)
+	{
+		base.AttachToAssembly(ass, root, localTrans);
+		AttachVisualToAssembly(root, localTrans);
+
+		Node3D rootBody = root.GDNode3D;
+
+		if (_nRemoteAt != null)
+		{
+			_originalRemoteParent ??= _nRemoteAt.GetParent();
+			_nRemoteAt.Reparent(rootBody, keepGlobalTransform: true);
+			_nRemoteAt.Transform = localTrans;
+			_nRemoteAt.Scale = NodeSize;
+		}
+	}
+
+	internal override void DetachFromAssembly()
+	{
+		if (_nRemoteAt != null && _originalRemoteParent != null && Node.IsInstanceValid(_originalRemoteParent))
+		{
+			_nRemoteAt.Reparent(_originalRemoteParent, keepGlobalTransform: true);
+			_nRemoteAt.Position = Vector3.Zero;
+			_nRemoteAt.Rotation = Vector3.Zero;
+			_nRemoteAt.Scale = NodeSize;
+		}
+
+		base.DetachFromAssembly();
+		DetachVisualFromAssembly();
+	}
+
+	internal void AttachVisualToAssembly(RigidBody root, Transform3D localTrans)
+	{
+		OverrideNoMultiMesh = true;
+		Root?.Bridge?.RemovePart(this);
+		CreateSeparateMesh();
+
+		Node3D rootBody = root.GDNode3D;
+
+		if (_mesh != null)
+		{
+			_originalMeshParent ??= _mesh.GetParent();
+			_mesh.Reparent(rootBody, keepGlobalTransform: true);
+			_mesh.Transform = localTrans;
+			_mesh.Scale = NodeSize;
+		}
+	}
+
+	internal void DetachVisualFromAssembly()
+	{
+		if (_mesh != null && _originalMeshParent != null && Node.IsInstanceValid(_originalMeshParent))
+		{
+			_mesh.Reparent(_originalMeshParent, keepGlobalTransform: true);
+			_mesh.Transform = Transform3D.Identity;
+			_mesh.Scale = NodeSize;
+		}
+
+		_originalMeshParent = null;
+
+		OverrideNoMultiMesh = false;
+		Root?.Bridge?.AddPart(this);
 	}
 
 	public override Aabb GetSelfBound()

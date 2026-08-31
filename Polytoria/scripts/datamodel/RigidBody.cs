@@ -4,6 +4,7 @@
 
 using Godot;
 using Polytoria.Attributes;
+using Polytoria.Physics;
 using Polytoria.Utils;
 using System;
 
@@ -22,6 +23,11 @@ public partial class RigidBody : Physical
 	private float _drag;
 	private float _angularDrag;
 	private float _bounciness;
+
+	protected internal WeldAssembly? Assembly { get; protected set; }
+	internal Transform3D AssemblyLocalTransform = Transform3D.Identity;
+
+	protected Node? _originalRemoteParent;
 
 	[Editable, ScriptProperty, SyncVar(Unreliable = true, AllowAuthorWrite = true)]
 	public override Vector3 Velocity
@@ -190,6 +196,9 @@ public partial class RigidBody : Physical
 		}
 	}
 
+	[ScriptProperty]
+	public RigidBody AssemblyRoot => Assembly is null ? this : Assembly.Root;
+
 	public override Node CreateGDNode()
 	{
 		return new RigidBody3D();
@@ -213,6 +222,11 @@ public partial class RigidBody : Physical
 
 	internal override void ApplyAddForce(Vector3 force, ForceModeEnum mode = ForceModeEnum.Force)
 	{
+		if (Assembly is not null && Assembly.Root != this)
+		{
+			Assembly.Root.ApplyAddForceAtPosition(force, Position, mode);
+			return;
+		}
 		if (mode == ForceModeEnum.Force)
 		{
 			GDRigidBody.ApplyCentralForce(force);
@@ -237,6 +251,11 @@ public partial class RigidBody : Physical
 
 	internal override void ApplyAddTorque(Vector3 force, ForceModeEnum mode = ForceModeEnum.Force)
 	{
+		if (Assembly is not null && Assembly.Root != this)
+		{
+			Assembly.Root.ApplyAddTorque(force, mode);
+			return;
+		}
 		if (mode == ForceModeEnum.Force)
 		{
 			GDRigidBody.ApplyTorque(force);
@@ -261,6 +280,11 @@ public partial class RigidBody : Physical
 
 	internal override void ApplyAddForceAtPosition(Vector3 force, Vector3 position, ForceModeEnum mode = ForceModeEnum.Force)
 	{
+		if (Assembly is not null && Assembly.Root != this)
+		{
+			Assembly.Root.ApplyAddForceAtPosition(force, position, mode);
+			return;
+		}
 		if (mode == ForceModeEnum.Force)
 		{
 			GDRigidBody.ApplyForce(force, position);
@@ -285,6 +309,11 @@ public partial class RigidBody : Physical
 
 	internal override void ApplyAddRelativeForce(Vector3 force, ForceModeEnum mode = ForceModeEnum.Force)
 	{
+		if (Assembly is not null && Assembly.Root != this)
+		{
+			Assembly.Root.ApplyAddRelativeForce(force, mode);
+			return;
+		}
 		Vector3 worldForce = GDRigidBody.GlobalTransform.Basis * force;
 		if (mode == ForceModeEnum.Force)
 		{
@@ -310,6 +339,11 @@ public partial class RigidBody : Physical
 
 	internal override void ApplyAddRelativeTorque(Vector3 torque, ForceModeEnum mode = ForceModeEnum.Force)
 	{
+		if (Assembly is not null && Assembly.Root != this)
+		{
+			Assembly.Root.ApplyAddRelativeTorque(torque, mode);
+			return;
+		}
 		Vector3 worldTorque = GDRigidBody.GlobalTransform.Basis * torque;
 
 		if (mode == ForceModeEnum.Force)
@@ -334,9 +368,100 @@ public partial class RigidBody : Physical
 		}
 	}
 
+	internal override void ApplyAddRelativeForceAtPosition(Vector3 force, Vector3 position, ForceModeEnum mode = ForceModeEnum.Force)
+	{
+		Vector3 worldForce = GDRigidBody.GlobalTransform.Basis * force;
+		ApplyAddForceAtPosition(worldForce, position, mode);
+	}
+
 	protected override void ApplyFreeze(bool to)
 	{
 		GDRigidBody.Freeze = to;
 		base.ApplyFreeze(to);
+	}
+
+	internal virtual void AttachToAssembly(WeldAssembly ass, RigidBody root, Transform3D localTrans)
+	{
+		Assembly = ass;
+		AssemblyLocalTransform = localTrans;
+
+		if (this != root)
+		{
+			OverridePhysicsProcess = true;
+			SetPhysicsProcess(false);
+			OverrideNetworkTransform = true;
+			AutoUpdateNetTransform = false;
+			SetAssemblyCollisionRoot(root);
+
+			GDRigidBody.Freeze = true;
+			GDRigidBody.Sleeping = true;
+			GDNode.Reparent(root.GDNode, keepGlobalTransform: true);
+		}
+
+		Node3D rootBody = root.GDNode3D;
+
+		foreach (Instance desc in GetDescendants())
+		{
+			if (desc is Part p)
+			{
+				p.AttachVisualToAssembly(root, localTrans * p.GDNode3D.Transform);
+			}
+		}
+
+		UpdateFreeze();
+	}
+
+	internal virtual void DetachFromAssembly()
+	{
+		foreach (Instance desc in GetDescendants())
+		{
+			if (desc is Part p)
+			{
+				p.DetachVisualFromAssembly();
+			}
+		}
+
+		Transform3D currentTrans;
+		if (Assembly == null)
+		{
+			currentTrans = GDNode3D.GlobalTransform;
+		}
+		else
+		{
+			currentTrans = Assembly.Root.GDNode3D.GlobalTransform * AssemblyLocalTransform;
+		}
+
+		GDNode3D.GlobalTransform = currentTrans;
+		GDNode.Reparent(Parent.GDNode, keepGlobalTransform: true);
+		ForceUpdateTransform();
+		UpdateCurrentTransformCache();
+
+		SetAssemblyCollisionRoot(null);
+
+		OverridePhysicsProcess = false;
+		OverrideNetworkTransform = false;
+		AutoUpdateNetTransform = true;
+
+		Assembly = null;
+		AssemblyLocalTransform = Transform3D.Identity;
+
+		_originalRemoteParent = null;
+
+		UpdateFreeze();
+		UpdateCollision();
+	}
+
+	internal bool TryGetAssemblyTransform(out Transform3D trans)
+	{
+		if (Assembly == null || Assembly.Root == this)
+		{
+			trans = default;
+			return false;
+		}
+
+		Transform3D rootBody = Assembly.Root.GDNode3D.GlobalTransform;
+		trans = rootBody * AssemblyLocalTransform * Transform3D.Identity.Scaled(NodeSize);
+
+		return true;
 	}
 }

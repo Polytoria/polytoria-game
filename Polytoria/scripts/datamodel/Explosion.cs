@@ -2,9 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+using System.Collections.Generic;
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Datamodel.Resources;
+using Polytoria.Physics;
 using Polytoria.Scripting;
 using Polytoria.Shared;
 
@@ -141,10 +143,21 @@ public partial class Explosion : Dynamic
 			}
 		}
 
+		HashSet<Instance> processed = [];
+		HashSet<RigidBody> toCheck = new(ReferenceEqualityComparer.Instance);
+		HashSet<Weld> breakWelds = new(ReferenceEqualityComparer.Instance);
+		List<Entity> forceTargets = [];
+		List<Player> playerTargets = [];
+
 		Instance[] overlaps = Root.Environment.OverlapSphere(Position, Radius);
 
 		foreach (Instance item in overlaps)
 		{
+			if (!processed.Add(item))
+			{
+				continue;
+			}
+
 			Touched.Invoke(item);
 
 			if (AffectPredicate != null)
@@ -156,9 +169,29 @@ public partial class Explosion : Dynamic
 				}
 			}
 
-			if (item is Entity e && !item.IsDescendantOfClass("Accessory"))
+			if (item is RigidBody e && !item.IsDescendantOfClass("Accessory"))
 			{
-				if (e.Anchored && !AffectAnchored && AffectPredicate == null) continue;
+				bool skipForce = e.Anchored && !AffectAnchored && AffectPredicate == null;
+
+				if (_affectWelds && item is RigidBody p)
+				{
+					if (p.Assembly != null && p.Assembly.Physicalized)
+					{
+						foreach (RigidBody assemblyPart in p.Assembly.Parts)
+						{
+							toCheck.Add(assemblyPart);
+						}
+					}
+					else
+					{
+						toCheck.Add(p);
+					}
+				}
+
+				if (skipForce)
+				{
+					continue;
+				}
 
 				RigidBody3D body = e.GDRigidBody;
 				Vector3 direction = body.GlobalTransform.Origin - GetGlobalTransform().Origin;
@@ -180,16 +213,8 @@ public partial class Explosion : Dynamic
 				float forceMagnitude = Force * (1 - (distance / Radius));
 				Vector3 force = direction * forceMagnitude / 100;
 
-				body.ApplyCentralImpulse(force);
+				e.ApplyAddForce(force);
 
-				if (_affectWelds)
-				{
-					foreach (Weld w in Weld.GetWeldsFor(e))
-					{
-						if (w.Enabled)
-							w.Break();
-					}
-				}
 			}
 			else if (item is Player plr)
 			{
@@ -198,6 +223,27 @@ public partial class Explosion : Dynamic
 				plr.TakeDamage(Damage);
 				AddPlrExplosionForce(plr);
 			}
+		}
+
+		if (_affectWelds)
+		{
+			foreach (RigidBody part in toCheck)
+			{
+				foreach (Weld weld in WeldGraph.GetWelds(part).ToArray())
+				{
+					if (!WeldGraph.TryGetParts(weld, out RigidBody a, out RigidBody b))
+					{
+						continue;
+					}
+
+					if (IsWeldAffected(a, b))
+					{
+						breakWelds.Add(weld);
+					}
+				}
+			}
+
+			WeldAssemblyManager.BreakWelds(breakWelds);
 		}
 
 		// Play sound on next frame, needed to be loaded
@@ -209,6 +255,40 @@ public partial class Explosion : Dynamic
 		await Globals.Singleton.WaitAsync(ExplosionParticleTimeSec);
 
 		Delete();
+	}
+
+	private bool IsWeldAffected(RigidBody a, RigidBody b)
+	{
+		Aabb aa = a.GetSelfBound();
+		Aabb bb = b.GetSelfBound();
+
+		Vector3 point = Position;
+
+		Vector3 closestOnContact = new(
+			ClosestContactAxis(point.X, aa.Position.X, aa.End.X, bb.Position.X, bb.End.X),
+			ClosestContactAxis(point.Y, aa.Position.Y, aa.End.Y, bb.Position.Y, bb.End.Y),
+			ClosestContactAxis(point.Z, aa.Position.Z, aa.End.Z, bb.Position.Z, bb.End.Z)
+		);
+
+		return closestOnContact.DistanceTo(point) <= Radius;
+	}
+
+	private static float ClosestContactAxis(float point, float aMin, float aMax, float bMin, float bMax)
+	{
+		if (aMax < bMin)
+		{
+			return (aMax + bMin) * 0.5f;
+		}
+
+		if (bMax < aMin)
+		{
+			return (bMax + aMin) * 0.5f;
+		}
+
+		float overlapMin = Mathf.Max(aMin, bMin);
+		float overlapMax = Mathf.Min(aMax, bMax);
+
+		return Mathf.Clamp(point, overlapMin, overlapMax);
 	}
 
 	private void AddPlrExplosionForce(Player player)
