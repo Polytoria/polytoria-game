@@ -230,6 +230,64 @@ public sealed partial class World : Instance
 		return Engine.GetFramesPerSecond();
 	}
 
+	/// Returns the current main loop process time in milliseconds.
+	[ScriptMethod]
+	public double GetTimeProcessMs()
+	{
+		return Performance.Singleton.GetMonitor(Performance.Monitor.TimeProcess) * 1000.0;
+	}
+
+	/// Returns the current physics process time in milliseconds.
+	[ScriptMethod]
+	public double GetTimePhysicsProcessMs()
+	{
+		return Performance.Singleton.GetMonitor(Performance.Monitor.TimePhysicsProcess) * 1000.0;
+	}
+
+	/// Returns the total node count of the running process.
+	[ScriptMethod]
+	public int GetNodeCount()
+	{
+		return (int)Performance.Singleton.GetMonitor(Performance.Monitor.ObjectNodeCount);
+	}
+
+	/// Returns the total resource count of the running process.
+	[ScriptMethod]
+	public int GetResourceCount()
+	{
+		return (int)Performance.Singleton.GetMonitor(Performance.Monitor.ObjectResourceCount);
+	}
+
+	/// Returns the number of non-Datamodel (separated) parts on the client.
+	/// Returns zero on a dedicated server where the bridge is not present.
+	[ScriptMethod]
+	public long GetNonDMBPartCount()
+	{
+		if (Bridge == null) return 0L;
+		return Bridge.SeparatedPartCount;
+	}
+
+	/// Returns the current asset cache memory usage in mebibytes.
+	[ScriptMethod]
+	public double GetAssetMemoryMiB()
+	{
+		return AssetLoader.Singleton.AssetSizeBytes / 1048576d;
+	}
+
+	/// Returns the number of assets currently cached by the asset loader.
+	[ScriptMethod]
+	public int GetLoadedAssetCount()
+	{
+		return AssetLoader.Singleton.AssetCacheCount;
+	}
+
+	/// Returns the number of assets currently waiting to load.
+	[ScriptMethod]
+	public int GetPendingAssetCount()
+	{
+		return AssetLoader.Singleton.PendingAssetsCount;
+	}
+
 	[SyncVar]
 	public bool ServerUnderLoad
 	{
