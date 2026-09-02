@@ -4,20 +4,16 @@
 
 using Godot;
 using Polytoria.Attributes;
+using Polytoria.Datamodel.Data;
 using Polytoria.Datamodel.Resources;
 using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Enums;
 
-
-#if CREATOR
-using Polytoria.Creator.Spatial;
-#endif
-
 namespace Polytoria.Datamodel;
 
 [Instantiable]
-public sealed partial class Sound : Dynamic
+public sealed partial class Sound : Instance
 {
 	public const float SoundDistanceMultipler = 1.25f;
 	private const float MinPitch = 0.001f;
@@ -32,18 +28,20 @@ public sealed partial class Sound : Dynamic
 
 	private AudioAsset? _asset;
 	private int _soundID = 0;
-	private bool _autoplay = false;
 	private float _volume = 1f;
 	private float _time = 0f;
 	private bool _loop = false;
-	private float _loopStart = 0f;
-	private bool _playInWorld = false;
+	private NumberRange _loopRange = new(-1, -1);
+	private bool _inWorld = false;
+	private float _lastPlaybackPos = 0f;
+	private bool _playing = false;
 	private bool _paused = false;
 	private float _pitch = 1f;
-	private float _maxDistance = 60f;
+	private NumberRange _distance = new(1f, 60f);
 	private float _pan = 0f;
 
 	private AudioStream? _currentStream;
+	private decimal _playStartTime = 0;
 
 	[Editable, ScriptProperty]
 	public AudioAsset? Audio
@@ -81,7 +79,7 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Audio instead"), CloneIgnore]
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use 'Audio' instead."), CloneIgnore]
 	public int SoundID
 	{
 		get => _soundID;
@@ -130,17 +128,6 @@ public sealed partial class Sound : Dynamic
 	}
 
 	[Editable, ScriptProperty]
-	public bool Autoplay
-	{
-		get => _autoplay;
-		set
-		{
-			_autoplay = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
 	public bool Loop
 	{
 		get => _loop;
@@ -153,35 +140,25 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
-	[Editable, ScriptProperty]
-	public float LoopStart
+	[Editable, ScriptProperty, Attributes.Obsolete("Use 'Playing' instead.")]
+	public bool Autoplay
 	{
-		get => _loopStart;
-		set
-		{
-			// unclamped value is reapplied and clamped when Sound is loaded
-			if (_currentStream != null)
-			{
-				value = (float)Mathf.Clamp(value, 0, _currentStream.GetLength());
-			}
-
-			_loopStart = value;
-
-			SetStreamLoopStart(_currentStream, value);
-			OnPropertyChanged();
-		}
+		get => Playing;
+		set => Playing = value;
 	}
 
-	[Editable, ScriptProperty]
+	[Editable, ScriptProperty, Attributes.Obsolete("Use 'LoopRange.Min' instead.")]
+	public float LoopStart
+	{
+		get => LoopRange.Min;
+		set => LoopRange = new(value, LoopRange.Max);
+	}
+
+	[Editable, ScriptProperty, Attributes.Obsolete("Playback location is now determined by the sound's parent.")]
 	public bool PlayInWorld
 	{
-		get => _playInWorld;
-		set
-		{
-			_playInWorld = value;
-			CreateAudioPlayer();
-			OnPropertyChanged();
-		}
+		get => _inWorld;
+		set { }
 	}
 
 	[Editable, ScriptProperty]
@@ -198,17 +175,60 @@ public sealed partial class Sound : Dynamic
 	}
 
 	[Editable, ScriptProperty]
-	public float MaxDistance
+	public bool Playing
 	{
-		get => _maxDistance;
+		get => _playing;
 		set
 		{
-			_maxDistance = value;
-			UpdateMaxDistance();
+			if (_playing == value) return;
+
+			if (Root != null && Root.SessionType == World.SessionTypeEnum.Creator)
+			{
+				_playing = value;
+				OnPropertyChanged();
+				return;
+			}
+
+			if (value) Play(); else Stop();
 		}
 	}
 
-	private AudioStreamPlayer3D.AttenuationModelEnum _attenuationMode = AudioStreamPlayer3D.AttenuationModelEnum.Disabled;
+	[Editable, ScriptProperty]
+	public NumberRange LoopRange
+	{
+		get => _loopRange;
+		set
+		{
+			_loopRange = value;
+			if (_currentStream != null && value.Min >= 0)
+			{
+				SetStreamLoopStart(_currentStream, (float)Mathf.Clamp(value.Min, 0, _currentStream.GetLength()));
+			}
+
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public NumberRange Distance
+	{
+		get => _distance;
+		set
+		{
+			_distance = value;
+			UpdateDistance();
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, Attributes.Obsolete("Use 'Distance.Max' instead.")]
+	public float MaxDistance
+	{
+		get => Distance.Max;
+		set => Distance = new(Distance.Min, value);
+	}
+
+	private AudioStreamPlayer3D.AttenuationModelEnum _attenuationMode = AudioStreamPlayer3D.AttenuationModelEnum.InverseDistance;
 
 	[Editable, ScriptProperty]
 	public SoundAttenuationModeEnum AttenuationMode
@@ -217,7 +237,7 @@ public sealed partial class Sound : Dynamic
 		{
 			return _attenuationMode switch
 			{
-				AudioStreamPlayer3D.AttenuationModelEnum.InverseDistance => SoundAttenuationModeEnum.Linear,
+				AudioStreamPlayer3D.AttenuationModelEnum.InverseDistance => SoundAttenuationModeEnum.Inverse,
 				AudioStreamPlayer3D.AttenuationModelEnum.InverseSquareDistance => SoundAttenuationModeEnum.Squared,
 				AudioStreamPlayer3D.AttenuationModelEnum.Logarithmic => SoundAttenuationModeEnum.Logarithmic,
 				AudioStreamPlayer3D.AttenuationModelEnum.Disabled => SoundAttenuationModeEnum.Disabled,
@@ -230,7 +250,7 @@ public sealed partial class Sound : Dynamic
 
 			_attenuationMode = value switch
 			{
-				SoundAttenuationModeEnum.Linear => AudioStreamPlayer3D.AttenuationModelEnum.InverseDistance,
+				SoundAttenuationModeEnum.Inverse => AudioStreamPlayer3D.AttenuationModelEnum.InverseDistance,
 				SoundAttenuationModeEnum.Squared => AudioStreamPlayer3D.AttenuationModelEnum.InverseSquareDistance,
 				SoundAttenuationModeEnum.Logarithmic => AudioStreamPlayer3D.AttenuationModelEnum.Logarithmic,
 				SoundAttenuationModeEnum.Disabled => AudioStreamPlayer3D.AttenuationModelEnum.Disabled,
@@ -252,22 +272,37 @@ public sealed partial class Sound : Dynamic
 		{
 			_time = value;
 			InternalSeek(_time);
-
-			if (HasAuthority)
-			{
-				Rpc(nameof(NetSoundSeek), _time);
-			}
+			Rpc(nameof(NetSoundSeek), _time);
 		}
 	}
 
-	[ScriptProperty] public bool Playing { get; private set; } = false;
 	[ScriptProperty] public bool Loading { get; private set; } = false;
 
 	[ScriptProperty]
 	public float Length => (_currentStream != null ? (float)_currentStream.GetLength() : 0);
 
+	[ScriptProperty]
+	public float Loudness
+	{
+		get
+		{
+			int bus = AudioServer.GetBusIndex(_audioBusName);
+			if (bus < 0) return 0f;
+
+			float left = AudioServer.GetBusPeakVolumeLeftDb(bus, 0);
+			float right = AudioServer.GetBusPeakVolumeRightDb(bus, 0);
+			return Mathf.DbToLinear(Mathf.Max(left, right));
+		}
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use 'Loudness' instead.")]
+	public float GetPeakVolume() => Loudness;
+
+
 	[ScriptProperty] public PTSignal Loaded { get; private set; } = new();
-	[ScriptProperty] public PTSignal Finished { get; private set; } = new();
+	[ScriptProperty] public PTSignal<bool> Played { get; private set; } = new();
+	[ScriptProperty] public PTSignal<bool> Finished { get; private set; } = new();
+	[ScriptProperty] public PTSignal Looped { get; private set; } = new();
 
 	[SyncVar]
 	public bool ServerIsPlaying
@@ -280,13 +315,33 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
+	[SyncVar(ServerOnly = true)]
+	internal decimal PlayStartTime
+	{
+		get => _playStartTime;
+		set
+		{
+			_playStartTime = value;
+			OnPropertyChanged();
+		}
+	}
+
 	public override void Init()
 	{
 		CreateAudioPlayer();
-#if CREATOR
-		GDNode.AddChild(new SpatialIcon(ClassName), @internal: Node.InternalMode.Back);
-#endif
+		SetProcess(true);
 		base.Init();
+	}
+
+	public override void PostReparent()
+	{
+		bool inWorld = Parent is Physical;
+		if (inWorld != _inWorld)
+		{
+			_inWorld = inWorld;
+			CreateAudioPlayer();
+		}
+		base.PostReparent();
 	}
 
 	public override void PreDelete()
@@ -302,7 +357,7 @@ public sealed partial class Sound : Dynamic
 
 		CleanupAudioPlayer();
 
-		if (!PlayInWorld)
+		if (!_inWorld)
 		{
 			_audioBusName = "Sound_" + ObjectID;
 			AudioServer.AddBus();
@@ -331,7 +386,7 @@ public sealed partial class Sound : Dynamic
 			GDNode.AddChild(_audioPlayer3D, @internal: Node.InternalMode.Back);
 			_audioPlayer3D.Finished += OnPlayerFinished;
 		}
-		UpdateMaxDistance();
+		UpdateDistance();
 		UpdateVolume();
 		UpdatePitch();
 	}
@@ -354,9 +409,11 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
-	private void UpdateMaxDistance()
+	private void UpdateDistance()
 	{
-		_audioPlayer3D?.MaxDistance = _maxDistance * SoundDistanceMultipler;
+		if (_audioPlayer3D == null) return;
+		_audioPlayer3D.UnitSize = _distance.Min;
+		_audioPlayer3D.MaxDistance = _distance.Max * SoundDistanceMultipler;
 	}
 
 	private void UpdateVolume()
@@ -388,15 +445,32 @@ public sealed partial class Sound : Dynamic
 		audioAsset.AudioID = (uint)_soundID;
 	}
 
+	public override void Process(double delta)
+	{
+		if (!Playing || Paused || !Loop) return;
+
+		float pos = Time;
+		if (_loopRange.Max >= 0 && pos >= _loopRange.Max)
+		{
+			InternalSeek(Mathf.Max(_loopRange.Min, 0));
+			Looped.Invoke();
+		}
+		else
+		{
+			if (pos < _lastPlaybackPos) Looped.Invoke();
+			_lastPlaybackPos = pos;
+		}
+		base.Process(delta);
+	}
+
 	private void OnPlayerFinished()
 	{
-		// Event is not fired on looping sound
-		Playing = false;
+		SetPlayingInternal(false);
 		if (HasAuthority)
 		{
 			ServerIsPlaying = false;
 		}
-		Finished.Invoke();
+		Finished.Invoke(true);
 	}
 
 	[ScriptMethod]
@@ -405,9 +479,11 @@ public sealed partial class Sound : Dynamic
 		if (Paused)
 		{
 			Paused = false;
+			Played.Invoke(true);
 			return;
 		}
 		InternalPlay();
+		Played.Invoke(false);
 
 		if (HasAuthority)
 		{
@@ -416,16 +492,19 @@ public sealed partial class Sound : Dynamic
 	}
 
 	[ScriptMethod]
-	public void PlayOneShot(float volume = 1f)
+	public void PlayOnce(float volume = 1f)
 	{
 		// WARN: only add panning to oneshot after sorting extra complexity of audiobus and safety
-		InternalPlayOneShot(volume);
+		InternalPlayOnce(volume);
 
 		if (HasAuthority)
 		{
-			Rpc(nameof(NetPlayOneshot), volume);
+			Rpc(nameof(NetPlayOnce), volume);
 		}
 	}
+
+	[ScriptMethod, Attributes.Obsolete("Use 'PlayOnce' instead.")]
+	public void PlayOneShot(float volume = 1f) => PlayOnce(volume);
 
 	[ScriptMethod]
 	public void Pause()
@@ -444,28 +523,15 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
-	[ScriptMethod]
-	public float GetPeakVolume()
-	{
-		int bus = AudioServer.GetBusIndex(_audioBusName);
-		if (bus < 0)
-			return 0f;
-
-		float left = AudioServer.GetBusPeakVolumeLeftDb(bus, 0);
-		float right = AudioServer.GetBusPeakVolumeRightDb(bus, 0);
-
-		return Mathf.DbToLinear(Mathf.Max(left, right));
-	}
-
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
-	private void NetPlayOneshot(float volume)
+	private void NetPlayOnce(float volume)
 	{
 		Mathf.Clamp(volume, 0f, 1f);
 
-		InternalPlayOneShot(volume);
+		InternalPlayOnce(volume);
 	}
 
-	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
+	[NetRpc(AuthorityMode.Any, TransferMode = TransferMode.Reliable)]
 	private void NetSoundSeek(float to)
 	{
 		InternalSeek(to);
@@ -484,16 +550,24 @@ public sealed partial class Sound : Dynamic
 		InternalStop();
 	}
 
+	private void SetPlayingInternal(bool value)
+	{
+		_playing = value;
+		OnPropertyChanged(nameof(Playing));
+	}
+
 	private void InternalPlay()
 	{
 		if (Root.SessionType == World.SessionTypeEnum.Creator) return;
 
 		if (!Loading && Audio != null)
 		{
-			Playing = true;
+			SetPlayingInternal(true);
+			_lastPlaybackPos = 0f;
 			if (HasAuthority)
 			{
 				ServerIsPlaying = true;
+				PlayStartTime = Root.ServerTime;
 			}
 			_audioPlayer?.Play();
 			_audioPlayer3D?.Play();
@@ -504,7 +578,7 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
-	private void InternalPlayOneShot(float volume)
+	private void InternalPlayOnce(float volume)
 	{
 		// can safely mute on the server since this method doesn't change any properties
 		if (Root.Network.IsServer) return;
@@ -552,19 +626,25 @@ public sealed partial class Sound : Dynamic
 
 	private void InternalStop()
 	{
-		Playing = false;
+		bool wasPlaying = Playing;
+		SetPlayingInternal(false);
 		if (HasAuthority)
 		{
 			ServerIsPlaying = false;
 		}
 		_audioPlayer?.Stop();
 		_audioPlayer3D?.Stop();
+		if (wasPlaying)
+		{
+			Finished.Invoke(false);
+		}
 	}
 
 	private void InternalSeek(float to)
 	{
 		_audioPlayer?.Seek(to);
 		_audioPlayer3D?.Seek(to);
+		_lastPlaybackPos = to;
 	}
 
 	private void OnResourceLoaded(Resource audio)
@@ -576,16 +656,24 @@ public sealed partial class Sound : Dynamic
 		_currentStream = (AudioStream)audio;
 		_audioPlayer?.Stream = (AudioStream)audio;
 		_audioPlayer3D?.Stream = (AudioStream)audio;
-		// reapply to new stream
-		LoopStart = _loopStart;
+
+		// Re-apply to new stream
+		LoopRange = _loopRange;
 		Loop = _loop;
 
 		Loaded.Invoke();
 
-		if (Autoplay || _playAfterLoad || ServerIsPlaying)
+		if (_playAfterLoad || ServerIsPlaying)
 		{
 			_playAfterLoad = false;
 			InternalPlay();
+
+			// Catch up
+			float elapsed = (float)(Root.ServerTime - PlayStartTime);
+			if (Playing && elapsed > 0.05f && Length > 0)
+			{
+				InternalSeek(Loop ? elapsed % Length : Mathf.Min(elapsed, Length));
+			}
 		}
 	}
 
