@@ -230,6 +230,80 @@ public sealed partial class World : Instance
 		return Engine.GetFramesPerSecond();
 	}
 
+	/// <summary>
+	/// Returns the current main loop process time in milliseconds.
+	/// </summary>
+	[ScriptMethod]
+	public double GetTimeProcessMs()
+	{
+		return Performance.Singleton.GetMonitor(Performance.Monitor.TimeProcess) * 1000.0;
+	}
+
+	/// <summary>
+	/// Returns the current physics process time in milliseconds.
+	/// </summary>
+	[ScriptMethod]
+	public double GetTimePhysicsProcessMs()
+	{
+		return Performance.Singleton.GetMonitor(Performance.Monitor.TimePhysicsProcess) * 1000.0;
+	}
+
+	/// <summary>
+	/// Returns the total node count of the running process.
+	/// </summary>
+	[ScriptMethod]
+	public int GetNodeCount()
+	{
+		return (int)Performance.Singleton.GetMonitor(Performance.Monitor.ObjectNodeCount);
+	}
+
+	/// <summary>
+	/// Returns the total resource count of the running process.
+	/// </summary>
+	[ScriptMethod]
+	public int GetResourceCount()
+	{
+		return (int)Performance.Singleton.GetMonitor(Performance.Monitor.ObjectResourceCount);
+	}
+
+	/// <summary>
+	/// Returns the number of non-Datamodel (separated) parts on the client.
+	/// Returns zero on a dedicated server where the bridge is not present.
+	/// </summary>
+	[ScriptMethod]
+	public long GetNonDMBPartCount()
+	{
+		if (Bridge == null) return 0L;
+		return Bridge.SeparatedPartCount;
+	}
+
+	/// <summary>
+	/// Returns the current asset cache memory usage in mebibytes.
+	/// </summary>
+	[ScriptMethod]
+	public double GetAssetMemoryMiB()
+	{
+		return AssetLoader.Singleton.AssetSizeBytes / 1048576d;
+	}
+
+	/// <summary>
+	/// Returns the number of assets currently cached by the asset loader.
+	/// </summary>
+	[ScriptMethod]
+	public int GetLoadedAssetCount()
+	{
+		return AssetLoader.Singleton.AssetCacheCount;
+	}
+
+	/// <summary>
+	/// Returns the number of assets currently waiting to load.
+	/// </summary>
+	[ScriptMethod]
+	public int GetPendingAssetCount()
+	{
+		return AssetLoader.Singleton.PendingAssetsCount;
+	}
+
 	[SyncVar]
 	public bool ServerUnderLoad
 	{
