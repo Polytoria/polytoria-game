@@ -23,11 +23,19 @@ public partial class SelectionBox : Node
 			if (_target != value)
 			{
 				_target?.TransformChanged -= UpdateBox;
+				if (_target is Part p)
+				{
+					p.ShapeChanged -= UpdateBox;
+				}
 				_target = value;
-				// When the target changes drop the cache so the new target recalculates it's bounds.
+				// When the target changes drop the cache so the new target recalculates its bounds.
 				InvalidateBoundCache();
 				UpdateBox();
 				_target?.TransformChanged += UpdateBox;
+				if (_target is Part p2)
+				{
+					p2.ShapeChanged += UpdateBox;
+				}
 			}
 		}
 	}

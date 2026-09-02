@@ -284,6 +284,7 @@ public sealed partial class Environment : Instance
 			Vector3 hitPos = (Vector3)result["position"];
 			Vector3 normal = (Vector3)result["normal"];
 			Node collider = (Node)(GodotObject)result["collider"];
+			int shapeIndex = (int)result["shape"];
 
 			return new()
 			{
@@ -292,7 +293,7 @@ public sealed partial class Environment : Instance
 				Position = hitPos,
 				Normal = normal,
 				Distance = (origin - hitPos).Length(),
-				Instance = ColliderToInstance(collider)
+				Instance = ColliderToInstance(collider, shapeIndex)
 			};
 		}
 
@@ -330,6 +331,7 @@ public sealed partial class Environment : Instance
 			Rid colliderRid = (Rid)result["rid"];
 			ignoreRids.Add(colliderRid);
 			Node collider = (Node)(GodotObject)result["collider"];
+			int shapeIndex = (int)result["shape"];
 
 			rayResults.Add(new()
 			{
@@ -338,14 +340,14 @@ public sealed partial class Environment : Instance
 				Position = hitPos,
 				Normal = normal,
 				Distance = (origin - hitPos).Length(),
-				Instance = ColliderToInstance(collider)
+				Instance = ColliderToInstance(collider, shapeIndex)
 			});
 		}
 
 		return [.. rayResults];
 	}
 
-	private static Instance? ColliderToInstance(Node collider)
+	private static Instance? ColliderToInstance(Node collider, int shapeIndex)
 	{
 		Instance? instance = null;
 
@@ -415,7 +417,8 @@ public sealed partial class Environment : Instance
 		foreach (Godot.Collections.Dictionary result in results)
 		{
 			Node collider = (Node)(GodotObject)result["collider"];
-			Instance? i = ColliderToInstance(collider);
+			int shapeIndex = (int)result["shape"];
+			Instance? i = ColliderToInstance(collider, shapeIndex);
 
 			if (i != null)
 			{

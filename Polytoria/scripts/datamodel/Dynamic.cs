@@ -1007,30 +1007,7 @@ public partial class Dynamic : Instance
 		{
 			if (item is Part part)
 			{
-				Transform3D t = part.GetGlobalTransform();
-
-				Vector3 localSize = part.Size;
-				Vector3 he = localSize / 2f;
-
-				Vector3 basisScale = t.Basis.Scale;
-
-				// get pure rotation matrix
-				Basis rot = t.Basis;
-				rot.X /= basisScale.X;
-				rot.Y /= basisScale.Y;
-				rot.Z /= basisScale.Z;
-
-				// some dark magic
-				Vector3 worldExtents = new(
-					Mathf.Abs(rot.X.X) * he.X + Mathf.Abs(rot.Y.X) * he.Y + Mathf.Abs(rot.Z.X) * he.Z,
-					Mathf.Abs(rot.X.Y) * he.X + Mathf.Abs(rot.Y.Y) * he.Y + Mathf.Abs(rot.Z.Y) * he.Z,
-					Mathf.Abs(rot.X.Z) * he.X + Mathf.Abs(rot.Y.Z) * he.Y + Mathf.Abs(rot.Z.Z) * he.Z
-				);
-
-				Vector3 center = t.Origin;
-
-				Aabb pBounds = new(center - worldExtents, worldExtents * 2);
-
+				Aabb pBounds = part.GetSelfBound();
 
 				if (bounds == null)
 				{
