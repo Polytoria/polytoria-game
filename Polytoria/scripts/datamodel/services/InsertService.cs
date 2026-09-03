@@ -78,6 +78,24 @@ public sealed partial class InsertService : Instance
 		jumpSound.LocalPosition = Vector3.Zero;
 		jumpSound.LocalRotation = Vector3.Zero;
 		jumpSound.LocalSize = Vector3.One;
+
+		// Death sound
+		BuiltInAudioAsset deathAudio = New<BuiltInAudioAsset>();
+		deathAudio.AudioPreset = BuiltInAudioAsset.BuiltInAudioPresetEnum.Death;
+		Sound deathSound = New<Sound>();
+		deathSound.Name = "DeathSound";
+		deathSound.Parent = npc;
+		deathSound.Volume = 1;
+		deathSound.Audio = deathAudio;
+		deathSound.Autoplay = false;
+		deathSound.Loop = false;
+		deathSound.PlayInWorld = true;
+		deathSound.SetNetworkAuthority(owner, false);
+
+		npc.DeathSound = deathSound;
+		deathSound.LocalPosition = Vector3.Zero;
+		deathSound.LocalRotation = Vector3.Zero;
+		deathSound.LocalSize = Vector3.One;
 	}
 
 	[ScriptMethod]
