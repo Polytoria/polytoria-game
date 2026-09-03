@@ -19,7 +19,7 @@ public sealed partial class Tool : RigidBody
 {
 	private bool _droppable = true;
 	private ImageAsset? _iconImage;
-	private NPC? _holder = null;
+	private CharacterModel? _holder = null;
 
 	private double _dropEquipCooldown;
 	private Timer _equipTimer = null!;
@@ -79,7 +79,7 @@ public sealed partial class Tool : RigidBody
 	}
 
 	[SyncVar, ScriptProperty]
-	public NPC? Holder
+	public CharacterModel? Holder
 	{
 		get
 		{
@@ -124,9 +124,9 @@ public sealed partial class Tool : RigidBody
 
 	private void OnToolTouched(Physical physical)
 	{
-		if (physical is NPC npc && _holder == null && Parent is not (Inventory or Player) && _equipTimer.IsStopped())
+		if (physical is CharacterModel charModel && _holder == null && Parent is not (Inventory or CharacterModel) && _equipTimer.IsStopped())
 		{
-			npc.EquipTool(this);
+			charModel.EquipTool(this);
 		}
 	}
 
@@ -139,7 +139,7 @@ public sealed partial class Tool : RigidBody
 	public override void EnterTree()
 	{
 		base.EnterTree();
-		if (Parent is not (Inventory or NPC))
+		if (Parent is not (Inventory or CharacterModel))
 		{
 			CanCollide = true;
 			Anchored = false;
@@ -159,7 +159,7 @@ public sealed partial class Tool : RigidBody
 		Root.Input.GodotInputEvent += OnInput;
 
 		// Just in case it were reparented while still having a holder
-		if (Parent is not NPC && Holder != null)
+		if (Parent is not CharacterModel && Holder != null)
 		{
 			Holder.InternalDetachTool();
 			Holder = null;
@@ -201,9 +201,9 @@ public sealed partial class Tool : RigidBody
 	private void UpdateHandHold()
 	{
 		_hasDynChild = Children.Any(i => i is Dynamic);
-		if (Holder != null && Holder.Character != null)
+		if (Holder != null)
 		{
-			Holder.Character.SetBlendValue(CharacterModel.CharacterModelBlendEnum.ToolHoldRight, _hasDynChild ? 1 : 0);
+			Holder.SetBlendValue(CharacterModel.CharacterModelBlendEnum.ToolHoldRight, _hasDynChild ? 1 : 0);
 		}
 	}
 
@@ -215,7 +215,7 @@ public sealed partial class Tool : RigidBody
 
 	public void OnInput(InputEvent @event)
 	{
-		if (Holder != Root.Players.LocalPlayer) return;
+		if (Holder != Root.Players.LocalPlayer.Character) return;
 		if (@event.IsActionPressed("activate"))
 		{
 			Activate();
@@ -250,12 +250,13 @@ public sealed partial class Tool : RigidBody
 	private void NetRecvActivate()
 	{
 		if (Holder == null) return;
+		if (Holder.Controller == null) return;
 
 		// Only allow from the holder
-		if (Holder is Player plr && RemoteSenderId != plr.PeerID) return;
+		if (Holder.Controller is Player plr && RemoteSenderId != plr.PeerID) return;
 
 		// Only allow from server if is NPC
-		if (Holder is not Player && Holder is not null && RemoteSenderId != 1) return;
+		if (Holder.Controller is not Player && RemoteSenderId != 1) return;
 		Activated.Invoke();
 	}
 
@@ -263,12 +264,13 @@ public sealed partial class Tool : RigidBody
 	private void NetRecvDeactivate()
 	{
 		if (Holder == null) return;
+		if (Holder.Controller == null) return;
 
 		// Only allow from the holder
-		if (Holder is Player plr && RemoteSenderId != plr.PeerID) return;
+		if (Holder.Controller is Player plr && RemoteSenderId != plr.PeerID) return;
 
 		// Only allow from server if is NPC
-		if (Holder is not Player && Holder is not null && RemoteSenderId != 1) return;
+		if (Holder.Controller is not Player && RemoteSenderId != 1) return;
 		Deactivated.Invoke();
 	}
 
@@ -326,7 +328,7 @@ public sealed partial class Tool : RigidBody
 	[ScriptMethod, ScriptLegacyMethod("Play")]
 	public void PlayAnimation(string animationName)
 	{
-		Holder?.Character?.Animator?.PlayOneShotAnimation(animationName);
+		Holder?.Animator?.PlayOneShotAnimation(animationName);
 	}
 
 	internal void InvokeEquipped()

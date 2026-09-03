@@ -85,6 +85,9 @@ public partial class InsertMenuPopup : PopupPanel
 			"Accessory",
 			"Clothing",
 			"NPC",
+			"CharacterModel",
+			"PolytorianModel",
+			"Inventory",
 			"Tool",
 		},
 		/*

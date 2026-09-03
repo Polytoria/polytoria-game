@@ -14,7 +14,7 @@ public partial class Nametag : Node3D
 	private ProgressBar _healthBar = null!;
 	private Node3D _nametag = null!;
 
-	public NPC Target = null!;
+	public CharacterModel? Target = null!;
 
 	public override void _Ready()
 	{
@@ -33,9 +33,14 @@ public partial class Nametag : Node3D
 
 	public void UpdateNameTag()
 	{
+		if (Target is null)
+		{
+			Visible = false;
+			return;
+		}
 		bool useNametag = Target.UseNametag;
 
-		Camera? cam = Target.Root.Environment.CurrentCamera;
+		Camera? cam = Target.Controller?.Root.Environment.CurrentCamera;
 
 		// Check distance from camera if is with-in radius
 		if (cam != null && useNametag)
@@ -44,13 +49,13 @@ public partial class Nametag : Node3D
 		}
 
 		// Hide if self is Target
-		if (Target == Target.Root.Players?.LocalPlayer)
+		if (Target.Controller == Target.Controller?.Root?.Players?.LocalPlayer)
 		{
 			useNametag = false;
 		}
 
 		Visible = useNametag;
-		_titleLabel.Text = Target.DisplayName != string.Empty ? Target.DisplayName : Target.Name;
+		_titleLabel.Text = Target.Controller is null ? "" : Target.Controller.DisplayName != string.Empty ? Target.Controller.DisplayName : Target.Name;
 		_healthBar.Visible = (Target.Health < Target.MaxHealth);
 		_healthBar.Value = Target.Health;
 		_healthBar.MaxValue = Target.MaxHealth;

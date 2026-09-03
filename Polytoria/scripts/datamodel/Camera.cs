@@ -7,6 +7,7 @@ using Godot.Collections;
 using Polytoria.Attributes;
 using Polytoria.Client.Settings;
 using Polytoria.Scripting;
+using Polytoria.Shared;
 using Polytoria.Shared.Misc;
 using Polytoria.Utils;
 using System;
@@ -54,6 +55,7 @@ public sealed partial class Camera : Dynamic
 	private float _moveSpeed = 8f;
 	private readonly float _rotateSpeed = 0.005f;
 	private Dynamic? _target = null;
+	private RemoteTransform3D tracker = new() { UpdatePosition = false, UpdateRotation = false };
 
 	private bool _isMouseCaptured;
 	private Vector2I _lastMousePosition;
@@ -82,6 +84,7 @@ public sealed partial class Camera : Dynamic
 		set
 		{
 			_mode = value;
+			UpdateTracker(value);
 			OnPropertyChanged();
 		}
 	}
@@ -349,7 +352,13 @@ public sealed partial class Camera : Dynamic
 			}
 			return _target;
 		}
-		set => _target = value;
+		set
+		{
+			_target?.Deleted -= OnTrackerThreatened;
+			_target = value;
+			value?.Deleted += OnTrackerThreatened;
+			OnPropertyChanged();
+		}
 	}
 
 	[ScriptEnum]
@@ -373,24 +382,38 @@ public sealed partial class Camera : Dynamic
 	[ScriptProperty]
 	public PTSignal FirstPersonExited { get; private set; } = new();
 
-	/// <summary>
-	/// Should camera be updating itself or not.
-	/// </summary>
-	internal bool UpdateCameraSelf = true;
+	private void UpdateTracker(CameraModeEnum? cammode = null)
+	{
+		tracker.UpdatePosition = false;// (cammode ?? Mode) == CameraModeEnum.Follow;
+	}
+
+	private void OnTrackerThreatened()
+	{
+		tracker.UpdatePosition = false;
+		tracker.Reparent(GDNode);
+	}
+
+	private async void InformTracker()
+	{
+		await Globals.Singleton.WaitFrame();
+		tracker.RemotePath = tracker.GetPathTo(GDNode3D);
+		UpdateTracker();
+	}
 
 	public override void EnterTree()
 	{
 		// keep the current camera current
 		EnforceCurrentCam();
-
 		base.EnterTree();
+		// this is needed because GetPath doesn't update when it entered tree
+		InformTracker();
 	}
 
 	public override void ExitTree()
 	{
 		// keep the current camera current
 		EnforceCurrentCam();
-
+		tracker.UpdatePosition = false;
 		base.ExitTree();
 	}
 
@@ -407,6 +430,8 @@ public sealed partial class Camera : Dynamic
 	public override void Init()
 	{
 		base.Init();
+
+		InformTracker();
 
 		GDNode.AddChild(_inputHelper = new(), @internal: Node.InternalMode.Back);
 		_inputHelper.GodotUnhandledInputEvent += OnInput;
@@ -440,19 +465,13 @@ public sealed partial class Camera : Dynamic
 		base.PreDelete();
 	}
 
+	private Vector3 latentTrackedPos = Vector3.Zero;
+
 	public override void Process(double delta)
 	{
-		if (UpdateCameraSelf)
-		{
-			CameraProcess(delta);
-		}
 		base.Process(delta);
-	}
-
-	internal void CameraProcess(double delta)
-	{
 		if (Root.Environment.CurrentCamera != this) return;
-		if (Mode == CameraModeEnum.Follow && Target != null)
+		if (Mode == CameraModeEnum.Follow)
 		{
 			if (Root.Input.IsGameFocused)
 			{
@@ -473,10 +492,10 @@ public sealed partial class Camera : Dynamic
 				LimitRotation();
 			}
 
-			Vector3 computedPosition = Target.Position + PositionOffset;
+			Vector3 targetLocalPos = PositionOffset;
 			Vector3 computedRotation = _targetRotation + RotationOffset;
 
-			_turnX.GlobalPosition = computedPosition;
+			_turnX.GlobalPosition = Position;
 			_turnX.RotationDegrees = computedRotation;
 
 			LimitZoomDistance();
@@ -517,11 +536,12 @@ public sealed partial class Camera : Dynamic
 			float finalizedZoom = _currentZoom;
 
 			_turnY2.Position = new Vector3(0, 0, _currentZoom);
+			latentTrackedPos = Target?.Position ?? latentTrackedPos;
 
 			if (!ClipThroughWalls)
 			{
 				Vector3 desiredCamPos = _turnY2.GlobalPosition;
-				Vector3 origin = computedPosition;
+				Vector3 origin = latentTrackedPos + targetLocalPos;
 
 				PhysicsDirectSpaceState3D spaceState = Camera3D.GetWorld3D().DirectSpaceState;
 				PhysicsRayQueryParameters3D query = PhysicsRayQueryParameters3D.Create(origin, desiredCamPos);
@@ -543,21 +563,21 @@ public sealed partial class Camera : Dynamic
 
 			_distance = finalizedZoom;
 
-			_turnY.Position = new Vector3(0, 0, _distance);
+			GDNode3D.GlobalBasis = _turnY.GlobalBasis;
 
-			Vector3 posSetto = _turnY.GlobalPosition;
+			targetLocalPos -= Forward * _distance;
+
+			Vector3 targetPos = targetLocalPos + latentTrackedPos; // avoid transform rotation
 
 			// Apply position/rotation
 			if (FollowLerp)
 			{
-				GDNode3D.GlobalPosition = GDNode3D.GlobalPosition.Lerp(posSetto, MathUtils.ExpDecay((float)delta, LerpSpeed));
+				Position = Position.Lerp(targetPos, MathUtils.ExpDecay((float)delta, LerpSpeed));
 			}
 			else
 			{
-				GDNode3D.GlobalPosition = posSetto;
+				Position = targetPos;
 			}
-
-			GDNode3D.GlobalBasis = _turnY.GlobalBasis;
 		}
 		else if (Mode == CameraModeEnum.Free)
 		{

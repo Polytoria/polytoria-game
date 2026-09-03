@@ -58,18 +58,18 @@ public partial class BodyPosition : Instance
 		Vector3 gdPos = _targetPosition;
 		if (Parent != null)
 		{
-			if (Parent is NPC npc)
+			if (Parent is CharacterModel charModel)
 			{
-				if (npc.GetGlobalPosition().DistanceTo(gdPos) > AcceptanceDistance)
+				if (charModel.GetGlobalPosition().DistanceTo(gdPos) > AcceptanceDistance)
 				{
-					Vector3 currentPos = npc.Position;
+					Vector3 currentPos = charModel.Position;
 					Vector3 direction = (TargetPosition - currentPos).Normalized();
 					float distance = currentPos.DistanceTo(TargetPosition);
 
 					float forceMagnitude = Mathf.Min(Force * distance, Force);
 					Vector3 forceVector = direction * forceMagnitude * (float)delta;
 
-					npc.CharacterVelocity += forceVector;
+					charModel.CharacterVelocity += forceVector;
 				}
 			}
 			else if (Parent.GDNode is RigidBody3D rigid3D)

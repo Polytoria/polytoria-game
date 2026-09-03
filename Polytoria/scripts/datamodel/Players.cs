@@ -62,7 +62,7 @@ public sealed partial class Players : Instance
 	public readonly Dictionary<int, Player> _idToPlayer = [];
 
 	/// <summary>
-	/// Get Player from Peer ID. This should only be called on server, as peer is not guaranteed to be available on clients. 
+	/// Get Player from Peer ID. This should only be called on server, as peer is not guaranteed to be available on clients.
 	/// </summary>
 	/// <param name="peerID"></param>
 	/// <returns></returns>

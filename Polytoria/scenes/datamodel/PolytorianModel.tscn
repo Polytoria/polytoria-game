@@ -4624,7 +4624,8 @@ nodes/DynBlend/node = SubResource("AnimationNodeBlend2_dpcmo")
 nodes/DynBlend/position = Vector2(1880, 100)
 node_connections = [&"output", 0, &"DynBlend", &"GearHold_R", 0, &"Sit", &"GearHold_R", 1, &"Animation", &"Sit", 0, &"TimeScale", &"Sit", 1, &"Animation 3", &"TimeScale", 0, &"StateMachine", &"LookYAdd", 0, &"Animation 6", &"LookYAdd", 1, &"GearHold_R", &"LookYAdd", 2, &"Animation 7", &"LookXAdd", 0, &"Animation 8", &"LookXAdd", 1, &"LookYAdd", &"LookXAdd", 2, &"Animation 9", &"DynBlend", 0, &"LookXAdd", &"DynBlend", 1, &"DynBlendTree"]
 
-[node name="Character" type="Node3D" unique_id=1577145919]
+[node name="Character" type="CharacterBody3D" unique_id=1614401625]
+floor_max_angle = 1.3962634
 
 [node name="Character" type="Node3D" parent="." unique_id=1061713509]
 transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, -3, 0)

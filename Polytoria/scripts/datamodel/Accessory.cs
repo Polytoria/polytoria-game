@@ -28,9 +28,9 @@ public partial class Accessory : Dynamic
 
 	private void RefreshAttachment()
 	{
-		if (_targetCharacter == null || !GDNode.IsInsideTree()) { return; }
+		if (_targetCharacter is not PolytorianModel ptm || !GDNode.IsInsideTree()) { return; }
 		remoteTransform?.QueueFree();
-		Dynamic attachment = _targetCharacter.GetAttachment(TargetAttachment);
+		Dynamic attachment = ptm.GetAttachment(TargetAttachment);
 		remoteTransform = new()
 		{
 			UseGlobalCoordinates = true,

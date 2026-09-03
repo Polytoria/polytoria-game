@@ -123,7 +123,7 @@ public partial class UIEmoteWheel : Control
 			if (!_hoveringClose)
 			{
 				string selected = GetSelectedEmoteName();
-				CoreUIRoot.Singleton.Root.Players.LocalPlayer.PlayEmote(selected);
+				CoreUIRoot.Singleton.Root.Players.LocalPlayer.Character?.PlayEmote(selected);
 			}
 			CloseEmoteWheel();
 		}

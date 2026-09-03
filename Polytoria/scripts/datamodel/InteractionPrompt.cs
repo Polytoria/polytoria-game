@@ -302,7 +302,10 @@ public sealed partial class InteractionPrompt : Physical
 		_prompt.Scale = new Vector3(_scale, _scale, _scale);
 		if (Root.SessionType != World.SessionTypeEnum.Client) { return; }
 		if (!Root.IsLoaded) return;
-		var distance = Root.Players.LocalPlayer?.GetGlobalPosition().DistanceTo(GetGlobalPosition());
+		Player localPlayer = Root.Players.LocalPlayer;
+		if (localPlayer is null) return;
+		if (localPlayer.Character == null) return;
+		var distance = localPlayer.Character.GetGlobalPosition().DistanceTo(GetGlobalPosition());
 		_inRange = distance <= _maxDistance;
 		_prompt.Visible = false;
 		if (_inRange && _enabled && !_hiddenByServer)

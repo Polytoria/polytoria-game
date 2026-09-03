@@ -17,25 +17,32 @@ public partial class BubbleChat : Node3D
 	private readonly List<BubbleItem> _activeBubbles = [];
 
 	[Export] private Control _itemContainer = null!;
-	public Player TargetPlayer = null!;
+	private Player? TargetPlayer = null;
+
+	public void SetTarget(Player? plr)
+	{
+		if (TargetPlayer != null) TargetPlayer.Chatted.Disconnect(OnPlayerChatted);
+		TargetPlayer = plr;
+		if (TargetPlayer != null) TargetPlayer.Chatted.Connect(OnPlayerChatted);
+	}
 
 	public override void _EnterTree()
 	{
-		TargetPlayer.Chatted.Connect(OnPlayerChatted);
+		if (TargetPlayer != null) TargetPlayer.Chatted.Connect(OnPlayerChatted);
 		base._EnterTree();
 	}
 
 	public override void _ExitTree()
 	{
-		TargetPlayer.Chatted.Disconnect(OnPlayerChatted);
+		if (TargetPlayer != null) TargetPlayer.Chatted.Disconnect(OnPlayerChatted);
 		base._ExitTree();
 	}
 
 	private void OnPlayerChatted(string msg)
 	{
-		if (TargetPlayer.Character != null)
+		if (TargetPlayer!.Character != null)
 		{
-			Aabb? bounds = TargetPlayer.Character.GetAttachment(CharacterModel.CharacterAttachmentEnum.Head).CalculateBounds();
+			Aabb? bounds = (TargetPlayer.Character.Head ?? TargetPlayer.Character).CalculateBounds();
 			if (bounds.HasValue)
 			{
 				int decrease = 0;

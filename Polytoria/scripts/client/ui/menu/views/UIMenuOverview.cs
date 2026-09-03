@@ -61,7 +61,7 @@ public sealed partial class UIMenuOverview : UIMenuViewBase
 	{
 		if (!Menu.CoreUI.Service.CanRespawn) { return; }
 		Menu.CoreUI.GameMenu.HideMenu();
-		Menu.CoreUI.Root.Players.LocalPlayer.Kill();
+		Menu.CoreUI.Root.Players.LocalPlayer.Character?.Kill();
 	}
 
 	private void OnScreenshot()
@@ -114,7 +114,7 @@ public sealed partial class UIMenuOverview : UIMenuViewBase
 			_userAvatarImage.LoadResource();
 		}
 
-		if (Menu.CoreUI.Service.CanRespawn)
+		if (Menu.CoreUI.Service.CanRespawn && Menu.CoreUI.Root.Players.LocalPlayer.Character != null)
 		{
 			_respawnButton.Modulate = new(1, 1, 1, 1f);
 			_respawnButton.MouseFilter = MouseFilterEnum.Stop;

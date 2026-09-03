@@ -14,41 +14,17 @@ using Polytoria.Utils;
 namespace Polytoria.Datamodel;
 
 [Instantiable]
-public partial class NPC : Physical
+public partial class NPC : Instance
 {
-	private const float CoyoteTime = 0.15f;
 	private const float NavigationDistance = 2f;
 	public const float BodyRotateLerp = 10f;
-	private const float StepHeight = 1.5f;
-	private Tool? _holdingTool;
-	private Seat? _sittingIn;
-	private CharacterModel? _character;
+	internal CharacterModel? _character;
 	private Dynamic? _moveTarget;
 
-	public CharacterBody3D CharBody3D = null!;
-	public const float ForwardRaycastRange = 1;
-	public const float StairForwardRaycastRange = 4;
-	public const float NameTagHeightMinus = 3f;
-	private Vector3 _seatOffset = new(0, 1.7f, 0);
-	private float _health = 100;
-	private RemoteTransform3D? _toolRemoteTransform;
-	private float _maxHealth = 100;
-	private float _jumpPower = 36;
-	private float _walkSpeed = 16;
 	private string _displayName = "";
-	protected RayCast3D FootFwdRaycast = null!;
-	private Sound? _jumpSound;
-	private bool _lastOnFloorState = false;
-	private float _timeSinceGrounded = 0f;
-	private bool _coyoteUsed = false;
 	private Node3D? _navAgentContainer;
 	private NavigationAgent3D? _navAgent;
-
-	private Vector3 _nametagOffset = Vector3.Zero;
-	private Vector3 _fixedNametagOffset = new(0, 3, 0);
-	private float _nametagVisibleRadius = 40;
-	private bool _useNametag = true;
-	private Nametag _nametag = null!;
+	private Physical? _grabbing;
 
 	// Pending properties to apply to character
 	private Color? _pendingHeadColor;
@@ -59,37 +35,26 @@ public partial class NPC : Physical
 	private Color? _pendingRightLegColor;
 	private int? _pendingFaceID;
 
-	protected override float PositionSyncThreshold => 0.1f;
-	protected override float RotationSyncThreshold => 1f;
+	[ScriptProperty]
+	public PTSignal<Physical> Grabbed { get; private set; } = new();
 
-	[Editable, ScriptProperty, SyncVar(Unreliable = true, AllowAuthorWrite = true)]
-	public override Vector3 Velocity
+	[ScriptProperty]
+	public PTSignal<Physical> Ungrabbed { get; private set; } = new();
+
+	[ScriptProperty]
+	public Physical? Grabbing => _grabbing;
+
+	public void SetGrabbing(Physical phy)
 	{
-		get
-		{
-			return CharacterVelocity;
-		}
-		set
-		{
-			if (this is Player plr)
-			{
-				plr.LastVelocity = value;
-				plr.ExternalVelocity = value;
-			}
-
-			CharacterVelocity = value;
-
-			OnPropertyChanged();
-		}
+		_grabbing = phy;
+		Grabbed.Invoke(phy);
 	}
 
-	internal void ApplyInternalVelocity(Vector3 velocity)
+	public void ReleaseGrabbing()
 	{
-		UpdateVelocityInternal(velocity);
-		CharacterVelocity = velocity;
-		OnPropertyChanged(nameof(Velocity));
+		Ungrabbed.Invoke(_grabbing);
+		_grabbing = null;
 	}
-
 
 	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Apply them to Character"), CloneIgnore]
 	public Color HeadColor
@@ -217,104 +182,737 @@ public partial class NPC : Physical
 		}
 	}
 
-	[Editable, ScriptProperty]
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.SeatOffset instead"), CloneIgnore]
 	public Vector3 SeatOffset
 	{
-		get => _seatOffset;
+		get => Character?.SeatOffset ?? Vector3.Zero;
 		set
 		{
-			_seatOffset = value;
-			OnPropertyChanged();
+			Character?.SeatOffset = value;
 		}
 	}
 
-	[Editable, ScriptProperty]
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.Health instead"), CloneIgnore]
 	public float Health
 	{
-		get => _health;
+		get => Character?.Health ?? 0;
 		set
 		{
-			if (this is Player plr && !plr.IsReady) return;
-			float oldHealth = _health;
-			_health = value;
-			if (_health <= 0 && !IsDead)
-			{
-				TriggerNPCDead();
-			}
-			OnPropertyChanged();
-			if (_health != oldHealth)
-			{
-				HealthChanged.Invoke(_health, oldHealth);
-			}
+			Character?.Health = value;
 		}
 	}
 
-	[Editable, ScriptProperty]
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.MaxHealth instead"), CloneIgnore]
 	public float MaxHealth
 	{
-		get => _maxHealth;
+		get => Character?.MaxHealth ?? 0;
 		set
 		{
-			_maxHealth = value;
-			OnPropertyChanged();
+			Character?.MaxHealth = value;
 		}
 	}
 
-	[Editable, ScriptProperty]
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.JumpPower instead"), CloneIgnore]
 	public float JumpPower
 	{
-		get => _jumpPower;
+		get => Character?.JumpPower ?? 0;
 		set
 		{
-			_jumpPower = value;
-			OnPropertyChanged();
+			Character?.JumpPower = value;
 		}
 	}
 
-	[Editable, ScriptProperty]
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.WalkSpeed instead"), CloneIgnore]
 	public float WalkSpeed
 	{
-		get => _walkSpeed;
+		get => Character?.WalkSpeed ?? 0;
 		set
 		{
-			_walkSpeed = value;
-			OnPropertyChanged();
+			Character?.WalkSpeed = value;
 		}
 	}
 
-	[Editable, ScriptProperty]
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.JumpSound instead"), CloneIgnore]
+	public Sound? JumpSound
+	{
+		get => Character?.JumpSound;
+		set
+		{
+			Character?.JumpSound = value;
+		}
+	}
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.IsDead instead"), CloneIgnore]
+	public bool IsDead
+	{
+		get => Character?.IsDead ?? true;
+		set
+		{
+			Character?.IsDead = value;
+		}
+	}
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.SittingIn instead"), CloneIgnore]
+	public Seat? SittingIn
+	{
+		get => Character?.SittingIn;
+		set
+		{
+			Character?.SittingIn = value;
+		}
+	}
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.HoldingTool instead"), CloneIgnore]
+	public Tool? HoldingTool
+	{
+		get => Character?.HoldingTool;
+		set
+		{
+			Character?.HoldingTool = value;
+		}
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.Sit() instead")]
+	public void Sit(Seat value)
+	{
+		Character?.Sit(value);
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.Unsit() instead")]
+	public void Unsit(bool value = true)
+	{
+		Character?.Unsit(value);
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.EquipTool() instead")]
+	public void EquipTool(Tool value)
+	{
+		Character?.EquipTool(value);
+	}
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.CollisionLayers instead")]
+	public uint CollisionLayers
+	{
+		get => Character?.CollisionLayers ?? 0;
+		set
+		{
+			Character?.CollisionLayers = value;
+		}
+	}
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.CollisionMask instead")]
+	public uint CollisionMask
+	{
+		get => Character?.CollisionMask ?? 0;
+		set
+		{
+			Character?.CollisionMask = value;
+		}
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.SetCollisionLayer() instead")]
+	public void SetCollisionLayer(int layer, bool value)
+	{
+		Character?.SetCollisionLayer(layer, value);
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.SetCollisionMask() instead")]
+	public void SetCollisionMask(int layer, bool value)
+	{
+		Character?.SetCollisionMask(layer, value);
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.GetCollisionLayer() instead")]
+	public bool GetCollisionLayer(int layer)
+	{
+		return Character?.GetCollisionLayer(layer) ?? false;
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.GetCollisionMask() instead")]
+	public bool GetCollisionMask(int layer)
+	{
+		return Character?.GetCollisionMask(layer) ?? false;
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.GetTouching() instead")]
+	public Physical[] GetTouching()
+	{
+		return Character?.GetTouching() ?? [];
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.AddForce() instead")]
+	public void AddForce(Vector3 force, Physical.ForceModeEnum mode = Physical.ForceModeEnum.Force)
+	{
+		Character?.AddForce(force, mode);
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.AddTorque() instead")]
+	public void AddTorque(Vector3 force, Physical.ForceModeEnum mode = Physical.ForceModeEnum.Force)
+	{
+		Character?.AddTorque(force, mode);
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.AddForceAtPosition() instead")]
+	public void AddForceAtPosition(Vector3 force, Vector3 position, Physical.ForceModeEnum mode = Physical.ForceModeEnum.Force)
+	{
+		Character?.AddForceAtPosition(force, position, mode);
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.AddRelativeForce() instead")]
+	public void AddRelativeForce(Vector3 force, Physical.ForceModeEnum mode = Physical.ForceModeEnum.Force)
+	{
+		Character?.AddRelativeForce(force, mode);
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.AddRelativeTorque() instead")]
+	public void AddRelativeTorque(Vector3 torque, Physical.ForceModeEnum mode = Physical.ForceModeEnum.Force)
+	{
+		Character?.AddRelativeTorque(torque, mode);
+	}
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.Forward instead")] public Vector3 Forward => Character?.Forward ?? Vector3.Zero;
+	[ScriptProperty, Attributes.Obsolete("Use Character.Right instead")] public Vector3 Right => Character?.Right ?? Vector3.Zero;
+	[ScriptProperty, Attributes.Obsolete("Use Character.Up instead")] public Vector3 Up => Character?.Up ?? Vector3.Zero;
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.GetBounds() instead")]
+	public Aabb? GetBounds()
+	{
+		return Character?.GetBounds();
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.RotateAround() instead")]
+	public void RotateAround(Vector3 point, Vector3 axis, float angle)
+	{
+		Character?.RotateAround(point, axis, angle);
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.LookAt() instead")]
+	public void LookAt(object target)
+	{
+		Character?.LookAt(target);
+	}
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.LookAt() instead")]
+	public void LookAt(object target, Vector3 up)
+	{
+		Character?.LookAt(target, up);
+	}
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.UseNametag instead"), CloneIgnore]
 	public bool UseNametag
 	{
-		get => _useNametag;
+		get => Character?.UseNametag ?? false;
 		set
 		{
-			_useNametag = value;
-			_nametag?.UpdateNameTag();
-			OnPropertyChanged();
+			Character?.UseNametag = value;
 		}
 	}
 
 
-	[Editable, ScriptProperty]
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.NametagOffset instead"), CloneIgnore]
 	public Vector3 NametagOffset
 	{
-		get => _nametagOffset;
+		get => Character?.NametagOffset ?? Vector3.Zero;
 		set
 		{
-			_nametagOffset = value;
-			RecalculateNametagOffset();
-			OnPropertyChanged();
+			Character?.NametagOffset = value;
 		}
 	}
 
-	[Editable, ScriptProperty]
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.NametagVisibleRadius instead"), CloneIgnore]
 	public float NametagVisibleRadius
 	{
-		get => _nametagVisibleRadius;
+		get => Character?.NametagVisibleRadius ?? 0;
 		set
 		{
-			_nametagVisibleRadius = value;
-			OnPropertyChanged();
+			Character?.NametagVisibleRadius = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.IsSitting instead"), CloneIgnore]
+	public bool IsSitting
+	{
+		get => Character?.IsSitting ?? false;
+		set
+		{
+			Character?.IsSitting = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.IsOnGround instead"), CloneIgnore]
+	public bool IsOnGround => Character?.IsOnGround ?? false;
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.IsOnCeiling instead"), CloneIgnore]
+	public bool IsOnCeiling => Character?.IsOnCeiling ?? false;
+
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.Kill() instead")]
+	public void Kill()
+	{
+		Character?.Kill();
+	}
+
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.TryStepUp() instead")]
+	public bool TryStepUp()
+	{
+		return Character?.TryStepUp() ?? false;
+	}
+
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.Jump() instead")]
+	public void Jump()
+	{
+		Character?.Jump();
+	}
+
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.DropTool() instead")]
+	public void DropTool()
+	{
+		Character?.DropTool();
+	}
+
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.LoadAppearance() instead, only if it's a PolytorianModel")]
+	public void LoadAppearance(int value)
+	{
+		if (Character is PolytorianModel ptm)
+		{
+			ptm.LoadAppearance(value);
+		}
+	}
+
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.ClearAppearance() instead, only if it's a PolytorianModel")]
+	public void ClearAppearance()
+	{
+		if (Character is PolytorianModel ptm)
+		{
+			ptm.ClearAppearance();
+		}
+	}
+
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.Respawn() instead")]
+	public virtual void Respawn()
+	{
+		Character?.Respawn();
+	}
+
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.TakeDamage() instead")]
+	public void TakeDamage(float value)
+	{
+		Character?.TakeDamage(value);
+	}
+
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.Heal() instead")]
+	public void Heal(float value)
+	{
+		Character?.Heal(value);
+	}
+
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.Died instead")]
+	public PTSignal? Died
+	{
+		get => Character?.Died;
+		private set;
+	}
+
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.Landed instead")]
+	public PTSignal? Landed
+	{
+		get => Character?.Landed;
+		private set;
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.Anchored instead"), CloneIgnore]
+	public bool Anchored
+	{
+		get => Character?.Anchored ?? false;
+		set
+		{
+			Character?.Anchored = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.CanCollide instead"), CloneIgnore]
+	public bool CanCollide
+	{
+		get => Character?.CanCollide ?? false;
+		set
+		{
+			Character?.CanCollide = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.Velocity instead"), CloneIgnore]
+	public Vector3 Velocity
+	{
+		get => Character?.Velocity ?? Vector3.Zero;
+		set
+		{
+			Character?.Velocity = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.AngularVelocity instead"), CloneIgnore]
+	public Vector3 AngularVelocity
+	{
+		get => Character?.AngularVelocity ?? Vector3.Zero;
+		set
+		{
+			Character?.AngularVelocity = value;
+		}
+	}
+
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.MovePosition() instead")]
+	public void MovePosition(Vector3 value)
+	{
+		Character?.MovePosition(value);
+	}
+
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.MoveRotation() instead")]
+	public void MoveRotation(Vector3 value)
+	{
+		Character?.MoveRotation(value);
+	}
+
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.Touched instead")]
+	public PTSignal<Physical>? Touched
+	{
+		get => Character?.Touched;
+		private set;
+	}
+
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.TouchEnded instead")]
+	public PTSignal<Physical>? TouchEnded
+	{
+		get => Character?.TouchEnded;
+		private set;
+	}
+
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.Clicked instead")]
+	public PTSignal<Player>? Clicked
+	{
+		get => Character?.Clicked;
+		private set;
+	}
+
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.MouseEnter instead")]
+	public PTSignal? MouseEnter
+	{
+		get => Character?.MouseEnter;
+		private set;
+	}
+
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.MouseExit instead")]
+	public PTSignal? MouseExit
+	{
+		get => Character?.MouseExit;
+		private set;
+	}
+
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.HealthChanged instead")]
+	public PTSignal<float, float> HealthChanged
+	{
+		get => Character?.HealthChanged;
+		private set;
+	}
+
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.Jumped instead")]
+	public PTSignal Jumped
+	{
+		get => Character?.Jumped;
+		private set;
+	}
+
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.LeftGround instead")]
+	public PTSignal LeftGround
+	{
+		get => Character?.LeftGround;
+		private set;
+	}
+
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.Seated instead")]
+	public PTSignal<Seat> Seated
+	{
+		get => Character?.Seated;
+		private set;
+	}
+
+
+	[ScriptProperty, Attributes.Obsolete("Use Character.Unseated instead")]
+	public PTSignal<Seat> Unseated
+	{
+		get => Character?.Unseated;
+		private set;
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.Position instead"), CloneIgnore]
+	public Vector3 Position
+	{
+		get => Character?.Position ?? Vector3.Zero;
+		set
+		{
+			Character?.Position = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.Rotation instead"), CloneIgnore]
+	public Vector3 Rotation
+	{
+		get => Character?.Rotation ?? Vector3.Zero;
+		set
+		{
+			Character?.Rotation = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.Size instead"), CloneIgnore]
+	public Vector3 Size
+	{
+		get => Character?.Size ?? Vector3.Zero;
+		set
+		{
+			Character?.Size = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.LocalPosition instead"), CloneIgnore]
+	public Vector3 LocalPosition
+	{
+		get => Character?.LocalPosition ?? Vector3.Zero;
+		set
+		{
+			Character?.LocalPosition = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.LocalRotation instead"), CloneIgnore]
+	public Vector3 LocalRotation
+	{
+		get => Character?.LocalRotation ?? Vector3.Zero;
+		set
+		{
+			Character?.LocalRotation = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.LocalSize instead"), CloneIgnore]
+	public Vector3 LocalSize
+	{
+		get => Character?.LocalSize ?? Vector3.Zero;
+		set
+		{
+			Character?.LocalSize = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.Quaternion instead"), CloneIgnore]
+	public Quaternion Quaternion
+	{
+		get => Character?.Quaternion ?? Godot.Quaternion.Identity;
+		set
+		{
+			Character?.Quaternion = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.LocalQuaternion instead"), CloneIgnore]
+	public Quaternion LocalQuaternion
+	{
+		get => Character?.LocalQuaternion ?? Godot.Quaternion.Identity;
+		set
+		{
+			Character?.LocalQuaternion = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.Locked instead"), CloneIgnore]
+	public bool Locked
+	{
+		get => Character?.Locked ?? false;
+		set
+		{
+			Character?.Locked = value;
+		}
+	}
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.IsClimbing instead"), CloneIgnore]
+	public bool IsClimbing => Character?.IsClimbing ?? false;
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.ClimbingTruss instead"), CloneIgnore]
+	public Truss? ClimbingTruss => Character?.ClimbingTruss;
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.Translate() instead")]
+	public void Translate(Vector3 value)
+	{
+		Character?.Translate(value);
+	}
+
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.Rotate() instead")]
+	public void Rotate(Vector3 value)
+	{
+		Character?.Rotate(value);
+	}
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.CanMove instead"), CloneIgnore]
+	public bool CanMove
+	{
+		get => Character?.CanMove ?? false;
+		set
+		{
+			Character?.CanMove = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.SprintSpeed instead"), CloneIgnore]
+	public float SprintSpeed
+	{
+		get => Character?.SprintSpeed ?? 0;
+		set
+		{
+			Character?.SprintSpeed = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.Stamina instead"), CloneIgnore]
+	public float Stamina
+	{
+		get => Character?.Stamina ?? 0;
+		set
+		{
+			Character?.Stamina = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.MaxStamina instead"), CloneIgnore]
+	public float MaxStamina
+	{
+		get => Character?.MaxStamina ?? 0;
+		set
+		{
+			Character?.MaxStamina = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.UseStamina instead"), CloneIgnore]
+	public bool UseStamina
+	{
+		get => Character?.UseStamina ?? false;
+		set
+		{
+			Character?.UseStamina = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.StaminaRegen instead"), CloneIgnore]
+	public float StaminaRegen
+	{
+		get => Character?.StaminaRegen ?? 0;
+		set
+		{
+			Character?.StaminaRegen = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.StaminaBurn instead"), CloneIgnore]
+	public float StaminaBurn
+	{
+		get => Character?.StaminaBurn ?? 0;
+		set
+		{
+			Character?.StaminaBurn = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.KeepInventory instead"), CloneIgnore]
+	public bool KeepInventory
+	{
+		get => Character?.KeepInventory ?? false;
+		set
+		{
+			Character?.KeepInventory = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.UseHeadTurning instead"), CloneIgnore]
+	public bool UseHeadTurning
+	{
+		get => Character?.UseHeadTurning ?? false;
+		set
+		{
+			Character?.UseHeadTurning = value;
+		}
+	}
+
+
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Character.AllowAnimationWhileMoving instead"), CloneIgnore]
+	public bool AllowAnimationWhileMoving
+	{
+		get => Character?.AllowAnimationWhileMoving ?? false;
+		set
+		{
+			Character?.AllowAnimationWhileMoving = value;
+		}
+	}
+
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.UnequipTool() instead")]
+	public void UnequipTool()
+	{
+		Character?.UnequipTool();
+	}
+
+
+	[ScriptMethod, Attributes.Obsolete("Use Character.ResetAppearance() instead, only if it's a PolytorianModel")]
+	public void ResetAppearance()
+	{
+		if (Character is PolytorianModel ptm)
+		{
+			ptm.ResetAppearance();
 		}
 	}
 
@@ -329,51 +927,6 @@ public partial class NPC : Physical
 		}
 	}
 
-	[Editable, ScriptProperty]
-	public Sound? JumpSound
-	{
-		get => _jumpSound;
-		set
-		{
-			_jumpSound = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[SyncVar, ScriptProperty]
-	public bool IsSitting { get; internal set; } = false;
-
-	[SyncVar, ScriptProperty]
-	public bool IsDead { get; internal set; } = false;
-
-	[SyncVar, ScriptProperty]
-	public Tool? HoldingTool
-	{
-		get
-		{
-			if (_holdingTool != null && _holdingTool.IsDeleted)
-			{
-				_holdingTool = null;
-			}
-			return _holdingTool;
-		}
-		internal set => _holdingTool = value;
-	}
-
-	[SyncVar, ScriptProperty]
-	public Seat? SittingIn
-	{
-		get
-		{
-			if (_sittingIn != null && _sittingIn.IsDeleted)
-			{
-				_sittingIn = null;
-			}
-			return _sittingIn;
-		}
-		internal set => _sittingIn = value;
-	}
-
 	[Editable, ScriptProperty, SyncVar]
 	public CharacterModel? Character
 	{
@@ -385,7 +938,39 @@ public partial class NPC : Physical
 			}
 			return _character;
 		}
-		internal set => _character = value;
+		set
+		{
+			bool isServer = Root.Network.IsServer;
+			CharacterModel? oldChar = Character;
+			if (isServer)
+			{
+				if (this is Player plr)
+				{
+					oldChar?.SetNetworkAuthority(null);
+					oldChar?.SetNetworkAuthority(1, true);
+					value?.SetNetworkAuthority(plr);
+					value?.SetNetworkAuthority(plr.PeerID, true);
+					value?.SetPhysicsProcess(true);
+				}
+				else if (((value?.NetworkAuthority ?? 1) != 1))
+				{
+					value?.SetNetworkAuthority(null);
+					value?.SetNetworkAuthority(1, true);
+				}
+			}
+			Character?._controller = null;
+			Character?.OnPropertyChanged();
+			_character = value;
+			OnPropertyChanged();
+			value?.Controller?._character = null;
+			value?.Controller?.OnPropertyChanged();
+			value?._controller = this;
+			value?.OnPropertyChanged();
+			if (this is Player mplr)
+			{
+				mplr.CharacterChanged.Invoke(oldChar);
+			}
+		}
 	}
 
 	[SyncVar, ScriptProperty]
@@ -402,12 +987,6 @@ public partial class NPC : Physical
 		set => _moveTarget = value;
 	}
 
-	[ScriptProperty, ScriptLegacyProperty("Grounded")]
-	public bool IsOnGround => CharBody3D.IsOnFloor();
-
-	[ScriptProperty]
-	public bool IsOnCeiling => CharBody3D.IsOnCeiling();
-
 	[ScriptProperty] public float NavDestinationDistance => _navAgent == null ? Mathf.Inf : _navAgent.DistanceToTarget();
 
 	[ScriptProperty]
@@ -415,98 +994,69 @@ public partial class NPC : Physical
 
 	[ScriptProperty] public bool NavDestinationValid => _navAgent != null && _navAgent.IsTargetReachable();
 
-	public Vector3 CharacterVelocity = Vector3.Zero;
-
-	[ScriptProperty]
-	public PTSignal Died { get; private set; } = new();
-
-	[ScriptProperty]
-	public PTSignal<float, float> HealthChanged { get; private set; } = new();
-
-	[ScriptProperty]
-	public PTSignal Jumped { get; private set; } = new();
-
-	[ScriptProperty]
-	public PTSignal LeftGround { get; private set; } = new();
-
-	[ScriptProperty]
-	public PTSignal<Seat> Seated { get; private set; } = new();
-
-	[ScriptProperty]
-	public PTSignal<Seat> Unseated { get; private set; } = new();
-
-	[ScriptProperty]
-	public PTSignal Landed { get; private set; } = new();
-
 	[ScriptProperty]
 	public PTSignal NavFinished { get; private set; } = new();
 
-	public override Node CreateGDNode()
-	{
-		return new CharacterBody3D() { FloorMaxAngle = Mathf.DegToRad(80f) };
-	}
-
-	public override void InitGDNode()
-	{
-		CharBody3D = (CharacterBody3D)GDNode;
-		base.InitGDNode();
-	}
-
-	public override void Init()
-	{
-		base.Init();
-		EnsureTouchArea();
-		OverridePhysicsProcess = true;
-
-		// Create nametag
-		_nametag = new()
-		{
-			Target = this
-		};
-		GDNode3D.AddChild(_nametag);
-		excludedBoundNodes.Add(_nametag);
-
-		FootFwdRaycast = new();
-		GDNode3D.AddChild(FootFwdRaycast, false, Node.InternalMode.Front);
-		FootFwdRaycast.Position = new Vector3(0, -3, 0);
-		FootFwdRaycast.TargetPosition = new Vector3(0, 0, ForwardRaycastRange);
-
-		ChildAdded.Connect(OnChildAdded);
-		ChildRemoved.Connect(OnChildRemoved);
-
-		RecalculateNametagOffset();
-
-		// Force these to always be on
-		SetProcess(true);
-		SetPhysicsProcess(true);
-	}
-
-	public override void InitOverrides()
-	{
-		Anchored = false;
-	}
-
 	public override void PreDelete()
 	{
-		ChildAdded.Disconnect(OnChildAdded);
-		ChildRemoved.Disconnect(OnChildRemoved);
 		_navAgent?.NavigationFinished -= OnNavFinished;
 		base.PreDelete();
 	}
 
-	private void OnChildAdded(Instance n)
+	public void Navigate(double delta)
 	{
-		if (n is Tool t)
-		{
-			InternalAttachTool(t);
-		}
-	}
+		if (Character == null) return;
 
-	private void OnChildRemoved(Instance n)
-	{
-		if (n is Tool)
+		bool isOnFloor = Character.IsOnGround;
+		bool isOnCeiling = Character.IsOnCeiling;
+		bool playerNPCOverride = Character != null && !Character.CanMove;
+
+		CharacterModel.CharacterModelStateEnum finalState = CharacterModel.CharacterModelStateEnum.Idle;
+		Vector3? walkTarget = null;
+		float animSpeed = 1;
+
+		if (MoveTarget != null)
 		{
-			InternalDetachTool();
+			walkTarget = MoveTarget.GetGlobalPosition();
+		}
+
+		if (_navAgent != null)
+		{
+			walkTarget = _navAgent.GetNextPathPosition();
+
+			// Adjust Nav agent position in-case of unstable Y position changes
+			_navAgentContainer?.GlobalPosition = _navAgentContainer.GlobalPosition with { Y = walkTarget.Value.Y };
+		}
+
+		if (walkTarget.HasValue)
+		{
+			Vector3 velo = Character!.GetGlobalPosition().DirectionTo(walkTarget.Value with { Y = Character.Position.Y });
+			Character.CharacterVelocity = new(velo.X * Character.WalkSpeed, Character.CharacterVelocity.Y, velo.Z * Character.WalkSpeed);
+			Character.GDNode3D.GlobalRotationDegrees = new Vector3(Character.Rotation.X, Mathf.RadToDeg(Mathf.LerpAngle(Mathf.DegToRad(Character.Rotation.Y), Mathf.Atan2(Character.CharacterVelocity.X, Character.CharacterVelocity.Z), MathUtils.ExpDecay((float)delta, BodyRotateLerp))), Character.Rotation.Z);
+
+			float distanceToTarget = Character.GetGlobalPosition().DistanceTo(walkTarget.Value);
+
+			if (distanceToTarget > 0.5f)
+			{
+				finalState = CharacterModel.CharacterModelStateEnum.Walking;
+				animSpeed = Character.WalkSpeed / 8;
+				Character.TryStepUp();
+			}
+		}
+		else if (this is not Player || playerNPCOverride)
+		{
+			Character!.CharacterVelocity = new(0, Character.CharacterVelocity.Y, 0);
+		}
+
+		if (!isOnFloor)
+		{
+			finalState = CharacterModel.CharacterModelStateEnum.Jumping;
+		}
+
+		if (this is not Player || playerNPCOverride)
+		{
+			Character!.SetState(finalState);
+			Character!.SetAnimSpeed(animSpeed);
 		}
 	}
 
@@ -557,557 +1107,14 @@ public partial class NPC : Physical
 			}
 		}
 
-		if (IsSitting && SittingIn != null)
-		{
-			InternalSit(SittingIn);
-		}
-
-		if (HoldingTool != null)
-		{
-			InternalAttachTool(HoldingTool);
-		}
-
-		RecalculateNametagOffset();
+		if (Character != null) Character.Ready();
 		base.Ready();
 	}
-
-#if CREATOR
-	public override void CreatorInserted()
-	{
-		Root.Insert.InitializeDefaultNPC(this);
-		base.CreatorInserted();
-	}
-#endif
-
-	private void RecalculateNametagOffset()
-	{
-		if (!_nametag.IsInsideTree()) { return; }
-		_nametag.Position = NametagOffset + _fixedNametagOffset;
-	}
-
-	public override void PhysicsProcess(double delta)
-	{
-		base.PhysicsProcess(delta);
-
-		if (Root == null) return;
-		if (Anchored || IsHidden) return;
-		if (!Root.IsLoaded) return;
-
-		// Only enable physics in client mode
-		if (Root.SessionType != World.SessionTypeEnum.Client) return;
-
-		// Kill player if fall off the map
-		if (Position.Y < Root.Environment.PartDestroyHeight)
-		{
-			Kill();
-		}
-
-		if (IsSitting)
-		{
-			if (!Root.Network.IsServer && SittingIn != null)
-			{
-				Velocity = Vector3.Zero;
-				Position = SittingIn.Position + SeatOffset.Y * Up;
-				if (!SittingIn.SitDirectionLocked)
-				{
-					Rotation = new Vector3(SittingIn.Rotation.X, Rotation.Y, SittingIn.Rotation.Z);
-				}
-				else
-				{
-					Rotation = SittingIn.Rotation;
-				}
-				Character?.PlayIdle();
-			}
-			return;
-		}
-
-		if (this is Player plr)
-		{
-			if (!plr.IsLocal)
-			{
-				return;
-			}
-			if (plr.MovementMode == Player.PlayerMovementModeEnum.Scripted)
-			{
-				return;
-			}
-		}
-
-		if (Root.Network.LocalPeerID != NetworkAuthority && ExistInNetwork) return;
-
-		if (CharBody3D != null)
-		{
-			bool isOnFloor = CharBody3D.IsOnFloor();
-
-			if (isOnFloor)
-			{
-				_timeSinceGrounded = 0f;
-			}
-			else
-			{
-				_timeSinceGrounded += (float)delta;
-			}
-
-			bool isOnCeiling = CharBody3D.IsOnCeiling();
-			bool playerNPCOverride = this is Player p && !p.CanMove;
-
-			CharacterModel.CharacterModelStateEnum finalState = CharacterModel.CharacterModelStateEnum.Idle;
-			Vector3? walkTarget = null;
-			float animSpeed = 1;
-
-			if (MoveTarget != null)
-			{
-				walkTarget = MoveTarget.GetGlobalPosition();
-			}
-
-			if (_navAgent != null)
-			{
-				walkTarget = _navAgent.GetNextPathPosition();
-
-				// Adjust Nav agent position in-case of unstable Y position changes
-				_navAgentContainer?.GlobalPosition = _navAgentContainer.GlobalPosition with { Y = walkTarget.Value.Y };
-			}
-
-			if (walkTarget.HasValue)
-			{
-				Vector3 velo = GetGlobalPosition().DirectionTo(walkTarget.Value with { Y = Position.Y });
-				CharacterVelocity = new(velo.X * WalkSpeed, CharacterVelocity.Y, velo.Z * WalkSpeed);
-				GDNode3D.GlobalRotationDegrees = new Vector3(Rotation.X, Mathf.RadToDeg(Mathf.LerpAngle(Mathf.DegToRad(Rotation.Y), Mathf.Atan2(CharacterVelocity.X, CharacterVelocity.Z), MathUtils.ExpDecay((float)delta, BodyRotateLerp))), Rotation.Z);
-
-				float distanceToTarget = GetGlobalPosition().DistanceTo(walkTarget.Value);
-
-				if (distanceToTarget > 0.5f)
-				{
-					finalState = CharacterModel.CharacterModelStateEnum.Walking;
-					animSpeed = WalkSpeed / 8;
-					TryStepUp();
-				}
-			}
-			else if (this is not Player || playerNPCOverride)
-			{
-				CharacterVelocity = new(0, CharacterVelocity.Y, 0);
-			}
-
-			if (!isOnFloor)
-			{
-				finalState = CharacterModel.CharacterModelStateEnum.Jumping;
-			}
-
-			if (this is not Player || playerNPCOverride)
-			{
-				Character?.SetState(finalState);
-				Character?.SetAnimSpeed(animSpeed);
-			}
-
-			// Apply gravity
-			if (!isOnFloor)
-			{
-				CharacterVelocity.Y += Root.Environment.Gravity.Y * (float)delta;
-			}
-			else if (isOnFloor && CharacterVelocity.Y < 0)
-			{
-				// Cancel downward velocity when on floor
-				CharacterVelocity.Y = 0;
-			}
-
-			// Prevent sticking
-			if (isOnCeiling && CharacterVelocity.Y > 0)
-			{
-				CharacterVelocity.Y = 0;
-			}
-
-			UpdateVelocityInternal(CharacterVelocity);
-			if (this is not Player)
-			{
-				CharBody3D.Velocity = Velocity;
-				CharBody3D.MoveAndSlide();
-			}
-
-			if (isOnFloor != _lastOnFloorState)
-			{
-				_lastOnFloorState = isOnFloor;
-
-				// On floor change
-				if (isOnFloor)
-				{
-					_coyoteUsed = false;
-					Landed.Invoke();
-				}
-				else
-				{
-					LeftGround.Invoke();
-				}
-			}
-		}
-	}
-
-	[ScriptMethod]
-	public void Move(Vector3 velo)
-	{
-		CharacterVelocity = velo;
-		UpdateVelocityInternal(CharacterVelocity);
-		CharBody3D.Velocity = Velocity;
-		CharBody3D.MoveAndSlide();
-		CharacterVelocity = CharBody3D.Velocity;
-		UpdateVelocityInternal(CharacterVelocity);
-	}
-
-	[ScriptMethod]
-	public void Kill()
-	{
-		Health = 0;
-		RpcId(1, nameof(NetKill));
-	}
-
-	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
-	private void NetKill()
-	{
-		Health = 0;
-	}
-
-	private void TriggerNPCDead()
-	{
-		if (IsDead) return;
-		if (Root.SessionType != World.SessionTypeEnum.Client) return;
-		Anchored = true;
-		OverrideCanCollide = true;
-		OverrideCanCollideTo = false;
-		Unsit(false);
-		UpdateCollision();
-
-		Character?.Animator?.StopAnimation();
-		Character?.Animator?.StopOneShotAnimation();
-
-		if (Character is PolytorianModel ptmodel)
-		{
-			ptmodel.StartRagdoll(Velocity);
-		}
-		IsDead = true;
-		Died.Invoke();
-	}
-
-	[ScriptMethod]
-	public bool TryStepUp()
-	{
-		if (CharBody3D == null)
-		{
-			return false;
-		}
-
-		if (!CharBody3D.IsOnFloor())
-		{
-			return false;
-		}
-
-		int slideCount = CharBody3D.GetSlideCollisionCount();
-
-		if (slideCount <= 0)
-		{
-			return false;
-		}
-
-		Vector3 desiredVelocity = Velocity;
-		Vector3 desiredXZ = new(desiredVelocity.X, 0f, desiredVelocity.Z);
-		if (desiredXZ.LengthSquared() < 0.0001f)
-		{
-			return false;
-		}
-
-		float groundY;
-		{
-			var downHit = new KinematicCollision3D();
-			bool hasGround = CharBody3D.TestMove(CharBody3D.GlobalTransform, Vector3.Down * (StepHeight + 0.05f), downHit, 0.001f, true);
-			if (!hasGround)
-			{
-				return false;
-			}
-
-			groundY = downHit.GetPosition().Y;
-		}
-
-		const float stepSearchOvershoot = 0.05f;
-
-		var spaceState = World.Current!.World3D.DirectSpaceState;
-
-		for (int i = 0; i < slideCount; i++)
-		{
-			KinematicCollision3D stepTest = CharBody3D.GetSlideCollision(i);
-			Vector3 n = stepTest.GetNormal();
-			Vector3 p = stepTest.GetPosition();
-
-			if (Mathf.Abs(n.Y) >= 0.01f)
-			{
-				continue;
-			}
-
-			if (!(p.Y - groundY < StepHeight))
-			{
-				continue;
-			}
-
-			float stepHeight = p.Y + StepHeight + 0.0001f;
-			Vector3 stepTestInvDir = new Vector3(-n.X, 0, -n.Z).Normalized();
-			Vector3 origin = new Vector3(p.X, stepHeight, p.Z) + (stepTestInvDir * stepSearchOvershoot);
-			Vector3 direction = Vector3.Down * StepHeight;
-
-			Dictionary result = spaceState.IntersectRay(new PhysicsRayQueryParameters3D()
-			{
-				From = origin,
-				To = origin + direction,
-				Exclude = [CharBody3D.GetRid()],
-				CollideWithAreas = false,
-				CollideWithBodies = true,
-			});
-
-			if (result.Count == 0)
-			{
-				continue;
-			}
-
-			Vector3 hitPos = result["position"].AsVector3();
-
-			Vector3 stepUpPoint = new Vector3(p.X, hitPos.Y + 0.01f, p.Z) + (stepTestInvDir * stepSearchOvershoot);
-			Vector3 stepUpPointOffset = stepUpPoint - new Vector3(p.X, groundY, p.Z);
-
-			CharBody3D.GlobalPosition += stepUpPointOffset;
-			CharBody3D.Velocity = desiredVelocity;
-
-			return true;
-		}
-
-		return false;
-	}
-
-	[ScriptMethod]
-	public virtual void Jump()
-	{
-		bool canJump = (CharBody3D.IsOnFloor() || (!_coyoteUsed && _timeSinceGrounded <= CoyoteTime)) && JumpPower > 0;
-		bool playJumpSound = false;
-		if (canJump)
-		{
-			_coyoteUsed = true;
-			CharacterVelocity.Y = JumpPower;
-			playJumpSound = true;
-			Jumped.Invoke();
-		}
-		if (IsSitting)
-		{
-			playJumpSound = true;
-			Unsit();
-		}
-		if (playJumpSound && JumpSound != null && !JumpSound.Playing)
-		{
-			JumpSound?.Play();
-		}
-	}
-
-	[ScriptMethod]
-	public void Sit(Seat seat)
-	{
-		Rpc(nameof(NetSit), seat.NetworkedObjectID);
-	}
-
-	[ScriptMethod]
-	public void Unsit(bool addForce = true)
-	{
-		Rpc(nameof(NetJumpFromSeat));
-
-		// Reset rotation
-		Rotation = new(0, Rotation.Y, 0);
-
-		if (addForce)
-		{
-			Position += SeatOffset * 2;
-		}
-	}
-
-	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Reliable, CallLocal = true)]
-	private async void NetSit(string seatID)
-	{
-		Seat? seat = (Seat?)await Root.WaitForNetObjectAsync(seatID);
-
-		if (seat != null)
-		{
-			InternalSit(seat);
-		}
-	}
-
-	private void InternalSit(Seat seat)
-	{
-		if (IsSitting && SittingIn != null)
-		{
-			SittingIn.Occupant = null;
-			SittingIn.InvokeVacated(this);
-		}
-		IsSitting = true;
-		OverrideNetworkTransform = true;
-		SittingIn = seat;
-		seat.Occupant = this;
-		seat.InvokeSat(this);
-		Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.Sitting, 1);
-		Seated.Invoke(seat);
-	}
-
-	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable, CallLocal = true)]
-	private void NetJumpFromSeat()
-	{
-		if (IsSitting)
-		{
-			// Unsit the NPC
-			IsSitting = false;
-			OverrideNetworkTransform = false;
-
-			if (SittingIn != null)
-			{
-				Seat seat = SittingIn;
-				seat.Occupant = null;
-				seat.InvokeVacated(this);
-				SittingIn = null;
-				Unseated.Invoke(seat);
-			}
-
-			Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.Sitting, 0);
-		}
-	}
-
-	[ScriptMethod]
-	public void EquipTool(Tool tool)
-	{
-		if (IsDead) return;
-		// Check if tool is already held
-		if (HoldingTool != null)
-		{
-			if (this is Player plr)
-			{
-				plr.UnequipTool();
-			}
-			else
-			{
-				DropTool();
-			}
-		}
-
-		Rpc(nameof(NetEquipTool), tool.NetworkedObjectID);
-	}
-
-	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable, CallLocal = true)]
-	private async void NetEquipTool(string networkID)
-	{
-		NetworkedObject? netObj = await Root.WaitForNetObjectAsync(networkID);
-
-		if (netObj == null) { return; }
-
-		Tool tool = (Tool)netObj;
-
-		if (tool != null)
-		{
-			HoldingTool = tool;
-
-			// If is authority, attach the tool
-			if (HasAuthority)
-			{
-				tool.Holder = this;
-				tool.Parent = this;
-			}
-
-			tool.InvokeEquipped();
-		}
-	}
-
-	/// <summary>
-	/// Attach tool to hand
-	/// </summary>
-	/// <param name="tool"></param>
-	private async void InternalAttachTool(Tool tool)
-	{
-		tool.Holder = this;
-
-		if (_toolRemoteTransform != null && Node.IsInstanceValid(_toolRemoteTransform))
-		{
-			_toolRemoteTransform.QueueFree();
-		}
-
-		_toolRemoteTransform = new()
-		{
-			UpdatePosition = true,
-			UpdateRotation = true,
-			UpdateScale = false
-		};
-
-		if (Character != null)
-		{
-			Dynamic attachment = Character.GetAttachment(CharacterModel.CharacterAttachmentEnum.HandRight);
-			attachment.GDNode.AddChild(_toolRemoteTransform, @internal: Node.InternalMode.Back);
-		}
-
-		// stick and stones
-		// this is needed because GetPath doesn't update when it entered tree
-		await Globals.Singleton.WaitFrame();
-		_toolRemoteTransform.Position = new Vector3(0, 0, 0);
-		_toolRemoteTransform.RotationDegrees = new Vector3(0, -90, -90);
-		_toolRemoteTransform.UpdateScale = false;
-		_toolRemoteTransform.RemotePath = _toolRemoteTransform.GetPathTo(tool.GDNode);
-	}
-
-	internal void InternalDetachTool()
-	{
-		if (_toolRemoteTransform != null && Node.IsInstanceValid(_toolRemoteTransform))
-		{
-			_toolRemoteTransform?.QueueFree();
-		}
-
-		Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.ToolHoldRight, 0);
-	}
-
-	[ScriptMethod, ScriptLegacyMethod("DropTools")]
-	public void DropTool()
-	{
-		if (HoldingTool != null)
-		{
-			Tool tool = HoldingTool;
-			if (this is Player plr)
-			{
-				plr.UnequipTool();
-			}
-			Rpc(nameof(NetDropTool), tool.NetworkedObjectID);
-		}
-	}
-
-	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable, CallLocal = true)]
-	private async void NetDropTool(string id)
-	{
-		Tool? tool = (Tool?)await Root.WaitForNetObjectAsync(id);
-
-		if (tool != null && tool.Droppable)
-		{
-			tool.Reparent(Root.Environment);
-			InternalDetachTool();
-			tool.InvokeDropped();
-		}
-	}
-
-	[ScriptMethod]
-	public void LoadAppearance(int userID)
-	{
-		if (Character is PolytorianModel ptm)
-		{
-			ptm.LoadAppearance(userID, Root.PlayerDefaults.LoadAppearanceTools);
-		}
-	}
-
-	[ScriptMethod]
-	public void ClearAppearance()
-	{
-		if (Character is PolytorianModel ptm)
-		{
-			ptm.ClearAppearance();
-		}
-	}
-
 	[ScriptMethod]
 	public void SetNavDestination(Vector3 pos)
 	{
 		MoveTarget = null;
+		if (Character == null) return;
 		if (_navAgent == null)
 		{
 			_navAgentContainer = new();
@@ -1115,12 +1122,12 @@ public partial class NPC : Physical
 			{
 				PathDesiredDistance = NavigationDistance,
 				TargetDesiredDistance = 0.5f,
-				PathHeightOffset = -(CalculateBounds().Size.Y / 2),
+				PathHeightOffset = -(Character.CalculateBounds().Size.Y / 2),
 				PathMaxDistance = 3f
 			};
 
 			_navAgentContainer.AddChild(_navAgent);
-			GDNode3D.AddChild(_navAgentContainer);
+			Character.GDNode3D.AddChild(_navAgentContainer);
 			if (Globals.IsInGDEditor)
 			{
 				_navAgent.DebugEnabled = true;
@@ -1138,34 +1145,5 @@ public partial class NPC : Physical
 		_navAgent = null;
 		NavDestinationReached = true;
 		NavFinished.Invoke();
-	}
-
-	[ScriptMethod]
-	public void Respawn()
-	{
-		Health = MaxHealth;
-		Anchored = false;
-		IsDead = false;
-
-		if (Character is PolytorianModel ptmodel)
-		{
-			ptmodel.StopRagdoll();
-		}
-		CharacterVelocity = Vector3.Zero;
-
-		OverrideCanCollide = false;
-		UpdateCollision();
-	}
-
-	[ScriptMethod]
-	public void TakeDamage(float dmg)
-	{
-		Health -= dmg;
-	}
-
-	[ScriptMethod]
-	public void Heal(float amount)
-	{
-		Health += amount;
 	}
 }

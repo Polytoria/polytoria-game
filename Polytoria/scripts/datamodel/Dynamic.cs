@@ -825,9 +825,6 @@ public partial class Dynamic : Instance
 
 	public override void HiddenChanged(bool to)
 	{
-		// Player cannot be hidden
-		if (this is Player) return;
-
 		GDNode3D.Visible = !to;
 
 #if CREATOR

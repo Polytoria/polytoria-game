@@ -23,6 +23,10 @@ public sealed partial class PlayerDefaults : HiddenBase
 	private bool _useStamina;
 	private float _staminaRegen;
 	private float _staminaBurn;
+	private bool _reuseCharacter;
+	private bool _corpseDecay;
+	private bool _automaticSpawn;
+	private bool _cameraFollow;
 	private bool _keepInventory;
 	private bool _useHeadTurning;
 	private bool _useBubbleChat;
@@ -96,13 +100,13 @@ public sealed partial class PlayerDefaults : HiddenBase
 		}
 	}
 
-
 	[Editable, ScriptProperty]
 	public bool ChatColorsEnabled
 	{
 		get => _chatColorsEnabled;
 		set { _chatColorsEnabled = value; OnPropertyChanged(); }
 	}
+
 	[Editable, ScriptProperty]
 	public bool CanMove
 	{
@@ -176,6 +180,54 @@ public sealed partial class PlayerDefaults : HiddenBase
 		set
 		{
 			_staminaRegen = value;
+			OnPropertyChanged();
+		}
+	}
+
+
+	[Editable, ScriptProperty]
+	public bool ReuseCharacter
+	{
+		get => _reuseCharacter;
+		set
+		{
+			_reuseCharacter = value;
+			OnPropertyChanged();
+		}
+	}
+
+
+	[Editable, ScriptProperty]
+	public bool CorpseDecay
+	{
+		get => _corpseDecay;
+		set
+		{
+			_corpseDecay = value;
+			OnPropertyChanged();
+		}
+	}
+
+
+	[Editable, ScriptProperty]
+	public bool AutomaticSpawn
+	{
+		get => _automaticSpawn;
+		set
+		{
+			_automaticSpawn = value;
+			OnPropertyChanged();
+		}
+	}
+
+
+	[Editable, ScriptProperty]
+	public bool AutoCameraFollow
+	{
+		get => _cameraFollow;
+		set
+		{
+			_cameraFollow = value;
 			OnPropertyChanged();
 		}
 	}
@@ -276,6 +328,10 @@ public sealed partial class PlayerDefaults : HiddenBase
 		UseBubbleChat = true;
 		AutoLoadAppearance = true;
 		LoadAppearanceTools = true;
+		ReuseCharacter = true;
+		CorpseDecay = true;
+		AutomaticSpawn = true;
+		AutoCameraFollow = true;
 		MovementMode = Player.PlayerMovementModeEnum.Default;
 	}
 }

@@ -193,7 +193,7 @@ public partial class UIChat : Control
 			}
 
 			string emoteName = cmd[0][1..];
-			Root.Players.LocalPlayer.PlayEmote(emoteName);
+			Root.Players.LocalPlayer.Character?.PlayEmote(emoteName);
 			return;
 		}
 

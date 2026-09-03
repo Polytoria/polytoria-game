@@ -14,10 +14,10 @@ public partial class Seat : Part
 	private bool _canNPCSit;
 	private bool _sitDirectionLocked;
 
-	private NPC? _occupant = null;
+	private CharacterModel? _occupant = null;
 
 	[SyncVar, ScriptProperty]
-	public NPC? Occupant
+	public CharacterModel? Occupant
 	{
 		get
 		{
@@ -62,8 +62,8 @@ public partial class Seat : Part
 		}
 	}
 
-	[ScriptProperty] public PTSignal<NPC> Sat { get; private set; } = new();
-	[ScriptProperty] public PTSignal<NPC> Vacated { get; private set; } = new();
+	[ScriptProperty] public PTSignal<CharacterModel> Sat { get; private set; } = new();
+	[ScriptProperty] public PTSignal<CharacterModel> Vacated { get; private set; } = new();
 
 	public override void Init()
 	{
@@ -74,14 +74,14 @@ public partial class Seat : Part
 		}
 	}
 
-	internal void InvokeSat(NPC npc)
+	internal void InvokeSat(CharacterModel charModel)
 	{
-		Sat.Invoke(npc);
+		Sat.Invoke(charModel);
 	}
 
-	internal void InvokeVacated(NPC npc)
+	internal void InvokeVacated(CharacterModel charModel)
 	{
-		Vacated.Invoke(npc);
+		Vacated.Invoke(charModel);
 	}
 
 	private void OnSeatTouched(Physical hit)
@@ -90,17 +90,11 @@ public partial class Seat : Part
 		{
 			return;
 		}
-		if (hit is Player plr)
+		if (hit is CharacterModel charModel)
 		{
-			if (!CanPlayerSit) { return; }
-			if (plr.IsSitting) { return; }
-			plr.Sit(this);
-		}
-		else if (hit is NPC npc)
-		{
-			if (!CanNPCSit) { return; }
-			if (npc.IsSitting) { return; }
-			npc.Sit(this);
+			if (!(charModel.Controller is Player ? CanPlayerSit : CanNPCSit)) { return; }
+			if (charModel.IsSitting) { return; }
+			charModel.Sit(this);
 		}
 	}
 }

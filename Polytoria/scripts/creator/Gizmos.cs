@@ -575,12 +575,6 @@ public sealed partial class Gizmos : Node
 
 			if (hoveringOn != null)
 			{
-				// Force select NPC instead of CharacterModel
-				if (selectInstance?.Parent is NPC)
-				{
-					selectInstance = selectInstance.Parent;
-				}
-
 				// Don't select creator freelook/current cam
 				if (selectInstance == Root.Environment.CurrentCamera)
 				{

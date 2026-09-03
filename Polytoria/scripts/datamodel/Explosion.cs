@@ -191,12 +191,12 @@ public partial class Explosion : Dynamic
 					}
 				}
 			}
-			else if (item is Player plr)
+			else if (item is CharacterModel charModel)
 			{
-				if (plr.IsDead) continue;
+				if (charModel.IsDead) continue;
 
-				plr.TakeDamage(Damage);
-				AddPlrExplosionForce(plr);
+				charModel.TakeDamage(Damage);
+				AddCharExplosionForce(charModel);
 			}
 		}
 
@@ -211,16 +211,16 @@ public partial class Explosion : Dynamic
 		Delete();
 	}
 
-	private void AddPlrExplosionForce(Player player)
+	private void AddCharExplosionForce(CharacterModel charModel)
 	{
 		float force = Force * 0.02f;
-		Vector3 dir = player.GetGlobalTransform().Origin - GetGlobalTransform().Origin;
+		Vector3 dir = charModel.GetGlobalTransform().Origin - GetGlobalTransform().Origin;
 		float wearoff = 1 - (dir.Length() / (Radius * 2f));
 		wearoff = Mathf.Max(Mathf.Clamp(wearoff, 0, 1), 0.1f);
 		Vector3 f = dir.Normalized() * force;
 		f.X *= 1.5f;
 		f.Z *= 1.5f;
 
-		player.CharacterVelocity = f * wearoff;
+		charModel.CharacterVelocity = f * wearoff;
 	}
 }

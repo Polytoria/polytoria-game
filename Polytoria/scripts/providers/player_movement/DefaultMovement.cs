@@ -20,7 +20,7 @@ public class DefaultMovement : IPlayerMovement
 		bool sprint = false;
 		bool camLocked = false;
 
-		if (cam != null && Root.Input.IsGameFocused && Target.CanMove && !Target.IsDead)
+		if (cam != null && Root.Input.IsGameFocused)
 		{
 			Vector3 facingRot = cam.Camera3D.GlobalRotation;
 			camRotation = facingRot;
@@ -77,17 +77,21 @@ public class DefaultMovement : IPlayerMovement
 
 	public void ProcessInput(InputSnapshot snapshot)
 	{
-		bool isOnFloor = Target.CharBody3D.IsOnFloor();
+		if (Target == null) return;
+		CharacterModel TargetCharacter = Target.Character!;
+		if (TargetCharacter == null) return;
+
+		bool isOnFloor = TargetCharacter.CharBody3D.IsOnFloor();
 		CharacterModel.CharacterModelStateEnum finalState = CharacterModel.CharacterModelStateEnum.Idle;
 
 		double delta = snapshot.Delta;
 
-		Vector3 externalVelocity = Target.ExternalVelocity;
+		Vector3 externalVelocity = TargetCharacter.ExternalVelocity;
 		bool hasExternalVelocity = externalVelocity.X != 0 || externalVelocity.Z != 0;
 
-		if (Target.CanMove && !Target.IsDead)
+		if (TargetCharacter.CanMove && !TargetCharacter.IsDead)
 		{
-			float gdWalkSpeed = Target.WalkSpeed;
+			float gdWalkSpeed = TargetCharacter.WalkSpeed;
 			bool sprinting = snapshot.Sprint;
 
 			Vector3 moveDirection = snapshot.MoveDirection;
@@ -96,15 +100,15 @@ public class DefaultMovement : IPlayerMovement
 			// Handle jump
 			if (snapshot.Jump)
 			{
-				Target.Jump();
+				TargetCharacter.Jump();
 			}
 
 			// Sprint/Stamina
 			if (sprinting && moveDirection != Vector3.Zero)
 			{
-				if (Target.Stamina > 0 || !Target.UseStamina)
+				if (TargetCharacter.Stamina > 0 || !TargetCharacter.UseStamina)
 				{
-					gdWalkSpeed = Target.SprintSpeed;
+					gdWalkSpeed = TargetCharacter.SprintSpeed;
 				}
 				else
 				{
@@ -112,131 +116,140 @@ public class DefaultMovement : IPlayerMovement
 					Target.SprintHoldAgain = true;
 				}
 
-				Target.RemoveStaminaTick(delta);
+				TargetCharacter.RemoveStaminaTick(delta);
 			}
 			else
 			{
-				Target.AddStaminaTick(delta);
+				TargetCharacter.AddStaminaTick(delta);
 			}
 
-			if (Target.IsClimbing)
+			if (TargetCharacter.IsClimbing)
 			{
 				// Reset all vectors, lock to Y only
-				Target.CharacterVelocity.X = 0;
-				Target.CharacterVelocity.Z = 0;
+				TargetCharacter.CharacterVelocity.X = 0;
+				TargetCharacter.CharacterVelocity.Z = 0;
 
-				float climbSpeed = forwardInput * gdWalkSpeed * Target.ClimbingTruss!.ClimbSpeed;
+				float climbSpeed = forwardInput * gdWalkSpeed * TargetCharacter.ClimbingTruss!.ClimbSpeed;
 
 				// Add y velocity
-				Target.CharacterVelocity.Y = climbSpeed;
+				TargetCharacter.CharacterVelocity.Y = climbSpeed;
 
 				finalState = CharacterModel.CharacterModelStateEnum.Climbing;
-				Target.Character?.SetAnimSpeed(climbSpeed / 8);
+				TargetCharacter.SetAnimSpeed(climbSpeed / 8);
 			}
-			else if (Target.JustFinishedClimbing)
+			else if (TargetCharacter.JustFinishedClimbing)
 			{
-				Target.JustFinishedClimbing = false;
-				Target.CharacterVelocity.Y = 0;
+				TargetCharacter.JustFinishedClimbing = false;
+				TargetCharacter.CharacterVelocity.Y = 0;
 			}
 
 			// Always rotate in first person
 			if (snapshot.CamLocked)
 			{
-				Target.Rotation = Target.Rotation with { Y = 180 + Mathf.RadToDeg(snapshot.CameraRotation.Y) };
+				TargetCharacter.Rotation = TargetCharacter.Rotation with { Y = 180 + Mathf.RadToDeg(snapshot.CameraRotation.Y) };
 			}
 
 			Vector3 pushVelocity = hasExternalVelocity
 				? externalVelocity with { Y = 0 }
 				: Vector3.Zero;
 
-			if (moveDirection != Vector3.Zero && !Target.IsClimbing)
+			if (moveDirection != Vector3.Zero && !TargetCharacter.IsClimbing)
 			{
 				Target.IsMoving = true;
 
-				Target.CharacterVelocity.X = (moveDirection.X * gdWalkSpeed) + pushVelocity.X;
-				Target.CharacterVelocity.Z = (moveDirection.Z * gdWalkSpeed) + pushVelocity.Z;
+				TargetCharacter.CharacterVelocity.X = (moveDirection.X * gdWalkSpeed) + pushVelocity.X;
+				TargetCharacter.CharacterVelocity.Z = (moveDirection.Z * gdWalkSpeed) + pushVelocity.Z;
 
 				if (!snapshot.CamLocked)
 				{
 					// Apply rotation by move direction
-					Target.Rotation = Target.Rotation with
+					TargetCharacter.Rotation = TargetCharacter.Rotation with
 					{
-						Y = Mathf.RadToDeg(Mathf.LerpAngle(Mathf.DegToRad(Target.Rotation.Y), Mathf.Atan2(Target.CharacterVelocity.X, Target.CharacterVelocity.Z), MathUtils.ExpDecay((float)delta, NPC.BodyRotateLerp)))
+						Y = Mathf.RadToDeg(
+							Mathf.LerpAngle(
+								Mathf.DegToRad(TargetCharacter.Rotation.Y),
+								Mathf.Atan2(
+									TargetCharacter.CharacterVelocity.X,
+									TargetCharacter.CharacterVelocity.Z
+								),
+								MathUtils.ExpDecay((float)delta, NPC.BodyRotateLerp)
+							)
+						)
 					};
 				}
 
 
 				float animMoveAmount = Mathf.Max(Mathf.Clamp(moveDirection.Length(), 0f, 1f), 0.15f);
-				if (sprinting && Target.SprintSpeed != Target.WalkSpeed)
+				if (sprinting && TargetCharacter.SprintSpeed != TargetCharacter.WalkSpeed)
 				{
 					finalState = CharacterModel.CharacterModelStateEnum.Running;
-					Target.Character?.SetAnimSpeed(gdWalkSpeed / 20 * animMoveAmount);
+					TargetCharacter.SetAnimSpeed(gdWalkSpeed / 20 * animMoveAmount);
 				}
 				else
 				{
 					finalState = CharacterModel.CharacterModelStateEnum.Walking;
-					Target.Character?.SetAnimSpeed(gdWalkSpeed / 8 * animMoveAmount);
+					TargetCharacter.SetAnimSpeed(gdWalkSpeed / 8 * animMoveAmount);
 				}
 			}
-			else if (!Target.IsClimbing)
+			else if (!TargetCharacter.IsClimbing)
 			{
 				Target.IsMoving = false;
 
 				if (hasExternalVelocity)
 				{
-					Target.CharacterVelocity.X = pushVelocity.X;
-					Target.CharacterVelocity.Z = pushVelocity.Z;
+					TargetCharacter.CharacterVelocity.X = pushVelocity.X;
+					TargetCharacter.CharacterVelocity.Z = pushVelocity.Z;
 				}
 				else
 				{
 					// Stop horizontal movement when no input
-					Target.CharacterVelocity.X = Mathf.MoveToward(Target.CharacterVelocity.X, 0, gdWalkSpeed);
-					Target.CharacterVelocity.Z = Mathf.MoveToward(Target.CharacterVelocity.Z, 0, gdWalkSpeed);
+					TargetCharacter.CharacterVelocity.X = Mathf.MoveToward(TargetCharacter.CharacterVelocity.X, 0, gdWalkSpeed);
+					TargetCharacter.CharacterVelocity.Z = Mathf.MoveToward(TargetCharacter.CharacterVelocity.Z, 0, gdWalkSpeed);
 				}
-				Target.Character?.SetAnimSpeed(1);
+				TargetCharacter.SetAnimSpeed(1);
 			}
 
-			if (!isOnFloor && !Target.IsClimbing)
+			if (!isOnFloor && !TargetCharacter.IsClimbing)
 			{
-				Target.Character?.SetAnimSpeed(1);
+				TargetCharacter.SetAnimSpeed(1);
 				finalState = CharacterModel.CharacterModelStateEnum.Jumping;
 			}
 
 			// Remove debounce if touched the ground
-			if (Target.ClimbDebounce && isOnFloor)
+			if (TargetCharacter.ClimbDebounce && isOnFloor)
 			{
-				Target.ClimbDebounce = false;
+				TargetCharacter.ClimbDebounce = false;
 			}
 
-			if (Target.IsClimbing && isOnFloor)
+			if (TargetCharacter.IsClimbing && isOnFloor)
 			{
-				Target.EndClimb();
+				TargetCharacter.EndClimb();
 			}
 		}
 		else
 		{
-			Target.CharacterVelocity = new Vector3(0, Target.CharacterVelocity.Y, 0);
+			TargetCharacter.CharacterVelocity = new Vector3(0, TargetCharacter.CharacterVelocity.Y, 0);
 		}
 
-		Target.Character?.SetState(finalState);
+		TargetCharacter.SetState(finalState);
 
 		if (hasExternalVelocity)
 		{
-			float decay = Target.WalkSpeed * 60f * (float)delta;
-			Target.ExternalVelocity = new Vector3(
+			float decay = TargetCharacter.WalkSpeed * 60f * (float)delta;
+			TargetCharacter.ExternalVelocity = new Vector3(
 				Mathf.MoveToward(externalVelocity.X, 0, decay),
 				externalVelocity.Y,
 				Mathf.MoveToward(externalVelocity.Z, 0, decay)
 			);
 		}
 
-		Target.ApplyInternalVelocity(Target.CharacterVelocity);
-		Target.CharBody3D.Velocity = Target.CharacterVelocity;
-		Target.CharBody3D.MoveAndSlide();
+		TargetCharacter.ApplyInternalVelocity(TargetCharacter.CharacterVelocity);
+		TargetCharacter.CharBody3D.Velocity = TargetCharacter.CharacterVelocity;
+		TargetCharacter.CharBody3D.MoveAndSlide();
 
-		if (isOnFloor && Target.IsMoving && !Target.IsClimbing && !Target.IsSitting)
+		if (isOnFloor && Target.IsMoving && !TargetCharacter.IsClimbing && !TargetCharacter.IsSitting)
 		{
-			Target.TryStepUp();
+			TargetCharacter.TryStepUp();
 		}
 	}
 }

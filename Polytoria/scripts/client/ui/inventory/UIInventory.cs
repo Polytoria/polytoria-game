@@ -11,7 +11,8 @@ namespace Polytoria.Client.UI;
 public partial class UIInventory : Control
 {
 	public const int MaximumToolSlot = 6;
-	private Inventory _inventory = null!;
+	private Inventory? _inventory = null!;
+	private CharacterModel? _localchar = null!;
 	private Player _localplr = null!;
 	private Control _layout = null!;
 	private readonly Dictionary<Tool, UIToolItem> _tools = [];
@@ -27,26 +28,65 @@ public partial class UIInventory : Control
 	public bool IsBackpackOpened = false;
 	public int CurrentSlotIndex = -1;
 
+	public void UpdateCharacter()
+	{
+		SetCharacter(_localplr.Character);
+	}
+
+	public void SetCharacter(CharacterModel? newchar)
+	{
+		if (newchar == _localchar) return;
+		if (_localchar is not null)
+		{
+			_localchar.ChildAdded.Disconnect(OnChildEnterInventory);
+			_localchar.ChildRemoved.Disconnect(OnChildExitInventory);
+		}
+		_localchar = newchar;
+		if (newchar is not null)
+		{
+			newchar.ChildAdded.Connect(OnChildEnterInventory);
+			newchar.ChildRemoved.Connect(OnChildExitInventory);
+		}
+
+		SetInventory(newchar?.Inventory);
+	}
+
+	public void SetInventory(Inventory? newinv)
+	{
+		if (newinv == _inventory) return;
+		if (_inventory is not null)
+		{
+			_inventory.ChildAdded.Disconnect(OnChildEnterInventory);
+			_inventory.ChildRemoved.Disconnect(OnChildExitInventory);
+			foreach (Instance item in _inventory.GetChildren())
+			{
+				if (item is Tool tool) ForceRemoveTool(tool);
+			}
+		}
+		_inventory = newinv;
+		if (newinv is not null)
+		{
+			newinv.ChildAdded.Connect(OnChildEnterInventory);
+			newinv.ChildRemoved.Connect(OnChildExitInventory);
+			foreach (Instance item in newinv.GetChildren())
+			{
+				OnChildEnterInventory(item);
+			}
+		}
+	}
+
 	public override void _Ready()
 	{
 		_localplr = World.Current!.Players.LocalPlayer;
-		_inventory = _localplr.Inventory;
 		_layout = GetNode<Control>("Layout");
-		_inventory.ChildAdded.Connect(OnChildEnterInventory);
-		_inventory.ChildRemoved.Connect(OnChildExitInventory);
-		_localplr.ChildAdded.Connect(OnChildEnterInventory);
-		_localplr.ChildRemoved.Connect(OnChildExitInventory);
-
 		PackedScene packed = GD.Load<PackedScene>("res://scenes/client/ui/inventory/slot_add_item.tscn");
 		_addSlotItemBtn = packed.Instantiate<UIToolAddItem>();
 		_addSlotItemBtn.Root = this;
 		_layout.AddChild(_addSlotItemBtn, false, InternalMode.Back);
 		_addSlotItemBtn.Visible = false;
 
-		foreach (Instance item in _inventory.GetChildren())
-		{
-			OnChildEnterInventory(item);
-		}
+		UpdateCharacter();
+		_localplr.CharacterChanged.Connect(UpdateCharacter);
 	}
 
 	public void ToggleBackpack()
@@ -212,10 +252,10 @@ public partial class UIInventory : Control
 
 	public void PutToolInBackpack(Tool tool, int slot)
 	{
-		if (tool.Holder == _localplr)
+		if (tool.Holder != null && tool.Holder == _localplr.Character)
 		{
 			// Unequip tool if holding right now
-			_localplr.UnequipTool();
+			_localplr.Character.UnequipTool();
 		}
 		UIToolItem? item = GetToolItemFromTool(tool);
 		if (item != null)
@@ -283,7 +323,7 @@ public partial class UIInventory : Control
 			UpdateSlots();
 		}
 
-		if (tool.Holder == _localplr)
+		if (tool.Holder != null && tool.Holder == _localplr.Character)
 		{
 			// Set active if holding
 			item.SetPressedNoSignal(true);
@@ -356,15 +396,8 @@ public partial class UIInventory : Control
 		_backpackNoneView.Visible = _backpackSlot.Count == 0;
 	}
 
-	private async void RemoveTool(Tool tool)
+	private void ForceRemoveTool(Tool tool)
 	{
-		// Wait for tool to enter another tree first
-		if (!tool.IsDeleted)
-			await tool.TreeEntered.Wait();
-
-		// If the tool was reparented back to the player or their inventory, keep it
-		if (!tool.IsDeleted && (tool.Parent == _localplr || tool.Parent == _localplr.Inventory)) return;
-
 		if (_tools.TryGetValue(tool, out UIToolItem? toolItem))
 		{
 			_tools.Remove(tool);
@@ -378,13 +411,27 @@ public partial class UIInventory : Control
 		}
 	}
 
+	private async void RemoveTool(Tool tool)
+	{
+		// Wait for tool to enter another tree first
+		if (!tool.IsDeleted)
+			await tool.TreeEntered.Wait();
+
+		// If the tool was reparented back to the player or their inventory, keep it
+		if (!tool.IsDeleted && (tool.Parent is null || tool.Parent == _inventory || tool.Parent == _localchar)) return;
+
+		ForceRemoveTool(tool);
+	}
+
 	private void EquipSlot(int index)
 	{
-		Tool? oldTool = _localplr.HoldingTool;
-		if (_localplr.HoldingTool != null)
+		CharacterModel charModel = _localplr.Character!;
+		if (charModel == null) return;
+		Tool? oldTool = charModel.HoldingTool;
+		if (charModel.HoldingTool != null)
 		{
 			CurrentSlotIndex = -1;
-			_localplr.UnequipTool();
+			charModel.UnequipTool();
 		}
 		if (index < 0 || index >= _toolSlot.Count) { return; }
 		if (_toolSlot[index] != null)
@@ -392,7 +439,7 @@ public partial class UIInventory : Control
 			Tool tool = _toolSlot[index]!;
 			if (oldTool == tool) return;
 			CurrentSlotIndex = index;
-			_localplr.EquipTool(tool);
+			charModel.EquipTool(tool);
 		}
 	}
 }

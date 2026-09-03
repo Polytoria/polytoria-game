@@ -21,7 +21,7 @@ public partial class Grabbable : Instance
 	private float _maxRange;
 	private float _maxGrabbableRange;
 	private bool _useDragForce;
-	private Player? _dragger;
+	private NPC? _dragger;
 	private GrabbablePermissionModeEnum _permissionMode = GrabbablePermissionModeEnum.Everyone;
 
 	[Editable, ScriptProperty, DefaultValue(10)]
@@ -79,10 +79,10 @@ public partial class Grabbable : Instance
 		}
 	}
 
-	[ScriptProperty] public Player? Dragger => _dragger;
+	[ScriptProperty] public NPC? Dragger => _dragger;
 	[ScriptProperty] public PTFunction? PermissionPredicate { get; set; }
-	[ScriptProperty] public PTSignal<Player> Grabbed { get; private set; } = new();
-	[ScriptProperty] public PTSignal<Player> Released { get; private set; } = new();
+	[ScriptProperty] public PTSignal<NPC> Grabbed { get; private set; } = new();
+	[ScriptProperty] public PTSignal<NPC> Released { get; private set; } = new();
 
 	public override void EnterTree()
 	{
@@ -154,10 +154,11 @@ public partial class Grabbable : Instance
 	private async void OnClicked(Player by)
 	{
 		if (_dragger != null) return;
+		if (by.Character == null) return;
 		if (_parent != null)
 		{
 			// Check grabbable range
-			if ((by.Position - _parent.Position).Length() > MaxGrabbableRange) return;
+			if ((by.Character.Position - _parent.Position).Length() > MaxGrabbableRange) return;
 		}
 		if (Root.Network.IsServer)
 		{
@@ -293,8 +294,9 @@ public partial class Grabbable : Instance
 					}
 
 					if (targetPos == null) return;
+					if (_dragger.Character == null) return;
 
-					Vector3 anchorPos = _dragger.Position;
+					Vector3 anchorPos = _dragger.Character.Position;
 					Vector3 direction = targetPos.Value - anchorPos;
 					float distance = direction.Length();
 

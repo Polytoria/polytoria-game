@@ -211,7 +211,7 @@ public partial class Physical : Dynamic
 		if (Root != null && Root.Network != null)
 		{
 			// Ignore player
-			if (Root.Network.IsServer && this is not Player)
+			if (Root.Network.IsServer && !(this is CharacterModel charModel && charModel.Controller is Player))
 			{
 				AutoUpdateNetTransform = finalVal;
 			}
@@ -241,7 +241,7 @@ public partial class Physical : Dynamic
 		if (!IsHidden)
 		{
 			// Stop collision override if player's not ready
-			if (this is Player plr && !plr.IsReady) { return; }
+			if (this is CharacterModel charModel && charModel.Controller is Player plr && !plr.IsReady) { return; }
 			bool setTo = !_canCollide;
 
 #if CREATOR
@@ -283,9 +283,9 @@ public partial class Physical : Dynamic
 	{
 		get
 		{
-			if (this is NPC npc)
+			if (this is CharacterModel charModel)
 			{
-				return npc.CharacterVelocity;
+				return charModel.CharacterVelocity;
 			}
 
 			return _velocity;
@@ -296,14 +296,17 @@ public partial class Physical : Dynamic
 
 			var setto = _velocity;
 
-			if (this is Player plr)
+			if (this is CharacterModel charModel)
 			{
-				plr.LastVelocity = _velocity;
-			}
-
-			if (this is NPC npc)
-			{
-				npc.CharacterVelocity = setto;
+				NPC? controller = charModel.Controller;
+				if (controller is Player plr)
+				{
+					charModel.LastVelocity = _velocity;
+				}
+				else
+				{
+					charModel.CharacterVelocity = setto;
+				}
 			}
 
 			OnPropertyChanged();
@@ -1050,12 +1053,12 @@ public partial class Physical : Dynamic
 		NetworkedObject? hit = Root.GetNetObjectFromID(touchedBy);
 
 		// Only allow player hit invoke
-		if (hit != null && hit is Player plr && !plr.IsDead)
+		if (hit != null && hit is CharacterModel charModel && !charModel.IsDead)
 		{
 			// Ignore invalid touches (touches that are out of range)
-			if (!IsTouchedValid(plr)) return;
+			if (!IsTouchedValid(charModel)) return;
 
-			InternalInvokeTouched(plr);
+			InternalInvokeTouched(charModel);
 		}
 	}
 
@@ -1065,16 +1068,16 @@ public partial class Physical : Dynamic
 		NetworkedObject? hit = Root.GetNetObjectFromID(touchedBy);
 
 		// Only allow player hit invoke
-		if (hit != null && hit is Player plr)
+		if (hit != null && hit is CharacterModel charModel)
 		{
-			InternalInvokeTouchEnded(plr);
+			InternalInvokeTouchEnded(charModel);
 		}
 	}
 
-	private bool IsTouchedValid(Player plr)
+	private bool IsTouchedValid(CharacterModel charModel)
 	{
 		// Check if player position is in vaild range
-		return GetSelfBound().Grow(TouchedGapCheck).HasPoint(plr.GetGlobalPosition());
+		return GetSelfBound().Grow(TouchedGapCheck).HasPoint(charModel.GetGlobalPosition());
 	}
 
 	[NetRpc(AuthorityMode.Any, TransferMode = TransferMode.Reliable)]
@@ -1083,7 +1086,7 @@ public partial class Physical : Dynamic
 		NetworkedObject? hit = Root.GetNetObjectFromID(touchedBy);
 
 		// Only allow player hit invoke
-		if (hit != null && hit is Player plr)
+		if (hit != null && hit is CharacterModel charModel && charModel.Controller is Player plr)
 		{
 			InternalInvokeClicked(plr);
 		}
@@ -1092,11 +1095,13 @@ public partial class Physical : Dynamic
 	private void InternalInvokeTouched(Physical physical)
 	{
 		if (physical == this) return;
-		// Ignore dead NPCs, their position could be inaccurate
-		if (physical is NPC npc && npc.IsDead) return;
-
-		// Ignore player that's not ready
-		if (physical is Player plr && !plr.IsReady) return;
+		if (physical is CharacterModel charModel)
+		{
+			// Ignore dead characters, their position could be inaccurate
+			if (charModel.IsDead) return;
+			// Ignore player that's not ready
+			if (charModel.Controller is Player plr && !plr.IsReady) return;
+		}
 
 		if (_touchContacts.TryGetValue(physical, out int count))
 		{
@@ -1111,7 +1116,7 @@ public partial class Physical : Dynamic
 	private void InternalInvokeTouchEnded(Physical physical)
 	{
 		// Ignore player that's not ready
-		if (physical is Player plr && !plr.IsReady) return;
+		if (physical is CharacterModel charModel && charModel.Controller is Player plr && !plr.IsReady) return;
 
 		if (!_touchContacts.TryGetValue(physical, out int count))
 			return;

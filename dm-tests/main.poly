@@ -1,5 +1,5 @@
 {
-  "Version": "2.0.12\u002Bdev",
+  "Version": "2.0.19\u002Bdev",
   "FileType": 0,
   "Objects": [
     {
@@ -522,54 +522,8 @@
                   "ClassName": "NPC",
                   "ID": "297651b0-836e-4ebd-87c9-99363fcc1e6c",
                   "Properties": {
-                    "Velocity": [
-                      0,
-                      0,
-                      0
-                    ],
-                    "SeatOffset": [
-                      0,
-                      1.5,
-                      0
-                    ],
-                    "Health": 100,
-                    "MaxHealth": 100,
-                    "JumpPower": 36,
-                    "WalkSpeed": 16,
-                    "UseNametag": true,
-                    "NametagOffset": [
-                      0,
-                      0,
-                      0
-                    ],
-                    "NametagVisibleRadius": 40,
                     "DisplayName": "",
-                    "JumpSound": "ddc48a2c-a146-4bed-8bc1-f279e0e0e46f",
                     "Character": "c4f96fd9-aba4-4141-80e8-f4bb0086646d",
-                    "Anchored": false,
-                    "CanCollide": true,
-                    "CollisionLayers": 1,
-                    "CollisionMask": 3,
-                    "AngularVelocity": [
-                      0,
-                      -0,
-                      -0
-                    ],
-                    "LocalPosition": [
-                      0,
-                      3,
-                      2
-                    ],
-                    "LocalRotation": [
-                      -0,
-                      0,
-                      0
-                    ],
-                    "LocalSize": [
-                      1,
-                      1,
-                      1
-                    ],
                     "Tags": []
                   },
                   "Children": [
@@ -584,16 +538,59 @@
                         "RightArmColor": "ffffffff",
                         "LeftLegColor": "ffffffff",
                         "RightLegColor": "ffffffff",
-                        "Animator": "6ff8f25d-eec7-4398-a265-0a80f845247c",
-                        "LocalPosition": [
+                        "JumpSound": "ddc48a2c-a146-4bed-8bc1-f279e0e0e46f",
+                        "AllowAnimationWhileMoving": false,
+                        "KeepInventory": false,
+                        "UseHeadTurning": false,
+                        "SprintSpeed": 0,
+                        "Stamina": 0,
+                        "MaxStamina": 3,
+                        "UseStamina": true,
+                        "StaminaRegen": 1.2,
+                        "StaminaBurn": 1.2,
+                        "SeatOffset": [
+                          0,
+                          1.5,
+                          0
+                        ],
+                        "UseNametag": true,
+                        "NametagOffset": [
                           0,
                           0,
                           0
                         ],
-                        "LocalRotation": [
+                        "NametagVisibleRadius": 40,
+                        "CanMove": true,
+                        "Health": 100,
+                        "MaxHealth": 100,
+                        "JumpPower": 36,
+                        "WalkSpeed": 16,
+                        "UseBubbleChat": true,
+                        "Velocity": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "Controller": "297651b0-836e-4ebd-87c9-99363fcc1e6c",
+                        "Animator": "6ff8f25d-eec7-4398-a265-0a80f845247c",
+                        "Anchored": false,
+                        "CanCollide": true,
+                        "CollisionLayers": 1,
+                        "CollisionMask": 3,
+                        "AngularVelocity": [
                           0,
                           -0,
                           -0
+                        ],
+                        "LocalPosition": [
+                          -11,
+                          3,
+                          -6
+                        ],
+                        "LocalRotation": [
+                          -0,
+                          0,
+                          0
                         ],
                         "LocalSize": [
                           1,
@@ -626,8 +623,10 @@
                         "Audio": "d3e89ca2-fdcb-40e4-b44b-dada777d3496",
                         "Volume": 0.5,
                         "Pitch": 1,
+                        "Pan": 0,
                         "Autoplay": false,
                         "Loop": false,
+                        "LoopStart": 0,
                         "PlayInWorld": true,
                         "Paused": false,
                         "MaxDistance": 60,
@@ -1076,6 +1075,8 @@
             "Stamina": 0,
             "MaxStamina": 3,
             "StaminaRegen": 1.2,
+            "ReuseCharacter": true,
+            "KeepInventory": false,
             "UseHeadTurning": true,
             "UseBubbleChat": true,
             "AutoLoadAppearance": true,
@@ -1129,6 +1130,7 @@
           "ID": "1e50f39e-881b-4444-b137-2b90385018a5",
           "Properties": {
             "CtrlLockCursor": 1,
+            "ChatBubbleRenderDistance": 40,
             "UseUserCard": true,
             "UseChat": true,
             "UseHealthBar": true,

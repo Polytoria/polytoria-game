@@ -272,6 +272,10 @@ public sealed partial class PolytorianModel : CharacterModel
 		AnimTree.Active = true;
 
 		base.Init();
+
+		Head = GetAttachment(CharacterAttachmentEnum.Head);
+		ToolAttachment = GetAttachment(CharacterAttachmentEnum.HandRight); // TODO: lefthanded representation
+
 		SetProcess(true);
 	}
 
@@ -290,33 +294,36 @@ public sealed partial class PolytorianModel : CharacterModel
 
 	public override Node CreateGDNode()
 	{
-		return Globals.LoadNetworkedObjectScene(ClassName)!;
+		if (GDNode != null) return GDNode;
+		Node? node = Globals.LoadNetworkedObjectScene(ClassName);
+		if (node != null)
+		{
+			return node;
+		}
+		return new();
 	}
 
 	public override void EnterTree()
 	{
-		if (Parent is Physical phy)
+		_oldPhyParent = this;
+
+		// Configure default collision shape for PolytorianModel
+		CollisionPivot = new()
 		{
-			_oldPhyParent = phy;
+			Scale = NodeSize
+		};
+		CollisionShape = new()
+		{
+			Shape = _collisionBox
+		};
+		Physical.SetRemoteLinkOffset(CollisionShape, new(0, 3f - 0.1f, 0));
+		Physical.SetRemoteLinkTarget(CollisionShape, CollisionPivot);
+		GDNode.AddChild(CollisionPivot);
+		CollisionPivot.Position = new(0, -3f, 0);
 
-			// Configure default collision shape for PolytorianModel
-			CollisionPivot = new()
-			{
-				Scale = NodeSize
-			};
-			CollisionShape = new()
-			{
-				Shape = _collisionBox
-			};
-			Physical.SetRemoteLinkOffset(CollisionShape, new(0, 3f - 0.1f, 0));
-			Physical.SetRemoteLinkTarget(CollisionShape, CollisionPivot);
-			GDNode.AddChild(CollisionPivot);
-			CollisionPivot.Position = new(0, -3f, 0);
-
-			phy.GDNode.AddChild(CollisionShape);
-			phy.AddCollisionShape(CollisionShape);
-			phy.UpdateCollision();
-		}
+		GDNode.AddChild(CollisionShape);
+		AddCollisionShape(CollisionShape);
+		UpdateCollision();
 		base.EnterTree();
 	}
 
@@ -390,6 +397,11 @@ public sealed partial class PolytorianModel : CharacterModel
 	public override void Process(double delta)
 	{
 		base.Process(delta);
+
+		if (Ragdolling && VelocityPhysicalBone is not null)
+		{
+			Position = VelocityPhysicalBone.GetGlobalPosition();
+		}
 
 		if (_updateClothDirty)
 		{
@@ -581,7 +593,7 @@ public sealed partial class PolytorianModel : CharacterModel
 	}
 
 	[ScriptMethod]
-	public override Dynamic GetAttachment(CharacterAttachmentEnum attachmentEnum)
+	public Dynamic GetAttachment(CharacterAttachmentEnum attachmentEnum)
 	{
 		if (!_attachmentEnumToDyn.TryGetValue(attachmentEnum, out Dynamic? dyn))
 		{
@@ -698,6 +710,23 @@ public sealed partial class PolytorianModel : CharacterModel
 	}
 
 	[ScriptMethod]
+	public void ResetAppearance()
+	{
+		ClearAppearance();
+		if (Controller is Player plr && plr.AutoLoadAppearance)
+		{
+			if (Root.Entry != null && Root.Entry.IsSoloTest)
+			{
+				LoadAppearance(1144);
+			}
+			else
+			{
+				LoadAppearance(plr.UserID);
+			}
+		}
+	}
+
+	[ScriptMethod]
 	public void ClearAppearance()
 	{
 		HeadColor = _defaultBodyColor;
@@ -785,15 +814,15 @@ public sealed partial class PolytorianModel : CharacterModel
 					{
 						Root.Insert.CreateAccessory(asset.ID, asset.Name, asset.AccessoryType).Parent = this;
 					}
-					else if (Parent is Player plr && loadTool)
+					else if (Controller is Player plr && loadTool)
 					{
 						hasTool = true;
-						Root.Insert.CreateTool(asset.ID, asset.Name).Parent = plr.Inventory;
+						Root.Insert.CreateTool(asset.ID, asset.Name).Parent = Inventory;
 					}
-					else if (Parent is NPC npc && loadToolNpc)
+					else if (loadToolNpc)
 					{
 						hasTool = true;
-						npc.EquipTool(Root.Insert.CreateTool(asset.ID, asset.Name));
+						EquipTool(Root.Insert.CreateTool(asset.ID, asset.Name));
 					}
 				}
 				catch (Exception ex)
@@ -820,12 +849,6 @@ public sealed partial class PolytorianModel : CharacterModel
 		}
 
 		Instance checkOn = this;
-
-		// Check on NPC for loading tools
-		if (Parent is NPC)
-		{
-			checkOn = Parent;
-		}
 
 		foreach (var item in checkOn.GetDescendants())
 		{

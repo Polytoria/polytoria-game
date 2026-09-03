@@ -6,5 +6,4 @@ using Polytoria.Attributes;
 
 namespace Polytoria.Datamodel;
 
-[Static]
 public sealed partial class Inventory : HiddenBase { }
