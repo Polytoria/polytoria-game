@@ -976,12 +976,12 @@ public sealed partial class Player : NPC
 		{
 			Entity spawnpoint = ArrayUtils.GetRandom(Root.Environment.SpawnPoints);
 			Position = spawnpoint.Position + spawnpoint.Up * (spawnpoint.Size.Y / 2 + 3.0f);
-			Rotation = new(0, spawnpoint.Rotation.Y, 0);
+			Quaternion = new Quaternion(spawnpoint.Up, Vertical) * spawnpoint.Quaternion;
 		}
 		else
 		{
 			Position = DefaultSpawnLocation;
-			Rotation = new(0, 0, 0);
+			Quaternion = new Quaternion(Vector3.Up, Vertical);
 		}
 
 		// Spawn at custom position

@@ -29,6 +29,7 @@ public partial class NPC : Physical
 	public const float ForwardRaycastRange = 1;
 	public const float StairForwardRaycastRange = 4;
 	public const float NameTagHeightMinus = 3f;
+	private Vector3 _vertical = Vector3.Up;
 	private Vector3 _seatOffset = new(0, 1.7f, 0);
 	private float _health = 100;
 	private RemoteTransform3D? _toolRemoteTransform;
@@ -388,6 +389,18 @@ public partial class NPC : Physical
 		internal set => _character = value;
 	}
 
+	[Editable, ScriptProperty, SyncVar]
+	public Vector3 Vertical
+	{
+		get => _vertical;
+		set
+		{
+			_vertical = value;
+			CharBody3D.UpDirection = value;
+			OnPropertyChanged();
+		}
+	}
+
 	[SyncVar, ScriptProperty]
 	public Dynamic? MoveTarget
 	{
@@ -585,6 +598,11 @@ public partial class NPC : Physical
 		_nametag.Position = NametagOffset + _fixedNametagOffset;
 	}
 
+	private static Vector3 SetAxisOf(Vector3 v, Vector3 axis, float value)
+	{
+		return v.Slide(axis) + value * axis;
+	}
+
 	public override void PhysicsProcess(double delta)
 	{
 		base.PhysicsProcess(delta);
@@ -608,13 +626,13 @@ public partial class NPC : Physical
 			{
 				Velocity = Vector3.Zero;
 				Position = SittingIn.Position + SeatOffset.Y * Up;
-				if (!SittingIn.SitDirectionLocked)
+				if (SittingIn.SitDirectionLocked)
 				{
-					Rotation = new Vector3(SittingIn.Rotation.X, Rotation.Y, SittingIn.Rotation.Z);
+					Quaternion = SittingIn.Quaternion;
 				}
 				else
 				{
-					Rotation = SittingIn.Rotation;
+					Quaternion = new Quaternion(Up, SittingIn.Up) * Quaternion;
 				}
 				Character?.PlayIdle();
 			}
@@ -664,15 +682,22 @@ public partial class NPC : Physical
 			{
 				walkTarget = _navAgent.GetNextPathPosition();
 
-				// Adjust Nav agent position in-case of unstable Y position changes
-				_navAgentContainer?.GlobalPosition = _navAgentContainer.GlobalPosition with { Y = walkTarget.Value.Y };
+				// Adjust Nav agent position in-case of unstable vertical changes
+				_navAgentContainer?.GlobalPosition = _navAgentContainer.GlobalPosition.Slide(Vertical) + walkTarget.Value.Project(Vertical);
 			}
 
 			if (walkTarget.HasValue)
 			{
-				Vector3 velo = GetGlobalPosition().DirectionTo(walkTarget.Value with { Y = Position.Y });
-				CharacterVelocity = new(velo.X * WalkSpeed, CharacterVelocity.Y, velo.Z * WalkSpeed);
-				GDNode3D.GlobalRotationDegrees = new Vector3(Rotation.X, Mathf.RadToDeg(Mathf.LerpAngle(Mathf.DegToRad(Rotation.Y), Mathf.Atan2(CharacterVelocity.X, CharacterVelocity.Z), MathUtils.ExpDecay((float)delta, BodyRotateLerp))), Rotation.Z);
+				Vector3 dir = (walkTarget.Value - GetGlobalPosition()).Slide(Vertical).Normalized();
+				CharacterVelocity = (dir * WalkSpeed).Slide(Vertical) + CharacterVelocity.Project(Vertical);
+				// Apply rotation by move direction
+				Vector3 a = new Quaternion(Up, Vertical) * Forward;
+				float angle = Mathf.Asin(a.Cross(dir).Dot(vertical));
+				if (a.Dot(dir) < 0) angle = Mathf.Pi - angle;
+				if (angle > Mathf.Pi) angle -= Mathf.Tau;
+				Quaternion = new Quaternion(vertical, angle * MathUtils.ExpDecay((float)delta, BodyRotateLerp)) * Quaternion;
+
+				Quaternion = (new Quaternion(new Quaternion(Up, Vertical) * Forward, dir).Log() * MathUtils.ExpDecay((float)delta, BodyRotateLerp)).Exp() * Quaternion;
 
 				float distanceToTarget = GetGlobalPosition().DistanceTo(walkTarget.Value);
 
@@ -685,7 +710,7 @@ public partial class NPC : Physical
 			}
 			else if (this is not Player || playerNPCOverride)
 			{
-				CharacterVelocity = new(0, CharacterVelocity.Y, 0);
+				CharacterVelocity = CharacterVelocity.Project(Vertical);
 			}
 
 			if (!isOnFloor)
@@ -702,18 +727,18 @@ public partial class NPC : Physical
 			// Apply gravity
 			if (!isOnFloor)
 			{
-				CharacterVelocity.Y += Root.Environment.Gravity.Y * (float)delta;
+				CharacterVelocity += Vertical * (Root.Environment.Gravity.Dot(Vertical) * (float)delta);
 			}
-			else if (isOnFloor && CharacterVelocity.Y < 0)
+			else if (isOnFloor && CharacterVelocity.Dot(Vertical) < 0)
 			{
 				// Cancel downward velocity when on floor
-				CharacterVelocity.Y = 0;
+				CharacterVelocity = CharacterVelocity.Slide(Vertical);
 			}
 
 			// Prevent sticking
-			if (isOnCeiling && CharacterVelocity.Y > 0)
+			if (isOnCeiling && CharacterVelocity.Dot(Vertical) > 0)
 			{
-				CharacterVelocity.Y = 0;
+				CharacterVelocity = CharacterVelocity.Slide(Vertical);
 			}
 
 			UpdateVelocityInternal(CharacterVelocity);
@@ -807,13 +832,13 @@ public partial class NPC : Physical
 		}
 
 		Vector3 desiredVelocity = Velocity;
-		Vector3 desiredXZ = new(desiredVelocity.X, 0f, desiredVelocity.Z);
+		Vector3 desiredXZ = desiredVelocity.Slide(Vertical);
 		if (desiredXZ.LengthSquared() < 0.0001f)
 		{
 			return false;
 		}
 
-		float groundY;
+		float groundAltitude;
 		{
 			var downHit = new KinematicCollision3D();
 			bool hasGround = CharBody3D.TestMove(CharBody3D.GlobalTransform, Vector3.Down * (StepHeight + 0.05f), downHit, 0.001f, true);
@@ -822,7 +847,7 @@ public partial class NPC : Physical
 				return false;
 			}
 
-			groundY = downHit.GetPosition().Y;
+			groundAltitude = downHit.GetPosition().Dot(Vertical);
 		}
 
 		const float stepSearchOvershoot = 0.05f;
@@ -835,20 +860,20 @@ public partial class NPC : Physical
 			Vector3 n = stepTest.GetNormal();
 			Vector3 p = stepTest.GetPosition();
 
-			if (Mathf.Abs(n.Y) >= 0.01f)
+			if (Mathf.Abs(n.Dot(Vertical)) >= 0.01f)
 			{
 				continue;
 			}
 
-			if (!(p.Y - groundY < StepHeight))
+			if (!(p.Dot(Vertical) - groundAltitude < StepHeight))
 			{
 				continue;
 			}
 
-			float stepHeight = p.Y + StepHeight + 0.0001f;
-			Vector3 stepTestInvDir = new Vector3(-n.X, 0, -n.Z).Normalized();
-			Vector3 origin = new Vector3(p.X, stepHeight, p.Z) + (stepTestInvDir * stepSearchOvershoot);
-			Vector3 direction = Vector3.Down * StepHeight;
+			float stepHeight = p.Dot(Vertical) + StepHeight + 0.0001f;
+			Vector3 stepTestInvDir = (-n).Slide(Vertical).Normalized();
+			Vector3 origin = SetAxisOf(p, Vertical, stepHeight) + (stepTestInvDir * stepSearchOvershoot);
+			Vector3 direction = Vertical * -StepHeight;
 
 			Dictionary result = spaceState.IntersectRay(new PhysicsRayQueryParameters3D()
 			{
@@ -866,8 +891,8 @@ public partial class NPC : Physical
 
 			Vector3 hitPos = result["position"].AsVector3();
 
-			Vector3 stepUpPoint = new Vector3(p.X, hitPos.Y + 0.01f, p.Z) + (stepTestInvDir * stepSearchOvershoot);
-			Vector3 stepUpPointOffset = stepUpPoint - new Vector3(p.X, groundY, p.Z);
+			Vector3 stepUpPoint = SetAxisOf(p, Vertical, hitPos.Dot(Vertical) + 0.01f) + (stepTestInvDir * stepSearchOvershoot);
+			Vector3 stepUpPointOffset = stepUpPoint - SetAxisOf(p, Vertical, groundAltitude);
 
 			CharBody3D.GlobalPosition += stepUpPointOffset;
 			CharBody3D.Velocity = desiredVelocity;
@@ -886,7 +911,7 @@ public partial class NPC : Physical
 		if (canJump)
 		{
 			_coyoteUsed = true;
-			CharacterVelocity.Y = JumpPower;
+			CharacterVelocity = SetAxisOf(CharacterVelocity, Vertical, JumpPower);
 			playJumpSound = true;
 			Jumped.Invoke();
 		}
@@ -913,7 +938,7 @@ public partial class NPC : Physical
 		Rpc(nameof(NetJumpFromSeat));
 
 		// Reset rotation
-		Rotation = new(0, Rotation.Y, 0);
+		Quaternion = new Quaternion(Up, Vertical) * Quaternion;
 
 		if (addForce)
 		{
@@ -1111,6 +1136,8 @@ public partial class NPC : Physical
 		if (_navAgent == null)
 		{
 			_navAgentContainer = new();
+			Quaternion q = Quaternion;
+			Quaternion = Quaternion.Identity;
 			_navAgent = new()
 			{
 				PathDesiredDistance = NavigationDistance,
@@ -1118,6 +1145,7 @@ public partial class NPC : Physical
 				PathHeightOffset = -(CalculateBounds().Size.Y / 2),
 				PathMaxDistance = 3f
 			};
+			Quaternion = q;
 
 			_navAgentContainer.AddChild(_navAgent);
 			GDNode3D.AddChild(_navAgentContainer);
