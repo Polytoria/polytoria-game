@@ -697,8 +697,6 @@ public partial class NPC : Physical
 				if (angle > Mathf.Pi) angle -= Mathf.Tau;
 				Quaternion = new Quaternion(vertical, angle * MathUtils.ExpDecay((float)delta, BodyRotateLerp)) * Quaternion;
 
-				Quaternion = (new Quaternion(new Quaternion(Up, Vertical) * Forward, dir).Log() * MathUtils.ExpDecay((float)delta, BodyRotateLerp)).Exp() * Quaternion;
-
 				float distanceToTarget = GetGlobalPosition().DistanceTo(walkTarget.Value);
 
 				if (distanceToTarget > 0.5f)
