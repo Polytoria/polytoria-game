@@ -15,7 +15,7 @@ public partial class TouchScrollContainer : ScrollContainer
 
 	public override void _Input(InputEvent @event)
 	{
-		if (!TouchDragScroll || !Visible || !IsInsideTree())
+		if (!TouchDragScroll || !IsInsideTree() || !IsVisibleInTree())
 			return;
 
 		if (@event is InputEventScreenTouch touch)

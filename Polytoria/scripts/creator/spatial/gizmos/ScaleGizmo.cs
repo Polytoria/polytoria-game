@@ -153,6 +153,12 @@ public partial class ScaleGizmo : Node, IGizmo
 
 	public override void _Process(double delta)
 	{
+		if (_isMouseDragging && !Input.IsMouseButtonPressed(MouseButton.Left))
+		{
+			DragEnded?.Invoke();
+			_isMouseDragging = false;
+		}
+
 		SetVisiblity();
 		RedrawGizmo();
 	}

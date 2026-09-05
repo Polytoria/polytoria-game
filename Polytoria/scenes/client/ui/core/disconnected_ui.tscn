@@ -241,6 +241,7 @@ theme_override_font_sizes/font_size = 16
 text = "Reason"
 horizontal_alignment = 1
 autowrap_mode = 3
+max_lines_visible = 16
 
 [node name="DisconnectCode" type="Label" parent="ColorRect/Pivot/Panel/VBoxContainer" unique_id=1066318451]
 layout_mode = 2

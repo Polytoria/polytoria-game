@@ -40,6 +40,7 @@ public sealed partial class Player : NPC
 
 	private float _respawnTime = 5.0f;
 	private bool _canMove = true;
+	private bool _canJumpWhileClimbing = true;
 	private float _sprintSpeed;
 	private float _stamina = 0;
 	private float _maxStamina = 3;
@@ -69,6 +70,7 @@ public sealed partial class Player : NPC
 	private RemoteTransform3D _remoteCamAttach = null!;
 	internal Dynamic CamAttach = null!;
 	private Physical? _mouseHoveringOn;
+	private Physical? _grabbing;
 
 	private Vector3 DefaultSpawnLocation = new(0, 5, 0);
 	internal event Action<APIUserInfo>? UserInfoReady;
@@ -100,6 +102,12 @@ public sealed partial class Player : NPC
 
 	[ScriptProperty]
 	public PTSignal Respawned { get; private set; } = new();
+
+	[ScriptProperty]
+	public PTSignal<Physical> Grabbed { get; private set; } = new();
+
+	[ScriptProperty]
+	public PTSignal<Physical> Ungrabbed { get; private set; } = new();
 
 	[SyncVar, ScriptProperty]
 	public int UserID
@@ -310,6 +318,21 @@ public sealed partial class Player : NPC
 			_rotationMode = value;
 			OnPropertyChanged();
 		}
+	}
+
+	[ScriptProperty]
+	public Physical? Grabbing => _grabbing;
+
+	public void SetGrabbing(Physical phy)
+	{
+		_grabbing = phy;
+		Grabbed.Invoke(phy);
+	}
+
+	public void ReleaseGrabbing()
+	{
+		Ungrabbed.Invoke(_grabbing);
+		_grabbing = null;
 	}
 
 	[ScriptProperty]
@@ -657,12 +680,20 @@ public sealed partial class Player : NPC
 		Environment.RayResult? ray = Root.Environment.CurrentCamera?.ScreenPointToRay(Root.Input.MousePosition);
 		if (ray.HasValue && ray.Value.Instance is Physical p)
 		{
-			if (_mouseHoveringOn != null && _mouseHoveringOn != p)
+			if (_mouseHoveringOn != p)
 			{
-				_mouseHoveringOn.MouseExit.Invoke();
+				if (_mouseHoveringOn != null)
+				{
+					_mouseHoveringOn.MouseExit.Invoke();
+				}
+				_mouseHoveringOn = p;
+				_mouseHoveringOn.MouseEnter.Invoke();
 			}
-			_mouseHoveringOn = p;
-			_mouseHoveringOn.MouseEnter.Invoke();
+		}
+		else if (_mouseHoveringOn != null)
+		{
+			_mouseHoveringOn.MouseExit.Invoke();
+			_mouseHoveringOn = null;
 		}
 
 		if (FootFwdRaycast.IsColliding())
@@ -670,15 +701,12 @@ public sealed partial class Player : NPC
 			Node collider = (Node)FootFwdRaycast.GetCollider();
 			if (collider != null && GetNetObjFromProxy(collider) is Truss truss)
 			{
-				if (!IsClimbing)
+				if (!IsClimbing && !ClimbDebounce && truss.Climbable)
 				{
-					if (!ClimbDebounce)
-					{
-						ClimbingTruss = truss;
-						IsClimbing = true;
-						Character?.PlayClimb();
-					}
-
+					ClimbingTruss = truss;
+					_canJumpWhileClimbing = false;
+					IsClimbing = true;
+					Character?.PlayClimb();
 				}
 			}
 			else
@@ -803,6 +831,7 @@ public sealed partial class Player : NPC
 			// Ignore jump command if is custom
 			if (MovementMode == PlayerMovementModeEnum.Scripted) return;
 			if (!CanMove) return;
+			_canJumpWhileClimbing = true;
 			Jump();
 		}
 		else if (@event.IsActionPressed("toggle_sprint"))
@@ -917,10 +946,13 @@ public sealed partial class Player : NPC
 	public override void Jump()
 	{
 		base.Jump();
-		if (IsClimbing)
+		if (_canJumpWhileClimbing)
 		{
-			EndClimb();
-			ClimbDebounce = true;
+			if (IsClimbing)
+			{
+				EndClimb();
+				ClimbDebounce = true;
+			}
 		}
 	}
 
@@ -938,12 +970,12 @@ public sealed partial class Player : NPC
 		_bubbleChat.Visible = true;
 	}
 
-	public void WrapToSpawnPoint()
+	public void WarpToSpawnPoint()
 	{
 		if (Root.Environment.SpawnPoints.Count > 0)
 		{
 			Entity spawnpoint = ArrayUtils.GetRandom(Root.Environment.SpawnPoints);
-			Position = spawnpoint.Position + new Vector3(0, spawnpoint.Size.Y + 2.0f, 0);
+			Position = spawnpoint.Position + spawnpoint.Up * (spawnpoint.Size.Y / 2 + 3.0f);
 			Rotation = new(0, spawnpoint.Rotation.Y, 0);
 		}
 		else
@@ -1057,7 +1089,7 @@ public sealed partial class Player : NPC
 		Velocity = Vector3.Zero;
 
 		ResetAppearance();
-		WrapToSpawnPoint();
+		WarpToSpawnPoint();
 
 		Health = MaxHealth;
 		Anchored = false;
