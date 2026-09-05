@@ -222,7 +222,7 @@ public partial class Animator : Instance
 			bool isActive = (bool)AnimationTree.Get(_pendingOneShot + "/active");
 			if (isActive)
 			{
-				// it's now active
+				// It's now active
 				_currentOneShot = _pendingOneShot;
 				_pendingOneShot = null;
 			}
@@ -233,7 +233,7 @@ public partial class Animator : Instance
 		{
 			bool isActive = (bool)AnimationTree.Get(_currentOneShot + "/active");
 
-			// the animation finished or was aborted
+			// The animation finished or was aborted
 			if (!isActive)
 			{
 				_dynPlayback.Start("End");
@@ -247,7 +247,7 @@ public partial class Animator : Instance
 	}
 
 	// NOTE: This is disabled until we find a better solution to animations
-	//[ScriptMethod]
+	// [ScriptMethod]
 	public void ImportMeshAnimation(string key, MeshAnimationAsset asset)
 	{
 		InternalImportMeshAnimation(key, asset);
@@ -340,7 +340,7 @@ public partial class Animator : Instance
 		string filteredAnimKey = animationKey.Replace('/', '_');
 		if (_dynTrack.HasNode(filteredAnimKey))
 		{
-			// already exists
+			// Already exists
 			return;
 		}
 
@@ -372,7 +372,7 @@ public partial class Animator : Instance
 		string animKey = animationKey.Replace('/', '_') + "_anim";
 		if (_blendTree.HasNode(oneshotKey) || _blendTree.HasNode(animKey))
 		{
-			// already exists
+			// Already exists
 			return;
 		}
 		AnimationList.Add(animationKey);
