@@ -469,75 +469,81 @@ public sealed partial class TweenService : Instance
 		}
 
 		[ScriptMethod]
-		public void TweenPosition(Dynamic target, Vector3 destination, float time)
+		public TweenObject TweenPosition(Dynamic target, Vector3 destination, float time)
 		{
-			TweenVector3(target.Position, destination, time, new((v3) =>
+			GD.Print("Called");
+			return TweenVector3(target.Position, destination, time, new((v3) =>
 			{
 				target.Position = (Vector3)v3[0]!;
 			}));
 		}
 
 		[ScriptMethod]
-		public void TweenRotation(Dynamic target, Vector3 destination, float time)
+		public TweenObject TweenRotation(Dynamic target, Vector3 destination, float time)
 		{
-			TweenQuaternion(target.Quaternion, Quaternion.FromEuler(destination.DegToRad()), time, new((q) =>
+			return TweenQuaternion(target.Quaternion, Quaternion.FromEuler(destination.DegToRad()), time, new((q) =>
 			{
 				target.Quaternion = (Quaternion)q[0]!;
 			}));
 		}
 
 		[ScriptMethod]
-		public void TweenSize(Dynamic target, Vector3 destination, float time)
+		public TweenObject TweenSize(Dynamic target, Vector3 destination, float time)
 		{
-			TweenVector3(target.Size, destination, time, new((v3) =>
+			return TweenVector3(target.Size, destination, time, new((v3) =>
 			{
 				target.Size = (Vector3)v3[0]!;
 			}));
 		}
 
 		[ScriptMethod]
-		public void TweenColor(Color from, Color to, float time, PTCallback callback)
+		public TweenObject TweenColor(Color from, Color to, float time, PTCallback callback)
 		{
 			tween.TweenMethod(Callable.From((Color val) =>
 			{
 				callback.Invoke(val);
 			}), from, to, time);
+			return this;
 		}
 
 		[ScriptMethod]
-		public void TweenNumber(float from, float to, float time, PTCallback callback)
+		public TweenObject TweenNumber(float from, float to, float time, PTCallback callback)
 		{
 			tween.TweenMethod(Callable.From((float val) =>
 			{
 				callback.Invoke(val);
 			}), from, to, time);
+			return this;
 		}
 
 		[ScriptMethod]
-		public void TweenVector2(Vector2 from, Vector2 to, float time, PTCallback callback)
+		public TweenObject TweenVector2(Vector2 from, Vector2 to, float time, PTCallback callback)
 		{
 			tween.TweenMethod(Callable.From((Vector2 val) =>
 			{
 				callback.Invoke(val);
 			}), from, to, time);
+			return this;
 		}
 
 		[ScriptMethod]
-		public void TweenVector3(Vector3 from, Vector3 to, float time, PTCallback callback)
+		public TweenObject TweenVector3(Vector3 from, Vector3 to, float time, PTCallback callback)
 		{
 			tween.TweenMethod(Callable.From((Vector3 val) =>
 			{
 				callback.Invoke(val);
 			}), from, to, time);
+			return this;
 		}
 
 		[ScriptMethod]
-		public void TweenQuaternion(Quaternion from, Quaternion to, float time, PTCallback callback)
+		public TweenObject TweenQuaternion(Quaternion from, Quaternion to, float time, PTCallback callback)
 		{
 			tween.TweenMethod(Callable.From((Quaternion val) =>
 			{
 				callback.Invoke(val);
 			}), from, to, time);
+			return this;
 		}
 
 		[ScriptMethod]
@@ -560,9 +566,10 @@ public sealed partial class TweenService : Instance
 		}
 
 		[ScriptMethod]
-		public void Interval(float sec)
+		public TweenObject Interval(float sec)
 		{
 			tween.TweenInterval(sec);
+			return this;
 		}
 
 		[ScriptMethod]
