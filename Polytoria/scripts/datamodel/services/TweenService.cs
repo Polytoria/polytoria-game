@@ -471,7 +471,6 @@ public sealed partial class TweenService : Instance
 		[ScriptMethod]
 		public TweenObject TweenPosition(Dynamic target, Vector3 destination, float time)
 		{
-			GD.Print("Called");
 			return TweenVector3(target.Position, destination, time, new((v3) =>
 			{
 				target.Position = (Vector3)v3[0]!;
