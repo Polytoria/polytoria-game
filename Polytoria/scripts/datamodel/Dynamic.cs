@@ -647,6 +647,11 @@ public partial class Dynamic : Instance
 			ReliableTransformChanged?.Invoke();
 		}
 
+		if (this is Physical physical && !physical.HasLocalTransformAuthority())
+		{
+			physical.SetRemoteSleeping(isReliable);
+		}
+
 		InvokeTransformChanged();
 	}
 

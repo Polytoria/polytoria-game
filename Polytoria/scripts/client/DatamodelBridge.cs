@@ -367,10 +367,16 @@ public partial class DatamodelBridge : Node3D
 		RemoveFromBatch(part);
 	}
 
+	internal void MarkPartDirty(Part part)
+	{
+		if (!_renderingEnabled || !isGameReady) return;
+		_dirty.Add(part);
+	}
+
 	public static bool IsPartEligible(Part part)
 	{
 		if (part.IsHidden || part.IsInTemporary) return false;
-		if (part.Anchored && !part.OverrideNoMultiMesh)
+		if ((part.Anchored || part.IsBodySleeping) && !part.OverrideNoMultiMesh)
 		{
 			if (!IsInstanceValid(part.GDNode3D) || !part.GDNode3D.IsInsideTree()) return false;
 			if (part.IsDeleted) return false;

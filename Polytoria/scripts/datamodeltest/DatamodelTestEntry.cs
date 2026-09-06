@@ -85,5 +85,30 @@ public partial class DatamodelTestEntry : Node3D
 		File.Delete(placeFilePath);
 
 		networkService.CreateServer();
+
+		if (cmdargs.ContainsKey("dmtest-stats"))
+		{
+			StaticBody3D controlFloor = new() { Position = new Vector3(500, 0, 500) };
+			controlFloor.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(50, 2, 50) } });
+			AddChild(controlFloor);
+
+			RigidBody3D controlBody = new() { Position = new Vector3(500, 4, 500) };
+			controlBody.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = Vector3.One } });
+			AddChild(controlBody);
+
+			RigidBody3D controlBodyGrav2 = new() { Position = new Vector3(510, 4, 510), GravityScale = 2, PhysicsMaterialOverride = new PhysicsMaterial() };
+			controlBodyGrav2.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = Vector3.One } });
+			AddChild(controlBodyGrav2);
+
+			PT.CallDeferred(async () =>
+			{
+				while (true)
+				{
+					await Globals.Singleton.WaitAsync(2);
+					(int polledSleeping, int polledAwake, int polledFrozen) = Datamodel.Physical.CountBodySleepStates();
+					PT.Print($"[STATS] signalSleeping={Datamodel.Physical.SleepingBodyCount} polledSleeping={polledSleeping} awake={polledAwake} frozen={polledFrozen} controlSleeping={controlBody.Sleeping} controlGrav2Sleeping={controlBodyGrav2.Sleeping}");
+				}
+			});
+		}
 	}
 }

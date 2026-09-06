@@ -172,6 +172,10 @@ public partial class Physical : Dynamic
 		return _collisionLayers;
 	}
 
+	private CollisionObject3D? _lastLayerTarget;
+	private uint _lastAppliedLayer;
+	private uint _lastAppliedMask;
+
 	protected void ApplyCollisionObjectLayers()
 	{
 		CollisionObject3D? collisionObject3D = GetCollisionObject();
@@ -180,7 +184,17 @@ public partial class Physical : Dynamic
 			return;
 		}
 
-		collisionObject3D.CollisionLayer = GetAppliedCollisionLayers();
+		uint layer = GetAppliedCollisionLayers();
+		if (ReferenceEquals(collisionObject3D, _lastLayerTarget) && layer == _lastAppliedLayer && _collisionMask == _lastAppliedMask)
+		{
+			return;
+		}
+
+		_lastLayerTarget = collisionObject3D;
+		_lastAppliedLayer = layer;
+		_lastAppliedMask = _collisionMask;
+
+		collisionObject3D.CollisionLayer = layer;
 		collisionObject3D.CollisionMask = _collisionMask;
 	}
 
@@ -220,7 +234,63 @@ public partial class Physical : Dynamic
 
 		if (!OverridePhysicsProcess)
 		{
-			SetPhysicsProcess(!_anchored);
+			SetPhysicsProcess(!_anchored && !(_bodySleeping && HasLocalTransformAuthority()));
+		}
+	}
+
+	internal bool HasLocalTransformAuthority()
+	{
+		return Root != null && Root.Network != null && NetTransformAuthority == Root.Network.LocalPeerID;
+	}
+
+	internal void SetRemoteSleeping(bool sleeping)
+	{
+		if (_remoteSleeping == sleeping)
+		{
+			return;
+		}
+		_remoteSleeping = sleeping;
+
+		if (!IsDeleted && !_anchored && this is Part part)
+		{
+			Root!.Bridge?.MarkPartDirty(part);
+		}
+	}
+
+	private void OnBodySleepingStateChanged()
+	{
+		bool sleeping = GDNode is RigidBody3D body && body.Sleeping;
+		if (_bodySleeping == sleeping)
+		{
+			return;
+		}
+		_bodySleeping = sleeping;
+		SleepingBodyCount += sleeping ? 1 : -1;
+
+		if (IsDeleted || _anchored)
+		{
+			return;
+		}
+
+		if (HasLocalTransformAuthority())
+		{
+			if (sleeping)
+			{
+				UpdateNetTransformReliable();
+				if (!OverridePhysicsProcess)
+				{
+					SetPhysicsProcess(false);
+				}
+			}
+			else if (!OverridePhysicsProcess)
+			{
+				SetPhysicsProcess(true);
+			}
+
+			if (this is Part part)
+			{
+				Root!.Bridge?.MarkPartDirty(part);
+			}
 		}
 	}
 
@@ -272,8 +342,9 @@ public partial class Physical : Dynamic
 
 	internal void SetCollisionDisabled(bool disabled)
 	{
-		foreach (CollisionShape3D c in CollisionShapes.ToArray())
+		for (int i = 0; i < CollisionShapes.Count; i++)
 		{
+			CollisionShape3D c = CollisionShapes[i];
 			if (!Node.IsInstanceValid(c)) continue;
 			c.Disabled = disabled;
 		}
@@ -341,6 +412,40 @@ public partial class Physical : Dynamic
 	internal bool OverrideCanCollide = false;
 	internal bool OverrideCanCollideTo = false;
 	internal bool OverridePhysicsProcess = false;
+
+	private bool _bodySleeping;
+	private bool _remoteSleeping = true;
+	private int _netPumpPhase;
+
+	internal static int SleepingBodyCount;
+
+	internal static (int Sleeping, int Awake, int Frozen) CountBodySleepStates()
+	{
+		int sleeping = 0;
+		int awake = 0;
+		int frozen = 0;
+		foreach (Node node in _proxyToPhysical.Keys)
+		{
+			if (node is RigidBody3D body && GodotObject.IsInstanceValid(body))
+			{
+				if (body.Freeze)
+				{
+					frozen++;
+				}
+				else if (body.Sleeping)
+				{
+					sleeping++;
+				}
+				else
+				{
+					awake++;
+				}
+			}
+		}
+		return (sleeping, awake, frozen);
+	}
+
+	internal bool IsBodySleeping => HasLocalTransformAuthority() ? _bodySleeping : _remoteSleeping;
 
 	public override void HiddenChanged(bool to)
 	{
@@ -418,6 +523,12 @@ public partial class Physical : Dynamic
 		ApplyFreeze(true);
 
 		_proxyToPhysical[GDNode] = this;
+		_netPumpPhase = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this) % 3;
+
+		if (GDNode is RigidBody3D sleepBody)
+		{
+			sleepBody.SleepingStateChanged += OnBodySleepingStateChanged;
+		}
 
 		if (this is Entity e)
 		{
@@ -439,6 +550,11 @@ public partial class Physical : Dynamic
 
 	public override void PreDelete()
 	{
+		if (GDNode is RigidBody3D sleepBody)
+		{
+			sleepBody.SleepingStateChanged -= OnBodySleepingStateChanged;
+		}
+
 		ClearCollisionBody();
 		Root?.Loaded.Disconnect(OnRootReady);
 		// _proxyToPhysical.Remove(PhysicalArea);
@@ -601,7 +717,19 @@ public partial class Physical : Dynamic
 		// Sync if has authority and not anchored, if so. sync in interval
 		if (NetTransformAuthority == Root.Network.LocalPeerID && !Anchored)
 		{
-			UpdateNetTransform();
+			if (this is Player)
+			{
+				UpdateNetTransform();
+			}
+			else
+			{
+				_netPumpPhase++;
+				if (_netPumpPhase >= 3)
+				{
+					_netPumpPhase = 0;
+					UpdateNetTransform();
+				}
+			}
 		}
 		base.PhysicsProcess(delta);
 	}
@@ -802,7 +930,7 @@ public partial class Physical : Dynamic
 	private void AttachRemoteLinkNode(CollisionShape3D origin, Node3D scaleNode)
 	{
 		RemoteLinkConfig? config = GetRemoteLinkConfig(origin);
-		Node? target = config?.Target;
+		Node? target = config?.Target ?? GetCollisionSyncParent();
 
 		if (target != null && Node.IsInstanceValid(target))
 		{
@@ -816,17 +944,42 @@ public partial class Physical : Dynamic
 		scaleNode.Position = config is { HasOffset: true } ? config.Offset : Vector3.Zero;
 	}
 
-	private RemoteTransform3D CreateRemoteLinkNode(CollisionShape3D origin, Node target)
+	internal partial class CollisionSyncNode : Node3D
 	{
-		RemoteTransform3D rt = new()
+		internal CollisionShape3D? SyncTarget;
+
+		public override void _Ready()
 		{
-			UseGlobalCoordinates = true
-		};
+			SetNotifyTransform(true);
+			PushTransform();
+		}
 
-		AttachRemoteLinkNode(origin, rt);
+		public override void _Notification(int what)
+		{
+			if (what == NotificationTransformChanged)
+			{
+				PushTransform();
+			}
+		}
 
-		rt.RemotePath = rt.GetPathTo(target);
-		return rt;
+		private void PushTransform()
+		{
+			if (SyncTarget == null || !IsInstanceValid(SyncTarget) || !IsInsideTree() || !SyncTarget.IsInsideTree())
+			{
+				return;
+			}
+
+			Transform3D global = GlobalTransform;
+			if (!SyncTarget.GlobalTransform.IsEqualApprox(global))
+			{
+				SyncTarget.GlobalTransform = global;
+			}
+		}
+	}
+
+	protected virtual Node3D? GetCollisionSyncParent()
+	{
+		return null;
 	}
 
 	private void EnsureRemoteTransform(CollisionShape3D origin)
@@ -838,8 +991,14 @@ public partial class Physical : Dynamic
 			return;
 		}
 
-		RemoteTransform3D remoteTransform = CreateRemoteLinkNode(origin, origin);
-		SetTrackedNodes(origin, static state => state.CollisionSyncNodes, [remoteTransform]);
+		if (origin.GetParent() == GDNode && GetRemoteLinkConfig(origin) == null)
+		{
+			return;
+		}
+
+		CollisionSyncNode syncNode = new() { SyncTarget = origin };
+		AttachRemoteLinkNode(origin, syncNode);
+		SetTrackedNodes(origin, static state => state.CollisionSyncNodes, [syncNode]);
 	}
 
 	private void CreateAreaShapeInternal(CollisionShape3D origin)
