@@ -383,9 +383,10 @@ public sealed partial class Player : NPC
 		return ChatColorPalette[userID % ChatColorPalette.Length];
 	}
 
-	public static string GetBadgeIconPath(Player player)
+	public static string GetBadgeIconPath(Player player, bool isFriends = false)
 	{
-		string badgeName = player.IsCreator ? "creator"
+		string badgeName = isFriends ? "friend"
+			: player.IsCreator ? "creator"
 			: !string.IsNullOrEmpty(player.UserRoleClass) ? player.UserRoleClass
 			: player.IsAdmin ? "admin"
 			: "";
