@@ -21,6 +21,11 @@ public partial class DatamodelBridge : Node3D
 	private readonly Dictionary<Part, PartHandle> _handles = [];
 	private readonly Dictionary<ChunkKey, ChunkBatch> _batches = [];
 	private readonly HashSet<Part> _dirty = [];
+	private readonly Dictionary<Part, System.Action> _propertyHandlers = [];
+	private readonly List<Part> _dirtyScratch = [];
+	private readonly Dictionary<ChunkKey, ulong> _emptyBatchExpiry = [];
+	private readonly List<ChunkKey> _expiredBatchScratch = [];
+	private const ulong EmptyBatchKeepAliveMsec = 5000;
 	private Rid _scenario;
 
 	private readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materials = [];
@@ -79,6 +84,13 @@ public partial class DatamodelBridge : Node3D
 				{
 					RemovePart(item);
 				}
+
+				foreach (ChunkBatch batch in _batches.Values)
+				{
+					RenderingServer.FreeRid(batch.Rid);
+				}
+				_batches.Clear();
+				_emptyBatchExpiry.Clear();
 			}
 
 			Root.Bridge = null!;
@@ -123,9 +135,15 @@ public partial class DatamodelBridge : Node3D
 	public override void _Process(double delta)
 	{
 		if (!_renderingEnabled || !isGameReady) return;
+
+		SweepEmptyBatches();
+
 		if (_dirty.Count == 0) return;
 
-		foreach (Part part in _dirty)
+		_dirtyScratch.AddRange(_dirty);
+		_dirty.Clear();
+
+		foreach (Part part in _dirtyScratch)
 		{
 			bool inBatch = _handles.TryGetValue(part, out PartHandle? handle);
 			bool shouldBatch = IsPartEligible(part);
@@ -147,7 +165,12 @@ public partial class DatamodelBridge : Node3D
 				{
 					ChunkBatch batch = _batches[handle.Key];
 					batch.MultiMesh.SetInstanceTransform(handle.Index, part.GetGlobalTransform());
-					batch.MultiMesh.SetInstanceColor(handle.Index, part.Color.SrgbToLinear());
+					Color color = part.Color;
+					if (handle.LastColor != color)
+					{
+						handle.LastColor = color;
+						batch.MultiMesh.SetInstanceColor(handle.Index, color.SrgbToLinear());
+					}
 				}
 			}
 			else
@@ -164,22 +187,22 @@ public partial class DatamodelBridge : Node3D
 			}
 		}
 
-		_dirty.Clear();
+		_dirtyScratch.Clear();
 	}
 
 	private static ChunkKey GetKeyForPart(Part part)
 	{
 		uint scaleLevel = 1;
 		float size = ChunkBaseSize;
+		Vector3 partSize = part.Size;
 
-		while (part.Size.X > size || part.Size.Y > size || part.Size.Z > size)
+		while (partSize.X > size || partSize.Y > size || partSize.Z > size)
 		{
 			size *= 2;
 			scaleLevel++;
 
 			if (scaleLevel > 10) break;
 		}
-
 
 		Vector3I coord = GetChunkCoord(part.Position, scaleLevel);
 		return new ChunkKey { Coord = coord, Material = part.Material, Shape = part.Shape, IsTransparent = part.Color.A < 1f, CastShadows = part.CastShadows, ScaleLevel = scaleLevel };
@@ -217,11 +240,36 @@ public partial class DatamodelBridge : Node3D
 		isGameReady = true;
 	}
 
+	private void SweepEmptyBatches()
+	{
+		if (_emptyBatchExpiry.Count == 0) return;
+
+		ulong now = Time.GetTicksMsec();
+		_expiredBatchScratch.Clear();
+		foreach ((ChunkKey key, ulong expireAt) in _emptyBatchExpiry)
+		{
+			if (now >= expireAt)
+			{
+				_expiredBatchScratch.Add(key);
+			}
+		}
+
+		foreach (ChunkKey key in _expiredBatchScratch)
+		{
+			_emptyBatchExpiry.Remove(key);
+			if (_batches.TryGetValue(key, out ChunkBatch? batch) && batch.Count == 0)
+			{
+				_batches.Remove(key);
+				RenderingServer.FreeRid(batch.Rid);
+			}
+		}
+	}
+
 	private void AddToBatch(Part part, ChunkKey key)
 	{
 		if (!_batches.TryGetValue(key, out var batch))
 		{
-			(Godot.Mesh mesh, _) = Globals.LoadShape(part.Shape.ToString());
+			(Godot.Mesh mesh, _) = Globals.LoadShape(part.Shape);
 
 			MultiMesh mm = new()
 			{
@@ -252,6 +300,10 @@ public partial class DatamodelBridge : Node3D
 
 			_batches.Add(key, batch);
 		}
+		else
+		{
+			_emptyBatchExpiry.Remove(key);
+		}
 
 		part.RemoveSeparateMesh();
 
@@ -263,9 +315,10 @@ public partial class DatamodelBridge : Node3D
 		batch.MultiMesh.VisibleInstanceCount = batch.Count;
 
 		batch.MultiMesh.SetInstanceTransform(index, part.GetGlobalTransform());
-		batch.MultiMesh.SetInstanceColor(index, part.Color.SrgbToLinear());
+		Color addColor = part.Color;
+		batch.MultiMesh.SetInstanceColor(index, addColor.SrgbToLinear());
 
-		_handles[part] = new PartHandle { Key = key, Index = index };
+		_handles[part] = new PartHandle { Key = key, Index = index, LastColor = addColor };
 	}
 
 	private void RemoveFromBatch(Part part)
@@ -300,8 +353,7 @@ public partial class DatamodelBridge : Node3D
 
 		if (batch.Count == 0)
 		{
-			RenderingServer.FreeRid(batch.Rid);
-			_batches.Remove(handle.Key);
+			_emptyBatchExpiry[handle.Key] = Time.GetTicksMsec() + EmptyBatchKeepAliveMsec;
 		}
 
 		_handles.Remove(part);
@@ -334,23 +386,23 @@ public partial class DatamodelBridge : Node3D
 	{
 		if (!_renderingEnabled) return;
 		if (_handles.ContainsKey(part)) return;
+
+		if (!_propertyHandlers.ContainsKey(part))
+		{
+			void propertyChangedHandler() { if (isGameReady) _dirty.Add(part); }
+			part.PropertyChanged.Connect(propertyChangedHandler);
+			_propertyHandlers[part] = propertyChangedHandler;
+		}
+
 		if (!IsPartEligible(part))
 		{
 			part.CreateSeparateMesh();
+			_dirty.Add(part);
 			return;
 		}
 
-		void propertyChangedHandler() { if (isGameReady) _dirty.Add(part); }
-
-		part.PropertyChanged.Connect(propertyChangedHandler);
-
 		var key = GetKeyForPart(part);
 		AddToBatch(part, key);
-
-		if (_handles.TryGetValue(part, out var handle))
-		{
-			handle.PropertyChangedHandler = propertyChangedHandler;
-		}
 
 		_dirty.Add(part);
 	}
@@ -358,12 +410,15 @@ public partial class DatamodelBridge : Node3D
 	public void RemovePart(Part part)
 	{
 		if (!_renderingEnabled) return;
-		if (_handles.TryGetValue(part, out var handle))
+		if (_propertyHandlers.Remove(part, out System.Action? handler))
 		{
-			part.PropertyChanged.Disconnect(handle.PropertyChangedHandler);
+			part.PropertyChanged.Disconnect(handler);
 		}
 
-		part.CreateSeparateMesh();
+		if (!part.IsDeleted)
+		{
+			part.CreateSeparateMesh();
+		}
 		RemoveFromBatch(part);
 	}
 
@@ -384,17 +439,17 @@ public partial class DatamodelBridge : Node3D
 	{
 		public ChunkKey Key;
 		public int Index;
-		public System.Action PropertyChangedHandler = null!;
+		public Color LastColor;
 	}
 
-	private struct ChunkKey
+	private readonly record struct ChunkKey
 	{
-		public Vector3I Coord;
-		public Part.PartMaterialEnum Material;
-		public Part.ShapeEnum Shape;
-		public bool IsTransparent;
-		public bool CastShadows;
-		public uint ScaleLevel;
+		public Vector3I Coord { get; init; }
+		public Part.PartMaterialEnum Material { get; init; }
+		public Part.ShapeEnum Shape { get; init; }
+		public bool IsTransparent { get; init; }
+		public bool CastShadows { get; init; }
+		public uint ScaleLevel { get; init; }
 	}
 
 	private class ChunkBatch

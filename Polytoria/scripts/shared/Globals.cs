@@ -325,6 +325,20 @@ public sealed partial class Globals : Node
 		return LoadCachedTexture(_uiIconsCache, iconName, UIIconsPath, "empty");
 	}
 
+	private static readonly Dictionary<Part.ShapeEnum, (Mesh, Shape3D)> _shapesByEnumCache = [];
+
+	public static (Mesh, Shape3D) LoadShape(Part.ShapeEnum shape)
+	{
+		if (_shapesByEnumCache.TryGetValue(shape, out (Mesh, Shape3D) cachedShape))
+		{
+			return cachedShape;
+		}
+
+		(Mesh, Shape3D) loadedShape = LoadShape(shape.ToString());
+		_shapesByEnumCache[shape] = loadedShape;
+		return loadedShape;
+	}
+
 	public static (Mesh, Shape3D) LoadShape(string shapeName)
 	{
 		if (_shapesCache.TryGetValue(shapeName, out (Mesh, Shape3D) cachedShape))

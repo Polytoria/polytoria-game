@@ -204,7 +204,7 @@ public partial class Part : Entity
 	internal void UpdateShape()
 	{
 		if (_collider == null) return;
-		(Godot.Mesh mesh, Shape3D shape) = Globals.LoadShape(_shape.ToString());
+		(Godot.Mesh mesh, Shape3D shape) = Globals.LoadShape(_shape);
 		if (_isSeparateMesh)
 		{
 			_mesh?.Mesh = mesh;
