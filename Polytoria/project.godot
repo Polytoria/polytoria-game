@@ -450,7 +450,6 @@ jolt_physics_3d/limits/max_bodies=131070
 occlusion_culling/bvh_build_quality=0
 textures/canvas_textures/default_texture_filter=2
 rendering_device/driver.windows="d3d12"
-renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true
 lights_and_shadows/directional_shadow/size.mobile=512
 reflections/sky_reflections/ggx_samples.mobile=2
