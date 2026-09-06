@@ -20,7 +20,7 @@ namespace Polytoria.Datamodel;
 public sealed partial class Sound : Dynamic
 {
 	public const float SoundDistanceMultipler = 1.25f;
-	private const float MinPitch = 0.001f;
+	private const float MinPitch = 1.17549435E-38f; // smallest float above denormals
 	private const float MaxVolume = 2f;
 	private AudioStreamPlayer? _audioPlayer;
 	private AudioStreamPlayer3D? _audioPlayer3D;
