@@ -25,14 +25,30 @@ public partial class DatamodelTestEntry : Node3D
 
 	public async void Entry()
 	{
+		var cmdargs = Globals.ReadCmdArgs();
+
+		float timeoutSec = TestTimeoutSec;
+		if (cmdargs.TryGetValue("dmtest-timeout", out string? timeoutRaw) && float.TryParse(timeoutRaw, out float parsedTimeout))
+		{
+			timeoutSec = parsedTimeout;
+		}
+
+		if (cmdargs.ContainsKey("dmtest-profile"))
+		{
+			PTProfiler.Enabled = true;
+		}
+
+		if (cmdargs.ContainsKey("dmtest-rpclog"))
+		{
+			Globals.UseLogRPC = true;
+		}
+
 		// Fallsafe so test doesn't last forever
 		PT.CallDeferred(async () =>
 		{
-			await Globals.Singleton.WaitAsync(TestTimeoutSec);
+			await Globals.Singleton.WaitAsync(timeoutSec);
 			Globals.Singleton.Quit(true, 1);
 		});
-
-		var cmdargs = Globals.ReadCmdArgs();
 
 		// Setup essentials 
 		ClientSettingsService settings = new()
@@ -48,6 +64,9 @@ public partial class DatamodelTestEntry : Node3D
 		settings.AddChild(new AudioSettingsApplier { Name = "AudioSettingsApplier" }, true, InternalMode.Front);
 		settings.AddChild(new GraphicsSettingsApplier { Name = GraphicsSettingsApplier.NodeName, Settings = settings }, true, InternalMode.Front);
 
+		Engine.MaxFps = 0;
+		DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
+
 		DatamodelBridge bridge = new()
 		{
 			Name = "DatamodelBridge"
@@ -60,8 +79,10 @@ public partial class DatamodelTestEntry : Node3D
 		};
 		NetworkService = networkService;
 
+		bool isClientMode = cmdargs.ContainsKey("dmtest-client");
+
 		networkService.Attach(Root);
-		networkService.IsServer = true;
+		networkService.IsServer = !isClientMode;
 		networkService.NetworkParent = Root;
 
 		AddChild(Root.GDNode, true);
@@ -74,10 +95,45 @@ public partial class DatamodelTestEntry : Node3D
 
 		Root.Setup();
 
-		string tempPath = Path.GetTempPath();
-		string placeFilePath = tempPath.PathJoin("pt_test_" + new DateTimeOffset(DateTime.Now).Millisecond + ".zip");
+		Root.Entry = new Client.ClientEntry
+		{
+			IsSoloTest = true,
+			TestUserID = isClientMode ? 2200 : 1100
+		};
+		networkService.Entry = Root.Entry;
 
 		IsTesting = true;
+
+		if (isClientMode)
+		{
+			string address = cmdargs.TryGetValue("dmtest-connect", out string? addr) ? addr : "127.0.0.1";
+			networkService.CreateClient(address);
+
+			PT.CallDeferred(async () =>
+			{
+				while (true)
+				{
+					await Globals.Singleton.WaitAsync(1);
+					if (IsInstanceValid(this) == false) return;
+					int parts = 0;
+					foreach (Instance inst in Root.Environment.GetDescendants())
+					{
+						if (inst is Part) parts++;
+					}
+					PT.Print($"[CLIENT] loaded={networkService.ReplicateSync.InstanceLoadedCount}/{networkService.ReplicateSync.InstanceToBeLoadedCount} done={networkService.IsPlaceReplicationDone} parts={parts}");
+					if (networkService.IsPlaceReplicationDone)
+					{
+						PT.Print($"[CLIENT] WORLD SYNCED parts={parts}");
+						Globals.Singleton.Quit(true, 0);
+						return;
+					}
+				}
+			});
+			return;
+		}
+
+		string tempPath = Path.GetTempPath();
+		string placeFilePath = tempPath.PathJoin("pt_test_" + new DateTimeOffset(DateTime.Now).Millisecond + ".zip");
 
 		await PackedFormat.PackProjectToFile(cmdargs["proj"], placeFilePath);
 
