@@ -19,6 +19,10 @@ public partial class Part : Entity
 	private Color _color = new(1, 1, 1);
 	private bool _isSeparateMesh = false;
 	private bool _castShadows;
+	private bool _hasFaceTextures;
+	private ShaderMaterial? _faceTextureOverlay;
+	private Vector3 _faceTextureSize;
+	private static Shader? _faceTextureShader;
 
 	private Node3D _nRemoteAt = null!; // Remote collider proxy
 
@@ -99,11 +103,21 @@ public partial class Part : Entity
 
 		UpdateColor();
 		UpdateShadow();
+
+		if (_hasFaceTextures)
+		{
+			RefreshFaceTextures();
+		}
 	}
 
 	internal override void OnNodeSizeChanged(Vector3 newSize)
 	{
 		UpdateMeshSize();
+		if (_hasFaceTextures && newSize != _faceTextureSize)
+		{
+			_faceTextureSize = newSize;
+			_faceTextureOverlay?.SetShaderParameter("part_size", newSize);
+		}
 		base.OnNodeSizeChanged(newSize);
 	}
 
@@ -252,6 +266,94 @@ public partial class Part : Entity
 		if (_isSeparateMesh)
 		{
 			_mesh?.CastShadow = _castShadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
+		}
+	}
+
+	internal void RefreshFaceTextures(PartTexture? include = null, PartTexture? exclude = null)
+	{
+		PartTexture?[] slots = new PartTexture?[6];
+		bool any = false;
+
+		void addSlot(PartTexture texture)
+		{
+			if (texture.IsHidden || texture.IsDeleted || texture == exclude)
+			{
+				return;
+			}
+			slots[(int)texture.Face] = texture;
+			any = true;
+		}
+
+		foreach (Instance child in GetChildren())
+		{
+			if (child is PartTexture texture && texture != include)
+			{
+				addSlot(texture);
+			}
+		}
+
+		if (include != null)
+		{
+			addSlot(include);
+		}
+
+		if (any && !_hasFaceTextures)
+		{
+			_hasFaceTextures = true;
+			OverrideNoMultiMesh = true;
+			if (Root != null && Root.Bridge != null)
+			{
+				Root.Bridge.RemovePart(this);
+			}
+			else
+			{
+				CreateSeparateMesh();
+			}
+		}
+		else if (!any && _hasFaceTextures)
+		{
+			_hasFaceTextures = false;
+			OverrideNoMultiMesh = IsDescendantOfClass<UIViewport>();
+			if (_mesh != null)
+			{
+				_mesh.MaterialOverlay = null;
+			}
+			_faceTextureOverlay = null;
+			if (!IsDeleted && !OverrideNoMultiMesh && Root != null && Root.Bridge != null)
+			{
+				Root.Bridge.AddPart(this);
+			}
+			return;
+		}
+
+		if (!any || _mesh == null)
+		{
+			return;
+		}
+
+		_faceTextureShader ??= ResourceLoader.Load<Shader>("res://resources/shaders/part/part_face_texture.gdshader");
+		_faceTextureOverlay ??= new ShaderMaterial { Shader = _faceTextureShader };
+		_mesh.MaterialOverlay = _faceTextureOverlay;
+
+		_faceTextureSize = Size;
+		_faceTextureOverlay.SetShaderParameter("part_size", _faceTextureSize);
+
+		for (int i = 0; i < slots.Length; i++)
+		{
+			PartTexture? slot = slots[i];
+			Texture2D? texture = slot?.LoadedTexture;
+			_faceTextureOverlay.SetShaderParameter($"face_texture_{i}", texture);
+			_faceTextureOverlay.SetShaderParameter($"face_adjust_{i}", slot == null
+				? new Vector4(0f, 1f, 1f, 0f)
+				: new Vector4(slot.Exposure, slot.Contrast, slot.Saturation, slot.Temperature));
+			_faceTextureOverlay.SetShaderParameter($"face_state_{i}", new Vector2(texture != null ? 1f : 0f, slot?.Transparency ?? 0f));
+
+			Vector4 tile = Vector4.Zero;
+			if (slot != null && slot.Mode == PartTexture.TextureModeEnum.Tile && slot.TileSize.X > 0f && slot.TileSize.Y > 0f)
+			{
+				tile = new Vector4(slot.TileSize.X, slot.TileSize.Y, slot.Offset.X, slot.Offset.Y);
+			}
+			_faceTextureOverlay.SetShaderParameter($"face_tile_{i}", tile);
 		}
 	}
 

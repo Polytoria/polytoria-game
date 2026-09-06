@@ -45,6 +45,7 @@ public partial class InsertMenuPopup : PopupPanel
 			"Text3D",
 			"Image3D",
 			"Decal",
+			"PartTexture",
 			"Camera",
 		},
 		[new() { Title = "Lighting" }] = new()
