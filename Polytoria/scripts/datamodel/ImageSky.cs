@@ -225,7 +225,7 @@ public sealed partial class ImageSky : Sky
 		}
 	}
 
-	[Editable, Obsolete("Use Image instead"), NoSync, ScriptLegacyProperty(nameof(TopId))]
+	[Editable, Obsolete(use: "TopImage"), NoSync, ScriptLegacyProperty(nameof(TopId))]
 	public int TopId
 	{
 		get => _topId;
@@ -237,7 +237,7 @@ public sealed partial class ImageSky : Sky
 		}
 	}
 
-	[Editable, Obsolete("Use Image instead"), NoSync, ScriptLegacyProperty(nameof(BottomId))]
+	[Editable, Obsolete(use: "BottomImage"), NoSync, ScriptLegacyProperty(nameof(BottomId))]
 	public int BottomId
 	{
 		get => _bottomId;
@@ -249,7 +249,7 @@ public sealed partial class ImageSky : Sky
 		}
 	}
 
-	[Editable, Obsolete("Use Image instead"), NoSync, ScriptLegacyProperty(nameof(LeftId))]
+	[Editable, Obsolete(use: "LeftImage"), NoSync, ScriptLegacyProperty(nameof(LeftId))]
 	public int LeftId
 	{
 		get => _leftId;
@@ -261,7 +261,7 @@ public sealed partial class ImageSky : Sky
 		}
 	}
 
-	[Editable, Obsolete("Use Image instead"), NoSync, ScriptLegacyProperty(nameof(RightId))]
+	[Editable, Obsolete(use: "RightImage"), NoSync, ScriptLegacyProperty(nameof(RightId))]
 	public int RightId
 	{
 		get => _rightId;
@@ -273,7 +273,7 @@ public sealed partial class ImageSky : Sky
 		}
 	}
 
-	[Editable, Obsolete("Use Image instead"), NoSync, ScriptLegacyProperty(nameof(FrontId))]
+	[Editable, Obsolete(use: "FrontImage"), NoSync, ScriptLegacyProperty(nameof(FrontId))]
 	public int FrontId
 	{
 		get => _frontId;
@@ -285,7 +285,7 @@ public sealed partial class ImageSky : Sky
 		}
 	}
 
-	[Editable, Obsolete("Use Image instead"), NoSync, ScriptLegacyProperty(nameof(BackId))]
+	[Editable, Obsolete(use: "BackImage"), NoSync, ScriptLegacyProperty(nameof(BackId))]
 	public int BackId
 	{
 		get => _backId;
