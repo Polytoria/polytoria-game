@@ -31,6 +31,40 @@ public sealed partial class Explorer : TabContainer
 
 	public static World? CurrentRoot { get; private set; }
 
+	private const float DisabledScriptIcon = 0.45f;
+
+	private static string GetExplorterLabel(Instance instance)
+	{
+		if (instance is Datamodel.Script script && !script.IsEnabled)
+		{
+			return $"{script.Name} (Disabled)";
+
+		}
+		return instance.Name;
+	}
+
+	private static void RefreshScriptItem(Instance instance, TreeItem item)
+	{
+		if (instance is not Datamodel.Script script)
+		{
+			item.SetIconModulate(0, Colors.White);
+			return;
+		}
+
+		item.SetIconModulate(0, script.IsEnabled ? Colors.White : new Color(1, 1, 1, DisabledScriptIcon));
+	}
+
+	public static void RefreshTreeItem(Datamodel.Script script)
+	{
+		if (!_instanceToItem.TryGetValue(script, out TreeItem? item))
+		{
+			return;
+		}
+
+		item.SetText(0, GetExplorterLabel(script));
+		RefreshScriptItem(script, item);
+	}
+
 	public void SwitchTo(World? game)
 	{
 		CurrentRoot = game;
@@ -98,12 +132,13 @@ public sealed partial class Explorer : TabContainer
 		}
 
 		item.SetIcon(0, Globals.LoadIcon(instance.ClassName));
-		item.SetText(0, instance.Name);
+		item.SetText(0, GetExplorterLabel(instance));
 
 		_instanceToItem[instance] = item;
 		_itemToInstance[item] = instance;
 
 		RefreshLinked(instance);
+		RefreshScriptItem(instance, item);
 		if (instance is Dynamic dyn)
 		{
 			RefreshLocked(dyn);
@@ -224,7 +259,8 @@ public sealed partial class Explorer : TabContainer
 				if (instance.IsDeleted) return;
 				if (!Node.IsInstanceValid(item)) return;
 
-				item.SetText(0, instance.Name);
+				item.SetText(0, GetExplorterLabel(instance));
+				RefreshScriptItem(instance, item);
 			}).CallDeferred();
 		}
 	}
@@ -475,7 +511,8 @@ public sealed partial class Explorer : TabContainer
 		// Lastly update the name in-case name got rejected
 		Callable.From(() =>
 		{
-			targetItem.SetText(0, instance.Name);
+			targetItem.SetText(0, GetExplorterLabel(instance));
+			RefreshScriptItem(instance, targetItem);
 		}).CallDeferred();
 	}
 }
