@@ -273,18 +273,27 @@ public partial class Grabbable : Instance
 					Camera3D camera = viewport.GetCamera3D();
 					Camera? cam = Root.Environment.CurrentCamera;
 					if (cam == null) return;
-					Vector2 mousePos = Root.Input.MousePosition;
-					Vector3 rayOrigin = camera.ProjectRayOrigin(mousePos);
-					Vector3 rayDir = camera.ProjectRayNormal(mousePos);
 
 					Vector3? targetPos = null;
 
 					if (cam.IsFirstPerson)
 					{
+						Vector2 mousePos = Root.Input.MousePosition;
+						Vector3 rayOrigin = camera.ProjectRayOrigin(mousePos);
+						Vector3 rayDir = camera.ProjectRayNormal(mousePos);
 						targetPos = rayOrigin + rayDir * MaxRange;
+					}
+					else if (cam.CtrlLocked && cam.Target != null)
+					{
+						Vector2 mousePos = Root.Input.MousePosition;
+						Vector3 rayDir = camera.ProjectRayNormal(mousePos);
+						targetPos = cam.Target.Position + cam.PositionOffset + rayDir * MaxRange;
 					}
 					else
 					{
+						Vector2 mousePos = cam.GetMousePos();
+						Vector3 rayOrigin = camera.ProjectRayOrigin(mousePos);
+						Vector3 rayDir = camera.ProjectRayNormal(mousePos);
 						RayResult? hit = Root.Environment.Raycast(rayOrigin, rayDir, ignoreList: [Parent], passthroughMask: 1 << 2);
 						if (hit != null)
 						{
