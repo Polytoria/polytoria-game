@@ -64,6 +64,7 @@ public sealed partial class Camera : Dynamic
 	private Vector3 _targetRotation = new(0, 180, 0);
 	private float _targetZoom = DefaultZoomDistance;
 	private float _currentZoom = DefaultZoomDistance;
+	private PhysicsRayQueryParameters3D? _clipQuery;
 	private float _distance = DefaultZoomDistance;
 	private bool _turning = false;
 	private Vector2 _turnStartPos;
@@ -535,13 +536,18 @@ public sealed partial class Camera : Dynamic
 				Vector3 origin = computedPosition;
 
 				PhysicsDirectSpaceState3D spaceState = Camera3D.GetWorld3D().DirectSpaceState;
-				PhysicsRayQueryParameters3D query = PhysicsRayQueryParameters3D.Create(origin, desiredCamPos);
-				query.HitFromInside = false;
+				if (_clipQuery == null)
+				{
+					_clipQuery = new PhysicsRayQueryParameters3D
+					{
+						HitFromInside = false,
+						CollisionMask = Entity.CameraClipCollisionLayerMask
+					};
+				}
+				_clipQuery.From = origin;
+				_clipQuery.To = desiredCamPos;
 
-				// Fliter only clipping layers
-				query.CollisionMask = Entity.CameraClipCollisionLayerMask;
-
-				Dictionary? result = spaceState.IntersectRay(query);
+				Dictionary? result = spaceState.IntersectRay(_clipQuery);
 
 				if (result.Count > 0)
 				{

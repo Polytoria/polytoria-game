@@ -36,6 +36,9 @@ public partial class Animator : Instance
 
 	private string? _currentOneShot;
 	private string? _pendingOneShot;
+	private StringName? _currentOneShotActivePath;
+	private StringName? _pendingOneShotActivePath;
+	private static readonly StringName _dynBlendPathName = DynBlendPath;
 
 	private string _currentAnimation = "";
 	private bool _queuePostAnimationImport = false;
@@ -212,26 +215,31 @@ public partial class Animator : Instance
 		if (!Node.IsInstanceValid(AnimationTree)) return;
 
 		// Smooth step toward target
-		float currentValue = (float)AnimationTree.Get(DynBlendPath);
-		float newValue = Mathf.Lerp(currentValue, _targetDynBlendValue, MathUtils.ExpDecay((float)delta, BlendSpeed));
-		AnimationTree.Set(DynBlendPath, newValue);
+		float currentValue = (float)AnimationTree.Get(_dynBlendPathName);
+		if (!Mathf.IsEqualApprox(currentValue, _targetDynBlendValue))
+		{
+			float newValue = Mathf.Lerp(currentValue, _targetDynBlendValue, MathUtils.ExpDecay((float)delta, BlendSpeed));
+			AnimationTree.Set(_dynBlendPathName, newValue);
+		}
 
 		// Check if pending oneshot became active
-		if (_pendingOneShot != null)
+		if (_pendingOneShotActivePath != null)
 		{
-			bool isActive = (bool)AnimationTree.Get(_pendingOneShot + "/active");
+			bool isActive = (bool)AnimationTree.Get(_pendingOneShotActivePath);
 			if (isActive)
 			{
 				// it's now active
 				_currentOneShot = _pendingOneShot;
+				_currentOneShotActivePath = _pendingOneShotActivePath;
 				_pendingOneShot = null;
+				_pendingOneShotActivePath = null;
 			}
 		}
 
 		// Check active oneshot
-		if (_currentOneShot != null)
+		if (_currentOneShotActivePath != null)
 		{
-			bool isActive = (bool)AnimationTree.Get(_currentOneShot + "/active");
+			bool isActive = (bool)AnimationTree.Get(_currentOneShotActivePath);
 
 			// the animation finished or was aborted
 			if (!isActive)
@@ -240,8 +248,9 @@ public partial class Animator : Instance
 				_targetDynBlendValue = 0f;
 
 				// Snap back to zero dynblend
-				AnimationTree.Set(DynBlendPath, 0);
+				AnimationTree.Set(_dynBlendPathName, 0);
 				_currentOneShot = null;
+				_currentOneShotActivePath = null;
 			}
 		}
 	}
@@ -539,6 +548,7 @@ public partial class Animator : Instance
 		AnimationTree.Set(oneshotPath + "/request", (int)AnimationNodeOneShot.OneShotRequest.Fire);
 
 		_pendingOneShot = oneshotPath;
+		_pendingOneShotActivePath = oneshotPath + "/active";
 	}
 
 	[ScriptMethod]
@@ -592,6 +602,7 @@ public partial class Animator : Instance
 		{
 			AnimationTree.Set(_currentOneShot + "/request", (int)AnimationNodeOneShot.OneShotRequest.Abort);
 			_currentOneShot = null;
+			_currentOneShotActivePath = null;
 		}
 	}
 
