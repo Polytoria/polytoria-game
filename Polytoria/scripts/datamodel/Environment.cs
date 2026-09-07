@@ -425,7 +425,7 @@ public sealed partial class Environment : Instance
 			instance = Physical.GetPhysicalFromCollider(a3d);
 		}
 
-		if (collider is RigidBody3D r)
+		if (collider is PhysicsBody3D r)
 		{
 			instance = (Instance?)GetNetObjFromProxy(r);
 		}

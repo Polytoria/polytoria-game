@@ -29,8 +29,9 @@ public class DefaultMovement : IPlayerMovement
 			float backwardStrength = Input.GetActionStrength("backward");
 			forwardInput = forwardStrength - backwardStrength;
 
-			Quaternion verticalize = new(facingRot.Y, Target.Vertical);
-			moveDirection = verticalize * ((facingRot.Z * -forwardInput) + (facingRot.X * (Input.GetActionStrength("rightward") - Input.GetActionStrength("leftward")))).LimitLength(1);
+			Vector3 camForward = facingRot.Z.Slide(Target.Vertical).Normalized();
+			Vector3 camRight = facingRot.X.Slide(Target.Vertical).Normalized();
+			moveDirection = ((camForward * -forwardInput) + (camRight * (Input.GetActionStrength("rightward") - Input.GetActionStrength("leftward")))).LimitLength(1);
 
 			bool initialSprintOverride = Target.SprintOverride;
 			jump = Input.IsActionPressed("jump");
