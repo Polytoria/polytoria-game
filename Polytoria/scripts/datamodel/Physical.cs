@@ -24,6 +24,7 @@ public partial class Physical : Dynamic
 	private static readonly Dictionary<Node, Physical> _proxyToPhysical = [];
 	private static readonly ConditionalWeakTable<CollisionShape3D, RemoteLinkConfig> _remoteLinkConfigs = [];
 	private static readonly ConditionalWeakTable<CollisionShape3D, TrackedNodesState> _trackedNodes = [];
+	public static readonly ConditionalWeakTable<CollisionShape3D, Physical> ShapeToPhysical = [];
 
 	private sealed class RemoteLinkConfig
 	{
@@ -845,6 +846,7 @@ public partial class Physical : Dynamic
 				Disabled = IsHidden,
 			};
 
+			ShapeToPhysical.Add(newShape, this);
 			parent.AddChild(newShape);
 			createdNodes.Add(newShape);
 

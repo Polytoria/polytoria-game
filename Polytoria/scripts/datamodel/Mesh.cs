@@ -487,6 +487,7 @@ public sealed partial class Mesh : Entity
 						Shape = boxShape,
 					};
 					GDNode3D.AddChild(collisionShape);
+					Physical.ShapeToPhysical.Add(collisionShape, this);
 
 					SetRemoteLinkTarget(collisionShape, meshInstance);
 					SetRemoteLinkOffset(collisionShape, meshInstance.GetAabb().GetCenter());
@@ -526,6 +527,7 @@ public sealed partial class Mesh : Entity
 					};
 
 					GDNode3D.AddChild(collisionShape);
+					Physical.ShapeToPhysical.Add(collisionShape, this);
 					SetRemoteLinkTarget(collisionShape, meshInstance);
 					AddCollisionShape(collisionShape);
 				}

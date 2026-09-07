@@ -48,6 +48,7 @@ public partial class Part : Entity
 		base.Init();
 		GDNode3D.AddChild(_collider = new(), false, Node.InternalMode.Back);
 		GDNode3D.AddChild(_nRemoteAt = new(), false, Node.InternalMode.Back);
+		Physical.ShapeToPhysical.Add(_collider, this);
 		SetRemoteLinkTarget(_collider, _nRemoteAt);
 		_nRemoteAt.Rotation = Vector3.Zero;
 
