@@ -24,11 +24,6 @@ public partial class PTMeshAsset : MeshAsset
 		}
 	}
 
-	public static void RegisterAsset()
-	{
-		RegisterType<PTMeshAsset>();
-	}
-
 	public override void LoadResource()
 	{
 		AssetLoader.Singleton.GetResource(

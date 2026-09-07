@@ -18,6 +18,23 @@ public sealed partial class FilterService : Instance
 {
 	private static List<string> _profanityList = [];
 
+	private static bool IsRegexEntry(string entry)
+	{
+		return Regex.IsMatch(entry, @"[\\(\[\^$|+?{]");
+	}
+
+	private static bool Matches(string input, string pattern)
+	{
+		try
+		{
+			return Regex.IsMatch(input, pattern, RegexOptions.IgnoreCase);
+		}
+		catch (ArgumentException)
+		{
+			return false;
+		}
+	}
+
 	public override void Init()
 	{
 		base.Init();
@@ -50,18 +67,55 @@ public sealed partial class FilterService : Instance
 			LoadFilter();
 			return new string('*', input.Length);
 		}
+
+		string matchInput = Regex.Replace(input, @"[\u200B\uFEFF]", "");
+		matchInput = Regex.Replace(matchInput, @"\s+", " ").Trim();
+
+		foreach (string filter in _profanityList)
+		{
+			string f = filter.Trim();
+			if (!f.Contains(' ') && !f.Contains(@"\s")) continue;
+			if (IsRegexEntry(f))
+			{
+				if (Matches(matchInput, f))
+					return new string('*', input.Length);
+			}
+			else if (f.Contains('*'))
+			{
+				string regex = Regex.Replace(f, @"(?<!\.)\*", ".*").Replace(" ", @"\s+");
+				if (Matches(matchInput, regex))
+					return new string('*', input.Length);
+			}
+			else
+			{
+				string regex = @"\b" + Regex.Escape(f).Replace(@"\ ", @"\s+") + @"\b";
+				if (Matches(matchInput, regex))
+					return new string('*', input.Length);
+			}
+		}
+
 		string[] words = input.Split([" "], StringSplitOptions.RemoveEmptyEntries);
 		List<string> filteredWords = [];
 		foreach (string word in words)
 		{
+			string matchWord = Regex.Replace(word.Trim(), @"[\u200B\uFEFF]", "");
 			bool found = false;
 			foreach (string filter in _profanityList)
 			{
 				string f = filter.Trim();
-				if (f.Contains('*'))
+				if (IsRegexEntry(f))
 				{
-					string regex = f.Replace("*", ".*");
-					if (Regex.IsMatch(word, regex, RegexOptions.IgnoreCase))
+					if (Matches(matchWord, "^" + f))
+					{
+						filteredWords.Add(new string('*', word.Length));
+						found = true;
+						break;
+					}
+				}
+				else if (f.Contains('*'))
+				{
+					string regex = "^" + Regex.Replace(f, @"(?<!\.)\*", ".*");
+					if (Matches(matchWord, regex))
 					{
 						filteredWords.Add(new string('*', word.Length));
 						found = true;
@@ -70,7 +124,7 @@ public sealed partial class FilterService : Instance
 				}
 				else
 				{
-					if (word.Equals(f, StringComparison.OrdinalIgnoreCase))
+					if (matchWord.Equals(f, StringComparison.OrdinalIgnoreCase))
 					{
 						filteredWords.Add(new string('*', word.Length));
 						found = true;

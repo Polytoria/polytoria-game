@@ -355,11 +355,6 @@ public partial class Dynamic : Instance
 			_currentTransform = _netTransform;
 			_isFirstUpdate = false;
 			_isDirty = false;
-
-			// Reset velocity on snapped
-			if (this is Physical phy)
-				phy.Velocity = Vector3.Zero;
-
 			SetLocalTransform(_currentTransform);
 		}
 		else
@@ -819,8 +814,8 @@ public partial class Dynamic : Instance
 
 	internal void NotifySizeChange()
 	{
-		OnPropertyChanged(nameof(LocalSize));
-		OnPropertyChanged(nameof(Size));
+		OnPropertyChanged(nameof(LocalSize), false);
+		OnPropertyChanged(nameof(Size), false);
 	}
 
 	public override void HiddenChanged(bool to)

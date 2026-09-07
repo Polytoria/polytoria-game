@@ -14,7 +14,7 @@ public class DefaultMovement : IPlayerMovement
 	{
 		Camera? cam = Root.Environment.CurrentCamera;
 		Vector3 moveDirection = Vector3.Zero;
-		Vector3 camRotation = Vector3.Zero;
+		Quaternion camRotation = Quaternion.Identity;
 		float forwardInput = 0f;
 		bool jump = false;
 		bool sprint = false;
@@ -22,16 +22,15 @@ public class DefaultMovement : IPlayerMovement
 
 		if (cam != null && Root.Input.IsGameFocused && Target.CanMove && !Target.IsDead)
 		{
-			Vector3 facingRot = cam.Camera3D.GlobalRotation;
-			camRotation = facingRot;
+			Basis facingRot = cam.Camera3D.GlobalBasis;
+			camRotation = facingRot.Orthonormalized().GetRotationQuaternion();
 
 			float forwardStrength = Input.GetActionStrength("forward");
 			float backwardStrength = Input.GetActionStrength("backward");
 			forwardInput = forwardStrength - backwardStrength;
 
-			moveDirection.X = Input.GetActionStrength("rightward") - Input.GetActionStrength("leftward");
-			moveDirection.Z = backwardStrength - forwardStrength;
-			moveDirection = moveDirection.Rotated(Vector3.Up, facingRot.Y).LimitLength(1);
+			Quaternion verticalize = new(facingRot.Y, Target.Vertical);
+			moveDirection = verticalize * ((facingRot.Z * -forwardInput) + (facingRot.X * (Input.GetActionStrength("rightward") - Input.GetActionStrength("leftward")))).LimitLength(1);
 
 			bool initialSprintOverride = Target.SprintOverride;
 			jump = Input.IsActionPressed("jump");
@@ -82,8 +81,10 @@ public class DefaultMovement : IPlayerMovement
 
 		double delta = snapshot.Delta;
 
+		Vector3 vertical = Target.Vertical;
+
 		Vector3 externalVelocity = Target.ExternalVelocity;
-		bool hasExternalVelocity = externalVelocity.X != 0 || externalVelocity.Z != 0;
+		bool hasExternalVelocity = externalVelocity.Slide(vertical) != Vector3.Zero;
 
 		if (Target.CanMove && !Target.IsDead)
 		{
@@ -121,14 +122,10 @@ public class DefaultMovement : IPlayerMovement
 
 			if (Target.IsClimbing)
 			{
-				// Reset all vectors, lock to Y only
-				Target.CharacterVelocity.X = 0;
-				Target.CharacterVelocity.Z = 0;
-
 				float climbSpeed = forwardInput * gdWalkSpeed * Target.ClimbingTruss!.ClimbSpeed;
 
-				// Add y velocity
-				Target.CharacterVelocity.Y = climbSpeed;
+				// Lock to vertical only and add vertical velocity
+				Target.CharacterVelocity = vertical * climbSpeed;
 
 				finalState = CharacterModel.CharacterModelStateEnum.Climbing;
 				Target.Character?.SetAnimSpeed(climbSpeed / 8);
@@ -136,33 +133,34 @@ public class DefaultMovement : IPlayerMovement
 			else if (Target.JustFinishedClimbing)
 			{
 				Target.JustFinishedClimbing = false;
-				Target.CharacterVelocity.Y = 0;
+				Target.CharacterVelocity = Target.CharacterVelocity.Slide(vertical);
 			}
 
 			// Always rotate in first person
 			if (snapshot.CamLocked)
 			{
-				Target.Rotation = Target.Rotation with { Y = 180 + Mathf.RadToDeg(snapshot.CameraRotation.Y) };
+				Target.Quaternion = new Quaternion(vertical, Mathf.Pi) * (new Quaternion(snapshot.CameraRotation * Vector3.Up, vertical) * snapshot.CameraRotation);
 			}
 
 			Vector3 pushVelocity = hasExternalVelocity
-				? externalVelocity with { Y = 0 }
+				? externalVelocity.Slide(vertical)
 				: Vector3.Zero;
 
 			if (moveDirection != Vector3.Zero && !Target.IsClimbing)
 			{
 				Target.IsMoving = true;
 
-				Target.CharacterVelocity.X = (moveDirection.X * gdWalkSpeed) + pushVelocity.X;
-				Target.CharacterVelocity.Z = (moveDirection.Z * gdWalkSpeed) + pushVelocity.Z;
+				Target.CharacterVelocity = moveDirection * gdWalkSpeed + pushVelocity + Target.CharacterVelocity.Project(vertical);
 
 				if (!snapshot.CamLocked)
 				{
 					// Apply rotation by move direction
-					Target.Rotation = Target.Rotation with
-					{
-						Y = Mathf.RadToDeg(Mathf.LerpAngle(Mathf.DegToRad(Target.Rotation.Y), Mathf.Atan2(Target.CharacterVelocity.X, Target.CharacterVelocity.Z), MathUtils.ExpDecay((float)delta, NPC.BodyRotateLerp)))
-					};
+					Vector3 a = new Quaternion(Target.Up, vertical) * Target.Forward;
+					Vector3 b = Target.CharacterVelocity.Slide(vertical).Normalized();
+					float angle = Mathf.Asin(a.Cross(b).Dot(vertical));
+					if (a.Dot(b) < 0) angle = Mathf.Pi - angle;
+					if (angle > Mathf.Pi) angle -= Mathf.Tau;
+					Target.Quaternion = new Quaternion(vertical, angle * MathUtils.ExpDecay((float)delta, NPC.BodyRotateLerp)) * Target.Quaternion;
 				}
 
 
@@ -184,14 +182,12 @@ public class DefaultMovement : IPlayerMovement
 
 				if (hasExternalVelocity)
 				{
-					Target.CharacterVelocity.X = pushVelocity.X;
-					Target.CharacterVelocity.Z = pushVelocity.Z;
+					Target.CharacterVelocity = pushVelocity + Target.CharacterVelocity.Project(vertical);
 				}
 				else
 				{
 					// Stop horizontal movement when no input
-					Target.CharacterVelocity.X = Mathf.MoveToward(Target.CharacterVelocity.X, 0, gdWalkSpeed);
-					Target.CharacterVelocity.Z = Mathf.MoveToward(Target.CharacterVelocity.Z, 0, gdWalkSpeed);
+					Target.CharacterVelocity = Target.CharacterVelocity.Slide(vertical).MoveToward(Vector3.Zero, gdWalkSpeed) + Target.CharacterVelocity.Project(vertical);
 				}
 				Target.Character?.SetAnimSpeed(1);
 			}
@@ -215,7 +211,7 @@ public class DefaultMovement : IPlayerMovement
 		}
 		else
 		{
-			Target.CharacterVelocity = new Vector3(0, Target.CharacterVelocity.Y, 0);
+			Target.CharacterVelocity = Target.CharacterVelocity.Project(vertical);
 		}
 
 		Target.Character?.SetState(finalState);
@@ -223,11 +219,7 @@ public class DefaultMovement : IPlayerMovement
 		if (hasExternalVelocity)
 		{
 			float decay = Target.WalkSpeed * 60f * (float)delta;
-			Target.ExternalVelocity = new Vector3(
-				Mathf.MoveToward(externalVelocity.X, 0, decay),
-				externalVelocity.Y,
-				Mathf.MoveToward(externalVelocity.Z, 0, decay)
-			);
+			Target.ExternalVelocity = externalVelocity.Slide(vertical).MoveToward(Vector3.Zero, decay) + externalVelocity.Project(vertical);
 		}
 
 		Target.ApplyInternalVelocity(Target.CharacterVelocity);

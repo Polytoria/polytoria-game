@@ -40,11 +40,6 @@ public partial class PTImageAsset : ImageAsset
 
 	internal string? DirectImageURL { get; private set; }
 
-	public static void RegisterAsset()
-	{
-		RegisterType<PTImageAsset>();
-	}
-
 	public override void LoadResource()
 	{
 		if (ImageID == 0) { return; }

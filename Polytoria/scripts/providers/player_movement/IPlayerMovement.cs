@@ -16,7 +16,7 @@ public struct InputSnapshot
 	public uint SequenceNumber;
 	public double Delta;
 	public Vector3 MoveDirection;
-	public Vector3 CameraRotation;
+	public Quaternion CameraRotation;
 	public bool Jump;
 	public bool Sprint;
 	public float ForwardInput;

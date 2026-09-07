@@ -13,9 +13,9 @@ using Polytoria.Utils;
 using Polytoria.Utils.DTOs;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using static Polytoria.Datamodel.Services.NetworkService;
@@ -76,6 +76,19 @@ public sealed partial class NetworkPropSync : Instance
 		PendingRefs.Clear();
 		_batchBroadcasts.Clear();
 		base.PreDelete();
+	}
+
+	public static T DeserializeRpcArg<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>(byte[] data)
+	{
+		try
+		{
+			return SerializeUtils.Deserialize<T>(data);
+		}
+		catch (Exception ex)
+		{
+			PT.PrintErr("Failed to deserialize RPC argument: ", ex);
+			throw;
+		}
 	}
 
 	public static byte[] SerializePropValue(object? propValue)
@@ -346,7 +359,7 @@ public sealed partial class NetworkPropSync : Instance
 		return intermediateValue;
 	}
 
-	public void BroadcastPropUpdate(NetworkedObject netObj, string propName, object? propValue, bool unreliable)
+	public void BroadcastPropUpdate(NetworkedObject netObj, PropSyncProp prop, object? propValue, bool unreliable)
 	{
 		if (!netObj.IsNetworkReady) return;
 		if (!netObj.Root.IsLoaded) return;
@@ -360,10 +373,10 @@ public sealed partial class NetworkPropSync : Instance
 			}
 		}
 		string netID = netObj.NetworkedObjectID;
-		byte[] data = SerializePropValue(propValue);
-		long sequence = netObj.GetSequenceForProp(propName);
+		byte[] data = prop.Serialize(propValue);
+		long sequence = netObj.GetSequenceForProp(prop.Name);
 
-		_batchBroadcasts.Add(new() { NetID = netID, PropName = propName, PropValueRaw = data, IsUnreliable = unreliable, ExcludePeer = -1, Sequence = sequence });
+		_batchBroadcasts.Add(new() { NetID = netID, PropName = prop.Name, PropValueRaw = data, IsUnreliable = unreliable, ExcludePeer = -1, Sequence = sequence });
 	}
 
 	public void NetSendAllPropUpdate(NetworkedObject netObj, int toPeerId)
@@ -374,17 +387,12 @@ public sealed partial class NetworkPropSync : Instance
 		RpcId(toPeerId, nameof(NetRecvPropUpdateBatch), netID, JsonSerializer.Serialize(propData, NetDataGenerationContext.Default.NetPropReplicateDataArray));
 	}
 
-	public void BroadcastPropUpdateToServer(NetworkedObject netObj, string propName, object? propValue, bool unreliable)
+	public void BroadcastPropUpdateToServer(NetworkedObject netObj, PropSyncProp prop, object? propValue, bool unreliable)
 	{
 		if (!netObj.IsNetworkReady) return;
 		if (!netObj.Root.IsLoaded) return;
 
-		PropertyInfo? propInfo = netObj.GetSyncProperty(propName);
-
-		if (propInfo == null) return;
-
-		// Check authority
-		if (!CheckPropHasAuthority(propInfo, netObj, NetService.LocalPeerID)) return;
+		if (!CheckPropHasAuthority(prop, netObj, NetService.LocalPeerID)) return;
 
 		if (propValue is NetworkedObject nobj)
 		{
@@ -395,15 +403,15 @@ public sealed partial class NetworkPropSync : Instance
 			}
 		}
 		string netID = netObj.NetworkedObjectID;
-		byte[] data = SerializePropValue(propValue);
+		byte[] data = prop.Serialize(propValue);
 
 		if (unreliable)
 		{
-			RpcId(1, nameof(NetRecvPropUpdateToServerUnreliable), netID, propName, data);
+			RpcId(1, nameof(NetRecvPropUpdateToServerUnreliable), netID, prop.Name, data);
 		}
 		else
 		{
-			RpcId(1, nameof(NetRecvPropUpdateToServer), netID, propName, data);
+			RpcId(1, nameof(NetRecvPropUpdateToServer), netID, prop.Name, data);
 		}
 	}
 
@@ -425,43 +433,39 @@ public sealed partial class NetworkPropSync : Instance
 
 		if (netObj != null)
 		{
-			PropertyInfo? propInfo = netObj.GetSyncProperty(propName);
+			PropSyncProp? entry = PropSyncRegistry.GetProp(netObj.GetType(), propName);
 
-			// Target property doesn't exist
-			if (propInfo == null) return;
+			if (entry == null) return;
 
-			if (CheckPropHasAuthority(propInfo, netObj, peerID))
+			if (CheckPropHasAuthority(entry, netObj, peerID))
 			{
-				// Mark -1 to ignore sequence
 				netObj.RecvPropUpdate(propName, propValueRaw, -1);
 				_batchBroadcasts.Add(new() { NetID = netObj.NetworkedObjectID, PropName = propName, PropValueRaw = propValueRaw, IsUnreliable = isUnreliable, ExcludePeer = peerID, Sequence = -1 });
 			}
 		}
 	}
 
-	public static bool CheckPropHasAuthority(PropertyInfo propInfo, NetworkedObject netObj, int peerID)
-	{
-		SyncVarAttribute? sv = propInfo.GetCustomAttribute<SyncVarAttribute>();
+	public static bool CheckPropHasAuthority(PropSyncProp prop, NetworkedObject netObj, int peerID) =>
+		CheckPropHasAuthority(prop.HasSyncVar, prop.AllowAuthorWrite, prop.ServerOnly, netObj, peerID);
 
+	private static bool CheckPropHasAuthority(bool hasSyncVar, bool allowAuthorWrite, bool serverOnly, NetworkedObject netObj, int peerID)
+	{
 		bool hasAuthority = false;
 
-		if (sv != null)
+		if (hasSyncVar)
 		{
-			if (sv.AllowAuthorWrite && netObj.NetworkAuthority == peerID)
+			if (allowAuthorWrite && netObj.NetworkAuthority == peerID)
 			{
-				// Has authority from AllowAuthorWrite
 				hasAuthority = true;
 			}
 
-			if (sv.ServerOnly && peerID != 1)
+			if (serverOnly && peerID != 1)
 			{
-				// Disallow if from non server
 				hasAuthority = false;
 			}
 		}
 		else
 		{
-			// Check normally via NetPropAuthority
 			hasAuthority = CheckAuthority(peerID, netObj.NetPropAuthority);
 		}
 
