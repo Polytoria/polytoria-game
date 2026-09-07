@@ -60,11 +60,6 @@ public sealed partial class Environment : Instance
 
 	private float _partDestroyHeight;
 	private bool _autoGenerateNavMesh;
-	private Lighting.SkyboxEnum _skybox = Lighting.SkyboxEnum.Day1;
-	private bool _fogEnabled = false;
-	private Color _fogColor = new(1, 1, 1);
-	private float _fogStartDistance = 0;
-	private float _fogEndDistance = 250;
 
 	private NavigationRegion3D _navRegion = null!;
 	private NavigationMesh _navMesh = null!;
@@ -111,66 +106,6 @@ public sealed partial class Environment : Instance
 		set
 		{
 			_autoGenerateNavMesh = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with Lighting.Skybox")]
-	public Lighting.SkyboxEnum Skybox
-	{
-		get => _skybox;
-		set
-		{
-			_skybox = value;
-			Lighting.Skybox = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with Lighting.FogEnabled")]
-	public bool FogEnabled
-	{
-		get => _fogEnabled;
-		set
-		{
-			_fogEnabled = value;
-			Lighting.FogEnabled = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with Lighting.FogColor")]
-	public Color FogColor
-	{
-		get => _fogColor;
-		set
-		{
-			_fogColor = value;
-			Lighting.FogColor = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with Lighting.FogStartDistance")]
-	public float FogStartDistance
-	{
-		get => _fogStartDistance;
-		set
-		{
-			_fogStartDistance = value;
-			Lighting.FogStartDistance = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with Lighting.FogEndDistance")]
-	public float FogEndDistance
-	{
-		get => _fogEndDistance;
-		set
-		{
-			_fogEndDistance = value;
-			Lighting.FogEndDistance = value;
 			OnPropertyChanged();
 		}
 	}

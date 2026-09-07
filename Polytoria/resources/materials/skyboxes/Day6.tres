@@ -5,15 +5,25 @@
 [resource]
 resource_name = "Day6"
 shader = ExtResource("1_8l7i4")
+
+shader_parameter/clock_time = 12.0
+
 shader_parameter/sun_disc_color = Color(1, 1, 1, 1)
-shader_parameter/sun_disc_multiplier = 100000.0
 shader_parameter/sun_disc_exponent = 500000.0
 shader_parameter/sun_halo_color = Color(0.911765, 0.864836, 0.770977, 1)
 shader_parameter/sun_halo_exponent = 500.0
 shader_parameter/sun_halo_contribution = 0.5
+
+shader_parameter/moon_disc_color = Color(0.80, 0.88, 1.0, 1)
+shader_parameter/moon_disc_exponent = 500000.0
+shader_parameter/moon_halo_color = Color(0.55, 0.65, 0.85, 1)
+shader_parameter/moon_halo_exponent = 500.0
+shader_parameter/moon_halo_contribution = 0.4
+
 shader_parameter/horizon_line_color = Color(1, 1, 1, 1)
 shader_parameter/horizon_line_exponent = 5.75
 shader_parameter/horizon_line_contribution = 0.3
+
 shader_parameter/sky_gradient_top = Color(0, 0.563373, 0.811321, 1)
 shader_parameter/sky_gradient_bottom = Color(0.467649, 0.845328, 0.877359, 1)
 shader_parameter/sky_gradient_exponent = 0.1

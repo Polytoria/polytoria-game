@@ -5,15 +5,25 @@
 [resource]
 resource_name = "Morning3"
 shader = ExtResource("1_c8mqi")
+
+shader_parameter/clock_time = 7.0
+
 shader_parameter/sun_disc_color = Color(1, 0.860446, 0.683824, 1)
-shader_parameter/sun_disc_multiplier = 100.0
 shader_parameter/sun_disc_exponent = 100000.0
 shader_parameter/sun_halo_color = Color(1, 0.584179, 0.264706, 1)
 shader_parameter/sun_halo_exponent = 50.0
 shader_parameter/sun_halo_contribution = 0.5
+
+shader_parameter/moon_disc_color = Color(0.75, 0.85, 1.0, 1)
+shader_parameter/moon_disc_exponent = 100000.0
+shader_parameter/moon_halo_color = Color(0.40, 0.55, 0.85, 1)
+shader_parameter/moon_halo_exponent = 50.0
+shader_parameter/moon_halo_contribution = 0.40
+
 shader_parameter/horizon_line_color = Color(0, 0, 0, 1)
 shader_parameter/horizon_line_exponent = 1.0
 shader_parameter/horizon_line_contribution = 0.0
+
 shader_parameter/sky_gradient_top = Color(0.639216, 0.686275, 0.741177, 1)
 shader_parameter/sky_gradient_bottom = Color(0.929412, 0.870588, 0.85098, 1)
 shader_parameter/sky_gradient_exponent = 4.0

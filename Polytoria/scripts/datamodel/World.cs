@@ -792,23 +792,48 @@ public sealed partial class World : Instance
 
 		// Sub childrens
 		Camera? camera = Environment.FindChild<Camera>("Camera");
-
 		if (camera == null)
 		{
 			camera = Globals.LoadInstance<Camera>(Root);
 			camera.NetworkParent = Environment;
 		}
 
-		SunLight? sunLight = Lighting.FindChild<SunLight>("SunLight");
-
-		if (sunLight == null)
+		SunLight? sun = Lighting.FindChild<SunLight>("SunLight");
+		if (sun == null)
 		{
-			sunLight = Globals.LoadInstance<SunLight>(Root);
-			sunLight.NetworkParent = Lighting;
+			sun = Globals.LoadInstance<SunLight>(Root);
+			sun.NetworkParent = Lighting;
+		}
+
+		MoonLight? moon = Lighting.FindChild<MoonLight>("MoonLight");
+		if (moon == null)
+		{
+			moon = Globals.LoadInstance<MoonLight>(Root);
+			moon.NetworkParent = Lighting;
+		}
+
+		Stars? stars = Lighting.FindChild<Stars>("Stars");
+		if (stars == null)
+		{
+			stars = Globals.LoadInstance<Stars>(Root);
+			stars.NetworkParent = Lighting;
+		}
+
+		Clouds? clouds = Lighting.FindChild<Clouds>("Clouds");
+		if (clouds == null)
+		{
+			clouds = Globals.LoadInstance<Clouds>(Root);
+			clouds.NetworkParent = Lighting;
+		}
+
+		Sky? sky = Lighting.FindChild<Sky>("Sky");
+		if (sky == null)
+		{
+			sky = Globals.LoadInstance<Sky>(Root);
+			sky.NetworkParent = Lighting;
 		}
 
 		Inventory? inventory = playerDefaults.FindChild<Inventory>("Inventory");
-
 		if (inventory == null)
 		{
 			inventory = Globals.LoadInstance<Inventory>(Root);
@@ -894,7 +919,11 @@ public sealed partial class World : Instance
 		}
 
 		environment.MoveChild(camera, 0);
-		lighting.MoveChild(sunLight, 0);
+		lighting.MoveChild(sun, 0);
+		lighting.MoveChild(moon, 1);
+		lighting.MoveChild(stars, 2);
+		lighting.MoveChild(clouds, 3);
+		lighting.MoveChild(sky, 4);
 		playerDefaults.MoveChild(inventory, 0);
 
 		environment.CurrentCamera = (Camera)environment.FindChildByClass("Camera")!;
