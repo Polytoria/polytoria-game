@@ -314,11 +314,24 @@ public partial class Dynamic : Instance
 	/// set this to false if you update them manually every frame via UpdateNetTransform()
 	/// </summary>
 	public bool AutoUpdateNetTransform { get; internal set; } = true;
+	private bool _overrideNetworkTransform = false;
 
 	/// <summary>
 	/// Set to true if transform will be overrided, essentially ignoring network transform
 	/// </summary>
-	public bool OverrideNetworkTransform { get; internal set; } = false;
+	public bool OverrideNetworkTransform
+	{
+		get => _overrideNetworkTransform;
+		internal set
+		{
+			if (value && !_overrideNetworkTransform)
+			{
+				_isDirty = false;
+				_lerpUnreliable = false;
+			}
+			_overrideNetworkTransform = value;
+		}
+	}
 
 	/// <summary>
 	/// Virtual function to notify when node size changed
