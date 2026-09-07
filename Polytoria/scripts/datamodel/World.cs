@@ -58,11 +58,10 @@ public sealed partial class World : Instance
 
 	public PTSignal Loaded { get; private set; } = new();
 
-	[Attributes.Obsolete("Use 'Hooks.Updated' instead.")]
-	[ScriptProperty]
+	[ScriptProperty, Attributes.Obsolete("Use 'Hooks.Updated' instead.")]
 	public PTSignal<double> Rendered { get; private set; } = new();
 
-	[ScriptProperty]
+	[ScriptProperty, Attributes.Obsolete("Use 'ScriptService.IsLocalTest' instead.")]
 	public bool IsLocalTest => _worldID == 0;
 
 	public SessionTypeEnum SessionType { get; set; } = SessionTypeEnum.Client;
@@ -209,13 +208,13 @@ public sealed partial class World : Instance
 		}
 	}
 
-	[ScriptProperty, Attributes.Obsolete("Use Players.PlayersCount instead")]
+	[ScriptProperty, Attributes.Obsolete("Use 'Players.PlayersCount' instead.")]
 	public int PlayersConnected => Players.PlayersCount;
 
 	[ScriptProperty]
 	public int InstanceCount { get; private set; } = 0;
 
-	[ScriptProperty, Attributes.Obsolete("Use InstanceCount instead")]
+	[ScriptProperty, Attributes.Obsolete("Use 'InstanceCount' instead.")]
 	public int LocalInstanceCount => InstanceCount;
 
 	[ScriptMethod]

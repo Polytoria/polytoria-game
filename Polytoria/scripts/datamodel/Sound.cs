@@ -81,7 +81,7 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Audio instead"), CloneIgnore]
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use 'Audio' instead."), CloneIgnore]
 	public int SoundID
 	{
 		get => _soundID;

@@ -71,6 +71,30 @@ public sealed partial class ScriptService : Instance
 
 	public LogDispatcher Logger { get; private set; } = null!;
 
+	/// <summary>
+	/// Returns whether the current session is running on the server.
+	/// </summary>
+	[ScriptProperty]
+	public bool IsServer => Root.Network?.IsServer ?? false;
+
+	/// <summary>
+	/// Returns whether the current session is running on the client.
+	/// </summary>
+	[ScriptProperty]
+	public bool IsClient => Root.SessionType == World.SessionTypeEnum.Client && !IsServer;
+
+	/// <summary>
+	/// Returns whether the current session is running on the creator.
+	/// </summary>
+	[ScriptProperty]
+	public bool IsCreator => Root.SessionType == World.SessionTypeEnum.Creator;
+
+	/// <summary>
+	/// Returns whether the current session is being tested locally.
+	/// </summary>
+	[ScriptProperty]
+	public bool IsLocalTest => Root.WorldID == 0;
+
 	public ScriptService()
 	{
 		if (Globals.UseNodes)

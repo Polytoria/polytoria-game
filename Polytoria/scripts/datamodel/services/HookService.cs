@@ -13,12 +13,39 @@ namespace Polytoria.Datamodel.Services;
 [Static("Hooks"), ExplorerExclude, SaveIgnore]
 public sealed partial class HookService : Instance
 {
+	/// <summary>
+	/// Fires every frame.
+	///
+	/// Used for general gameplay logic.
+	/// </summary>
+	/// <param name="delta">Time elapsed in seconds since the last frame.</param>
 	[ScriptProperty]
 	public PTSignal<double> Updated { get; private set; } = new();
+
+	/// <summary>
+	/// Fires before a frame is drawn.
+	///
+	/// Used for last moment visual adjustments, such as camera manipulation.
+	/// </summary>
+	/// <param name="delta">Time elapsed in seconds since the last frame.</param>
 	[ScriptProperty]
 	public PTSignal<double> PreRendered { get; private set; } = new();
+
+	/// <summary>
+	/// Fires after a frame is drawn.
+	///
+	/// Used to capture what was just drawn, such as for screenshots.
+	/// </summary>
+	/// <param name="delta">Time elapsed in seconds since the last frame.</param>
 	[ScriptProperty]
 	public PTSignal<double> PostRendered { get; private set; } = new();
+
+	/// <summary>
+	/// Fires at a fixed rate.
+	///
+	/// Used for physics and movement.
+	/// </summary>
+	/// <param name="delta">Time elapsed in seconds since the last physics update.</param>
 	[ScriptProperty]
 	public PTSignal<double> PhysicsUpdated { get; private set; } = new();
 

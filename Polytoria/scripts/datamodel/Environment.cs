@@ -115,7 +115,7 @@ public sealed partial class Environment : Instance
 		}
 	}
 
-	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with Lighting.Skybox")]
+	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with 'Lighting.Skybox'.")]
 	public Lighting.SkyboxEnum Skybox
 	{
 		get => _skybox;
@@ -127,7 +127,7 @@ public sealed partial class Environment : Instance
 		}
 	}
 
-	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with Lighting.FogEnabled")]
+	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with 'Lighting.FogEnabled'.")]
 	public bool FogEnabled
 	{
 		get => _fogEnabled;
@@ -139,7 +139,7 @@ public sealed partial class Environment : Instance
 		}
 	}
 
-	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with Lighting.FogColor")]
+	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with 'Lighting.FogColor'.")]
 	public Color FogColor
 	{
 		get => _fogColor;
@@ -151,7 +151,7 @@ public sealed partial class Environment : Instance
 		}
 	}
 
-	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with Lighting.FogStartDistance")]
+	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with 'Lighting.FogStartDistance'.")]
 	public float FogStartDistance
 	{
 		get => _fogStartDistance;
@@ -163,7 +163,7 @@ public sealed partial class Environment : Instance
 		}
 	}
 
-	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with Lighting.FogEndDistance")]
+	[Editable, ScriptProperty, Attributes.Obsolete("Replaced with 'Lighting.FogEndDistance'.")]
 	public float FogEndDistance
 	{
 		get => _fogEndDistance;
@@ -497,7 +497,7 @@ public sealed partial class Environment : Instance
 		return [.. intersects];
 	}
 
-	[ScriptMethod, Attributes.Obsolete("Explosion can be created using Instance.New('Explosion')")]
+	[ScriptMethod, Attributes.Obsolete("Explosion can be created using 'Instance.New(\"Explosion\")'.")]
 	public void CreateExplosion(Vector3 position, float radius = 10f, float force = 5000f, bool affectAnchored = true, PTCallback? callback = null, float damage = 10000f)
 	{
 		Explosion explod = New<Explosion>();
