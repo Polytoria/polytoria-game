@@ -169,9 +169,9 @@ public partial class SunRaysModifier : LightingModifier
 		}
 
 		ISettingsContext? settings =
-	#if CREATOR
+#if CREATOR
 		(ISettingsContext?)CreatorSettingsService.Instance ??
-	#endif
+#endif
 		ClientSettingsService.Instance;
 
 		GraphicsPreset preset = settings?.Get<GraphicsPreset>(SharedSettingKeys.Graphics.Preset) ?? GraphicsPreset.Medium;
