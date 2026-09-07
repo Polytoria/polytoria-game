@@ -5,15 +5,25 @@
 [resource]
 resource_name = "Night4"
 shader = ExtResource("1_f3kvk")
-shader_parameter/sun_disc_color = Color(1, 1, 1, 1)
-shader_parameter/sun_disc_multiplier = 500.0
+
+shader_parameter/clock_time = 0.0
+
+shader_parameter/sun_disc_color = Color(1.0, 0.80, 0.42, 1)
 shader_parameter/sun_disc_exponent = 250000.0
-shader_parameter/sun_halo_color = Color(0.047578, 0.808824, 0.714324, 1)
+shader_parameter/sun_halo_color = Color(0.85, 0.52, 0.12, 1)
 shader_parameter/sun_halo_exponent = 500.0
-shader_parameter/sun_halo_contribution = 0.5
+shader_parameter/sun_halo_contribution = 0.2
+
+shader_parameter/moon_disc_color = Color(1, 1, 1, 1)
+shader_parameter/moon_disc_exponent = 250000.0
+shader_parameter/moon_halo_color = Color(0.047578, 0.808824, 0.714324, 1)
+shader_parameter/moon_halo_exponent = 500.0
+shader_parameter/moon_halo_contribution = 0.5
+
 shader_parameter/horizon_line_color = Color(0.497297, 0.926471, 0.855435, 1)
 shader_parameter/horizon_line_exponent = 12.3
 shader_parameter/horizon_line_contribution = 0.121
+
 shader_parameter/sky_gradient_top = Color(0.027898, 0.049893, 0.088235, 1)
 shader_parameter/sky_gradient_bottom = Color(0.126838, 0.313387, 0.375, 1)
 shader_parameter/sky_gradient_exponent = 0.75

@@ -5,15 +5,25 @@
 [resource]
 resource_name = "Sunset3"
 shader = ExtResource("1_gdt4w")
+
+shader_parameter/clock_time = 18.5
+
 shader_parameter/sun_disc_color = Color(1, 1, 1, 1)
-shader_parameter/sun_disc_multiplier = 100000.0
 shader_parameter/sun_disc_exponent = 100000.0
 shader_parameter/sun_halo_color = Color(1, 0.378212, 0.108491, 1)
 shader_parameter/sun_halo_exponent = 100.0
 shader_parameter/sun_halo_contribution = 0.5
+
+shader_parameter/moon_disc_color = Color(0.80, 0.72, 1.0, 1)
+shader_parameter/moon_disc_exponent = 100000.0
+shader_parameter/moon_halo_color = Color(0.50, 0.35, 0.85, 1)
+shader_parameter/moon_halo_exponent = 100.0
+shader_parameter/moon_halo_contribution = 0.4
+
 shader_parameter/horizon_line_color = Color(1, 0.508856, 0.239216, 1)
 shader_parameter/horizon_line_exponent = 30.0
 shader_parameter/horizon_line_contribution = 1.0
+
 shader_parameter/sky_gradient_top = Color(0, 0, 0, 1)
 shader_parameter/sky_gradient_bottom = Color(0.384314, 0.133333, 0.203922, 1)
 shader_parameter/sky_gradient_exponent = 0.5

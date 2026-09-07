@@ -2,10 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+using System;
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Client.Settings;
+using Polytoria.Datamodel.Data;
 using Polytoria.Shared.Settings;
+using System.Collections.Generic;
 
 #if CREATOR
 using Polytoria.Creator;
@@ -22,11 +25,18 @@ public sealed partial class Lighting : Instance
 	private WorldEnvironment _worldEnv = null!;
 	internal Godot.Environment environment = null!;
 	private Godot.Sky _sky = null!;
+	internal CameraAttributesPractical cameraAttributes = null!;
 
-	private SkyboxEnum _skybox;
+	private readonly List<CelestialBody> _bodies = new();
+	private bool _syncingBody;
+	private float _clockTime = 12f;
+	private float _latitude = 41f;
+	private bool _followsClock = true;
+	private readonly Dictionary<CelestialBody, Action<string>> _bodyCallbacks = [];
 
 	public bool CustomSkyApplied { get; private set; }
 	private Sky? _currentSky;
+	private LightingPreset _currentPreset = LightingPreset.Custom;
 
 	public override Node CreateGDNode()
 	{
@@ -38,6 +48,18 @@ public sealed partial class Lighting : Instance
 		_worldEnv = (WorldEnvironment)GDNode;
 		environment = _worldEnv.Environment;
 		_sky = environment.Sky;
+		environment.BackgroundMode = Godot.Environment.BGMode.Sky;
+
+		cameraAttributes = new();
+		_worldEnv.CameraAttributes = cameraAttributes;
+
+		// Compatibility can't sample custom sky shaders for ambient (would produce pitch black)
+		if (RenderingDeviceSwitcher.GetCurrentDriverName() == RenderingDeviceSwitcher.GetRenderingName(RenderingDeviceSwitcher.RenderingDeviceEnum.GLCompatibility))
+		{
+			environment.AmbientLightSource = Godot.Environment.AmbientSource.Color;
+			environment.AmbientLightColor = new Color(0.3f, 0.3f, 0.35f);
+			environment.AmbientLightEnergy = 0.8f;
+		}
 
 #if CREATOR
 		if (CreatorSettingsService.Instance != null)
@@ -50,8 +72,14 @@ public sealed partial class Lighting : Instance
 			ApplyGraphicsSettings(ClientSettingsService.Instance);
 		}
 
-
-		UpdateSkybox();
+		if (Root.IsLoaded)
+		{
+			UpdateCelestialPositions();
+		}
+		else
+		{
+			Root.Loaded.Once(UpdateCelestialPositions);
+		}
 
 		base.Init();
 	}
@@ -97,41 +125,202 @@ public sealed partial class Lighting : Instance
 		CustomSkyApplied = true;
 		_sky.SkyMaterial = sky.SkyMaterial;
 		_currentSky = sky;
+		sky.Refresh();
+		if (Root.IsLoaded) ReevaluatePreset();
 	}
 
 	public void RemoveSky(Sky sky)
 	{
 		if (_currentSky != sky) { return; }
 		CustomSkyApplied = false;
-		UpdateSkybox();
 	}
 
-	public void UpdateSkybox()
+	public Sky? CurrentSky => _currentSky;
+	public IReadOnlyList<CelestialBody> Bodies => _bodies;
+
+	public void UpdateSky()
 	{
-		if (CustomSkyApplied)
+		if (_currentSky == null || !Root.IsLoaded) return;
+		_currentSky?.Refresh();
+		ReevaluatePreset();
+	}
+
+	public SunLight Sun => FindChild<SunLight>("SunLight")!;
+	public MoonLight Moon => FindChild<MoonLight>("MoonLight")!;
+	public Stars Stars => FindChild<Stars>("Stars")!;
+	public Clouds Clouds => FindChild<Clouds>("Clouds")!;
+
+	internal void RegisterBody(CelestialBody body)
+	{
+		_bodies.Add(body);
+		Action<string> callback = name => OnBodyPropertyChanged(body, name);
+		_bodyCallbacks[body] = callback;
+		body.PropertyChanged.Connect(callback);
+		SyncBodyToClock(body);
+	}
+
+	internal void UnregisterBody(CelestialBody body)
+	{
+		_bodies.Remove(body);
+		if (_bodyCallbacks.TryGetValue(body, out var callback))
 		{
-			return;
+			body.PropertyChanged.Disconnect(callback);
+			_bodyCallbacks.Remove(body);
 		}
-		_sky.SkyMaterial = Globals.LoadSkybox(_skybox.ToString());
+		UpdateSky();
 	}
 
-	[Editable, ScriptProperty]
-	public SkyboxEnum Skybox
+	private void OnBodyPropertyChanged(CelestialBody body, string propertyName)
 	{
-		get => _skybox;
-		set
+		if (propertyName != nameof(CelestialBody.Rotation) || _syncingBody || !body.IsPropReady) return;
+		if (!_followsClock) return;
+		float orbitOffset = body is SunLight ? 0f : 180f;
+		Vector3 expectedRot = ComputeArcRotation(_clockTime, _latitude, orbitOffset);
+		if (body.Rotation.IsEqualApprox(expectedRot)) return;
+		SyncClockFromBody(body);
+	}
+
+	internal bool IsSyncingBody(CelestialBody body) => _syncingBody;
+
+	internal void SyncBodyToClock(CelestialBody body)
+	{
+		if (!_followsClock || !(body is SunLight || body is MoonLight)) return;
+		float orbitOffset = body is SunLight ? 0f : 180f;
+		_syncingBody = true;
+		Vector3 rot = ComputeArcRotation(_clockTime, _latitude, orbitOffset);
+		body.Rotation = rot;
+		_syncingBody = false;
+	}
+
+	internal void SyncClockFromBody(CelestialBody body)
+	{
+		if (!(body is SunLight || body is MoonLight)) return;
+		float orbitOffset = body is SunLight ? 0f : 180f;
+		_followsClock = false;
+		_clockTime = ComputeClockFromRotation(body.Rotation, orbitOffset);
+		foreach (var other in _bodies)
 		{
-			_skybox = value;
-			UpdateSkybox();
+			if (other != body) SyncBodyToClock(other);
+		}
+		UpdateSky();
+	}
+
+	private void UpdateCelestialPositions()
+	{
+		foreach (var body in _bodies)
+		{
+			SyncBodyToClock(body);
+		}
+		UpdateSky();
+	}
+
+	// Builds a world "toward the sun" direction from clock time + latitude, then derives
+	// the Euler rotation whose light points along it
+	private static Vector3 ComputeArcRotation(float clockTime, float latitude, float orbitOffsetDeg)
+	{
+		float maxElevationDeg = Mathf.Clamp(90f - Mathf.Abs(latitude), 10f, 90f);
+
+		float phase = (clockTime / 24f) + (orbitOffsetDeg / 360f);
+		float phaseAngle = phase * Mathf.Tau;
+
+		float elevationRad = Mathf.DegToRad(maxElevationDeg) * Mathf.Cos(phaseAngle);
+		float azimuthRad = phaseAngle;
+
+		Vector3 towardSun = new(Mathf.Sin(azimuthRad) * Mathf.Cos(elevationRad), Mathf.Sin(elevationRad), Mathf.Cos(azimuthRad) * Mathf.Cos(elevationRad));
+		Vector3 lightTravelDirection = -towardSun;
+		Vector3 upHint = Mathf.Abs(lightTravelDirection.Y) > 0.99f ? Vector3.Back : Vector3.Up;
+		Basis basis = Basis.LookingAt(lightTravelDirection, upHint);
+		return basis.GetEuler() * (180f / Mathf.Pi);
+	}
+
+	private static float ComputeClockFromRotation(Vector3 rotationDegrees, float orbitOffsetDeg)
+	{
+		Vector3 rotationRad = rotationDegrees * (Mathf.Pi / 180f);
+		Basis basis = Basis.FromEuler(rotationRad);
+		Vector3 towardSun = basis.Z;
+		float azimuthRad = Mathf.Atan2(towardSun.X, towardSun.Z);
+		float clockTime = (azimuthRad - Mathf.DegToRad(orbitOffsetDeg)) / Mathf.Tau * 24f;
+		return ((clockTime % 24f) + 24f) % 24f;
+	}
+
+	// Highest elevation light-casting body
+	public CelestialBody? PrimaryLightBody
+	{
+		get
+		{
+			CelestialBody? best = null;
+			float bestElevation = float.NegativeInfinity;
+			foreach (var b in _bodies)
+			{
+				if (!b.CastsLight) continue;
+				float elevation = Mathf.Sin(Mathf.DegToRad(b.Rotation.X));
+				if (elevation > bestElevation)
+				{
+					bestElevation = elevation;
+					best = b;
+				}
+			}
+			return best;
 		}
 	}
 
 	private AmbientSourceEnum _ambientSource;
 	private Color _ambientColor;
-	private bool _fogEnabled;
-	private Color _fogColor;
-	private float _fogStartDistance;
-	private float _fogEndDistance;
+
+	[Editable, ScriptProperty]
+	public LightingPreset Preset
+	{
+		get => _currentPreset;
+		set
+		{
+			_currentPreset = value;
+			if (value != LightingPreset.Custom) _currentSky?.ApplyPreset(value);
+			OnPropertyChanged();
+		}
+	}
+
+	internal void ReevaluatePreset()
+	{
+		if (_currentSky == null) return;
+		_currentPreset = LightingPresets.FindMatchingPreset(_currentSky) ?? LightingPreset.Custom;
+		OnPropertyChanged(nameof(Preset));
+	}
+
+	[Editable, ScriptProperty]
+	public float ClockTime
+	{
+		get => _clockTime;
+		set
+		{
+			_clockTime = ((value % 24f) + 24f) % 24f;
+			UpdateCelestialPositions();
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float Latitude
+	{
+		get => _latitude;
+		set
+		{
+			_latitude = value;
+			UpdateCelestialPositions();
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool FollowsClock
+	{
+		get => _followsClock;
+		set
+		{
+			_followsClock = value;
+			if (value) UpdateCelestialPositions();
+			OnPropertyChanged();
+		}
+	}
 
 	[Editable, ScriptProperty]
 	public AmbientSourceEnum AmbientSource
@@ -160,127 +349,28 @@ public sealed partial class Lighting : Instance
 	}
 
 	[Editable, ScriptProperty]
-	public bool FogEnabled
+	public float Exposure
 	{
-		get => _fogEnabled;
+		get => environment.TonemapExposure;
 		set
 		{
-			_fogEnabled = value;
-			environment.FogEnabled = value;
+			environment.TonemapExposure = value;
 			OnPropertyChanged();
 		}
 	}
 
-	[Editable, ScriptProperty]
-	public Color FogColor
+	[ScriptMethod]
+	public string GetTimeOfDay()
 	{
-		get => _fogColor;
-		set
-		{
-			_fogColor = value;
-			environment.FogLightColor = value;
-			OnPropertyChanged();
-		}
+		int h = (int)_clockTime, m = (int)((_clockTime - h) * 60);
+		return $"{h:D2}:{m:D2}:00";
 	}
 
-	[Editable, ScriptProperty]
-	public float FogStartDistance
+	[ScriptMethod]
+	public void SetTimeOfDay(string time)
 	{
-		get => _fogStartDistance;
-		set
-		{
-			_fogStartDistance = value;
-			environment.FogDepthBegin = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
-	public float FogEndDistance
-	{
-		get => _fogEndDistance;
-		set
-		{
-			_fogEndDistance = value;
-			environment.FogDepthEnd = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty, Obsolete("Replaced with SunLight.Brightness")]
-	public float SunBrightness
-	{
-		get => Sun.Brightness;
-		set
-		{
-			Sun.Brightness = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty, Obsolete("Replaced with SunLight.Color")]
-	public Color SunColor
-	{
-		get => Sun.Color;
-		set
-		{
-			Sun.Color = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty, Obsolete("Replaced with SunLight.Shadows")]
-	public bool Shadows
-	{
-		get => Sun.Shadows;
-		set
-		{
-			Sun.Shadows = value;
-			OnPropertyChanged();
-		}
-	}
-
-
-	public SunLight Sun
-	{
-		get
-		{
-			SunLight? sun = FindChild<SunLight>("SunLight");
-
-			if (sun == null)
-			{
-				sun = Globals.LoadInstance<SunLight>(Root);
-				sun.Parent = this;
-			}
-
-			return sun;
-		}
-	}
-
-	[ScriptEnum("SkyboxPreset")]
-	public enum SkyboxEnum
-	{
-		Day1,
-		Day2,
-		Day3,
-		Day4,
-		Day5,
-		Day6,
-		Day7,
-		Morning1,
-		Morning2,
-		Morning3,
-		Morning4,
-		Night1,
-		Night2,
-		Night3,
-		Night4,
-		Night5,
-		Sunset1,
-		Sunset2,
-		Sunset3,
-		Sunset4,
-		Sunset5
+		var parts = time.Split(':');
+		ClockTime = int.Parse(parts[0]) + int.Parse(parts[1]) / 60f;
 	}
 
 	[ScriptEnum]
