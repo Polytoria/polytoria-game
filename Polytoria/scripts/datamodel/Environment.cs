@@ -481,7 +481,7 @@ public sealed partial class Environment : Instance
 		}
 
 		Godot.Collections.Array<Godot.Collections.Dictionary> results = spaceState.IntersectShape(query, MaxOverlaps);
-		List<Instance> intersects = [];
+		HashSet<Instance> intersects = [];
 
 		foreach (Godot.Collections.Dictionary result in results)
 		{
