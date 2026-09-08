@@ -57,7 +57,7 @@ public partial class NetworkedObject : IScriptObject
 		get => _networkParent;
 		set
 		{
-			if (value == _networkParent) return;
+			if (value == _networkParent || value == this) return;
 			if (_networkParent != null)
 			{
 				InvokeExitTree();

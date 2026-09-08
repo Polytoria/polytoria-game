@@ -1,5 +1,5 @@
 {
-  "Version": "2.0.12\u002Bdev",
+  "Version": "2.0.21\u002Bdev",
   "FileType": 0,
   "Objects": [
     {
@@ -351,6 +351,7 @@
               "Properties": {
                 "Visible": true,
                 "ZIndex": 0,
+                "AvoidCoreUI": false,
                 "Tags": []
               },
               "Children": [],
@@ -626,8 +627,10 @@
                         "Audio": "d3e89ca2-fdcb-40e4-b44b-dada777d3496",
                         "Volume": 0.5,
                         "Pitch": 1,
+                        "Pan": 0,
                         "Autoplay": false,
                         "Loop": false,
+                        "LoopStart": 0,
                         "PlayInWorld": true,
                         "Paused": false,
                         "MaxDistance": 60,
@@ -1076,6 +1079,7 @@
             "Stamina": 0,
             "MaxStamina": 3,
             "StaminaRegen": 1.2,
+            "KeepInventory": false,
             "UseHeadTurning": true,
             "UseBubbleChat": true,
             "AutoLoadAppearance": true,
@@ -1129,6 +1133,7 @@
           "ID": "1e50f39e-881b-4444-b137-2b90385018a5",
           "Properties": {
             "CtrlLockCursor": 1,
+            "ChatBubbleRenderDistance": 40,
             "UseUserCard": true,
             "UseChat": true,
             "UseHealthBar": true,
