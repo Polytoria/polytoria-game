@@ -388,7 +388,8 @@ public sealed partial class Environment : Instance
 			if (result.Count == 0) break;
 
 			Node collider = (Node)(GodotObject)result["collider"];
-			Instance? instance = ColliderToInstance(collider);
+			int shape = (int)result["shape"];
+			Instance? instance = ColliderToInstance(collider, shape);
 			Rid colliderRid = (Rid)result["rid"];
 			ignoreRids.Add(colliderRid);
 
