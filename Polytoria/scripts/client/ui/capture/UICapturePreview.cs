@@ -22,8 +22,14 @@ public partial class UICapturePreview : Control
 	[Export] private TextEdit _captionTextEdit = null!;
 	[Export] private AnimationPlayer _animPlay = null!;
 	[Export] private AnimationPlayer _shareAnimPlay = null!;
+	[Export] private Button _coreUiToggle = null!;
+	[Export] private Button _gameUiToggle = null!;
+	[Export] private VBoxContainer _layerLayout = null!;
 
 	private CaptureService _capture = null!;
+	private CaptureService.LayerSelection _selection;
+	private ImageTexture? _previewTexture;
+	private bool _finalized;
 
 	public override void _Ready()
 	{
@@ -34,13 +40,52 @@ public partial class UICapturePreview : Control
 		_saveBtn.Pressed += OnSaveBtnPressed;
 		_firstShareBtn.Pressed += OnFirstShareBtnPressed;
 		_shareBtn.Pressed += OnShareBtnPressed;
+		_coreUiToggle.Toggled += OnCoreUiToggled;
+		_gameUiToggle.Toggled += OnGameUiToggled;
 		base._Ready();
+	}
+
+	public override void _UnhandledInput(InputEvent @event)
+	{
+		if (Visible && @event.IsActionPressed("toggle_menu"))
+		{
+			Close();
+			GetViewport().SetInputAsHandled();
+		}
+		base._UnhandledInput(@event);
+	}
+
+	private void OnCoreUiToggled(bool pressed)
+	{
+		_selection = _selection with { CoreUi = pressed };
+		UpdatePreview();
+	}
+
+	private void OnGameUiToggled(bool pressed)
+	{
+		_selection = _selection with { GameUi = pressed };
+		UpdatePreview();
+	}
+
+	private void UpdatePreview()
+	{
+		_previewTexture?.Dispose();
+		_previewTexture = _capture.ComposePreview(_selection);
+		_pictureRect.Texture = _previewTexture;
+	}
+
+	private void FinalizeSave()
+	{
+		_finalized = true;
+		_capture.SaveCurrentPhoto(_selection);
+		_capture.PersistLayerPreferences(_selection);
 	}
 
 	private void OnShareBtnPressed()
 	{
+		FinalizeSave();
 		Close();
-		_capture.UploadCurrentPhoto(_captionTextEdit.Text);
+		_capture.UploadCurrentPhoto(_captionTextEdit.Text, _selection);
 	}
 
 	private void OnFirstShareBtnPressed()
@@ -52,8 +97,8 @@ public partial class UICapturePreview : Control
 
 	private void OnSaveBtnPressed()
 	{
-		_capture.SaveCurrentPhoto();
-		_capture.OpenCurrentPhotoFile();
+		FinalizeSave();
+		Close();
 	}
 
 	public void Open()
@@ -63,13 +108,34 @@ public partial class UICapturePreview : Control
 		_firstMenuPage.Visible = true;
 		_captionWritePage.Visible = false;
 		_shareBtn.GrabFocus();
-		_pictureRect.Texture = _capture.CurrentPhoto;
-		_saveBtn.Visible = _capture.CurrentPhotoPath == null;
+
+		_finalized = false;
+
+		bool coreAvailable = _capture.CoreUiLayer != null;
+		bool gameAvailable = _capture.GameUiLayer != null;
+		bool notYetSaved = _capture.CurrentPhotoPath == null;
+
+		_selection = new() { CoreUi = coreAvailable, GameUi = gameAvailable };
+		_coreUiToggle.ButtonPressed = _selection.CoreUi;
+		_gameUiToggle.ButtonPressed = _selection.GameUi;
+		_layerLayout.Visible = (coreAvailable || gameAvailable) && notYetSaved;
+
+		UpdatePreview();
+
+		_saveBtn.Visible = notYetSaved;
 		_animPlay.Play("appear");
 	}
 
 	public void Close()
 	{
+		if (!_finalized)
+		{
+			_capture.DiscardCurrentPhoto();
+		}
+
+		_previewTexture?.Dispose();
+		_previewTexture = null;
+
 		CoreUI.CoreUIActive = false;
 		_animPlay.Play("disappear");
 	}
