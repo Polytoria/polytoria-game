@@ -119,6 +119,10 @@ public partial class Dynamic : Instance
 			NodeSize = scale;
 			PropagateParentSizeChanged(oldN);
 			OnPropertyChanged();
+
+#if CREATOR
+			InvokeTransformChanged();
+#endif
 		}
 	}
 

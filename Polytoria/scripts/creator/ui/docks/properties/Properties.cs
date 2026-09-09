@@ -377,14 +377,35 @@ public sealed partial class Properties : TabContainer
 						oldValues[item] = property.GetValue(item);
 				}
 
+				// Apply first so enforcement runs, then check if anything actually changed.
+				foreach (NetworkedObject item in networkedObjects)
+				{
+					property.SetValue(item, val);
+				}
+
+				bool anyChanged = false;
+				foreach (NetworkedObject item in networkedObjects)
+				{
+					if (!Equals(property.GetValue(item), oldValues[item]))
+					{
+						anyChanged = true;
+						break;
+					}
+				}
+
+				object? enforcedVal = property.GetValue(networkedObjects[0]);
+				input.SetValue(enforcedVal);
+
+				if (!anyChanged) return;
+
 				history.NewAction($"Change property {property.Name}");
 				history.AddDoCallback(new((_) =>
 				{
 					foreach (NetworkedObject item in networkedObjects)
 					{
-						property.SetValue(item, val);
+						property.SetValue(item, enforcedVal);
 					}
-					input.SetValue(val);
+					input.SetValue(property.GetValue(networkedObjects[0]));
 				}));
 
 				history.AddUndoCallback(new((_) =>
@@ -393,7 +414,7 @@ public sealed partial class Properties : TabContainer
 					{
 						property.SetValue(item, oldValues[item]);
 					}
-					input.SetValue(oldValues[networkedObjects[0]]);
+					input.SetValue(property.GetValue(networkedObjects[0]));
 				}));
 
 				history.CommitAction();
