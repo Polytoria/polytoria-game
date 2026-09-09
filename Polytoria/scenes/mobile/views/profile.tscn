@@ -62,3 +62,14 @@ theme_override_constants/margin_bottom = 24
 layout_mode = 2
 horizontal_alignment = 1
 autowrap_mode = 3
+
+[node name="LogoutMargin" type="MarginContainer" parent="ScrollContainer/VBoxContainer" unique_id=1526839617]
+layout_mode = 2
+theme_override_constants/margin_left = 100
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 100
+theme_override_constants/margin_bottom = 0
+
+[node name="Button" type="Button" parent="ScrollContainer/VBoxContainer/LogoutMargin" unique_id=1701048513]
+layout_mode = 2
+text = "Log out"

@@ -13,7 +13,6 @@ public partial class NewUserSplash : Control
 	[Export] private Button _loginBtn = null!;
 	[Export] private Button _closeBtn = null!;
 
-
 	public override void _Ready()
 	{
 		_closeBtn.Visible = OS.IsDebugBuild();
