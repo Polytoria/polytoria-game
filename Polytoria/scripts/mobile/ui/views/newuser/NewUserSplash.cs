@@ -16,6 +16,8 @@ public partial class NewUserSplash : Control
 
 	public override void _Ready()
 	{
+		_closeBtn.Visible = OS.IsDebugBuild();
+
 		_registerBtn.Pressed += OnRegisterPressed;
 		_loginBtn.Pressed += OnLoginPressed;
 		_closeBtn.Pressed += OnClosePressed;
