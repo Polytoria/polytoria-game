@@ -426,7 +426,6 @@ public sealed partial class Environment : Instance
 		if (collider is CollisionObject3D col)
 		{
 			CollisionShape3D colshape = (CollisionShape3D)col.ShapeOwnerGetOwner(col.ShapeFindOwner(shape));
-			PT.Print(colshape);
 			Physical? p = null;
 			Physical.ShapeToPhysical.TryGetValue(colshape, out p);
 			instance = p;
