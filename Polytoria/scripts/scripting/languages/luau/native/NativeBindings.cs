@@ -162,9 +162,9 @@ internal partial class NativeBindings
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
 	internal static partial void lua_pushboolean(IntPtr L, int b);
 
-	[LibraryImport(LuaLibraryName, StringMarshalling = StringMarshalling.Utf8)]
+	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	internal static partial void lua_pushcclosurek(IntPtr L, LuaFunction fn, string? debugname, int nup, LuaContinuation? cont);
+	internal static partial void lua_pushcclosurek(IntPtr L, LuaFunction fn, IntPtr debugname, int nup, LuaContinuation? cont);
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
