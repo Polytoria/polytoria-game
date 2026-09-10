@@ -684,7 +684,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	{
 		_gdToProxy[target] = proxy.GetMethod(nameof(IScriptGDObject.FromGDClass), BindingFlags.Public | BindingFlags.Static);
 	}
-	
+
 	private static string BuildLog(LuaState lua)
 	{
 		int n = lua.GetTop();
