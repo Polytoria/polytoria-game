@@ -32,10 +32,10 @@ public class DefaultMovement : IPlayerMovement
 			Vector3 vertical = Target.Vertical;
 
 			Quaternion verticalize = new(facingRot.Y, vertical);
-			moveDirection = verticalize * (
+			moveDirection = (verticalize * (
 				(facingRot.Z * -forwardInput) +
 				(facingRot.X * (Input.GetActionStrength("rightward") - Input.GetActionStrength("leftward")))
-			).Slide(vertical).LimitLength(1);
+			)).Slide(vertical).LimitLength(1);
 
 			bool initialSprintOverride = Target.SprintOverride;
 			jump = Input.IsActionPressed("jump");
