@@ -966,15 +966,13 @@ public sealed partial class Camera : Dynamic
 
 	private void LimitRotation()
 	{
-		if (_targetRotation.X > 89)
+		if (!_targetRotation.IsFinite())
 		{
-			_targetRotation.X = 89;
+			_targetRotation = new Vector3(0, 180, 0);
 		}
 
-		if (_targetRotation.X < -89)
-		{
-			_targetRotation.X = -89;
-		}
+		_targetRotation.X = Mathf.Clamp(_targetRotation.X, -89, 89);
+		_targetRotation.Y = Mathf.Wrap(_targetRotation.Y, -180, 180);
 	}
 
 	[ScriptMethod]

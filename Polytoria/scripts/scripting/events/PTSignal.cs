@@ -54,6 +54,25 @@ public class PTSignal : IScriptObject
 		}
 	}
 
+	public void InvokeOne(object? arg)
+	{
+		if (_ptCallbacks == null) return;
+
+		for (int i = _ptCallbacks.Count - 1; i >= 0; i--)
+		{
+			PTCallback? cb = _ptCallbacks[i];
+			if (cb is null || cb.Disposed)
+			{
+				_ptCallbacks.RemoveAt(i);
+				if (cb is not null) _ptSet?.Remove(cb);
+				continue;
+			}
+
+			try { cb.InvokeOne(arg); }
+			catch (Exception ex) { GD.PushError("PTCallback Length: 1 : " + ex.ToString()); }
+		}
+	}
+
 	private static List<PTSignal> GetSignalListFromScript(Script s)
 	{
 		if (!_subscribedScripts.TryGetValue(s, out List<PTSignal>? signals))
@@ -104,13 +123,13 @@ public class PTSignal : IScriptObject
 
 	public void Connect(Action action)
 	{
-		PTCallback cb = new(_ => action()) { OriginalDelegate = action };
+		PTCallback cb = new(_ => action()) { OriginalDelegate = action, SingleAction = _ => action() };
 		Connect(cb);
 	}
 
 	public void Connect(Action<object> action)
 	{
-		PTCallback cb = new(args => action(args?.Length > 0 ? args[0]! : null!)) { OriginalDelegate = action };
+		PTCallback cb = new(args => action(args?.Length > 0 ? args[0]! : null!)) { OriginalDelegate = action, SingleAction = action };
 		Connect(cb);
 	}
 
