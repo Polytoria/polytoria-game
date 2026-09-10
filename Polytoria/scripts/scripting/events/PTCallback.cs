@@ -14,6 +14,7 @@ namespace Polytoria.Scripting;
 public class PTCallback(Action<object?[]> target) : IDisposable, IScriptObject
 {
 	public Delegate? OriginalDelegate = null!;
+	internal Action<object>? SingleAction;
 	public Action<object?[]> TargetAction = target;
 	public IScriptLanguageProvider LangProvider = null!;
 	public Script? FromScript;
@@ -32,9 +33,36 @@ public class PTCallback(Action<object?[]> target) : IDisposable, IScriptObject
 	public void InvokeDirect(object?[] args)
 	{
 		if (_disposed) return;
+		if (PT.IsMainThread() || !Globals.GDAvailable)
+		{
+			TargetAction.Invoke(args);
+			return;
+		}
 		PT.CallOnMainThread(() =>
 		{
 			TargetAction.Invoke(args);
+		});
+	}
+
+	internal void InvokeOne(object? arg)
+	{
+		if (_disposed) return;
+
+		if (PT.IsMainThread() || !Globals.GDAvailable)
+		{
+			if (SingleAction != null)
+			{
+				SingleAction(arg!);
+				return;
+			}
+
+			TargetAction.Invoke([arg]);
+			return;
+		}
+
+		PT.CallOnMainThread(() =>
+		{
+			TargetAction.Invoke([arg]);
 		});
 	}
 

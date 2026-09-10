@@ -1037,7 +1037,7 @@ public partial class NetworkedObject : IScriptObject
 	protected void OnPropertyChanged([CallerMemberName] string propertyName = "", bool syncToNet = true)
 	{
 		if (PropertyChanged.HasConnections)
-			PropertyChanged.Invoke(propertyName);
+			PropertyChanged.InvokeOne(propertyName);
 		if (syncToNet)
 			SyncPropToClients(propertyName);
 	}

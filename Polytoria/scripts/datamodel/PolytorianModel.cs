@@ -403,6 +403,8 @@ public sealed partial class PolytorianModel : CharacterModel
 			float target = kvp.Value;
 			float current = (float)AnimTree.Get(propName);
 
+			if (!float.IsFinite(current)) current = 0f;
+
 			float targetBlendSpeed = BlendSpeed;
 			float newValue;
 
@@ -618,6 +620,8 @@ public sealed partial class PolytorianModel : CharacterModel
 
 	public override void RecvBlendValue(CharacterModelBlendEnum blendName, float blendValue)
 	{
+		if (!float.IsFinite(blendValue)) return;
+
 		string propName = "";
 		switch (blendName)
 		{
@@ -646,6 +650,8 @@ public sealed partial class PolytorianModel : CharacterModel
 
 	public override void RecvSpeedValue(float speedValue)
 	{
+		if (!float.IsFinite(speedValue)) return;
+
 		if (AnimTree == null) return;
 		AnimTree.Set("parameters/TimeScale/scale", speedValue);
 	}
