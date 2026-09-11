@@ -106,6 +106,7 @@ public partial class Part : Entity
 	internal override void OnNodeSizeChanged(Vector3 newSize)
 	{
 		UpdateMeshSize();
+		ShapeChanged?.Invoke();
 		base.OnNodeSizeChanged(newSize);
 	}
 
