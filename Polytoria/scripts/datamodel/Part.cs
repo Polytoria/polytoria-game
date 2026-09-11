@@ -285,6 +285,14 @@ public partial class Part : Entity
 	protected override void OnVisibleChanged(bool v)
 	{
 		_mesh?.Visible = v;
+		if (v)
+		{
+			Root.Bridge.AddPart(this);
+		}
+		else
+		{
+			Root.Bridge.RemovePart(this);
+		}
 		base.OnVisibleChanged(v);
 	}
 
