@@ -460,14 +460,11 @@ public partial class Dynamic : Instance
 		}
 	}
 
-	[ScriptMethod]
-	public void RotateAround(Vector3 point, Vector3 axis, float angle)
+	private void RotateAroundBasis(Vector3 point, Basis rotation)
 	{
 		Transform3D transform = GetGlobalTransform();
 
 		transform.Origin -= point;
-
-		Basis rotation = new(axis.Normalized(), Mathf.DegToRad(angle));
 
 		transform.Basis = rotation * transform.Basis;
 		transform.Origin = rotation.Xform(transform.Origin);
@@ -483,6 +480,18 @@ public partial class Dynamic : Instance
 	}
 
 	[ScriptMethod]
+	public void RotateAround(Vector3 point, Vector3 axis, float angle)
+	{
+		RotateAroundBasis(point, new(axis.Normalized(), Mathf.DegToRad(angle)));
+	}
+
+	[ScriptMethod]
+	public void RotateAroundQuaternion(Vector3 point, Quaternion q)
+	{
+		RotateAroundBasis(point, new(q));
+	}
+
+	[ScriptMethod]
 	public void Rotate(Vector3 eulerAngles)
 	{
 		Vector3 radians = eulerAngles * Mathf.DegToRad(1.0f);
@@ -491,6 +500,16 @@ public partial class Dynamic : Instance
 		GDNode3D.RotateObjectLocal(Vector3.Up, radians.Y);
 		GDNode3D.RotateObjectLocal(Vector3.Back, radians.Z);
 
+		if (AutoUpdateNetTransform)
+		{
+			UpdateNetTransformReliable();
+		}
+	}
+
+	[ScriptMethod]
+	public void RotateQuaternion(Quaternion q)
+	{
+		GDNode3D.Basis = new Basis(q) * GDNode3D.Basis;
 		if (AutoUpdateNetTransform)
 		{
 			UpdateNetTransformReliable();
