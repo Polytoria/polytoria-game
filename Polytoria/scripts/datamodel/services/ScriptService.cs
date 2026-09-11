@@ -292,6 +292,7 @@ public sealed partial class ScriptService : Instance
 			return underlying == typeof(float)
 				|| underlying == typeof(int)
 				|| underlying == typeof(long)
+				|| underlying == typeof(uint)
 				|| underlying == typeof(short);
 
 		// Array target, check element type compatibility
@@ -456,6 +457,8 @@ public sealed partial class ScriptService : Instance
 				return (int)doubleValue;
 			if (underlayingType == typeof(long))
 				return (long)doubleValue;
+			if (underlayingType == typeof(uint))
+				return (uint)doubleValue;
 			if (underlayingType == typeof(short))
 				return (short)doubleValue;
 		}
@@ -610,6 +613,10 @@ public sealed partial class ScriptService : Instance
 		else if (elementType == typeof(long))
 		{
 			return list.Cast<long>().ToArray();
+		}
+		else if (elementType == typeof(uint))
+		{
+			return list.Cast<uint>().ToArray();
 		}
 		else if (elementType == typeof(object))
 		{

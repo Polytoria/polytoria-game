@@ -181,6 +181,7 @@ public partial class Dynamic : Instance
 		set
 		{
 			Quaternion q = value;
+			if (!q.IsFinite()) return;
 			GDNode3D.GlobalBasis = new(q);
 			if (AutoUpdateNetTransform)
 			{
@@ -197,6 +198,7 @@ public partial class Dynamic : Instance
 		set
 		{
 			Quaternion q = value;
+			if (!q.IsFinite()) return;
 			GDNode3D.Basis = new(q);
 			if (AutoUpdateNetTransform)
 			{
@@ -309,16 +311,32 @@ public partial class Dynamic : Instance
 	private Transform3D _currentTransform;
 	private bool _lerpUnreliable = false;
 
+	private Transform3D _lastNotifiedTransform;
+	private bool _hasNotifiedOnce;
+
 	/// <summary>
 	/// Set if netwwork transform will be update automatically once setter called
 	/// set this to false if you update them manually every frame via UpdateNetTransform()
 	/// </summary>
 	public bool AutoUpdateNetTransform { get; internal set; } = true;
+	private bool _overrideNetworkTransform = false;
 
 	/// <summary>
 	/// Set to true if transform will be overrided, essentially ignoring network transform
 	/// </summary>
-	public bool OverrideNetworkTransform { get; internal set; } = false;
+	public bool OverrideNetworkTransform
+	{
+		get => _overrideNetworkTransform;
+		internal set
+		{
+			if (value && !_overrideNetworkTransform)
+			{
+				_isDirty = false;
+				_lerpUnreliable = false;
+			}
+			_overrideNetworkTransform = value;
+		}
+	}
 
 	/// <summary>
 	/// Virtual function to notify when node size changed
@@ -336,7 +354,7 @@ public partial class Dynamic : Instance
 
 		if (_currentTransform != old)
 		{
-			InvokeTransformChanged();
+			InvokeTransformChanged(old);
 		}
 	}
 
@@ -355,11 +373,6 @@ public partial class Dynamic : Instance
 			_currentTransform = _netTransform;
 			_isFirstUpdate = false;
 			_isDirty = false;
-
-			// Reset velocity on snapped
-			if (this is Physical phy)
-				phy.Velocity = Vector3.Zero;
-
 			SetLocalTransform(_currentTransform);
 		}
 		else
@@ -591,7 +604,7 @@ public partial class Dynamic : Instance
 		{
 			if (_hasSyncedOnce)
 			{
-				InvokeTransformChanged();
+				InvokeTransformChanged(_currentTransform);
 			}
 			else
 			{
@@ -620,6 +633,7 @@ public partial class Dynamic : Instance
 	internal void UpdateTransformFromNet(TransformPayloadDto transform, bool isReliable, bool lerpTransform)
 	{
 		if (OverrideNetworkTransform) return;
+		Transform3D previous = _currentTransform;
 		Vector3 scale = GetLocalTransform().Basis.Scale;
 		_netTransform = new Transform3D(
 			new Basis(transform.Rotation).ScaledLocal(scale),
@@ -652,7 +666,7 @@ public partial class Dynamic : Instance
 			ReliableTransformChanged?.Invoke();
 		}
 
-		InvokeTransformChanged();
+		InvokeTransformChanged(previous);
 	}
 
 #if CREATOR
@@ -736,7 +750,7 @@ public partial class Dynamic : Instance
 	}
 #endif
 
-	internal void InvokeTransformChanged()
+	internal void InvokeTransformChanged(Transform3D? previous = null)
 	{
 #if CREATOR
 		if (Root.CreatorContext != null && Root.CreatorContext.Gizmos != null)
@@ -749,15 +763,43 @@ public partial class Dynamic : Instance
 		}
 #endif
 
+		bool moved = true;
+		bool rotated = true;
+		bool resized = true;
+
+		Transform3D current = GetLocalTransform();
+
+		if (previous != null && _hasNotifiedOnce)
+		{
+			moved = _lastNotifiedTransform.Origin.DistanceTo(current.Origin) > 0.001f;
+			rotated = _lastNotifiedTransform.Basis.GetRotationQuaternion().AngleTo(current.Basis.GetRotationQuaternion()) > 0.001f;
+			resized = (_lastNotifiedTransform.Basis.Scale - current.Basis.Scale).Length() > 0.001f;
+		}
+
 		// Notify transform change without sync to clients
-		OnPropertyChanged(nameof(Position), false);
-		OnPropertyChanged(nameof(Rotation), false);
-		OnPropertyChanged(nameof(Size), false);
-		OnPropertyChanged(nameof(LocalPosition), false);
-		OnPropertyChanged(nameof(LocalRotation), false);
-		OnPropertyChanged(nameof(LocalSize), false);
-		OnPropertyChanged(nameof(Quaternion), false);
-		OnPropertyChanged(nameof(LocalQuaternion), false);
+		if (moved)
+		{
+			OnPropertyChanged(nameof(Position), false);
+			OnPropertyChanged(nameof(LocalPosition), false);
+		}
+		if (rotated)
+		{
+			OnPropertyChanged(nameof(Rotation), false);
+			OnPropertyChanged(nameof(LocalRotation), false);
+			OnPropertyChanged(nameof(Quaternion), false);
+			OnPropertyChanged(nameof(LocalQuaternion), false);
+		}
+		if (resized)
+		{
+			OnPropertyChanged(nameof(Size), false);
+			OnPropertyChanged(nameof(LocalSize), false);
+		}
+
+		if (moved || rotated || resized)
+		{
+			_lastNotifiedTransform = current;
+			_hasNotifiedOnce = true;
+		}
 
 		TransformChanged?.Invoke();
 		foreach (Instance item in GetChildren())

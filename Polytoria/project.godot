@@ -29,7 +29,7 @@ warnings/check_invalid_track_paths=false
 [application]
 
 config/name="Polytoria"
-config/version="2.0.22"
+config/version="2.0.23"
 run/main_scene="uid://c2tql65t73ak5"
 config/use_custom_user_dir=true
 config/custom_user_dir_name="PolytoriaClient"
@@ -449,7 +449,6 @@ jolt_physics_3d/limits/max_bodies=131070
 
 occlusion_culling/bvh_build_quality=0
 textures/canvas_textures/default_texture_filter=2
-rendering_device/driver.windows="d3d12"
 renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true
 lights_and_shadows/directional_shadow/size.mobile=512

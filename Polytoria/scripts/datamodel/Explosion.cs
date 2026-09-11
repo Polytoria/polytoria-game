@@ -141,62 +141,65 @@ public partial class Explosion : Dynamic
 			}
 		}
 
-		Instance[] overlaps = Root.Environment.OverlapSphere(Position, Radius);
-
-		foreach (Instance item in overlaps)
+		if (Root.Network.IsServer)
 		{
-			Touched.Invoke(item);
+			Instance[] overlaps = Root.Environment.OverlapSphere(Position, Radius);
 
-			if (AffectPredicate != null)
+			foreach (Instance item in overlaps)
 			{
-				object?[] res = await AffectPredicate.Call(item);
-				if (!(res.Length == 1 && res[0] is bool b && b))
+				Touched.Invoke(item);
+
+				if (AffectPredicate != null)
 				{
-					continue;
-				}
-			}
-
-			if (item is Entity e && !item.IsDescendantOfClass("Accessory"))
-			{
-				if (e.Anchored && !AffectAnchored && AffectPredicate == null) continue;
-
-				RigidBody3D body = e.GDRigidBody;
-				Vector3 direction = body.GlobalTransform.Origin - GetGlobalTransform().Origin;
-				float distance = direction.Length();
-				bool unanchor = true;
-
-				direction = direction.Normalized();
-
-				if ((e.Size.X > Radius * 1.3 || e.Size.Y > Radius * 1.3 || e.Size.Z > Radius * 1.3) && AffectPredicate == null)
-				{
-					unanchor = false;
-				}
-
-				if (unanchor)
-				{
-					e.Anchored = false;
-				}
-
-				float forceMagnitude = Force * (1 - (distance / Radius));
-				Vector3 force = direction * forceMagnitude / 100;
-
-				body.ApplyCentralImpulse(force);
-
-				if (_affectWelds)
-				{
-					foreach (Weld w in Weld.GetWeldsFor(e))
+					object?[] res = await AffectPredicate.Call(item);
+					if (!(res.Length == 1 && res[0] is bool b && b))
 					{
-						if (w.Enabled)
-							w.Break();
+						continue;
 					}
 				}
-			}
-			else if (item is Player plr)
-			{
-				if (plr.IsDead) continue;
 
-				plr.TakeDamage(Damage);
-				AddPlrExplosionForce(plr);
+				if (item is Entity e && !item.IsDescendantOfClass("Accessory"))
+				{
+					if (e.Anchored && !AffectAnchored && AffectPredicate == null) continue;
+
+					RigidBody3D body = e.GDRigidBody;
+					Vector3 direction = body.GlobalTransform.Origin - GetGlobalTransform().Origin;
+					float distance = direction.Length();
+					bool unanchor = true;
+
+					direction = direction.Normalized();
+
+					if ((e.Size.X > Radius * 1.3 || e.Size.Y > Radius * 1.3 || e.Size.Z > Radius * 1.3) && AffectPredicate == null)
+					{
+						unanchor = false;
+					}
+
+					if (unanchor)
+					{
+						e.Anchored = false;
+					}
+
+					float forceMagnitude = Force * (1 - (distance / Radius));
+					Vector3 force = direction * forceMagnitude / 100;
+
+					body.ApplyCentralImpulse(force);
+
+					if (_affectWelds)
+					{
+						foreach (Weld w in Weld.GetWeldsFor(e))
+						{
+							if (w.Enabled)
+								w.Break();
+						}
+					}
+				}
+				else if (item is NPC npc)
+				{
+					if (npc.IsDead) continue;
+
+					npc.TakeDamage(Damage);
+					AddNPCExplosionForce(npc);
+				}
 			}
 		}
 
@@ -208,19 +211,22 @@ public partial class Explosion : Dynamic
 
 		await Globals.Singleton.WaitAsync(ExplosionParticleTimeSec);
 
-		Delete();
+		if (Root.Network.IsServer)
+		{
+			Delete();
+		}
 	}
 
-	private void AddPlrExplosionForce(Player player)
+	private void AddNPCExplosionForce(NPC npc)
 	{
 		float force = Force * 0.02f;
-		Vector3 dir = player.GetGlobalTransform().Origin - GetGlobalTransform().Origin;
+		Vector3 dir = npc.GetGlobalTransform().Origin - GetGlobalTransform().Origin;
 		float wearoff = 1 - (dir.Length() / (Radius * 2f));
 		wearoff = Mathf.Max(Mathf.Clamp(wearoff, 0, 1), 0.1f);
 		Vector3 f = dir.Normalized() * force;
 		f.X *= 1.5f;
 		f.Z *= 1.5f;
 
-		player.CharacterVelocity = f * wearoff;
+		npc.CharacterVelocity += f * wearoff;
 	}
 }

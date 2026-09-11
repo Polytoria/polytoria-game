@@ -54,6 +54,25 @@ public class PTSignal : IScriptObject
 		}
 	}
 
+	public void InvokeOne(object? arg)
+	{
+		if (_ptCallbacks == null) return;
+
+		for (int i = _ptCallbacks.Count - 1; i >= 0; i--)
+		{
+			PTCallback? cb = _ptCallbacks[i];
+			if (cb is null || cb.Disposed)
+			{
+				_ptCallbacks.RemoveAt(i);
+				if (cb is not null) _ptSet?.Remove(cb);
+				continue;
+			}
+
+			try { cb.InvokeOne(arg); }
+			catch (Exception ex) { GD.PushError("PTCallback Length: 1 : " + ex.ToString()); }
+		}
+	}
+
 	private static List<PTSignal> GetSignalListFromScript(Script s)
 	{
 		if (!_subscribedScripts.TryGetValue(s, out List<PTSignal>? signals))
@@ -104,13 +123,13 @@ public class PTSignal : IScriptObject
 
 	public void Connect(Action action)
 	{
-		PTCallback cb = new(_ => action()) { OriginalDelegate = action };
+		PTCallback cb = new(_ => action()) { OriginalDelegate = action, SingleAction = _ => action() };
 		Connect(cb);
 	}
 
 	public void Connect(Action<object> action)
 	{
-		PTCallback cb = new(args => action(args?.Length > 0 ? args[0]! : null!)) { OriginalDelegate = action };
+		PTCallback cb = new(args => action(args?.Length > 0 ? args[0]! : null!)) { OriginalDelegate = action, SingleAction = action };
 		Connect(cb);
 	}
 
@@ -129,6 +148,78 @@ public class PTSignal : IScriptObject
 		bool takesArray = paramCount == 1 && del.Method.GetParameters()[0].ParameterType == typeof(object[]);
 
 		PTCallback cb = new(args => del.DynamicInvoke(takesArray ? [args] : args)) { OriginalDelegate = del };
+		Connect(cb);
+	}
+
+	public void Connect<T>(Action<T> action)
+	{
+		if (_ptCallbacks?.Any(c => c.OriginalDelegate?.Equals(action) == true) == true)
+		{
+			GD.PushWarning("This delegate already exists");
+			return;
+		}
+
+		PTCallback cb = new(args =>
+		{
+			action((T)args[0]!);
+		})
+		{
+			OriginalDelegate = action
+		};
+		Connect(cb);
+	}
+
+	public void Connect<T1, T2>(Action<T1, T2> action)
+	{
+		if (_ptCallbacks?.Any(c => c.OriginalDelegate?.Equals(action) == true) == true)
+		{
+			GD.PushWarning("This delegate already exists");
+			return;
+		}
+
+		PTCallback cb = new(args =>
+		{
+			action((T1)args[0]!, (T2)args[1]!);
+		})
+		{
+			OriginalDelegate = action
+		};
+		Connect(cb);
+	}
+
+	public void Connect<T1, T2, T3>(Action<T1, T2, T3> action)
+	{
+		if (_ptCallbacks?.Any(c => c.OriginalDelegate?.Equals(action) == true) == true)
+		{
+			GD.PushWarning("This delegate already exists");
+			return;
+		}
+
+		PTCallback cb = new(args =>
+		{
+			action((T1)args[0]!, (T2)args[1]!, (T3)args[2]!);
+		})
+		{
+			OriginalDelegate = action
+		};
+		Connect(cb);
+	}
+
+	public void Connect<T1, T2, T3, T4>(Action<T1, T2, T3, T4> action)
+	{
+		if (_ptCallbacks?.Any(c => c.OriginalDelegate?.Equals(action) == true) == true)
+		{
+			GD.PushWarning("This delegate already exists");
+			return;
+		}
+
+		PTCallback cb = new(args =>
+		{
+			action((T1)args[0]!, (T2)args[1]!, (T3)args[2]!, (T4)args[3]!);
+		})
+		{
+			OriginalDelegate = action
+		};
 		Connect(cb);
 	}
 
@@ -167,6 +258,34 @@ public class PTSignal : IScriptObject
 		if (del is Action<object?[]> aArgs) { Disconnect(aArgs); return; }
 
 		var cb = _ptCallbacks?.FirstOrDefault(c => c.OriginalDelegate == del);
+		if (cb == null) return;
+		Disconnect(cb);
+	}
+
+	public void Disconnect<T>(Action<T> action)
+	{
+		var cb = _ptCallbacks?.FirstOrDefault(c => c.OriginalDelegate?.Equals(action) == true);
+		if (cb == null) return;
+		Disconnect(cb);
+	}
+
+	public void Disconnect<T1, T2>(Action<T1, T2> action)
+	{
+		var cb = _ptCallbacks?.FirstOrDefault(c => c.OriginalDelegate?.Equals(action) == true);
+		if (cb == null) return;
+		Disconnect(cb);
+	}
+
+	public void Disconnect<T1, T2, T3>(Action<T1, T2, T3> action)
+	{
+		var cb = _ptCallbacks?.FirstOrDefault(c => c.OriginalDelegate?.Equals(action) == true);
+		if (cb == null) return;
+		Disconnect(cb);
+	}
+
+	public void Disconnect<T1, T2, T3, T4>(Action<T1, T2, T3, T4> action)
+	{
+		var cb = _ptCallbacks?.FirstOrDefault(c => c.OriginalDelegate?.Equals(action) == true);
 		if (cb == null) return;
 		Disconnect(cb);
 	}
@@ -229,6 +348,22 @@ public class PTSignal : IScriptObject
 		Connect(cb);
 	}
 
+	public void Once(Action action)
+	{
+		PTCallback? cb = null;
+
+		cb = new PTCallback(_ =>
+		{
+			Disconnect(cb!);
+			action();
+		})
+		{
+			OriginalDelegate = action
+		};
+
+		Connect(cb);
+	}
+
 	public void Once(Action<object?[]> action)
 	{
 		PTCallback? cb = null;
@@ -253,6 +388,66 @@ public class PTSignal : IScriptObject
 			del.DynamicInvoke(args ?? []);
 		})
 		{ OriginalDelegate = del };
+		Connect(cb);
+	}
+
+	public void Once<T>(Action<T> action)
+	{
+		PTCallback? cb = null;
+		cb = new PTCallback(args =>
+		{
+			Disconnect(cb!);
+			action((T)args[0]!);
+		})
+		{
+			OriginalDelegate = action
+		};
+
+		Connect(cb);
+	}
+
+	public void Once<T1, T2>(Action<T1, T2> action)
+	{
+		PTCallback? cb = null;
+		cb = new PTCallback(args =>
+		{
+			Disconnect(cb!);
+			action((T1)args[0]!, (T2)args[1]!);
+		})
+		{
+			OriginalDelegate = action
+		};
+
+		Connect(cb);
+	}
+
+	public void Once<T1, T2, T3>(Action<T1, T2, T3> action)
+	{
+		PTCallback? cb = null;
+		cb = new PTCallback(args =>
+		{
+			Disconnect(cb!);
+			action((T1)args[0]!, (T2)args[1]!, (T3)args[2]!);
+		})
+		{
+			OriginalDelegate = action
+		};
+
+		Connect(cb);
+	}
+
+	public void Once<T1, T2, T3, T4>(Action<T1, T2, T3, T4> action)
+	{
+		PTCallback? cb = null;
+		cb = new PTCallback(args =>
+		{
+			Disconnect(cb!);
+			action((T1)args[0]!, (T2)args[1]!, (T3)args[2]!, (T4)args[3]!);
+		})
+		{
+			OriginalDelegate = action
+		};
+
 		Connect(cb);
 	}
 

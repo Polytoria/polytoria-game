@@ -277,16 +277,7 @@ public class NetworkInstance
 			else if (eventType == ENetConnection.EventType.Disconnect)
 			{
 				if (fromPeer == null) { PT.PrintWarn("Disconnect received but peer is null, return"); return; }
-				IdToPeer.TryRemove(peerID, out _);
-				PeerToId.TryRemove(fromPeer, out _);
-				if (IsServer)
-				{
-					EnqueueEvent(DeferredNetworkEvent.PeerDisconnected(peerID));
-				}
-				else
-				{
-					EnqueueEvent(DeferredNetworkEvent.ClientDisconnected());
-				}
+				HandlePeerDisconnected(peerID, fromPeer);
 			}
 			else if (eventType == ENetConnection.EventType.Receive)
 			{
@@ -391,6 +382,7 @@ public class NetworkInstance
 				else if (action.Force)
 				{
 					peer.PeerDisconnectNow();
+					HandlePeerDisconnected(action.TargetID, peer);
 				}
 				else
 				{
@@ -401,6 +393,20 @@ public class NetworkInstance
 			{
 				GD.PushError("Error processing queued action: ", ex);
 			}
+		}
+	}
+
+	private void HandlePeerDisconnected(int peerID, ENetPacketPeer peer)
+	{
+		IdToPeer.TryRemove(peerID, out _);
+		PeerToId.TryRemove(peer, out _);
+		if (IsServer)
+		{
+			EnqueueEvent(DeferredNetworkEvent.PeerDisconnected(peerID));
+		}
+		else
+		{
+			EnqueueEvent(DeferredNetworkEvent.ClientDisconnected());
 		}
 	}
 
