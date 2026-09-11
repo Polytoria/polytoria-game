@@ -282,9 +282,10 @@ public partial class Part : Entity
 		return new(center - worldExtents, worldExtents * 2);
 	}
 
-	protected override void OnVisibleChanged(bool v) {
+	protected override void OnVisibleChanged(bool v)
+	{
 		_mesh.Visible = v;
-		base.OnVisibleChanged();
+		base.OnVisibleChanged(v);
 	}
 
 	[ScriptEnum("PartShape")]
