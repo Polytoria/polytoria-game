@@ -208,6 +208,8 @@ public partial class Dynamic : Instance
 		}
 	}
 
+	protected virtual void OnVisibleChanged(bool v) { }
+
 	[Editable, ScriptProperty, DefaultValue(true)]
 	public bool Visible
 	{
@@ -215,6 +217,7 @@ public partial class Dynamic : Instance
 		set
 		{
 			GDNode3D.Visible = value;
+			OnVisibleChanged(value);
 			OnPropertyChanged();
 		}
 	}
