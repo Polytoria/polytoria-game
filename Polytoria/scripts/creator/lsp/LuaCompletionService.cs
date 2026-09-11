@@ -151,6 +151,20 @@ public class LuaCompletionService(CreatorSession session)
 
 		return items;
 	}
+
+	public async Task<CodeHoverResult> GetCodeHoverAsync(CodeHoverContext context, CancellationToken? cancelToken = null)
+	{
+		LspHover? rawHover = await _client.RequestHoverAsync(
+			context.ScriptPath,
+			context.Line,
+			context.Column,
+			cancelToken ?? CancellationToken.None);
+
+		return new()
+		{
+			Contents = rawHover?.Contents?.Value
+		};
+	}
 }
 
 public struct CodeEditCompletionItem
@@ -167,4 +181,16 @@ public struct CodeEditCompletionContext
 	public string Content { get; set; }
 	public int CursorLine { get; set; }
 	public int CursorColumn { get; set; }
+}
+
+public struct CodeHoverContext
+{
+	public string ScriptPath { get; set; }
+	public int Line { get; set; }
+	public int Column { get; set; }
+}
+
+public struct CodeHoverResult
+{
+	public string? Contents { get; set; }
 }

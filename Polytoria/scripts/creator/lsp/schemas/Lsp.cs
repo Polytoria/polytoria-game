@@ -199,6 +199,14 @@ public class LspCompletionParams
 	public LspCompletionContext? Context { get; set; }
 }
 
+public class LspHoverParams
+{
+	[JsonPropertyName("textDocument")]
+	public LspTextDocumentIdentifier? TextDocument { get; set; }
+	[JsonPropertyName("position")]
+	public LspPosition? Position { get; set; }
+}
+
 public class LspPosition
 {
 	[JsonPropertyName("line")]
@@ -250,6 +258,14 @@ public class LspCompletionItem
 
 	[JsonPropertyName("additionalTextEdits")]
 	public List<object>? AdditionalTextEdits { get; set; }
+}
+
+public class LspHover
+{
+	[JsonPropertyName("contents")]
+	public LspMarkupContent? Contents { get; set; }
+	[JsonPropertyName("range")]
+	public LspRange? Range { get; set; }
 }
 
 public class LspCompletionItemLabelDetails
@@ -433,7 +449,9 @@ public sealed class EmptyParams
 [JsonSerializable(typeof(LspDidCloseParams))]
 [JsonSerializable(typeof(LspTextDocumentContentChangeEvent[]))]
 [JsonSerializable(typeof(LspCompletionParams))]
+[JsonSerializable(typeof(LspHoverParams))]
 [JsonSerializable(typeof(List<LspCompletionItem>))]
+[JsonSerializable(typeof(LspHover))]
 [JsonSerializable(typeof(LspCompletionItem))]
 [JsonSerializable(typeof(LspCompletionItemLabelDetails))]
 [JsonSerializable(typeof(LspMarkupContent))]

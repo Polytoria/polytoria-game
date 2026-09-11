@@ -7,6 +7,7 @@ using Polytoria.Creator.LSP;
 using Polytoria.Creator.LSP.Schemas;
 using Polytoria.Creator.Settings;
 using Polytoria.Datamodel.Creator;
+using Polytoria.MDToBBCode;
 using Polytoria.Shared;
 using Polytoria.Shared.Settings;
 using System;
@@ -21,6 +22,7 @@ public partial class TextEditorRoot : Node
 {
 	private const string CodeCompletionIconPath = "res://assets/textures/creator/tabs/text_editor/code_completion/";
 	private const int DiagDelay = 500;
+	private const int TooltipHideDelayMS = 100;
 
 	[Export] public TextEditorField CodeEditor = null!;
 	public TextEditorContainer Container = null!;
@@ -31,6 +33,13 @@ public partial class TextEditorRoot : Node
 	[Export] private TextEditorFind _finder = null!;
 	[Export] private Label _diagLabel = null!;
 	[Export] private Label _statusBar = null!;
+
+	[Export] public TextEditorTooltip Tooltip = null!;
+
+	private int? _prevHoverLine = null;
+	private int? _prevHoverStartCol = null;
+	private int? _prevHoverEndCol = null;
+	private CancellationTokenSource? _hideTooltipCts;
 
 	public static Color ColorDanger { get; private set; } = Color.FromString("D77C79", Colors.White);
 	public static Color ColorOrange { get; private set; } = Color.FromString("E6A472", Colors.White);
@@ -96,6 +105,11 @@ public partial class TextEditorRoot : Node
 		ApplyIndentSettings();
 
 		CodeEditor.GuiInput += OnCodeEditGUIInput;
+		CodeEditor.SymbolHovered += OnSymbolHovered;
+		CodeEditor.MouseExited += OnCodeEditMouseExited;
+
+		Tooltip.MouseEntered += OnTooltipMouseEntered;
+		Tooltip.MouseExited += OnTooltipMouseExited;
 
 		CodeEditor.GuttersDrawLineNumbers = true;
 
@@ -220,6 +234,11 @@ public partial class TextEditorRoot : Node
 
 	private async void OnCodeEditGUIInput(InputEvent @event)
 	{
+		if (@event is InputEventMouseMotion mouseMotion)
+		{
+			OnMouseMotion(mouseMotion);
+		}
+
 		if (@event.IsActionPressed("save"))
 		{
 			CodeEditor.AcceptEvent();
@@ -248,6 +267,168 @@ public partial class TextEditorRoot : Node
 		{
 			UpdateStatusBar();
 		}
+	}
+
+	private void OnMouseMotion(InputEventMouseMotion mouseMotion)
+	{
+		if (_prevHoverLine is null)
+		{
+			return;
+		}
+
+		Vector2I mousePos = new((int)mouseMotion.Position.X, (int)mouseMotion.Position.Y);
+
+		// (-1, -1) is returned for going out of bounds.
+		Vector2I hovered = CodeEditor.GetLineColumnAtPos(mousePos, false);
+
+		int currentLine = hovered.Y;
+		int currentCol = hovered.X;
+
+		// Are we inside the boundaries of the currently displayed tooltip's symbol?
+		bool isInsideCachedSymbol = _prevHoverLine != -1 &&
+									currentLine == _prevHoverLine &&
+									currentCol >= _prevHoverStartCol &&
+									currentCol <= _prevHoverEndCol;
+
+		if (isInsideCachedSymbol)
+		{
+			// We moved, but we are still inside the "safe zone" of the symbol.
+			_hideTooltipCts?.Cancel();
+		}
+		else if (Tooltip.Visible)
+		{
+			// We are outside the symbol's boundaries. Start the hide timer.
+			StartDelayedHideTooltip();
+		}
+	}
+
+	private void OnTooltipMouseEntered()
+	{
+		_hideTooltipCts?.Cancel();
+	}
+
+	private void OnTooltipMouseExited()
+	{
+		if (!Tooltip.GetGlobalRect().HasPoint(Tooltip.GetGlobalMousePosition()))
+		{
+			StartDelayedHideTooltip();
+		}
+	}
+
+	private void OnCodeEditMouseExited()
+	{
+		StartDelayedHideTooltip();
+	}
+
+	private async void StartDelayedHideTooltip()
+	{
+		// Cancel and dispose of any previous cancellation tokens.
+		_hideTooltipCts?.Cancel();
+		_hideTooltipCts?.Dispose();
+		_hideTooltipCts = new();
+
+		try
+		{
+			await Task.Delay(TooltipHideDelayMS, _hideTooltipCts.Token);
+
+			Tooltip.Visible = false;
+			_prevHoverLine = null;
+		}
+		catch (TaskCanceledException)
+		{
+			return;
+		}
+	}
+
+	/// <summary>
+	/// Handles the event when a symbol is hovered in the code editor.
+	/// </summary>
+	/// <param name="symbol">The symbol being hovered over in the code editor.</param>
+	/// <param name="line">The zero-based line number where the mouse is located.</param>
+	/// <param name="column">The zero-based column number within the line where the mouse is located.</param>
+	private async void OnSymbolHovered(string symbol, long line, long column)
+	{
+		_hideTooltipCts?.Cancel();
+
+		int hoveredSymbolLine = (int)line;
+		int hoveredSymbolCol = (int)column;
+
+		if (hoveredSymbolLine == _prevHoverLine &&
+			hoveredSymbolCol >= _prevHoverStartCol &&
+			hoveredSymbolCol <= _prevHoverEndCol)
+		{
+			return;
+		}
+
+		// Instantly hide tooltip if mouse goes out of the previous symbol's range
+		string lineText = CodeEditor.GetLine(hoveredSymbolLine);
+		bool isHoveringValidChar = false;
+
+		if (lineText.Length > 0 && hoveredSymbolCol >= 0 && hoveredSymbolCol < lineText.Length)
+		{
+			isHoveringValidChar = char.IsLetterOrDigit(lineText[hoveredSymbolCol]) || lineText[hoveredSymbolCol] == '_';
+		}
+
+		if (!isHoveringValidChar)
+		{
+			Tooltip.Visible = false;
+			_prevHoverLine = null;
+			return;
+		}
+
+		// In case the LSP is not ready yet, don't do anything.
+		if (_completion == null)
+		{
+			PT.Print("Code Completion Service is not ready.");
+			return;
+		}
+
+		// Get the hover info
+		CodeHoverContext context = new()
+		{
+			ScriptPath = Container.TargetFilePathAbsolute,
+			Line = hoveredSymbolLine,
+			Column = hoveredSymbolCol,
+		};
+
+		CodeHoverResult hoverResult = await _completion.GetCodeHoverAsync(context);
+		string? tooltipDisplayMD = hoverResult.Contents;
+
+		if (tooltipDisplayMD == null)
+		{
+			return;
+		}
+
+		int startCol = hoveredSymbolCol;
+		int endCol = hoveredSymbolCol;
+
+		// Only calculate if the mouse is actually over text, not empty space past the line end
+		if (lineText.Length > 0 && hoveredSymbolCol < lineText.Length)
+		{
+			// Walk backwards from the mouse until we hit a space or symbol,
+			// or we reach the beginning
+			while (startCol > 0 && (char.IsLetterOrDigit(lineText[startCol]) || lineText[startCol] == '_'))
+			{
+				startCol--;
+			}
+
+			// Walk forwards from the mouse until we hit a space or symbol,
+			// or we reach the end
+			while (endCol < lineText.Length && (char.IsLetterOrDigit(lineText[endCol]) || lineText[endCol] == '_'))
+			{
+				endCol++;
+			}
+		}
+
+		_prevHoverLine = hoveredSymbolLine;
+		_prevHoverStartCol = startCol;
+		_prevHoverEndCol = endCol;
+
+		string tooltipDisplay = Conversions.MarkdownToBBCode(tooltipDisplayMD);
+
+		Rect2 hoveredCharDimensions = CodeEditor.GetRectAtLineColumn(hoveredSymbolLine, hoveredSymbolCol);
+		Rect2 globalCharDimensions = new(CodeEditor.GlobalPosition + hoveredCharDimensions.Position, hoveredCharDimensions.Size);
+		Tooltip.UpdateTooltip(tooltipDisplay, globalCharDimensions);
 	}
 
 	private void InitSyntaxHighlighter(FileTypeEnum fileType)

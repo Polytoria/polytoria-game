@@ -7,7 +7,6 @@ using Polytoria.Shared;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,7 +34,7 @@ public class LspClient(Stream input, Stream output) : LspClientBase(input, outpu
 					},
 					Hover = new()
 					{
-						ContentFormat = ["plaintext"]
+						ContentFormat = ["markdown"]
 					},
 					Synchronization = new()
 					{
@@ -114,6 +113,17 @@ public class LspClient(Stream input, Stream output) : LspClientBase(input, outpu
 		}, cancellationToken);
 
 		return rawResult.Deserialize(LspJsonContext.Default.LspCompletionItemArray);
+	}
+
+	public async Task<LspHover?> RequestHoverAsync(string path, int line, int character, CancellationToken cancellationToken)
+	{
+		JsonElement rawResult = await SendRequestAsync<JsonElement>("textDocument/hover", new LspHoverParams
+		{
+			TextDocument = new() { Uri = LspHelper.PathToUri(path) },
+			Position = new() { Line = line, Character = character }
+		}, cancellationToken);
+
+		return rawResult.Deserialize(LspJsonContext.Default.LspHover);
 	}
 
 	protected override void HandleServerNotification(string method, JsonElement param)
