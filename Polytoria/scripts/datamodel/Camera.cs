@@ -229,7 +229,7 @@ public sealed partial class Camera : Dynamic
 		}
 	}
 
-	[Editable, ScriptProperty]
+	[ScriptProperty, CloneIgnore, SaveIgnore]
 	public Quaternion QuaternionOffset
 	{
 		get => _rotationOffset;
