@@ -199,6 +199,7 @@ public sealed partial class CaptureService : Instance
 			clone.Visible = true;
 			clone.Parent = guiOverlay;
 			guiOverlay.Parent = this;
+			((Control)guiOverlay.GDNode).Visible = true;
 
 			// Wait one frame for all node control to init
 			await Globals.Singleton.WaitFrame();
