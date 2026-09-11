@@ -163,7 +163,7 @@ public sealed partial class CaptureService : Instance
 	}
 
 	[ScriptMethod]
-	public async Task TakePhotoAtQuaternion(Vector3 pos, Quaternion rot, Vector2? photoSize = null, UIField? overlay = null)
+	public async Task TakePhotoAt(Vector3 pos, Quaternion rot, Vector2? photoSize = null, UIField? overlay = null)
 	{
 		if (_debounce) throw new Exception("TakePhoto is on cooldown");
 		if (!CanCapture)

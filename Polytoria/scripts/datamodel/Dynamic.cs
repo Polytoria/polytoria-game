@@ -486,7 +486,7 @@ public partial class Dynamic : Instance
 	}
 
 	[ScriptMethod]
-	public void RotateAroundQuaternion(Vector3 point, Quaternion q)
+	public void RotateAround(Vector3 point, Quaternion q)
 	{
 		RotateAroundBasis(point, new(q));
 	}
@@ -507,7 +507,7 @@ public partial class Dynamic : Instance
 	}
 
 	[ScriptMethod]
-	public void RotateQuaternion(Quaternion q)
+	public void Rotate(Quaternion q)
 	{
 		GDNode3D.Basis = new Basis(q) * GDNode3D.Basis;
 		if (AutoUpdateNetTransform)
