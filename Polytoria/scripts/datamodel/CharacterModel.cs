@@ -77,7 +77,7 @@ public partial class CharacterModel : Dynamic
 	[Editable, ScriptProperty]
 	public bool Visible
 	{
-		get => return GDNode3D.Visible;
+		get => GDNode3D.Visible;
 		set
 		{
 			GDNode3D.Visible = value;
