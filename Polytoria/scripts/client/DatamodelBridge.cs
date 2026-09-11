@@ -164,7 +164,7 @@ public partial class DatamodelBridge : Node3D
 			bool shouldBatch = IsPartEligible(part);
 			ChunkKey newKey = shouldBatch ? GetKeyForPart(part) : default;
 
-			if (shouldBatch)
+			if (shouldBatch && part.Visible)
 			{
 				if (!inBatch)
 				{
