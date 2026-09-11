@@ -450,13 +450,12 @@ public sealed partial class Environment : Instance
 	}
 
 	[ScriptMethod]
-	public Instance[] OverlapBox(Vector3 pos, Vector3 size, Vector3 rot, Instance[]? ignoreList = null)
+	public Instance[] OverlapBoxQuaternion(Vector3 pos, Vector3 size, Quaternion q, Instance[]? ignoreList = null)
 	{
 		Transform3D t = new()
 		{
 			Origin = pos
 		};
-		Quaternion q = Quaternion.FromEuler(rot.FlipEuler());
 		Basis basis = new(q);
 		t.Basis = basis;
 		t = t.Scaled(Vector3.One);
@@ -470,6 +469,12 @@ public sealed partial class Environment : Instance
 		};
 
 		return PerformOverlap(ignoreList, query);
+	}
+
+	[ScriptMethod]
+	public Instance[] OverlapBox(Vector3 pos, Vector3 size, Vector3 rot, Instance[]? ignoreList = null)
+	{
+		return OverlapBoxQuaternion(pos, size, Quaternion.FromEuler(rot.FlipEuler()), ignoreList);
 	}
 
 	private Instance[] PerformOverlap(Instance[]? ignoreList, PhysicsShapeQueryParameters3D query)
