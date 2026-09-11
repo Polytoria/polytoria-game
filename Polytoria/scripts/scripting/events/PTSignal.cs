@@ -139,7 +139,7 @@ public class PTSignal : IScriptObject
 			GD.PushWarning("This delegate already exists");
 			return;
 		}
-		
+
 		PTCallback cb = new(args =>
 		{
 			action((T)args[0]!);
