@@ -163,6 +163,92 @@ public sealed partial class CaptureService : Instance
 	}
 
 	[ScriptMethod]
+	public async Task TakePhotoAtQuaternion(Vector3 pos, Quaternion rot, Vector2? photoSize = null, UIField? overlay = null)
+	{
+		if (_debounce) throw new Exception("TakePhoto is on cooldown");
+		if (!CanCapture)
+		{
+			Root.CoreUI.CoreUI.NotificationCenter.FireMessage("Capture is disabled at this time");
+			return;
+		}
+		_debounce = true;
+		PrePhotoTake();
+
+		overlay ??= DefaultCaptureOverlay;
+
+		CurrentPhotoPath = null;
+		SubViewport subview = new();
+		Node3D pivot = new();
+		Camera3D cam = new();
+
+		Camera3D activeCam = GDNode.GetViewport().GetCamera3D();
+
+		cam.Fov = activeCam.Fov;
+		cam.Projection = activeCam.Projection;
+
+		pivot.AddChild(cam);
+		subview.AddChild(pivot);
+		GDNode.AddChild(subview, @internal: Node.InternalMode.Back);
+
+		GUI? guiOverlay = null;
+
+		if (overlay != null)
+		{
+			guiOverlay = New<GUI>();
+			UIField clone = (UIField)overlay.Clone();
+			clone.Visible = true;
+			clone.Parent = guiOverlay;
+			guiOverlay.Parent = this;
+
+			// Wait one frame for all node control to init
+			await Globals.Singleton.WaitFrame();
+
+			// Override parent check for visible
+			foreach (Instance des in guiOverlay.GetDescendants())
+			{
+				if (des is UIField field)
+				{
+					field.OverrideParentCheck = true;
+					field.RecomputeVisible();
+				}
+			}
+
+			guiOverlay.GDNode.Reparent(subview);
+		}
+
+		pivot.GlobalPosition = pos;
+		pivot.GlobalBasis = new(rot);
+		cam.RotationDegrees = new Vector3(0, 0, 0);
+		if (photoSize != null && photoSize != Vector2.Zero && !(photoSize > _photoSizeLimit))
+		{
+			subview.Size = (Vector2I)photoSize;
+		}
+		else
+		{
+			subview.Size = Globals.Singleton.GetWindow().Size;
+		}
+
+		subview.RenderTargetClearMode = SubViewport.ClearMode.Once;
+		subview.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+
+		await Globals.Singleton.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+
+		guiOverlay?.Delete();
+
+		Image img = subview.GetTexture().GetImage();
+		img.FixAlphaEdges();
+		img.GenerateMipmaps();
+
+
+		CurrentPhoto?.Dispose();
+		CurrentPhoto = ImageTexture.CreateFromImage(img);
+
+		subview.QueueFree();
+
+		PostPhotoTaken();
+	}
+
+	[ScriptMethod]
 	public async Task TakePhotoAt(Vector3 pos, Vector3 rot, Vector2? photoSize = null, UIField? overlay = null)
 	{
 		if (_debounce) throw new Exception("TakePhoto is on cooldown");
