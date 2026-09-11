@@ -151,6 +151,78 @@ public class PTSignal : IScriptObject
 		Connect(cb);
 	}
 
+	public void Connect<T>(Action<T> action)
+	{
+		if (_ptCallbacks?.Any(c => c.OriginalDelegate?.Equals(action) == true) == true)
+		{
+			GD.PushWarning("This delegate already exists");
+			return;
+		}
+
+		PTCallback cb = new(args =>
+		{
+			action((T)args[0]!);
+		})
+		{
+			OriginalDelegate = action
+		};
+		Connect(cb);
+	}
+
+	public void Connect<T1, T2>(Action<T1, T2> action)
+	{
+		if (_ptCallbacks?.Any(c => c.OriginalDelegate?.Equals(action) == true) == true)
+		{
+			GD.PushWarning("This delegate already exists");
+			return;
+		}
+
+		PTCallback cb = new(args =>
+		{
+			action((T1)args[0]!, (T2)args[1]!);
+		})
+		{
+			OriginalDelegate = action
+		};
+		Connect(cb);
+	}
+
+	public void Connect<T1, T2, T3>(Action<T1, T2, T3> action)
+	{
+		if (_ptCallbacks?.Any(c => c.OriginalDelegate?.Equals(action) == true) == true)
+		{
+			GD.PushWarning("This delegate already exists");
+			return;
+		}
+
+		PTCallback cb = new(args =>
+		{
+			action((T1)args[0]!, (T2)args[1]!, (T3)args[2]!);
+		})
+		{
+			OriginalDelegate = action
+		};
+		Connect(cb);
+	}
+
+	public void Connect<T1, T2, T3, T4>(Action<T1, T2, T3, T4> action)
+	{
+		if (_ptCallbacks?.Any(c => c.OriginalDelegate?.Equals(action) == true) == true)
+		{
+			GD.PushWarning("This delegate already exists");
+			return;
+		}
+
+		PTCallback cb = new(args =>
+		{
+			action((T1)args[0]!, (T2)args[1]!, (T3)args[2]!, (T4)args[3]!);
+		})
+		{
+			OriginalDelegate = action
+		};
+		Connect(cb);
+	}
+
 	[ScriptMethod]
 	public void Disconnect(PTCallback action)
 	{
