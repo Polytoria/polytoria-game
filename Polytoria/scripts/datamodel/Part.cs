@@ -284,7 +284,7 @@ public partial class Part : Entity
 
 	protected override void OnVisibleChanged(bool v)
 	{
-		_mesh.Visible = v;
+		_mesh?.Visible = v;
 		base.OnVisibleChanged(v);
 	}
 
