@@ -262,6 +262,34 @@ public class PTSignal : IScriptObject
 		Disconnect(cb);
 	}
 
+	public void Disconnect<T>(Action<T> action)
+	{
+		var cb = _ptCallbacks?.FirstOrDefault(c => c.OriginalDelegate?.Equals(action) == true);
+		if (cb == null) return;
+		Disconnect(cb);
+	}
+
+	public void Disconnect<T1, T2>(Action<T1, T2> action)
+	{
+		var cb = _ptCallbacks?.FirstOrDefault(c => c.OriginalDelegate?.Equals(action) == true);
+		if (cb == null) return;
+		Disconnect(cb);
+	}
+
+	public void Disconnect<T1, T2, T3>(Action<T1, T2, T3> action)
+	{
+		var cb = _ptCallbacks?.FirstOrDefault(c => c.OriginalDelegate?.Equals(action) == true);
+		if (cb == null) return;
+		Disconnect(cb);
+	}
+
+	public void Disconnect<T1, T2, T3, T4>(Action<T1, T2, T3, T4> action)
+	{
+		var cb = _ptCallbacks?.FirstOrDefault(c => c.OriginalDelegate?.Equals(action) == true);
+		if (cb == null) return;
+		Disconnect(cb);
+	}
+
 	[ScriptMetamethod(ScriptObjectMetamethod.ToString)]
 	public static string ToString(PTSignal? _)
 	{
@@ -320,6 +348,22 @@ public class PTSignal : IScriptObject
 		Connect(cb);
 	}
 
+	public void Once(Action action)
+	{
+		PTCallback? cb = null;
+
+		cb = new PTCallback(_ =>
+		{
+			Disconnect(cb!);
+			action();
+		})
+		{
+			OriginalDelegate = action
+		};
+
+		Connect(cb);
+	}
+
 	public void Once(Action<object?[]> action)
 	{
 		PTCallback? cb = null;
@@ -344,6 +388,66 @@ public class PTSignal : IScriptObject
 			del.DynamicInvoke(args ?? []);
 		})
 		{ OriginalDelegate = del };
+		Connect(cb);
+	}
+
+	public void Once<T>(Action<T> action)
+	{
+		PTCallback? cb = null;
+		cb = new PTCallback(args =>
+		{
+			Disconnect(cb!);
+			action((T)args[0]!);
+		})
+		{
+			OriginalDelegate = action
+		};
+
+		Connect(cb);
+	}
+
+	public void Once<T1, T2>(Action<T1, T2> action)
+	{
+		PTCallback? cb = null;
+		cb = new PTCallback(args =>
+		{
+			Disconnect(cb!);
+			action((T1)args[0]!, (T2)args[1]!);
+		})
+		{
+			OriginalDelegate = action
+		};
+
+		Connect(cb);
+	}
+
+	public void Once<T1, T2, T3>(Action<T1, T2, T3> action)
+	{
+		PTCallback? cb = null;
+		cb = new PTCallback(args =>
+		{
+			Disconnect(cb!);
+			action((T1)args[0]!, (T2)args[1]!, (T3)args[2]!);
+		})
+		{
+			OriginalDelegate = action
+		};
+
+		Connect(cb);
+	}
+
+	public void Once<T1, T2, T3, T4>(Action<T1, T2, T3, T4> action)
+	{
+		PTCallback? cb = null;
+		cb = new PTCallback(args =>
+		{
+			Disconnect(cb!);
+			action((T1)args[0]!, (T2)args[1]!, (T3)args[2]!, (T4)args[3]!);
+		})
+		{
+			OriginalDelegate = action
+		};
+
 		Connect(cb);
 	}
 
