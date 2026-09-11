@@ -12,19 +12,14 @@ using static Polytoria.DocsGen.APIReferenceGenerator;
 
 namespace Polytoria.DocsGen;
 
-public class LuaDefinitionGenerator
+public static class LuaDefinitionGenerator
 {
 	private const string CodeHintPath = "res://modules/creator/codehint/luau/";
-	private static readonly string[] SkippedMetamethods = ["__iter"];
 
 	public static void GenerateDocFiles(string atFolder)
 	{
 		// Clear old lua folder
-		string[] files = Directory.GetFiles(atFolder);
-
-		APIReferenceRoot refer = GenerateReferences();
-
-		foreach (string file in files)
+		foreach (string file in Directory.EnumerateFiles(atFolder))
 		{
 			File.Delete(file);
 		}
@@ -36,184 +31,195 @@ public class LuaDefinitionGenerator
 			string pathTo = CodeHintPath.PathJoin(item);
 			if (pathTo.EndsWith(".luau"))
 			{
-				string content = Godot.FileAccess.GetFileAsString(pathTo);
-				builder.AppendLine(content);
+				builder.AppendLine(Godot.FileAccess.GetFileAsString(pathTo));
 			}
 		}
+
+		APIReferenceRoot refer = GenerateReferences();
 
 		File.WriteAllText(atFolder.PathJoin("def.json"), JsonSerializer.Serialize(refer, APIRefGenerationContext.Default.APIReferenceRoot));
 
-		// Add PTSignal type definitions
-		builder.AppendLine("declare class PTSignalConnection");
-		builder.AppendLine("\tfunction Disconnect(self): ()");
-		builder.AppendLine("end");
-		builder.AppendLine();
-
-		builder.AppendLine("export type PTSignal<T... = ...any> = {");
-		builder.AppendLine("\tConnect: (self: PTSignal<T...>, callback: (T...) -> ()) -> PTSignalConnection,");
-		builder.AppendLine("\tDisconnect: (self: PTSignal<T...>, callback: (T...) -> ()) -> nil,");
-		builder.AppendLine("\tOnce: (self: PTSignal<T...>, callback: (T...) -> ()) -> PTSignalConnection,");
-		builder.AppendLine("\tWait: (self: PTSignal<T...>) -> T...,");
-		builder.AppendLine("}");
-		builder.AppendLine();
-
-		builder.AppendLine($"declare class Enum end");
-
 		foreach (ScriptEnum e in refer.Enums)
 		{
-			builder.AppendLine($"declare class {e.Name} end");
-			builder.AppendLine($"declare class {e.InternalName} extends Enum");
+			builder.AppendLine($"declare extern type {e.Name} extends Enum with end");
+			builder.AppendLine();
+		}
+
+		builder.AppendLine("declare Enums: {");
+		foreach (ScriptEnum e in refer.Enums)
+		{
+			builder.AppendLine($"\t{e.Name}: {{");
 			foreach (string item in e.Options)
 			{
-				builder.AppendLine($"\t{item}:{e.Name}");
+				builder.AppendLine($"\t\t{item}: {e.Name},");
 			}
-			builder.AppendLine($"end");
+			builder.AppendLine("\t},");
 		}
+		builder.AppendLine("}");
 
-		builder.AppendLine($"type ENUM_LIST = {{");
-		foreach (ScriptEnum e in refer.Enums)
+		foreach (ScriptClass c in refer.Classes)
 		{
-			builder.AppendLine($"\t{e.Name}:{e.InternalName},");
-		}
-		builder.AppendLine($"}} & {{ }}");
-		builder.AppendLine($"declare Enums: ENUM_LIST");
+			if (
+				// Ignore already declared types
+				c.Name == "PTSignal" || c.Name == "PTSignalConnection" ||
+				// Ignore unused types
+				c.Name == "PTCallback" || c.Name == "PTFunction"
+			) continue;
 
-		foreach (ScriptClass item in refer.Classes)
-		{
-			// Ignore already declared types
-			if (item.Name == "PTSignal" || item.Name == "PTSignalConnection") continue;
-
-			builder.AppendLine(GenerateClass(item));
+			builder.AppendLine();
+			AppendClass(builder, c);
+			builder.AppendLine();
 		}
 
 		File.WriteAllText(atFolder.PathJoin("def.d.luau"), builder.ToString());
 	}
 
-	public static string GenerateClass(ScriptClass c)
+	private static void AppendClass(StringBuilder builder, in ScriptClass c)
 	{
-		StringBuilder builder = new();
-
-		if (c.IsInstantiable)
-		{
-			// Add new to instantiatables
-			c.Methods.Add(new()
-			{
-				IsStatic = true,
-				Name = "New",
-				Parameters = [
-					new() {
-						Name = "parent",
-						Type = "NetworkedObject",
-						IsOptional = true,
-						DefaultValue = null
-					}
-				],
-				ReturnType = c.Name
-			});
-		}
-
 		bool hasStatic = false;
 
-		string baseType = c.BaseType != null ? $" extends {c.BaseType}" : "";
-		builder.AppendLine($"declare class {c.Name}{baseType}");
+		builder.Append($"declare extern type {c.Name}");
+		if (c.BaseType != null)
+		{
+			builder.Append($" extends {c.BaseType}");
+		}
+		builder.AppendLine(" with");
 
 		foreach (ScriptProperty p in c.Properties)
 		{
-			if (p.IsObsolete) continue;
-			if (p.IsStatic) { hasStatic = true; continue; }
-			builder.AppendLine($"\t{p.Name} : {ProcessType(p.Type ?? "nil")}");
+			if (p.IsStatic)
+			{
+				hasStatic = true;
+				continue;
+			}
+
+			// only functions can have attributes
+			if (p.ObsoletionInfo.HasValue)
+			{
+				builder.AppendLine($"\t{p.ObsoletionInfo.Value.GetWarningComment()}");
+			}
+
+			builder.Append('\t');
+			if (p.IsReadOnly)
+			{
+				builder.Append("read ");
+			}
+			builder.AppendLine(p.ToString());
 		}
 
 		foreach (ScriptEvent e in c.Events)
 		{
-			if (e.Parameters != null && e.Parameters.Count > 0)
+			builder.Append($"\tread {e.Name}: PTSignal");
+			if (e.Parameters.Length > 0)
 			{
-				string typeParams = string.Join(", ", e.Parameters.Select(p => ProcessType(p.Type ?? "nil")));
-				builder.AppendLine($"\t{e.Name} : PTSignal<{typeParams}>");
+				builder.Append($"<{string.Join(", ", e.Parameters.Select(p => p.Type))}>");
 			}
-			else
-			{
-				builder.AppendLine($"\t{e.Name} : PTSignal");
-			}
+			builder.AppendLine();
 		}
+
+		bool hasIndexer = false;
+		List<string> indexerIndexes = [];
+		List<string> indexerValues = [];
 
 		foreach (ScriptMethod m in c.Methods)
 		{
-			if (m.IsObsolete) continue;
-			if (SkippedMetamethods.Contains(m.Name)) continue;
-			if (m.IsStatic && !m.Name.StartsWith("__"))
+			if (m.IsMetamethod)
+			{
+				// if static, the first parameter must be this class (self)
+				// we can skip explicit metamethod operator overloads since the type
+				// checker will blatantly assume that they already exist
+				if (m.IsStatic && (m.Parameters.Length == 0 || m.Parameters[0].Type != c.Name)) continue;
+
+				// the type checker will not consider a class's __index or
+				// __newindex metamethods when checking for keys, so they must be
+				// converted to a `[K]: V` field
+
+				bool isNewIndex = m.Name == "__newindex";
+				if (isNewIndex || m.Name == "__index")
+				{
+					indexerIndexes.Add(m.Parameters[m.IsStatic ? 1 : 0].Type);
+					indexerValues.Add(isNewIndex ? m.Parameters[m.IsStatic ? 2 : 1].Type : (m.ReturnType ?? "nil"));
+					hasIndexer = true;
+					continue;
+				}
+			}
+			else if (m.IsStatic)
 			{
 				hasStatic = true;
-				if (!m.IsSemiStatic) { continue; }
+				if (!m.IsSemiStatic) continue;
 			}
-			List<string> args = [];
 
-			foreach (ScriptParameter param in m.Parameters)
+			if (m.ObsoletionInfo.HasValue)
 			{
-				if (param.Type == null) continue;
-				args.Add($"{param.Name}: {ProcessType(param.Type) + (param.IsOptional ? "?" : "")}");
+				builder.AppendLine($"\t{m.ObsoletionInfo.Value.GetAttribute()}");
 			}
 
-			if (!m.IsSemiStatic) { args.Insert(0, "self"); }
-			else { args[0] = "self"; }
+			IEnumerable<string> iter = m.Parameters.Select(p => p.ToString());
+			if ((m.IsMetamethod && m.IsStatic) || m.IsSemiStatic)
+			{
+				// overwrite first parameter with self
+				iter = iter.Skip(1);
+			}
+			builder.Append($"\tfunction {m.Name}({string.Join(", ", iter.Prepend("self"))})");
+			if (m.ReturnType != null)
+			{
+				builder.Append($": {m.ReturnType}");
+			}
 
-			builder.AppendLine($"\tfunction {m.Name}({string.Join(", ", args)}): {ProcessType(m.ReturnType ?? "")}");
+			builder.AppendLine();
 		}
 
-		builder.AppendLine($"end");
+		if (hasIndexer)
+		{
+			builder.AppendLine($"\t[{string.Join(" | ", indexerIndexes.Distinct())}]: {string.Join(" | ", indexerValues.Distinct())}");
+		}
+
+		builder.Append("end");
 
 		if (hasStatic)
 		{
-			builder.AppendLine(GenerateStaticClass(c));
+			builder.AppendLine();
+			builder.AppendLine();
+			AppendStaticClass(builder, c);
 		}
-
-		return builder.ToString();
 	}
 
-	public static string GenerateStaticClass(ScriptClass c)
+	private static void AppendStaticClass(StringBuilder builder, in ScriptClass c)
 	{
-		StringBuilder builder = new();
-
 		builder.AppendLine($"declare {c.Name}: {{");
 
 		foreach (ScriptProperty p in c.Properties)
 		{
 			if (!p.IsStatic) continue;
-			builder.AppendLine($"\t{p.Name} : {ProcessType(p.Type ?? "nil")},");
-		}
 
-		foreach (ScriptMethod m in c.Methods)
-		{
-			if (m.IsObsolete) continue;
-			if (!m.IsStatic) continue;
-			// Ignore metamethods
-			if (m.Name.StartsWith("__")) continue;
-			List<string> args = [];
-
-			foreach (ScriptParameter param in m.Parameters)
+			if (p.ObsoletionInfo.HasValue)
 			{
-				if (param.Type == null) continue;
-				args.Add($"{ProcessType(param.Type) + (param.IsOptional ? "?" : "")}");
+				// only functions can have attributes
+				builder.AppendLine($"\t{p.ObsoletionInfo.Value.GetWarningComment()}");
 			}
-
-			builder.AppendLine($"{m.Name}: ({string.Join(", ", args)}) -> ({ProcessType(m.ReturnType ?? "")}),");
+			if (p.IsReadOnly)
+			{
+				// only extern types can have 'read' or 'write' in poly's old
+				// luau-lsp
+				// https://eryn.io/moonwave/docs/TagList/#readonly
+				builder.AppendLine("\t--- @readonly");
+			}
+			builder.AppendLine($"\t{p},");
 		}
 
-		builder.AppendLine($"}}");
-
-		return builder.ToString();
-	}
-
-	private static string ProcessType(string t)
-	{
-		if (t == "function")
+		// overloaded function types cannot have attributes and cannot be
+		// documented individually, skip obsolete methods entirely to discourage
+		// usage
+		foreach (IGrouping<string, string> g in c.Methods
+			.Where(m => m.IsStatic && !m.IsMetamethod && !m.ObsoletionInfo.HasValue)
+			.GroupBy(
+				m => m.Name,
+				m => $"({string.Join(", ", m.Parameters.Select(p => p.ToString(true)))}) -> {m.ReturnType ?? "()"}"
+			))
 		{
-			return "() -> nil";
+			builder.AppendLine($"\t{g.Key}: {(g.Count() > 1 ? $"({string.Join(") & (", g)})" : g.First())},");
 		}
-		else if (t == "table")
-		{
-			return "{ any }";
-		}
-		return t;
+
+		builder.Append('}');
 	}
 }

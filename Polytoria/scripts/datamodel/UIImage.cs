@@ -74,7 +74,7 @@ public partial class UIImage : UIField
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Image instead"), CloneIgnore]
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete(use: "Image"), CloneIgnore]
 	public string ImageID
 	{
 		get => _imageID;
@@ -85,7 +85,7 @@ public partial class UIImage : UIField
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Image instead"), CloneIgnore]
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete(use: "Image"), CloneIgnore]
 	public ImageTypeEnum ImageType
 	{
 		get => _imageType;

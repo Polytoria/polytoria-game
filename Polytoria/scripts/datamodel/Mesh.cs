@@ -72,7 +72,7 @@ public sealed partial class Mesh : Entity
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Asset instead"), CloneIgnore]
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete(use: "Asset"), CloneIgnore]
 	public int AssetID
 	{
 		get => _assetID;
