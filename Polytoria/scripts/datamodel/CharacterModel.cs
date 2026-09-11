@@ -74,6 +74,17 @@ public partial class CharacterModel : Dynamic
 		set => _animator = value;
 	}
 
+	[Editable, ScriptProperty]
+	public bool Visible
+	{
+		get => return GDNode3D.Visible;
+		set
+		{
+			GDNode3D.Visible = value;
+			OnPropertyChanged();
+		}
+	}
+
 	private bool _peerReadySubscribed = false;
 
 	public override void Init()
