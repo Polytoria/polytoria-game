@@ -42,11 +42,11 @@ public partial class RigidBody : Physical
 	{
 		get
 		{
-			return GDRigidBody.AngularVelocity.FlipEuler();
+			return GDRigidBody.AngularVelocity;
 		}
 		set
 		{
-			GDRigidBody.AngularVelocity = value.FlipEuler();
+			GDRigidBody.AngularVelocity = value;
 			OnPropertyChanged();
 		}
 	}
