@@ -405,6 +405,11 @@ public sealed partial class Camera : Dynamic
 		base.ExitTree();
 	}
 
+	public Vector2 GetMousePos()
+	{
+		return _dragPanning ? _turnStartPos : Root.Input.MousePosition;
+	}
+
 	private void EnforceCurrentCam()
 	{
 		// idk godot
