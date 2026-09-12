@@ -456,7 +456,7 @@ public sealed partial class Environment : Instance
 		{
 			Origin = pos
 		};
-		Quaternion q = Quaternion.FromEuler(rot.FlipEuler());
+		Quaternion q = Quaternion.FromEuler(rot.DegToRad());
 		Basis basis = new(q);
 		t.Basis = basis;
 		t = t.Scaled(Vector3.One);
