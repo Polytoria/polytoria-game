@@ -255,13 +255,14 @@ public static partial class PolyFormat
 		}
 	}
 
-	public static void LoadWorld(World root, byte[] rawdata, bool forceMigrateCords = false)
+	public static PolyRootData? LoadWorld(World root, byte[] rawdata, bool forceMigrateCords = false)
 	{
 		// Empty world file
-		if (rawdata.Length == 0) return;
+		if (rawdata.Length == 0) return null;
 
 		PolyRootData data = ReadRootDataBytes(rawdata);
 		InternalLoadWorld(root, data, forceMigrateCords);
+		return data;
 	}
 
 	private static void InternalLoadWorld(World root, PolyRootData data, bool forceMigrateCords = false)
