@@ -42,11 +42,14 @@ public sealed partial class Player : NPC
 	private bool _canMove = true;
 	private bool _canJumpWhileClimbing = true;
 	private float _sprintSpeed;
-	private float _stamina = 0;
-	private float _maxStamina = 3;
+	private float _stamina = 3f;
+	private float _maxStamina = 3f;
 	private bool _useStamina = true;
-	private float _staminaRegen = 1.2f;
-	private float _staminaBurn = 1.2f;
+	private float _staminaRegen = 1f / 1.2f;
+	private float _staminaBurn = 1f / 1.2f;
+	private bool _useExhaustion = false;
+	private float _exhaustionRegen = 1f / 0.6f;
+	private float _exhaustionCeil = 0.5f;
 	private bool _keepInventory = false;
 	private bool _useHeadTurning = false;
 	private int _userID;
@@ -109,6 +112,12 @@ public sealed partial class Player : NPC
 	[ScriptProperty]
 	public PTSignal<Physical> Ungrabbed { get; private set; } = new();
 
+	[ScriptProperty]
+	public PTSignal Exhausted { get; private set; } = new();
+
+	[ScriptProperty]
+	public PTSignal Unexhausted { get; private set; } = new();
+
 	[SyncVar, ScriptProperty]
 	public int UserID
 	{
@@ -151,7 +160,7 @@ public sealed partial class Player : NPC
 		get => _stamina;
 		set
 		{
-			_stamina = value;
+			_stamina = Mathf.Clamp(value, 0f, MaxStamina);
 			OnPropertyChanged();
 		}
 	}
@@ -162,7 +171,7 @@ public sealed partial class Player : NPC
 		get => _maxStamina;
 		set
 		{
-			_maxStamina = value;
+			_maxStamina = Mathf.Max(value, 0f);
 			OnPropertyChanged();
 		}
 	}
@@ -195,7 +204,40 @@ public sealed partial class Player : NPC
 		get => _staminaBurn;
 		set
 		{
-			_staminaBurn = value;
+			_staminaBurn = Mathf.Max(value, 0f);
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool UseExhaustion
+	{
+		get => _useExhaustion;
+		set
+		{
+			_useExhaustion = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float ExhaustionRegen
+	{
+		get => _exhaustionRegen;
+		set
+		{
+			_exhaustionRegen = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float ExhaustionCeil
+	{
+		get => _exhaustionCeil;
+		set
+		{
+			_exhaustionCeil = Mathf.Clamp(value, 0f, 1f);
 			OnPropertyChanged();
 		}
 	}
@@ -412,6 +454,9 @@ public sealed partial class Player : NPC
 	public bool IsClimbing { get; internal set; }
 
 	[SyncVar(AllowAuthorWrite = true), ScriptProperty]
+	public bool IsExhausted { get; internal set; }
+
+	[SyncVar(AllowAuthorWrite = true), ScriptProperty]
 	public Truss? ClimbingTruss { get; internal set; }
 
 	[SyncVar(ServerOnly = true)]
@@ -614,7 +659,15 @@ public sealed partial class Player : NPC
 	internal void AddStaminaTick(double delta)
 	{
 		if (!UseStamina) { return; }
-		Stamina += (float)(delta * StaminaRegen);
+		bool exhaustionEnabled = UseExhaustion && ExhaustionRegen != 0f && ExhaustionCeil != 0f;
+		float regenRate = IsExhausted && exhaustionEnabled ? ExhaustionRegen : StaminaRegen;
+		Stamina += (float)(delta * regenRate);
+		if (IsExhausted && (!exhaustionEnabled || Stamina >= ExhaustionCeil * MaxStamina))
+		{
+			IsExhausted = false;
+			Unexhausted.Invoke();
+		}
+
 		if (Stamina > MaxStamina)
 		{
 			Stamina = MaxStamina;
@@ -625,9 +678,14 @@ public sealed partial class Player : NPC
 	{
 		if (!UseStamina) { return; }
 		Stamina -= (float)(delta * StaminaBurn);
-		if (Stamina < 0)
+		if (Stamina <= 0)
 		{
 			Stamina = 0;
+			if (!IsExhausted && ExhaustionRegen != 0f && ExhaustionCeil != 0f)
+			{
+				IsExhausted = true;
+				Exhausted.Invoke();
+			}
 		}
 	}
 
@@ -757,7 +815,7 @@ public sealed partial class Player : NPC
 		}
 
 		// Stop animation on move
-		if (IsMoving && !AllowAnimationWhileMoving)
+		if ((IsMoving || !IsOnGround) && !AllowAnimationWhileMoving)
 		{
 			Character?.Animator?.StopAnimation();
 		}
@@ -1070,10 +1128,13 @@ public sealed partial class Player : NPC
 		WalkSpeed = Root.PlayerDefaults.WalkSpeed;
 		SprintSpeed = Root.PlayerDefaults.SprintSpeed;
 		UseStamina = Root.PlayerDefaults.UseStamina;
-		Stamina = Root.PlayerDefaults.Stamina;
 		MaxStamina = Root.PlayerDefaults.MaxStamina;
+		Stamina = Root.PlayerDefaults.MaxStamina;
 		StaminaRegen = Root.PlayerDefaults.StaminaRegen;
 		StaminaBurn = Root.PlayerDefaults.StaminaBurn;
+		UseExhaustion = Root.PlayerDefaults.UseExhaustion;
+		ExhaustionRegen = Root.PlayerDefaults.ExhaustionRegen;
+		ExhaustionCeil = Root.PlayerDefaults.ExhaustionCeil;
 		JumpPower = Root.PlayerDefaults.JumpPower;
 		RespawnTime = Root.PlayerDefaults.RespawnTime;
 		KeepInventory = Root.PlayerDefaults.KeepInventory;
