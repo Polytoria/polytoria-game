@@ -136,12 +136,12 @@ public static class ProjectManager
 		}
 		if (lenA < lenB) return true;
 		if (lenA > lenB) return false;
+		GD.Print("equals "+a+" and "+b+", a is"+(isAdev ? "" : "n't")+" dev, b is"+(isBdev ? "" : "n't")+" dev");
 		return isBdev && !isAdev;
 	}
 
-	private static bool ScriptOccupied(CreatorSession session, string name)
+	private static bool ScriptOccupied(string path)
 	{
-		string path = session.ProjectFolderPath + "scripts/builtin/" + name;
 		if (!File.Exists(path)) return false;
 		Stream stream = File.OpenRead(path);
 		try
@@ -149,11 +149,11 @@ public static class ProjectManager
 			int len = DefaultScriptHeader.Length; // they're all ascii characters
 			byte[] buf = new byte[len];
 			stream.ReadExactly(buf, 0, len);
-			return DefaultScriptHeader.Equals(System.Text.Encoding.Default.GetString(buf));
+			return !DefaultScriptHeader.Equals(System.Text.Encoding.Default.GetString(buf));
 		}
 		catch (EndOfStreamException)
 		{
-			return false;
+			return true;
 		}
 	}
 
@@ -168,7 +168,7 @@ public static class ProjectManager
 	{
 		string path = session.GlobalizePath("scripts/builtin/" + name);
 		string metaPath = PackedFormat.GetMetaPath(path);
-		if (path == null) return null;
+		if (ScriptOccupied(path)) return path;
 		Godot.FileAccess f = Godot.FileAccess.Open("res://defaultscripts/" + name, Godot.FileAccess.ModeFlags.Read);
 		Godot.FileAccess sf = Godot.FileAccess.Open(path, Godot.FileAccess.ModeFlags.Write);
 		sf.StoreString(DefaultScriptHeader);
@@ -179,11 +179,11 @@ public static class ProjectManager
 		return path;
 	}
 
-	public static Script? AddDefaultScriptInstance(World world, Instance parent, string name, string dir, string suffix)
+	public static bool AddDefaultScriptInstance(World world, Instance parent, string name, string dir, string suffix)
 	{
 		if (parent.FindChild(name) is Instance i)
 		{
-			return (i is Script s) ? s : null;
+			return false;
 		}
 		Script? script = null;
 		string path = dir + name + suffix;
@@ -205,7 +205,7 @@ public static class ProjectManager
 			script.LinkedScript = world.Assets.GetFileLinkByPath(path);
 			script.Parent = parent;
 		}
-		return script;
+		return true;
 	}
 
 	public static void LoadDefaultScripts(CreatorSession session, string lastversion = "2.0.0")
@@ -221,7 +221,10 @@ public static class ProjectManager
 		string dir = Path.GetRelativePath(session.ProjectFolderPath, session.GlobalizePath("scripts/builtin/"));
 		session.RescanFolder();
 		if (!VersionLessThan(lastversion, "2.0.23+dev")) return;
-		AddDefaultScriptInstance(world, world.PlayerDefaults, "ChatBubble", dir, ".client.luau");
+		if (AddDefaultScriptInstance(world, world.PlayerDefaults, "ChatBubble", dir, ".client.luau"))
+		{
+			//world.New<VoiceBox>()
+		}
 	}
 
 	public static async Task NewProject(string destFolder, CreatorProjectMetadata metadata, bool createFromTemplate = false)
@@ -268,8 +271,12 @@ public static class ProjectManager
 		}
 
 		CreatorService.Interface.LoadOverlay?.SetStatus("Opening Project...");
-		CreatorSession? session = await CreatorService.Singleton.CreateNewSession(projectMetaPath);
-		if (session != null) LoadDefaultScripts(session);
+		(CreatorSession? session, World? opened) = await CreatorService.Singleton.CreateNewSession(projectMetaPath);
+		if (session != null)
+		{
+			LoadDefaultScripts(session);
+			AddDefaultInstances(session, opened!);
+		}
 		CreatorService.Interface.LoadOverlay?.Hide();
 	}
 

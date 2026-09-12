@@ -321,7 +321,12 @@ public partial class CreatorSession : Node, IDisposable
 			try
 			{
 				PolyFormat.PolyRootData? data = PolyFormat.LoadWorld(root, worldData, migrateCoords);
-				if (data != null) ProjectManager.AddDefaultInstances(this, root, data.Value.Version);
+				if (data != null)
+				{
+					string version = data.Value.Version;
+					ProjectManager.LoadDefaultScripts(this, version);
+					ProjectManager.AddDefaultInstances(this, root, version);
+				}
 				root.InvokeReady();
 			}
 			catch (Exception ex)
@@ -359,7 +364,7 @@ public partial class CreatorSession : Node, IDisposable
 		root.ForceDelete();
 	}
 
-	public World? OpenMainWorld(World? worldOverride = null)
+	public World OpenMainWorld(World? worldOverride = null)
 	{
 		return OpenWorld(Metadata.MainWorld, worldOverride);
 	}
