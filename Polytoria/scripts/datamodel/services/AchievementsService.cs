@@ -73,7 +73,7 @@ public sealed partial class AchievementsService : Instance
 		}
 	}
 
-	[ScriptLegacyMethod("Award")]
+	[ScriptMethod, ScriptLegacyMethod("Award")]
 	public void Award(int userID, int achievementID, PTCallback? callback)
 	{
 		_ = AwardAsync(userID, achievementID).ContinueWith(tsk =>
@@ -124,7 +124,7 @@ public sealed partial class AchievementsService : Instance
 		GotAchievement.Invoke(id);
 	}
 
-	[ScriptLegacyMethod("HasAchievement")]
+	[ScriptMethod, ScriptLegacyMethod("HasAchievement")]
 	public void HasAchievement(int userID, int achievementID, PTCallback callback)
 	{
 		_ = HasAchievementAsync(userID, achievementID).ContinueWith(tsk =>
