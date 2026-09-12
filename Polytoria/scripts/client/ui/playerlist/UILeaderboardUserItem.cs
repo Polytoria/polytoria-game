@@ -6,6 +6,7 @@ using Godot;
 using Polytoria.Datamodel;
 using Polytoria.Schemas.API;
 using System.Collections.Generic;
+using Polytoria.Datamodel.Resources;
 
 namespace Polytoria.Client.UI.Playerlist;
 
@@ -13,16 +14,24 @@ public partial class UILeaderboardUserItem : Button
 {
 	private readonly Dictionary<Stat, Label> _statToLabel = [];
 
+	[Export] private TextureRect _iconRect = null!;
 	[Export] private Label _usernameLabel = null!;
 	[Export] private Control _statsBox = null!;
 	[Export] private TextureRect _badgeRect = null!;
 
 	public Player TargetPlayer = null!;
 	public UILeaderboard Leaderboard = null!;
+	
+	private readonly PTImageAsset _plrIconAsset = new();
 
 	public override void _Ready()
 	{
 		_usernameLabel.Text = TargetPlayer.Name;
+		
+		_plrIconAsset.ResourceLoaded += OnAvatarLoaded;
+		_plrIconAsset.ImageType = ImageTypeEnum.UserAvatarHeadshot;
+		_plrIconAsset.ImageID = (uint)TargetPlayer.UserID;
+		_plrIconAsset.LoadResource();
 
 		if (TargetPlayer.UserInfo.HasValue)
 		{
@@ -36,6 +45,13 @@ public partial class UILeaderboardUserItem : Button
 		TargetPlayer.StatChanged.Connect(OnStatChanged);
 
 		UpdateBadge();
+	}
+	
+	private void OnAvatarLoaded(Resource resource)
+	{
+		if (resource is Texture2D texture){
+			_iconRect.Texture = texture;
+		}
 	}
 
 	private void OnStatChanged(Stat s, object? _)

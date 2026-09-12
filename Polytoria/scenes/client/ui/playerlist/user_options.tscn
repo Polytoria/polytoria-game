@@ -2,6 +2,8 @@
 
 [ext_resource type="Script" uid="uid://3bvn0pq3nupi" path="res://scripts/client/ui/playerlist/UILeaderboardUserOptions.cs" id="1_31oub"]
 [ext_resource type="PackedScene" uid="uid://dbaked5s53qqn" path="res://scenes/shared/loader.tscn" id="2_48ua2"]
+[ext_resource type="Texture2D" uid="uid://cktwlpkglqh01" path="res://assets/textures/ui-icons/external-link.svg" id="2_cvoej"]
+[ext_resource type="Texture2D" uid="uid://b723rf2mv3taw" path="res://assets/textures/ui-icons/flag.svg" id="3_1ps21"]
 [ext_resource type="Texture2D" uid="uid://dyef4qa4syg37" path="res://assets/textures/client/ui/chat/bubble_arrow.svg" id="3_3wcmt"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4fqi5"]
@@ -135,7 +137,7 @@ _data = {
 &"disappear": SubResource("Animation_31oub")
 }
 
-[node name="UserOptions" type="Control" unique_id=1089935845 node_paths=PackedStringArray("_animPlay", "_optionsLayout", "_addFriendBtn", "_removeFriendBtn", "_viewProfileBtn", "_loaderView")]
+[node name="UserOptions" type="Control" unique_id=1089935845 node_paths=PackedStringArray("_animPlay", "_optionsLayout", "_addFriendBtn", "_removeFriendBtn", "_viewProfileBtn", "_reportUserBtn", "_loaderView")]
 layout_mode = 3
 anchors_preset = 1
 anchor_left = 1.0
@@ -151,6 +153,7 @@ _optionsLayout = NodePath("Pivot/PanelContainer/Layout")
 _addFriendBtn = NodePath("Pivot/PanelContainer/Layout/AddFriend")
 _removeFriendBtn = NodePath("Pivot/PanelContainer/Layout/RemoveFriend")
 _viewProfileBtn = NodePath("Pivot/PanelContainer/Layout/ViewProfile")
+_reportUserBtn = NodePath("Pivot/PanelContainer/Layout/ReportUser")
 _loaderView = NodePath("Pivot/PanelContainer/LoaderView")
 
 [node name="Pivot" type="Control" parent="." unique_id=923873893]
@@ -175,6 +178,7 @@ theme_override_constants/separation = 0
 [node name="AddFriend" type="Button" parent="Pivot/PanelContainer/Layout" unique_id=29708534]
 visible = false
 layout_mode = 2
+offset_transform_position = Vector2(-8, 0)
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("StyleBoxEmpty_4fqi5")
 text = "Add Friend"
@@ -183,7 +187,9 @@ alignment = 0
 
 [node name="RemoveFriend" type="Button" parent="Pivot/PanelContainer/Layout" unique_id=270774084]
 visible = false
+self_modulate = Color(0.8666667, 0.33333334, 0.33333334, 1)
 layout_mode = 2
+offset_transform_position = Vector2(-8, 0)
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("StyleBoxEmpty_4fqi5")
 text = "Remove Friend"
@@ -192,9 +198,24 @@ alignment = 0
 
 [node name="ViewProfile" type="Button" parent="Pivot/PanelContainer/Layout" unique_id=124750535]
 layout_mode = 2
+offset_transform_enabled = true
+offset_transform_position = Vector2(-4, 0)
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("StyleBoxEmpty_4fqi5")
 text = "View Profile"
+icon = ExtResource("2_cvoej")
+flat = true
+alignment = 0
+
+[node name="ReportUser" type="Button" parent="Pivot/PanelContainer/Layout" unique_id=1771117854]
+self_modulate = Color(0.8666667, 0.33333334, 0.33333334, 1)
+layout_mode = 2
+offset_transform_enabled = true
+offset_transform_position = Vector2(-4, 0)
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_4fqi5")
+text = "Report User"
+icon = ExtResource("3_1ps21")
 flat = true
 alignment = 0
 
