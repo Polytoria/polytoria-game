@@ -157,35 +157,33 @@ public static class ProjectManager
 		}
 	}
 
-	private static string? TryAddDefaultScript(CreatorSession session, string name)
+	private static string IDFromPath(CreatorSession session, string path)
 	{
-		string? path = session.CreateScript("scripts/builtin/" + name);
-		if (path == null) return null;
-		Godot.FileAccess f = Godot.FileAccess.Open("res://defaultscripts/" + name, Godot.FileAccess.ModeFlags.Read);
-		File.WriteAllText(path, DefaultScriptHeader);
-		File.AppendAllText(path, f.GetAsText());
-		f.Dispose();
-		return path;
+		if (session.FileToIndex.TryGetValue(Path.GetRelativePath(session.ProjectFolderPath, path).SanitizePath(), out string? id)) return id;
+		string newId = Guid.NewGuid().ToString();
+		return newId;
 	}
 
-	public static void LoadDefaultScripts(CreatorSession session, string lastversion = "2.0.0")
+	private static string? TryAddDefaultScript(CreatorSession session, string name)
 	{
-		CreatorService.Interface.PendingCreateScriptAt = null;
-		if (VersionLessThan("2.0.24", lastversion)) return;
-		TryAddDefaultScript(session, "ChatBubble.client.luau");
+		string path = session.GlobalizePath("scripts/builtin/" + name);
+		string metaPath = PackedFormat.GetMetaPath(path);
+		if (path == null) return null;
+		Godot.FileAccess f = Godot.FileAccess.Open("res://defaultscripts/" + name, Godot.FileAccess.ModeFlags.Read);
+		Godot.FileAccess sf = Godot.FileAccess.Open(path, Godot.FileAccess.ModeFlags.Write);
+		sf.StoreString(DefaultScriptHeader);
+		sf.StoreString(f.GetAsText());
+		f.Dispose();
+		sf.Dispose();
+		PackedFormat.WriteMetaId(metaPath, IDFromPath(session, path));
+		return path;
 	}
 
 	public static Script? AddDefaultScriptInstance(World world, Instance parent, string name, string dir, string suffix)
 	{
+		if (parent.FindChild(name) is Instance i)
 		{
-			if (parent.FindChild(name) is Script s)
-			{
-				return s;
-			}
-			else
-			{
-				return null;
-			}
+			return (i is Script s) ? s : null;
 		}
 		Script? script = null;
 		string path = dir + name + suffix;
@@ -210,10 +208,19 @@ public static class ProjectManager
 		return script;
 	}
 
+	public static void LoadDefaultScripts(CreatorSession session, string lastversion = "2.0.0")
+	{
+		CreatorService.Interface.PendingCreateScriptAt = null;
+		if (!VersionLessThan(lastversion, "2.0.23+dev")) return;
+		TryAddDefaultScript(session, "ChatBubble.client.luau");
+		session.RescanFolder();
+	}
+
 	public static void AddDefaultInstances(CreatorSession session, World world, string lastversion = "2.0.0")
 	{
-		string dir = session.GlobalizePath("scripts/builtin/");
-		if (VersionLessThan("2.0.24", lastversion)) return;
+		string dir = Path.GetRelativePath(session.ProjectFolderPath, session.GlobalizePath("scripts/builtin/"));
+		session.RescanFolder();
+		if (!VersionLessThan(lastversion, "2.0.23+dev")) return;
 		AddDefaultScriptInstance(world, world.PlayerDefaults, "ChatBubble", dir, ".client.luau");
 	}
 
