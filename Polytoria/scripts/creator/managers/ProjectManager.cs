@@ -175,7 +175,7 @@ public static class ProjectManager
 		sf.StoreString(f.GetAsText());
 		f.Dispose();
 		sf.Dispose();
-		PackedFormat.WriteMetaId(metaPath, IDFromPath(session, path));
+		PackedFormat.WriteMetaId(metaPath, IDFromPath(session, path)); // do only when .meta is absent
 		return path;
 	}
 
@@ -211,7 +211,11 @@ public static class ProjectManager
 	public static void LoadDefaultScripts(CreatorSession session, string lastversion = "2.0.0")
 	{
 		CreatorService.Interface.PendingCreateScriptAt = null;
-		if (!VersionLessThan(lastversion, "2.0.23+dev")) return;
+		if (!VersionLessThan(lastversion, "2.0.23+dev"))
+		{
+			session.RescanFolder();
+			return;
+		}
 		TryAddDefaultScript(session, "ChatBubble.client.luau");
 		session.RescanFolder();
 	}
