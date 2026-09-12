@@ -56,7 +56,7 @@ public partial class UILoadingScreen : Control
 		_gameThumbnailImage.ResourceLoaded += OnGameThumbnailLoaded;
 		_gameIconImage.ResourceLoaded += OnGameIconLoaded;
 
-		SetStatusText("Waiting for server...");
+		SetStatusText(Tr("Waiting for server..."));
 		Visible = true;
 	}
 
@@ -127,7 +127,7 @@ public partial class UILoadingScreen : Control
 		_gameIconImage.LoadResource();
 
 		_gameTitleLabel.Text = info.Name;
-		_gameCreatorLabel.Text = "By " + info.Creator.Name;
+		_gameCreatorLabel.Text = Tr("By ") + info.Creator.Name;
 		AppearInfo();
 	}
 
@@ -152,27 +152,27 @@ public partial class UILoadingScreen : Control
 		Loader = null;
 		_statusProgressbar.Value = current;
 		_statusProgressbar.MaxValue = max;
-		SetStatusText($"Constructing ({current}/{max})...");
+		SetStatusText(Tr($"Constructing ({current}/{max})..."));
 	}
 
 	private void OnWorldReady()
 	{
-		SetStatusText("Waiting for player");
+		SetStatusText(Tr("Waiting for player"));
 	}
 
 	private void OnServerReady()
 	{
-		SetStatusText("Connecting...");
+		SetStatusText(Tr("Connecting..."));
 	}
 
 	private void OnClientConnectedToServer()
 	{
-		SetStatusText("Downloading world...");
+		SetStatusText(Tr("Downloading world..."));
 	}
 
 	private void OnClientReady()
 	{
-		SetStatusText("Ready!");
+		SetStatusText(Tr("Ready!"));
 		_animPlay.Play("load_ready");
 
 		_gameThumbnailImage.ResourceLoaded -= OnGameThumbnailLoaded;
