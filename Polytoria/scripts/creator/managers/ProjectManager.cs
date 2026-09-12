@@ -177,8 +177,18 @@ public static class ProjectManager
 
 	public static Script? AddDefaultScriptInstance(World world, Instance parent, string name, string dir, string suffix)
 	{
-		string path = dir + name + suffix;
+		{
+			if (parent.FindChild(name) is Script s)
+			{
+				return s;
+			}
+			else
+			{
+				return null;
+			}
+		}
 		Script? script = null;
+		string path = dir + name + suffix;
 		switch (CreatorService.GetScriptTypeFromPath(path))
 		{
 			case ScriptTypeEnum.Server:
