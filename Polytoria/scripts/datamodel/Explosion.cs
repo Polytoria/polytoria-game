@@ -135,9 +135,7 @@ public partial class Explosion : Dynamic
 
 				s = New<Sound>();
 				s.Audio = audio;
-				s.PlayInWorld = true;
 				s.Parent = this;
-				s.LocalPosition = Vector3.Zero;
 			}
 		}
 
