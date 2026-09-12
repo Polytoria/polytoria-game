@@ -10,6 +10,7 @@ using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
 using Polytoria.Utils;
+using System;
 
 namespace Polytoria.Datamodel;
 
@@ -237,7 +238,7 @@ public partial class NPC : Physical
 		{
 			if (this is Player plr && !plr.IsReady) return;
 			float oldHealth = _health;
-			_health = value;
+			_health = Math.Min(value, MaxHealth);
 			if (_health <= 0 && !IsDead)
 			{
 				TriggerNPCDead();
