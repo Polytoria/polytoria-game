@@ -54,6 +54,8 @@ public partial class GUI3D : Dynamic
 			_material.BillboardMode = value ? BaseMaterial3D.BillboardModeEnum.Enabled : BaseMaterial3D.BillboardModeEnum.Disabled;
 			UpdateSize();
 			SetProcess(value);
+			if (!value) { _area.Rotation = Vector3.Zero; }
+			
 			OnPropertyChanged();
 		}
 	}
@@ -224,6 +226,8 @@ public partial class GUI3D : Dynamic
 		mousePos3D = _area.GlobalTransform.AffineInverse() * mousePos3D;
 
 		Vector2 mousePos2D = new(mousePos3D.X, mousePos3D.Y);
+		if (FaceCamera) { mousePos2D.X *= -1; }
+
 		Vector2 viewportPos = new(Mathf.Remap(mousePos2D.X, 0.5f, -0.5f, 0, AbsoluteSize.X), Mathf.Remap(mousePos2D.Y, 0.5f, -0.5f, 0, AbsoluteSize.Y));
 		@event.Position = viewportPos;
 		@event.GlobalPosition = viewportPos;
@@ -314,6 +318,8 @@ public partial class GUI3D : Dynamic
 	{
 		_mesh.Scale = newSize;
 		_area.Scale = newSize;
+		UpdateSize();
+		UpdateCanvasSize();
 		base.OnNodeSizeChanged(newSize);
 	}
 
@@ -343,10 +349,6 @@ public partial class GUI3D : Dynamic
 				_area.LookAt(look);
 				_area.RotateObjectLocal(Vector3.Back, cam.Rotation.Z);
 			}
-		}
-		else
-		{
-			_area.Rotation = Vector3.Zero;
 		}
 	}
 }
