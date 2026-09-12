@@ -147,7 +147,8 @@ public partial class DatamodelBridge : Node3D
 
 				if (_handles.TryGetValue(part, out PartHandle? moved))
 				{
-					ChunkKey movedKey = GetKeyForPart(part);
+					Transform3D transform = part.GetGlobalTransform();
+					ChunkKey movedKey = GetKeyForPart(part, transform.Origin);
 					if (!movedKey.Equals(moved.Key))
 					{
 						RemoveFromBatch(part);
@@ -155,7 +156,7 @@ public partial class DatamodelBridge : Node3D
 						continue;
 					}
 
-					moved.Batch.MultiMesh.SetInstanceTransform(moved.Index, part.GetGlobalTransform());
+					moved.Batch.MultiMesh.SetInstanceTransform(moved.Index, transform);
 				}
 				continue;
 			}
@@ -203,11 +204,16 @@ public partial class DatamodelBridge : Node3D
 
 	private ChunkKey GetKeyForPart(Part part)
 	{
+		return GetKeyForPart(part, part.Position);
+	}
+
+	private ChunkKey GetKeyForPart(Part part, Vector3 position)
+	{
 		bool isDynamic = !part.Anchored;
 		bool split = !isDynamic && _groupCounts.GetValueOrDefault((part.Material, part.Shape)) >= SplitGroupSize;
 		float size = split ? ChunkBaseSize : CoarseChunkSize;
 
-		Vector3 pos = part.Position + new Vector3(size * 0.5f, size * 0.5f, size * 0.5f);
+		Vector3 pos = position + new Vector3(size * 0.5f, size * 0.5f, size * 0.5f);
 		Vector3I coord = new(
 			Mathf.FloorToInt(pos.X / size),
 			Mathf.FloorToInt(pos.Y / size),
