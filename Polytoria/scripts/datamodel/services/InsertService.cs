@@ -153,7 +153,6 @@ public sealed partial class InsertService : Instance
 
 		Accessory accessory = New<Accessory>(this);
 		Mesh mesh = New<Mesh>();
-		mesh.Size = Vector3.One;
 		mesh.Parent = accessory;
 		mesh.Asset = meshAsset;
 
@@ -161,7 +160,6 @@ public sealed partial class InsertService : Instance
 		mesh.LocalRotation = Vector3.Zero;
 		accessory.Size = new Vector3(0.5f, 0.5f, 0.5f);
 
-		mesh.IncludeOffset = true;
 		mesh.Name = "Mesh";
 		mesh.CanCollide = false;
 		mesh.Anchored = true;
@@ -205,7 +203,6 @@ public sealed partial class InsertService : Instance
 
 		Tool tool = New<Tool>(this);
 		Mesh mesh = New<Mesh>()!;
-		mesh.Size = Vector3.One;
 		mesh.Parent = tool;
 		mesh.Asset = meshAsset;
 
@@ -216,7 +213,6 @@ public sealed partial class InsertService : Instance
 		mesh.LocalRotation = Vector3.Zero;
 		tool.Size = new Vector3(0.5f, 0.5f, 0.5f);
 
-		mesh.IncludeOffset = true;
 		mesh.Name = "Mesh";
 		mesh.CanCollide = false;
 		mesh.Anchored = true;
