@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://mw6m2defycfx"]
+
+[ext_resource type="PackedScene" uid="uid://p1rg7w8044b6" path="res://scenes/creator/properties/subviews/PTImageAssetSubview.tscn" id="1_gdj0k"]
+[ext_resource type="Script" uid="uid://gvql56jtf444" path="res://scripts/creator/properties/subviews/PTCursorAssetSubview.cs" id="2_uo5rf"]
+
+[node name="PTCursorAssetView" unique_id=1557138754 instance=ExtResource("1_gdj0k")]
+script = ExtResource("2_uo5rf")
