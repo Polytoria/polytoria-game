@@ -22,6 +22,7 @@ public partial class NPC : Physical
 	private const float StepHeight = 1.5f;
 	private Tool? _holdingTool;
 	private Seat? _sittingIn;
+	private CharacterModel? _sitPoseModel;
 	private CharacterModel? _character;
 	private Dynamic? _moveTarget;
 
@@ -624,6 +625,15 @@ public partial class NPC : Physical
 		{
 			if (!Root.Network.IsServer && SittingIn != null)
 			{
+				if (!OverrideNetworkTransform)
+				{
+					InternalSit(SittingIn);
+				}
+				else
+				{
+					ApplySitPose();
+				}
+
 				Velocity = Vector3.Zero;
 				Position = SittingIn.Position + SeatOffset.Y * Up;
 				if (SittingIn.SitDirectionLocked)
@@ -957,18 +967,30 @@ public partial class NPC : Physical
 
 	private void InternalSit(Seat seat)
 	{
-		if (IsSitting && SittingIn != null)
+		if (IsSitting && SittingIn != null && !ReferenceEquals(SittingIn, seat))
 		{
 			SittingIn.Occupant = null;
 			SittingIn.InvokeVacated(this);
 		}
 		IsSitting = true;
 		OverrideNetworkTransform = true;
+		SetPhysicsProcess(true);
 		SittingIn = seat;
 		seat.Occupant = this;
 		seat.InvokeSat(this);
-		Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.Sitting, 1);
+		ApplySitPose();
 		Seated.Invoke(seat);
+	}
+
+	private void ApplySitPose()
+	{
+		if (Character == null || ReferenceEquals(_sitPoseModel, Character))
+		{
+			return;
+		}
+
+		_sitPoseModel = Character;
+		Character.SetBlendValue(CharacterModel.CharacterModelBlendEnum.Sitting, 1);
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable, CallLocal = true)]
@@ -979,6 +1001,7 @@ public partial class NPC : Physical
 			// Unsit the NPC
 			IsSitting = false;
 			OverrideNetworkTransform = false;
+			_sitPoseModel = null;
 
 			if (SittingIn != null)
 			{
