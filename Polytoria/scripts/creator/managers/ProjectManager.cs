@@ -175,15 +175,15 @@ public static class ProjectManager
 		sf.StoreString(f.GetAsText());
 		f.Dispose();
 		sf.Dispose();
-		PackedFormat.WriteMetaId(metaPath, IDFromPath(session, path)); // do only when .meta is absent
+		if (!Godot.FileAcces.FileExists(metaPath)) PackedFormat.WriteMetaId(metaPath, IDFromPath(session, path));
 		return path;
 	}
 
-	public static bool AddDefaultScriptInstance(World world, Instance parent, string name, string dir, string suffix)
+	public static Script? AddDefaultScriptInstance(World world, Instance parent, string name, string dir, string suffix)
 	{
 		if (parent.FindChild(name) is Instance i)
 		{
-			return false;
+			return null;
 		}
 		Script? script = null;
 		string path = dir + name + suffix;
@@ -205,7 +205,7 @@ public static class ProjectManager
 			script.LinkedScript = world.Assets.GetFileLinkByPath(path);
 			script.Parent = parent;
 		}
-		return true;
+		return script;
 	}
 
 	public static void LoadDefaultScripts(CreatorSession session, string lastversion = "2.0.0")
@@ -213,10 +213,9 @@ public static class ProjectManager
 		CreatorService.Interface.PendingCreateScriptAt = null;
 		if (!VersionLessThan(lastversion, "2.0.23+dev"))
 		{
-			session.RescanFolder();
 			return;
 		}
-		TryAddDefaultScript(session, "ChatBubble.client.luau");
+		TryAddDefaultScript(session, "_ChatBubble.client.luau");
 		session.RescanFolder();
 	}
 
@@ -225,9 +224,15 @@ public static class ProjectManager
 		string dir = Path.GetRelativePath(session.ProjectFolderPath, session.GlobalizePath("scripts/builtin/"));
 		session.RescanFolder();
 		if (!VersionLessThan(lastversion, "2.0.23+dev")) return;
-		if (AddDefaultScriptInstance(world, world.PlayerDefaults, "ChatBubble", dir, ".client.luau"))
+		if (AddDefaultScriptInstance(world, world.ScriptService, "_ChatBubble", dir, ".client.luau") is Script s)
 		{
-			//world.New<VoiceBox>()
+			if (world.PlayerDefaults.FindChild("ChatBubble") == null)
+			{
+				VoiceBox vb = world.New<VoiceBox>()
+				vb.Name = "_ChatBubble";
+				vb.Parent = world.PlayerDefaults;
+				vb.LocalPosition = new Vector3();
+			}
 		}
 	}
 
