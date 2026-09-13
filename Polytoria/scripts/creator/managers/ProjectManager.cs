@@ -228,7 +228,7 @@ public static class ProjectManager
 		{
 			if (world.PlayerDefaults.FindChild("ChatBubble") == null)
 			{
-				VoiceBox vb = world.New<VoiceBox>()
+				VoiceBox vb = world.New<VoiceBox>();
 				vb.Name = "_ChatBubble";
 				vb.Parent = world.PlayerDefaults;
 				vb.LocalPosition = new Vector3();
