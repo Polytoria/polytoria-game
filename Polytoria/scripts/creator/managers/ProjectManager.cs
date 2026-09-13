@@ -175,7 +175,7 @@ public static class ProjectManager
 		sf.StoreString(f.GetAsText());
 		f.Dispose();
 		sf.Dispose();
-		if (!Godot.FileAcces.FileExists(metaPath)) PackedFormat.WriteMetaId(metaPath, IDFromPath(session, path));
+		if (!Godot.FileAccess.FileExists(metaPath)) PackedFormat.WriteMetaId(metaPath, IDFromPath(session, path));
 		return path;
 	}
 
