@@ -60,7 +60,7 @@ public partial class RendererViewport : SubViewport
 	{
 		Root.Setup();
 
-		Root.Lighting.SunBrightness = 0;
+		Root.Lighting.Sun.Brightness = 0;
 
 		Node n = Globals.CreateInstanceFromScene<Node>(EnvironmentScene);
 		Root.GDNode.AddChild(n);

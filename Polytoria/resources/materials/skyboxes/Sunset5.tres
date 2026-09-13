@@ -5,15 +5,25 @@
 [resource]
 resource_name = "Sunset5"
 shader = ExtResource("1_lsshg")
+
+shader_parameter/clock_time = 18.5
+
 shader_parameter/sun_disc_color = Color(1, 0.941177, 0.870588, 1)
-shader_parameter/sun_disc_multiplier = 100000.0
 shader_parameter/sun_disc_exponent = 100000.0
 shader_parameter/sun_halo_color = Color(1, 0.373783, 0.098039, 1)
 shader_parameter/sun_halo_exponent = 250.0
 shader_parameter/sun_halo_contribution = 0.5
+
+shader_parameter/moon_disc_color = Color(0.72, 0.82, 1.0, 1)
+shader_parameter/moon_disc_exponent = 100000.0
+shader_parameter/moon_halo_color = Color(0.35, 0.50, 0.88, 1)
+shader_parameter/moon_halo_exponent = 250.0
+shader_parameter/moon_halo_contribution = 0.4
+
 shader_parameter/horizon_line_color = Color(0.854902, 0.776471, 0.847059, 1)
 shader_parameter/horizon_line_exponent = 5.0
 shader_parameter/horizon_line_contribution = 0.32
+
 shader_parameter/sky_gradient_top = Color(0.233564, 0.236821, 0.705882, 1)
 shader_parameter/sky_gradient_bottom = Color(0.485294, 0.335424, 0.485294, 1)
 shader_parameter/sky_gradient_exponent = 0.25

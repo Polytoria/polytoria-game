@@ -11,7 +11,7 @@ using Polytoria.Creator.Spatial;
 namespace Polytoria.Datamodel;
 
 [Static]
-public sealed partial class SunLight : CelestialBody
+public sealed partial class MoonLight : CelestialBody
 {
 #if CREATOR
 	private ArrowSpatial _arrow = null!;
@@ -44,10 +44,10 @@ public sealed partial class SunLight : CelestialBody
 
 	public override void InitOverrides()
 	{
-		// Default sun properties
-		Brightness = 1;
-		Color = Color.FromString("#FFF4D6", new());
-		Shadows = true;
+		// Default moon properties
+		Brightness = 0.2f;
+		Color = Color.FromString("#C7D6FF", new());
+		Shadows = false;
 		Position = new(0, 15, 0);
 		base.InitOverrides();
 	}

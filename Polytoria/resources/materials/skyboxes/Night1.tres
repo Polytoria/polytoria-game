@@ -5,15 +5,25 @@
 [resource]
 resource_name = "Night1"
 shader = ExtResource("1_166yw")
-shader_parameter/sun_disc_color = Color(1, 0.235294, 0.235294, 1)
-shader_parameter/sun_disc_multiplier = 200.0
+
+shader_parameter/clock_time = 0.0
+
+shader_parameter/sun_disc_color = Color(0.20, 0.85, 0.55, 1)
 shader_parameter/sun_disc_exponent = 250000.0
-shader_parameter/sun_halo_color = Color(0, 0, 0, 1)
+shader_parameter/sun_halo_color = Color(0.10, 0.50, 0.35, 1)
 shader_parameter/sun_halo_exponent = 50.0
-shader_parameter/sun_halo_contribution = 0.5
+shader_parameter/sun_halo_contribution = 0.2
+
+shader_parameter/moon_disc_color = Color(1, 0.235294, 0.235294, 1)
+shader_parameter/moon_disc_exponent = 250000.0
+shader_parameter/moon_halo_color = Color(0.4, 0.1, 0.1, 1)
+shader_parameter/moon_halo_exponent = 50.0
+shader_parameter/moon_halo_contribution = 0.4
+
 shader_parameter/horizon_line_color = Color(1, 0.81501, 0.647059, 1)
 shader_parameter/horizon_line_exponent = 4.86
 shader_parameter/horizon_line_contribution = 0.56
+
 shader_parameter/sky_gradient_top = Color(0.094118, 0.117647, 0.172549, 1)
 shader_parameter/sky_gradient_bottom = Color(0.286548, 0.669307, 0.735294, 1)
 shader_parameter/sky_gradient_exponent = 2.5
