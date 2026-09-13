@@ -40,6 +40,8 @@ public partial class Part : Entity
 			current = current.Parent;
 		}
 
+		Root?.Bridge?.MarkDirty(this);
+
 		base.EnterTree();
 	}
 
@@ -120,7 +122,10 @@ public partial class Part : Entity
 			return;
 		}
 		_isSeparateMesh = false;
-		Root.Bridge.SeparatedPartCount--;
+		if (Root != null && Root.Bridge != null)
+		{
+			Root.Bridge.SeparatedPartCount--;
+		}
 		_mesh?.Free();
 		_mesh = null;
 	}
