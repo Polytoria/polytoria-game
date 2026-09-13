@@ -117,27 +117,34 @@ public static class ProjectManager
 
 	private static bool VersionLessThan(string a, string b)
 	{
-		bool isAdev = a.EndsWith("+dev");
-		bool isBdev = b.EndsWith("+dev");
-		if (isAdev) a = a.Remove(a.IndexOf('+'));
-		if (isBdev) b = b.Remove(b.IndexOf('+'));
-		string[] partsA = a.Split('.');
-		string[] partsB = b.Split('.');
-
-		int lenA = partsA.Length;
-		int lenB = partsB.Length;
-		int minlen = Math.Min(lenA, lenB);
-		for (int i = 0; i < minlen; ++i)
+		try
 		{
-			int aval = int.Parse(partsA[i]);
-			int bval = int.Parse(partsB[i]);
-			if (aval < bval) return true;
-			if (aval > bval) return false;
+			bool isAdev = a.EndsWith("+dev");
+			bool isBdev = b.EndsWith("+dev");
+			if (isAdev) a = a.Remove(a.IndexOf('+'));
+			if (isBdev) b = b.Remove(b.IndexOf('+'));
+			string[] partsA = a.Split('.');
+			string[] partsB = b.Split('.');
+
+			int lenA = partsA.Length;
+			int lenB = partsB.Length;
+			int minlen = Math.Min(lenA, lenB);
+			for (int i = 0; i < minlen; ++i)
+			{
+				int aval = int.Parse(partsA[i]);
+				int bval = int.Parse(partsB[i]);
+				if (aval < bval) return true;
+				if (aval > bval) return false;
+			}
+			if (lenA < lenB) return true;
+			if (lenA > lenB) return false;
+			return isBdev && !isAdev;
 		}
-		if (lenA < lenB) return true;
-		if (lenA > lenB) return false;
-		GD.Print("equals "+a+" and "+b+", a is"+(isAdev ? "" : "n't")+" dev, b is"+(isBdev ? "" : "n't")+" dev");
-		return isBdev && !isAdev;
+		catch (Exception)
+		{
+			// b is known to be a familiar format, a is not, unfamiliar format means old format
+			return true;
+		}
 	}
 
 	private static bool ScriptOccupied(string path)
