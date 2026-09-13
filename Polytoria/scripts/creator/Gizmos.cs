@@ -904,9 +904,9 @@ public sealed partial class Gizmos : Node
 				Quaternion rotoff = new Quaternion(-_dragStartNormal, hitNormal);
 				_dragStartNormal = -hitNormal;
 				Transform3D trans = ((Node3D)intersection["collider"]).GlobalTransform;
-				Quaternion verticalize = new Quaternion(hitNormal * dragRotation, Vector3.Up);
 				Vector3 dragCenter = trans.Origin;
 				Quaternion dragRotation = trans.Basis.GetRotationQuaternion();
+				Quaternion verticalize = new Quaternion(hitNormal * dragRotation, Vector3.Up);
 				Vector3 delta;
 				{
 					Vector3 newpos = primary.Position + offset;
@@ -923,17 +923,18 @@ public sealed partial class Gizmos : Node
 						newpos = surfaceSnap + rotatedSnappedPlane + dragCenter;
 					}
 					delta = newpos - primary.Position;
-					_dragStartOrigin += delta;
 				}
+				_dragStartOrigin += delta;
 				foreach (Dynamic item in DragSelected)
 				{
-					item.SetGlobalPosition(item.Position + delta);
+					Vector3 newpos = item.Position + delta;
 					if (CreatorService.Interface.RotateAlignEnabled)
 					{
 						item.Quaternion = rotoff * item.Quaternion;
-						Vector3 leg = item.Position - _dragStartOrigin;
+						Vector3 leg = newpos - _dragStartOrigin;
 						newpos += rotoff * leg - leg;
 					}
+					item.SetGlobalPosition(newpos);
 					item.UpdateCurrentTransformCache();
 				}
 			}
