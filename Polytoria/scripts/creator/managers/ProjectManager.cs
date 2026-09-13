@@ -231,7 +231,7 @@ public static class ProjectManager
 				VoiceBox vb = world.New<VoiceBox>();
 				vb.Name = "_ChatBubble";
 				vb.Parent = world.PlayerDefaults;
-				vb.LocalPosition = new Vector3();
+				vb.LocalPosition = new(0,4,0);
 			}
 		}
 	}
