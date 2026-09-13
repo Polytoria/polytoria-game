@@ -49,6 +49,9 @@ public sealed partial class ClientEntry : Node3D
 
 	private Timer? _connectTimer;
 	private APIClientAuthResponseMessage? _clientConnectData;
+#if CREATOR
+	private string? _creatorTestToken;
+#endif
 #if ALLOW_SELFHOST
 	public Vector3? DebugSpawnPos { get; private set; }
 #endif
@@ -105,6 +108,15 @@ public sealed partial class ClientEntry : Node3D
 		if (testUserID != null)
 		{
 			TestUserID = int.Parse(testUserID);
+		}
+#endif
+
+#if CREATOR
+		_creatorTestToken = ctoken;
+
+		if (!string.IsNullOrWhiteSpace(_creatorTestToken))
+		{
+			PolyCreatorAPI.SetToken(_creatorTestToken);
 		}
 #endif
 		networkMode ??= "client";
@@ -239,14 +251,6 @@ public sealed partial class ClientEntry : Node3D
 		sw.Restart();
 		Root.Setup();
 		PT.Print($"World setup in {sw.ElapsedMilliseconds}ms");
-
-#if CREATOR
-		// Set creator token for testing (used for loading unapproved assets made by the user)
-		if (ctoken != null)
-		{
-			PolyCreatorAPI.SetToken(ctoken);
-		}
-#endif
 
 #if ALLOW_SELFHOST
 		// Load the test world for server
@@ -416,7 +420,7 @@ public sealed partial class ClientEntry : Node3D
 					Root.ServerID = _clientConnectData.Value.ServerID;
 					networkService.IsProd = true;
 
-					_connectTimer = new();
+					_connectTimer = new() { OneShot = true };
 					AddChild(_connectTimer);
 					_connectTimer.Timeout += PollServerStatus;
 					_connectTimer.Start(StatusPollIntervalSec);
@@ -439,8 +443,8 @@ public sealed partial class ClientEntry : Node3D
 
 	private async void PollServerStatus()
 	{
-		if (_connectTimer == null) return;
-		if (!_clientConnectData.HasValue) return;
+		Timer? timer = _connectTimer;
+		if (timer == null || !_clientConnectData.HasValue) return;
 
 		try
 		{
@@ -449,18 +453,24 @@ public sealed partial class ClientEntry : Node3D
 			PT.Print(status.Status);
 			if (status.Status == "started")
 			{
+				timer.Timeout -= PollServerStatus;
+				timer.QueueFree();
+				_connectTimer = null;
 				TargetServerReady?.Invoke();
 				NetworkService.CreateClient(_clientConnectData.Value.IP, _clientConnectData.Value.Port);
-				_connectTimer.QueueFree();
-				return;
 			}
 		}
 		catch (Exception ex)
 		{
 			GD.PushError(ex);
 		}
-
-		_connectTimer.Start(StatusPollIntervalSec);
+		finally
+		{
+			if (_connectTimer == timer && GodotObject.IsInstanceValid(timer))
+			{
+				timer.Start(StatusPollIntervalSec);
+			}
+		}
 	}
 
 	public override void _UnhandledKeyInput(InputEvent @event)
@@ -528,6 +538,13 @@ public sealed partial class ClientEntry : Node3D
 		string logFilePath = abs.PathJoin(plrID + ".txt");
 
 		List<string> args = ["--windowed", "--log-file", logFilePath, "-network", "client", "-id", plrID.ToString(), "-ltchild", "-port", port.ToString()];
+
+#if CREATOR
+		if (!string.IsNullOrWhiteSpace(_creatorTestToken))
+		{
+			args.AddRange(["-ctoken", _creatorTestToken]);
+		}
+#endif
 
 		if (Globals.IsInGDEditor)
 		{

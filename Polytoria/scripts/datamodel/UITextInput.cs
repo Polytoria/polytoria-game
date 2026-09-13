@@ -110,9 +110,12 @@ public partial class UITextInput : UIView
 		get => _autoSize;
 		set
 		{
+			bool changed = _autoSize != value;
+			if (changed && _autoSize) NodeControl.Resized -= UpdateTextSize;
+
 			_autoSize = value;
-			if (_autoSize) NodeControl.Resized += UpdateTextSize;
-			else NodeControl.Resized -= UpdateTextSize;
+			if (changed && _autoSize) NodeControl.Resized += UpdateTextSize;
+
 			UpdateTextSize();
 			OnPropertyChanged();
 		}
@@ -323,6 +326,12 @@ public partial class UITextInput : UIView
 
 	public override void PreDelete()
 	{
+		if (_autoSize)
+		{
+			NodeControl.Resized -= UpdateTextSize;
+			_autoSize = false;
+		}
+
 		_textEdit.FocusEntered -= OnTextEditFocusEntered;
 		_textEdit.FocusExited -= OnTextEditFocusExited;
 		_lineEdit.FocusEntered -= OnLineEditFocusEntered;

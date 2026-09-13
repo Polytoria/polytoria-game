@@ -141,11 +141,6 @@ public partial class BuiltInFontAsset : FontAsset
 		{ BuiltInTextFontPresetEnum.JetBrainsMono, "JetBrainsMono-VariableFont_wght.ttf" },
 	};
 
-	public static void RegisterAsset()
-	{
-		RegisterType<BuiltInFontAsset>();
-	}
-
 	public override void LoadResource()
 	{
 		// Try Specific Weight/Style mapping

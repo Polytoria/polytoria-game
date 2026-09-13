@@ -77,6 +77,7 @@ public sealed partial class DropdownSettingField : MenuButton
 		for (int i = 0; i < options.Count; i++)
 		{
 			_popup.AddItem(options[i].Label, i);
+			if (options[i].IsDisabled) _popup.SetItemDisabled(i, true);
 		}
 	}
 

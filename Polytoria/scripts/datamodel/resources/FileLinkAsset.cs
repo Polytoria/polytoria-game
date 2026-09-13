@@ -30,11 +30,6 @@ public partial class FileLinkAsset : BaseAsset
 
 	public string? LinkedPath => Root.IO.GetPathFromID(LinkedID);
 
-	public static void RegisterAsset()
-	{
-		RegisterType<FileLinkAsset>();
-	}
-
 	public override void Init()
 	{
 		base.Init();

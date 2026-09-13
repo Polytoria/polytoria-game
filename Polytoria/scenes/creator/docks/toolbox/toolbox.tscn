@@ -5,24 +5,6 @@
 [ext_resource type="Texture2D" uid="uid://c60spvojllrt4" path="res://assets/textures/ui-icons/chevron-left.svg" id="3_n2m24"]
 [ext_resource type="Texture2D" uid="uid://yd5kv6j4l3hp" path="res://assets/textures/ui-icons/chevron-right.svg" id="4_q1vt0"]
 
-[sub_resource type="FontVariation" id="FontVariation_khfyn"]
-variation_opentype = {
-2003265652: 700
-}
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_f05cx"]
-content_margin_left = 10.0
-content_margin_top = 5.0
-content_margin_right = 10.0
-content_margin_bottom = 5.0
-bg_color = Color(0.0862745, 0.0862745, 0.0862745, 1)
-
-[sub_resource type="Theme" id="Theme_khfyn"]
-resource_name = "HeaderTheme"
-Label/font_sizes/font_size = 14
-Label/fonts/font = SubResource("FontVariation_khfyn")
-PanelContainer/styles/panel = SubResource("StyleBoxFlat_f05cx")
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1r5bi"]
 content_margin_left = 6.0
 content_margin_top = 6.0
@@ -63,18 +45,6 @@ grow_vertical = 2
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_constants/separation = 0
-
-[node name="Header" type="PanelContainer" parent="." unique_id=808583813]
-custom_minimum_size = Vector2(0, 30)
-layout_mode = 2
-mouse_filter = 2
-theme = SubResource("Theme_khfyn")
-
-[node name="Label" type="Label" parent="Header" unique_id=1871889264]
-layout_mode = 2
-size_flags_vertical = 1
-text = "Toolbox"
-vertical_alignment = 1
 
 [node name="Content" type="PanelContainer" parent="." unique_id=1324323428 node_paths=PackedStringArray("_typeOption", "_filterOption", "_searchEdit", "_resultsContainer", "_pagNavPrev", "_pagNavLabel", "_pagNavNext", "_loaderView", "_noResultView")]
 layout_mode = 2

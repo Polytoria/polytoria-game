@@ -71,6 +71,18 @@ corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 expand_margin_bottom = 2.0
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_holddarken"]
+bg_color = Color(0, 0, 0, 0.28235295)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_holdfill"]
+bg_color = Color(1, 1, 1, 1)
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gwnx0"]
 content_margin_left = 8.0
 content_margin_top = 8.0
@@ -399,7 +411,7 @@ _data = {
 &"disappear": SubResource("Animation_e25ux")
 }
 
-[node name="PurchasePrompt" type="Panel" unique_id=1791377018 node_paths=PackedStringArray("_purchaseText", "_priceLabel", "_purchaseButton", "_cancelButton", "_iconRect", "_animPlay")]
+[node name="PurchasePrompt" type="Panel" unique_id=1791377018 node_paths=PackedStringArray("_purchaseText", "_priceLabel", "_purchaseButton", "_purchaseHoldFill", "_purchaseHoldDarken", "_cancelButton", "_iconRect", "_animPlay")]
 visible = false
 z_index = 6
 anchors_preset = 15
@@ -412,6 +424,8 @@ script = ExtResource("1_g3n34")
 _purchaseText = NodePath("Pivot/Pivot/Panel/Layout/Layout/Layout/PurchaseText")
 _priceLabel = NodePath("Pivot/Pivot/Panel/Layout/Layout/Layout/Price/PriceLabel")
 _purchaseButton = NodePath("Pivot/Pivot/Panel/Layout/Layout/Options/Purchase")
+_purchaseHoldFill = NodePath("Pivot/Pivot/Panel/Layout/Layout/Options/Purchase/HoldFill")
+_purchaseHoldDarken = NodePath("Pivot/Pivot/Panel/Layout/Layout/Options/Purchase/HoldDarken")
 _cancelButton = NodePath("Pivot/Pivot/Panel/Layout/Layout/Options/Cancel")
 _iconRect = NodePath("Pivot/Pivot/Panel/Layout/Icon/Icon")
 _animPlay = NodePath("AnimationPlayer")
@@ -545,6 +559,21 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_tesjd")
 theme_override_styles/hover = SubResource("StyleBoxFlat_tesjd")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_02xn0")
 text = "Purchase"
+
+[node name="HoldDarken" type="Panel" parent="Pivot/Pivot/Panel/Layout/Layout/Options/Purchase"]
+layout_mode = 1
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_holddarken")
+
+[node name="HoldFill" type="Panel" parent="Pivot/Pivot/Panel/Layout/Layout/Options/Purchase"]
+layout_mode = 1
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -4.0
+offset_bottom = 2.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_holdfill")
 
 [node name="Cancel" type="Button" parent="Pivot/Pivot/Panel/Layout/Layout/Options" unique_id=16636525]
 layout_mode = 2

@@ -403,6 +403,8 @@ public sealed partial class PolytorianModel : CharacterModel
 			float target = kvp.Value;
 			float current = (float)AnimTree.Get(propName);
 
+			if (!float.IsFinite(current)) current = 0f;
+
 			float targetBlendSpeed = BlendSpeed;
 			float newValue;
 
@@ -600,7 +602,7 @@ public sealed partial class PolytorianModel : CharacterModel
 			CharacterAttachmentEnum.Head => GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_Head/HeadAttachment"),
 			CharacterAttachmentEnum.UpperTorso => GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_UpperTorso/UpperTorsoAttachment"),
 			CharacterAttachmentEnum.LowerTorso => GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_LowerTorso/LowerTorsoAttachment"),
-			CharacterAttachmentEnum.ShoulderLeft => GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_UpperArm_L/ShoulderLeftAttachment"),
+			CharacterAttachmentEnum.ShoulderLeft => GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_UpperArm_L/LeftShoulderAttachment"),
 			CharacterAttachmentEnum.ShoulderRight => GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_UpperArm_R/RightShoulderAttachment"),
 			CharacterAttachmentEnum.ElbowLeft => GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_LowerArm_L/LeftElbowAttachment"),
 			CharacterAttachmentEnum.ElbowRight => GDNode.GetNode<Node3D>("Character/Poly/Skeleton3D/O_LowerArm_R/RightElbowAttachment"),
@@ -618,6 +620,8 @@ public sealed partial class PolytorianModel : CharacterModel
 
 	public override void RecvBlendValue(CharacterModelBlendEnum blendName, float blendValue)
 	{
+		if (!float.IsFinite(blendValue)) return;
+
 		string propName = "";
 		switch (blendName)
 		{
@@ -646,6 +650,8 @@ public sealed partial class PolytorianModel : CharacterModel
 
 	public override void RecvSpeedValue(float speedValue)
 	{
+		if (!float.IsFinite(speedValue)) return;
+
 		if (AnimTree == null) return;
 		AnimTree.Set("parameters/TimeScale/scale", speedValue);
 	}
@@ -777,64 +783,28 @@ public sealed partial class PolytorianModel : CharacterModel
 				body.AssetID = (uint)asset.ID;
 				BodyMesh = body;
 			}
-			else if (asset.Type == "hat")
+			else if (asset.Type == "hat" || asset.Type == "tool")
 			{
 				try
 				{
-					Accessory? accessory = await Root.Insert.AccessoryAsync(asset.ID);
-					if (myCount != _loadAppearanceCount) { accessory?.Delete(); throw new OperationCanceledException("The avatar is cancelled"); }
-					if (IsDeleted)
+					if (asset.Type == "hat")
 					{
-						accessory?.Delete();
-						throw new OperationCanceledException("The avatar is deleted");
+						Root.Insert.CreateAccessory(asset.ID, asset.Name, asset.AccessoryType).Parent = this;
 					}
-					accessory?.Parent = this;
+					else if (Parent is Player plr && loadTool)
+					{
+						hasTool = true;
+						Root.Insert.CreateTool(asset.ID, asset.Name).Parent = plr.Inventory;
+					}
+					else if (Parent is NPC npc && loadToolNpc)
+					{
+						hasTool = true;
+						npc.EquipTool(Root.Insert.CreateTool(asset.ID, asset.Name));
+					}
 				}
 				catch (Exception ex)
 				{
 					PT.PrintErr(ex);
-				}
-			}
-			else if (asset.Type == "tool")
-			{
-				if (Parent is Player plr && loadTool)
-				{
-					hasTool = true;
-					try
-					{
-						Tool? tool = await Root.Insert.ToolAsync(asset.ID);
-						if (myCount != _loadAppearanceCount) { tool?.Delete(); throw new OperationCanceledException("The avatar is cancelled"); }
-						if (IsDeleted)
-						{
-							tool?.Delete();
-							throw new OperationCanceledException("The avatar is deleted");
-						}
-						tool?.Parent = plr.Inventory;
-					}
-					catch (Exception ex)
-					{
-						PT.PrintErr(ex);
-					}
-				}
-				else if (Parent is NPC npc && loadToolNpc)
-				{
-					hasTool = true;
-					try
-					{
-						Tool? tool = await Root.Insert.ToolAsync(asset.ID);
-						if (myCount != _loadAppearanceCount) { tool?.Delete(); throw new OperationCanceledException("The avatar is cancelled"); }
-						if (IsDeleted)
-						{
-							tool?.Delete();
-							throw new OperationCanceledException("The avatar is deleted");
-						}
-						if (tool != null)
-							npc.EquipTool(tool);
-					}
-					catch (Exception ex)
-					{
-						PT.PrintErr(ex);
-					}
 				}
 			}
 		}

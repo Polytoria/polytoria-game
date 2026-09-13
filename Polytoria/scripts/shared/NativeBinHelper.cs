@@ -27,7 +27,7 @@ public static partial class NativeBinHelper
 
 	private static void SetExecutablePermission(string path, string label)
 	{
-		int ret = chmod(path, 0x755);
+		int ret = chmod(path, 0b111_101_101);
 		if (ret != 0)
 			throw new Exception($"{label} permission set failure: Code {ret}");
 	}

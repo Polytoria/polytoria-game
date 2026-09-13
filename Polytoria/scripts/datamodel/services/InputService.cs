@@ -599,7 +599,7 @@ public sealed partial class InputService : Instance
 	}
 
 	[ScriptMethod]
-	public Vector3 GetMouseWorldPosition(Instance[]? ignoreList = null)
+	public Vector3 GetMouseWorldPosition(Instance[]? ignoreList = null, uint passthroughMask = 1 << 0)
 	{
 		Viewport viewport = GDNode.GetViewport();
 		Camera3D camera = viewport.GetCamera3D();
@@ -610,7 +610,7 @@ public sealed partial class InputService : Instance
 		Vector3 rayOrigin = camera.ProjectRayOrigin(mousePos);
 		Vector3 rayDir = camera.ProjectRayNormal(mousePos);
 
-		RayResult? hit = Root.Environment.Raycast(rayOrigin, rayDir, ignoreList: ignoreList);
+		RayResult? hit = Root.Environment.Raycast(rayOrigin, rayDir, ignoreList: ignoreList, passthroughMask: passthroughMask);
 		return hit != null ? hit.Value.Position : rayOrigin + rayDir * 1000f;
 	}
 

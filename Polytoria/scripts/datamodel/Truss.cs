@@ -10,6 +10,7 @@ namespace Polytoria.Datamodel;
 public sealed partial class Truss : Part
 {
 	private float _climbSpeed;
+	private bool _climbable;
 
 	[Editable, ScriptProperty, DefaultValue(1f)]
 	public float ClimbSpeed
@@ -18,6 +19,17 @@ public sealed partial class Truss : Part
 		set
 		{
 			_climbSpeed = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue(true)]
+	public bool Climbable
+	{
+		get => _climbable;
+		set
+		{
+			_climbable = value;
 			OnPropertyChanged();
 		}
 	}

@@ -20,8 +20,6 @@ public partial class UnitQuaternionDto
 
 	[MemoryPackConstructor, JsonConstructor]
 	public UnitQuaternionDto() { }
-	public UnitQuaternionDto(Quaternion v) { Rotation = ToCompressed(v); }
-	public Quaternion ToQuaternion() => FromCompressed(Rotation);
 
 	public static string ToString(Quaternion src)
 	{

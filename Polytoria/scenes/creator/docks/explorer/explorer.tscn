@@ -2,40 +2,10 @@
 
 [ext_resource type="Script" uid="uid://dx8iy8t8pouw5" path="res://scripts/creator/ui/Explorer.cs" id="2_a6sm1"]
 
-[sub_resource type="FontVariation" id="FontVariation_khfyn"]
-variation_opentype = {
-2003265652: 700
-}
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_f05cx"]
-content_margin_left = 10.0
-content_margin_top = 5.0
-content_margin_right = 10.0
-content_margin_bottom = 5.0
-bg_color = Color(0.0862745, 0.0862745, 0.0862745, 1)
-
-[sub_resource type="Theme" id="Theme_khfyn"]
-resource_name = "HeaderTheme"
-Label/font_sizes/font_size = 14
-Label/fonts/font = SubResource("FontVariation_khfyn")
-PanelContainer/styles/panel = SubResource("StyleBoxFlat_f05cx")
-
 [node name="Explorer" type="VBoxContainer" unique_id=63511104]
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_constants/separation = 0
-
-[node name="Header" type="PanelContainer" parent="." unique_id=352362473]
-custom_minimum_size = Vector2(0, 30)
-layout_mode = 2
-mouse_filter = 2
-theme = SubResource("Theme_khfyn")
-
-[node name="Label" type="Label" parent="Header" unique_id=716894610]
-layout_mode = 2
-size_flags_vertical = 1
-text = "Explorer"
-vertical_alignment = 1
 
 [node name="Tabs" type="TabContainer" parent="." unique_id=508319159]
 layout_mode = 2

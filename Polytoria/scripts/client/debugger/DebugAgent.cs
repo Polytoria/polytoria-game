@@ -12,7 +12,6 @@ using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Threading.Tasks;
 
 namespace Polytoria.Client.Debugger;
@@ -133,10 +132,10 @@ public class DebugAgent
 			NetworkedObject? obj = World.Current.GetObjectFromID(pc.ObjectID);
 			if (obj != null)
 			{
-				PropertyInfo? prop = obj.GetSyncProperty(pc.PropertyName);
+				PropSyncProp? prop = PropSyncRegistry.GetProp(obj.GetType(), pc.PropertyName);
 				if (prop != null)
 				{
-					object? val = NetworkPropSync.DeserializePropValue(pc.PropertyValue, prop.PropertyType);
+					object? val = prop.Deserialize(pc.PropertyValue);
 
 					// Call in main thread
 					PT.CallOnMainThread(() =>
