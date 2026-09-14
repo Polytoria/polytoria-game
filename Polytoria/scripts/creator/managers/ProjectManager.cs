@@ -171,18 +171,17 @@ public static class ProjectManager
 		return newId;
 	}
 
+	private static readonly string GodotResDir = OS.HasFeature("editor") ? ProjectSettings.GlobalizePath("res://") : OS.GetExecutablePath().GetBaseDir();
+
 	private static string? TryAddDefaultScript(CreatorSession session, string name)
 	{
 		string path = session.GlobalizePath("scripts/builtin/" + name);
 		string metaPath = PackedFormat.GetMetaPath(path);
 		if (ScriptOccupied(path)) return path;
-		Godot.FileAccess f = Godot.FileAccess.Open("res://defaultscripts/" + name, Godot.FileAccess.ModeFlags.Read);
-		Godot.FileAccess sf = Godot.FileAccess.Open(path, Godot.FileAccess.ModeFlags.Write);
-		sf.StoreString(DefaultScriptHeader);
-		sf.StoreString(f.GetAsText());
-		f.Dispose();
-		sf.Dispose();
-		if (!Godot.FileAccess.FileExists(metaPath)) PackedFormat.WriteMetaId(metaPath, IDFromPath(session, path));
+		string defaultScriptPath = Path.Join(GodotResDir, "defaultscripts/", name).SanitizePath();
+		File.WriteAllText(path, DefaultScriptHeader);
+		File.AppendAllText(path, File.ReadAllText(defaultScriptPath));
+		if (!File.Exists(metaPath)) PackedFormat.WriteMetaId(metaPath, IDFromPath(session, path));
 		return path;
 	}
 
