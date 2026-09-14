@@ -8,6 +8,7 @@ using Polytoria.Datamodel.Resources;
 using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Enums;
+using System;
 
 
 #if CREATOR
@@ -226,19 +227,20 @@ public sealed partial class Sound : Dynamic
 		}
 		set
 		{
-			if (_audioPlayer3D == null) return;
-
 			_attenuationMode = value switch
 			{
 				SoundAttenuationModeEnum.Linear => AudioStreamPlayer3D.AttenuationModelEnum.InverseDistance,
 				SoundAttenuationModeEnum.Squared => AudioStreamPlayer3D.AttenuationModelEnum.InverseSquareDistance,
 				SoundAttenuationModeEnum.Logarithmic => AudioStreamPlayer3D.AttenuationModelEnum.Logarithmic,
 				SoundAttenuationModeEnum.Disabled => AudioStreamPlayer3D.AttenuationModelEnum.Disabled,
-				_ => _audioPlayer3D.AttenuationModel
+				_ => throw new IndexOutOfRangeException("Attenuation mode out of range")
 			};
 
-			_audioPlayer3D.AttenuationModel = _attenuationMode;
-			_audioPlayer3D.AttenuationFilterCutoffHz = _attenuationMode == AudioStreamPlayer3D.AttenuationModelEnum.Disabled ? 20500 : 5000;
+			if (_audioPlayer3D != null)
+			{
+				_audioPlayer3D.AttenuationModel = _attenuationMode;
+				_audioPlayer3D.AttenuationFilterCutoffHz = _attenuationMode == AudioStreamPlayer3D.AttenuationModelEnum.Disabled ? 20500 : 5000;
+			}
 
 			OnPropertyChanged();
 		}
