@@ -503,10 +503,21 @@ public sealed partial class Environment : Instance
 		return PerformShapecast(new SphereShape3D() { Radius = radius }, new(Basis.Identity, origin), direction, maxDistance, ignoreList, maxResults);
 	}
 
+	private RayResult[] PerformBoxcast(Vector3 size, Transform3D transform, Vector3 direction, float maxDistance, Instance[]? ignoreList, int maxResults)
+	{
+		return PerformShapecast(new BoxShape3D() { Size = size }, transform, direction, maxDistance, ignoreList, maxResults);
+	}
+
 	[ScriptMethod]
 	public RayResult[] Boxcast(Vector3 origin, Vector3 size, Vector3 rot, Vector3 direction, float maxDistance = 1000f, Instance[]? ignoreList = null, int maxResults = 1)
 	{
-		return PerformShapecast(new BoxShape3D() { Size = size }, new(Basis.FromEuler(rot), origin), direction, maxDistance, ignoreList, maxResults);
+		return PerformBoxcast(size, new(Basis.FromEuler(rot.DegToRad()), origin), direction, maxDistance, ignoreList, maxResults);
+	}
+
+	[ScriptMethod]
+	public RayResult[] Boxcast(Vector3 origin, Vector3 size, Quaternion q, Vector3 direction, float maxDistance = 1000f, Instance[]? ignoreList = null, int maxResults = 1)
+	{
+		return PerformBoxcast(size, new(new(q), origin), direction, maxDistance, ignoreList, maxResults);
 	}
 
 	private RayResult[] PerformShapecast(Resource shape, Transform3D transform, Vector3 direction, float maxDistance, Instance[]? ignoreList, int maxResults)
