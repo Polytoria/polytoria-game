@@ -632,7 +632,12 @@ public sealed partial class Gizmos : Node
 						Root.CreatorContext.Selections.SelectOnly(targetDyn);
 					}
 
-					if (toolMode == ToolModeEnum.Select || toolMode == ToolModeEnum.Move)
+					if (
+						toolMode == ToolModeEnum.Scale ||
+						toolMode == ToolModeEnum.Move ||
+						toolMode == ToolModeEnum.Rotate ||
+						toolMode == ToolModeEnum.Select
+					)
 					{
 						if (_reselectTarget != null)
 						{
