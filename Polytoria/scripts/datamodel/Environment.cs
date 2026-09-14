@@ -498,18 +498,18 @@ public sealed partial class Environment : Instance
 	}
 
 	[ScriptMethod]
-	public RayResult[] Spherecast(Vector3 origin, float radius, Vector3 direction, int maxResults = 1, float maxDistance = 1000f, Instance[]? ignoreList = null)
+	public RayResult[] Spherecast(Vector3 origin, float radius, Vector3 direction, float maxDistance = 1000f, Instance[]? ignoreList = null, int maxResults = 1)
 	{
-		return PerformShapecast(new SphereShape3D() { Radius = radius }, new(Basis.Identity, origin), direction, maxResults, maxDistance, ignoreList);
+		return PerformShapecast(new SphereShape3D() { Radius = radius }, new(Basis.Identity, origin), direction, maxDistance, ignoreList, maxResults);
 	}
 
 	[ScriptMethod]
-	public RayResult[] Boxcast(Vector3 origin, Vector3 size, Vector3 rot, Vector3 direction, int maxResults = 1, float maxDistance = 1000f, Instance[]? ignoreList = null)
+	public RayResult[] Boxcast(Vector3 origin, Vector3 size, Vector3 rot, Vector3 direction, float maxDistance = 1000f, Instance[]? ignoreList = null, int maxResults = 1)
 	{
-		return PerformShapecast(new BoxShape3D() { Size = size }, new(Basis.FromEuler(rot), origin), direction, maxResults, maxDistance, ignoreList);
+		return PerformShapecast(new BoxShape3D() { Size = size }, new(Basis.FromEuler(rot), origin), direction, maxDistance, ignoreList, maxResults);
 	}
 
-	private RayResult[] PerformShapecast(Resource shape, Transform3D transform, Vector3 direction, int maxResults, float maxDistance, Instance[]? ignoreList)
+	private RayResult[] PerformShapecast(Resource shape, Transform3D transform, Vector3 direction, float maxDistance, Instance[]? ignoreList, int maxResults)
 	{
 		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
 		Godot.Collections.Array<Rid> ignoreRids = [];
