@@ -25,7 +25,6 @@ namespace Polytoria.Datamodel;
 public sealed partial class Player : NPC
 {
 	private const double MaxAFKTime = 60 * 15;
-	private const float CameraHeight = 2f;
 	public const string CreatorHeadScene = "res://scenes/creator/livecollab/head.tscn";
 	public const string BubbleChatScene = "res://scenes/client/spatial/chat/bubble_chat.tscn";
 	public const string BadgeImageDirPath = "res://assets/textures/client/ui/playerlist/badges/";
@@ -38,6 +37,7 @@ public sealed partial class Player : NPC
 	internal Vector3 LastVelocity;
 	internal Vector3 ExternalVelocity;
 
+	private float _cameraHeight = 2f;
 	private float _respawnTime = 5.0f;
 	private bool _canMove = true;
 	private bool _canJumpWhileClimbing = true;
@@ -120,6 +120,21 @@ public sealed partial class Player : NPC
 			{
 				FetchUserInfo();
 			}
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float CameraHeight
+	{
+		get => _cameraHeight;
+		set
+		{
+			_cameraHeight = value;
+			if (!Root.Network.IsServer)
+			{
+				CamAttach.LocalPosition = new Vector3(0, _cameraHeight, 0);
+			}
+			OnPropertyChanged();
 		}
 	}
 
@@ -545,7 +560,7 @@ public sealed partial class Player : NPC
 		_remoteCamAttach.UpdateRotation = enabled;
 		if (enabled == false)
 		{
-			CamAttach.LocalPosition = new Vector3(0, CameraHeight, 0);
+			CamAttach.LocalPosition = new Vector3(0, _cameraHeight, 0);
 		}
 	}
 
@@ -1066,6 +1081,7 @@ public sealed partial class Player : NPC
 		CopyInventory();
 
 		// Apply playerdefaults
+		CameraHeight = Root.PlayerDefaults.CameraHeight;
 		MaxHealth = Root.PlayerDefaults.MaxHealth;
 		WalkSpeed = Root.PlayerDefaults.WalkSpeed;
 		SprintSpeed = Root.PlayerDefaults.SprintSpeed;
