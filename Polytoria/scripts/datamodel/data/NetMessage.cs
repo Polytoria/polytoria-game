@@ -29,69 +29,91 @@ public partial class NetMessage : IScriptObject
 	public Dictionary<string, byte[]> Buffers = [];
 
 	[ScriptMethod]
-	public void AddString(string key, string value)
+	public NetMessage AddString(string key, string value)
 	{
 		Strings.Add(key, value);
+
+		return this;
 	}
 
 	[ScriptMethod]
-	public void AddInt(string key, int value)
+	public NetMessage AddInt(string key, int value)
 	{
 		Ints.Add(key, value);
+
+		return this;
 	}
 
 	[ScriptMethod]
-	public void AddBool(string key, bool value)
+	public NetMessage AddBool(string key, bool value)
 	{
 		Bools.Add(key, value);
+
+		return this;
 	}
 
 	[ScriptMethod]
-	public void AddNumber(string key, float value)
+	public NetMessage AddNumber(string key, float value)
 	{
 		Numbers.Add(key, value);
+
+		return this;
 	}
 
 	[ScriptMethod]
-	public void AddVector2(string key, Vector2 value)
+	public NetMessage AddVector2(string key, Vector2 value)
 	{
 		Vec2s.Add(key, value);
+
+		return this;
 	}
 
 	[ScriptMethod]
-	public void AddVector3(string key, Vector3 value)
+	public NetMessage AddVector3(string key, Vector3 value)
 	{
 		Vec3s.Add(key, value);
+
+		return this;
 	}
 
 	[ScriptMethod]
-	public void AddColor(string key, Color value)
+	public NetMessage AddColor(string key, Color value)
 	{
 		Colors.Add(key, value);
+
+		return this;
 	}
 
 	[ScriptMethod]
-	public void AddQuaternion(string key, Quaternion value)
+	public NetMessage AddQuaternion(string key, Quaternion value)
 	{
 		Quaternions.Add(key, value);
+
+		return this;
 	}
 
 	[ScriptMethod]
-	public void AddVariant(string key, Variant value)
+	public NetMessage AddVariant(string key, Variant value)
 	{
 		Variants.Add(key, value);
+
+		return this;
 	}
 
 	[ScriptMethod]
-	public void AddInstance(string key, Instance value)
+	public NetMessage AddInstance(string key, Instance value)
 	{
 		Instances.Add(key, value);
+
+		return this;
 	}
 
 	[ScriptMethod]
-	public void AddBuffer(string key, byte[] buffer)
+	public NetMessage AddBuffer(string key, byte[] buffer)
 	{
 		Buffers.Add(key, buffer);
+
+		return this;
 	}
 
 	[ScriptMethod]
