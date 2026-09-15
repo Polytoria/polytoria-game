@@ -44,7 +44,7 @@ public partial class NPC : Physical
 	private bool _coyoteUsed = false;
 	private Node3D? _navAgentContainer;
 	private NavigationAgent3D? _navAgent;
-	private bool _isDead;
+	protected bool _isDead;
 
 	private Vector3 _nametagOffset = Vector3.Zero;
 	private Vector3 _fixedNametagOffset = new(0, 3, 0);
@@ -813,7 +813,15 @@ public partial class NPC : Physical
 		{
 			_isDead = true;
 			OnDied();
+			RpcId(1, nameof(NetKill));
 		}
+	}
+
+	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
+	private void NetKill()
+	{
+		_isDead = true;
+		OnDied();
 	}
 
 	protected virtual void OnDied()

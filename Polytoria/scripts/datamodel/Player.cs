@@ -1150,7 +1150,14 @@ public sealed partial class Player : NPC
 
 		OverrideCanCollide = false;
 		UpdateCollision();
-		Vitals?.Reset();
+		if (Vitals is Vitals v)
+		{
+			v.Reset();
+		}
+		else
+		{
+			_isDead = false;
+		}
 	}
 
 	[ScriptMethod]
