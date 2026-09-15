@@ -19,10 +19,8 @@ public sealed partial class Mesh : Entity
 	private MeshAsset? _asset;
 
 	private int _assetID = 0;
-	private bool _includeOffset;
-
 	private Node3D _meshContainer = null!; // scaled
-	private Node3D? _meshNode = null; // offset only
+	private Node3D? _meshNode = null;
 
 	private CollisionTypeEnum _collisionType = CollisionTypeEnum.Bounds;
 	private TextureFilterEnum _textureFilter;
@@ -34,6 +32,7 @@ public sealed partial class Mesh : Entity
 	private readonly List<MeshInstance3D> _meshInstances = [];
 	private readonly List<Material> _materials = [];
 	private Resource? _prevResource;
+	private Vector3 _nativeMeshSize = Vector3.One;
 
 	[Editable, ScriptProperty]
 	public MeshAsset? Asset
@@ -61,7 +60,11 @@ public sealed partial class Mesh : Entity
 				_asset.ResourceLoaded += OnResourceLoaded;
 				if (_asset.IsResourceLoaded && _asset.Resource != null)
 				{
-					OnResourceLoaded(_asset.Resource);
+					Resource cached = _asset.Resource;
+					Callable.From(() =>
+					{
+						if (!IsDeleted) OnResourceLoaded(cached);
+					}).CallDeferred();
 				}
 				else
 				{
@@ -78,31 +81,14 @@ public sealed partial class Mesh : Entity
 		get => _assetID;
 		set
 		{
+			if (_assetID == value) return;
 			_assetID = value;
-			CreatePTMeshAsset();
-			if (_asset != null)
-			{
-				if (_asset.IsResourceLoaded && _asset.Resource != null)
-				{
-					OnResourceLoaded(_asset.Resource);
-				}
-				else
-				{
-					_asset.QueueLoadResource();
-				}
-			}
-			OnPropertyChanged();
-		}
-	}
 
-	[Editable, ScriptProperty, DefaultValue(false)]
-	public bool IncludeOffset
-	{
-		get => _includeOffset;
-		set
-		{
-			_includeOffset = value;
-			UpdateMeshOffset();
+			PTMeshAsset meshAsset = New<PTMeshAsset>();
+			meshAsset.AssetID = (uint)value;
+			Asset = meshAsset;
+
+			OnPropertyChanged();
 		}
 	}
 
@@ -223,26 +209,11 @@ public sealed partial class Mesh : Entity
 		base.Init();
 	}
 
-	public override void InitOverrides()
-	{
-		Size = Vector3.One * 0.5f;
-		base.InitOverrides();
-	}
-
 	public override void PreDelete()
 	{
 		_materials.Clear();
 		_meshInstances.Clear();
 		base.PreDelete();
-	}
-
-	private void CreatePTMeshAsset()
-	{
-		Asset = New<PTMeshAsset>();
-		if (Asset is PTMeshAsset mesh)
-		{
-			mesh.AssetID = (uint)_assetID;
-		}
 	}
 
 	private static BaseMaterial3D.TextureFilterEnum ToGodotTextureFilter(TextureFilterEnum filter)
@@ -319,6 +290,18 @@ public sealed partial class Mesh : Entity
 				}
 			}
 
+			Aabb? nativeBounds = null;
+			foreach (MeshInstance3D meshInst in _meshInstances)
+			{
+				Aabb meshBounds = meshInst.GetAabb();
+				if (meshBounds.Size != Vector3.Zero)
+				{
+					nativeBounds = nativeBounds == null ? meshInst.Transform * meshBounds : nativeBounds.Value.Merge(meshInst.Transform * meshBounds);
+				}
+			}
+			_nativeMeshSize = new Vector3(Mathf.Max(nativeBounds?.Size.X ?? 1f, 0.001f), Mathf.Max(nativeBounds?.Size.Y ?? 1f, 0.001f), Mathf.Max(nativeBounds?.Size.Z ?? 1f, 0.001f));
+			Size = _nativeMeshSize;
+
 			UpdateColor();
 			UpdateShadows();
 			UpdateTextureFilter();
@@ -334,7 +317,7 @@ public sealed partial class Mesh : Entity
 				}
 			}
 
-			UpdateMeshOffset();
+			ResetMeshNodeState();
 
 			Loading = false;
 			Loaded.Invoke();
@@ -439,23 +422,11 @@ public sealed partial class Mesh : Entity
 		}
 	}
 
-	private void UpdateMeshOffset()
+	private void ResetMeshNodeState()
 	{
-		if (_meshNode == null)
-		{
-			return;
-		}
-		if (IncludeOffset)
-		{
-			_meshNode.Position = Vector3.Zero;
-		}
-		else
-		{
-			_meshNode.ForceUpdateTransform();
-			Vector3 offset = -_meshNode.CalculateBounds().GetCenter();
+		if (_meshNode == null) return;
 
-			_meshNode.Position = offset;
-		}
+		_meshNode.Position = Vector3.Zero;
 		_meshNode.Visible = !IsHidden;
 
 		RecalculateCollision();
@@ -588,7 +559,7 @@ public sealed partial class Mesh : Entity
 
 	internal override void OnNodeSizeChanged(Vector3 newSize)
 	{
-		_meshContainer.Scale = newSize;
+		_meshContainer.Scale = new Vector3(newSize.X / _nativeMeshSize.X, newSize.Y / _nativeMeshSize.Y, newSize.Z / _nativeMeshSize.Z);
 	}
 
 	public struct MeshAnimationInfo : IScriptObject
