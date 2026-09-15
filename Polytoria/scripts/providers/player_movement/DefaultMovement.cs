@@ -12,7 +12,7 @@ public class DefaultMovement : IPlayerMovement
 
 	private bool IsMobile(Player plr)
 	{
-		return plr.CanMove && (plr.Vitals?.IsDead != true);
+		return plr.CanMove && !plr.IsDead;
 	}
 
 	public InputSnapshot SampleInput(double delta)

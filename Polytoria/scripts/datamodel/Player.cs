@@ -822,7 +822,7 @@ public sealed partial class Player : NPC
 			}
 		}
 
-		if (Vitals?.IsDead == true) { return; }
+		if (IsDead) { return; }
 
 		if (@event.IsActionPressed("jump"))
 		{
@@ -921,7 +921,7 @@ public sealed partial class Player : NPC
 
 	internal void PlayEmote(string emoteName)
 	{
-		if (IsSitting || (Vitals?.IsDead == true)) return;
+		if (IsSitting || IsDead) return;
 		if (!EmoteList.Contains(emoteName)) return;
 		bool isOneShot = false;
 		if (OneShotEmoteList.Contains(emoteName))
@@ -1101,7 +1101,7 @@ public sealed partial class Player : NPC
 			Vitals!.Destroy();
 			Vitals = null;
 		}
-		if (!hasVitals && willHaveVitals)
+		if (willHaveVitals && !hasVitals)
 		{
 			Vitals = Root.New<Vitals>();
 			Vitals.Parent = this;

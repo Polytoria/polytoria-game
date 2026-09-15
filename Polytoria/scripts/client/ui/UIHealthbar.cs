@@ -34,7 +34,7 @@ public partial class UIHealthbar : Control
 		{
 			if (localplayer.Vitals is Vitals v)
 			{
-				_healthBar.Visible = true;
+				_heart.Visible = _healthBar.Visible = true;
 				float health = v.Health;
 				float maxHealth = v.MaxHealth;
 				Color healthClr = _healthOutColor.Lerp(_healthFullColor, Mathf.Clamp(health / maxHealth, 0, 1));
@@ -49,7 +49,7 @@ public partial class UIHealthbar : Control
 			}
 			else
 			{
-				_healthBar.Visible = false;
+				_heart.Visible = _healthBar.Visible = false;
 			}
 
 			_staminaBar.Visible = localplayer.UseStamina;

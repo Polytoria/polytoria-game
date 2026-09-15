@@ -44,6 +44,7 @@ public partial class NPC : Physical
 	private bool _coyoteUsed = false;
 	private Node3D? _navAgentContainer;
 	private NavigationAgent3D? _navAgent;
+	private bool _isDead;
 
 	private Vector3 _nametagOffset = Vector3.Zero;
 	private Vector3 _fixedNametagOffset = new(0, 3, 0);
@@ -332,8 +333,8 @@ public partial class NPC : Physical
 	[SyncVar, ScriptProperty]
 	public bool IsSitting { get; internal set; } = false;
 
-	[ScriptProperty, Obsolete("Use Vitals.IsDead instead")]
-	public bool? IsDead => Vitals?.IsDead;
+	[ScriptProperty]
+	public bool IsDead => Vitals?.IsDead ?? _isDead;
 
 	[SyncVar, ScriptProperty]
 	public Tool? HoldingTool
@@ -801,10 +802,18 @@ public partial class NPC : Physical
 		UpdateVelocityInternal(CharacterVelocity);
 	}
 
-	[ScriptMethod, Obsolete("Use Vitals:Kill() instead")]
+	[ScriptMethod]
 	public void Kill()
 	{
-		Vitals?.Kill();
+		if (Vitals is Vitals v)
+		{
+			v.Kill();
+		}
+		else
+		{
+			_isDead = true;
+			OnDied();
+		}
 	}
 
 	protected virtual void OnDied()
@@ -1025,7 +1034,7 @@ public partial class NPC : Physical
 	[ScriptMethod]
 	public void EquipTool(Tool tool)
 	{
-		if (Vitals?.IsDead == true) return;
+		if (IsDead) return;
 		// Check if tool is already held
 		if (HoldingTool != null)
 		{
@@ -1198,6 +1207,7 @@ public partial class NPC : Physical
 	[ScriptMethod]
 	public void Respawn()
 	{
+		_isDead = false;
 		Vitals?.Reset();
 		Anchored = false;
 

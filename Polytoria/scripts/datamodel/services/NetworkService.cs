@@ -709,7 +709,7 @@ public sealed partial class NetworkService : Instance
 		// Insert default character on client
 		if (NetworkMode == NetworkModeEnum.Client)
 		{
-			Root.Insert.InitializeDefaultNPC(plr, createVitals : false);
+			Root.Insert.InitializeDefaultNPC(plr, createVitals: Root.PlayerDefaults.UseHealth);
 		}
 
 		plr.Parent = _players;
