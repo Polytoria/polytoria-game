@@ -10,6 +10,7 @@ namespace Polytoria.Datamodel;
 [Static("PlayerDefaults")]
 public sealed partial class PlayerDefaults : HiddenBase
 {
+	private bool _useHealth;
 	private float _maxHealth;
 	private float _walkSpeed;
 	private float _jumpPower;
@@ -18,9 +19,9 @@ public sealed partial class PlayerDefaults : HiddenBase
 	private float _respawnTime;
 	private bool _canMove;
 	private float _sprintSpeed;
+	private bool _useStamina;
 	private float _stamina;
 	private float _maxStamina;
-	private bool _useStamina;
 	private float _staminaRegen;
 	private float _staminaBurn;
 	private bool _keepInventory;
@@ -29,6 +30,17 @@ public sealed partial class PlayerDefaults : HiddenBase
 	private bool _autoLoadAppearance;
 	private bool _loadAppearanceTools;
 	private Player.PlayerMovementModeEnum _movementMode;
+
+	[Editable, ScriptProperty]
+	public bool UseHealth
+	{
+		get => _useHealth;
+		set
+		{
+			_useHealth = value;
+			OnPropertyChanged();
+		}
+	}
 
 	[Editable, ScriptProperty]
 	public float MaxHealth
@@ -115,17 +127,6 @@ public sealed partial class PlayerDefaults : HiddenBase
 	}
 
 
-	[Editable, ScriptProperty]
-	public float StaminaBurn
-	{
-		get => _staminaBurn;
-		set
-		{
-			_staminaBurn = value;
-			OnPropertyChanged();
-		}
-	}
-
 	[Editable, ScriptProperty, ScriptLegacyProperty("StaminaEnabled")]
 	public bool UseStamina
 	{
@@ -133,6 +134,17 @@ public sealed partial class PlayerDefaults : HiddenBase
 		set
 		{
 			_useStamina = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float StaminaBurn
+	{
+		get => _staminaBurn;
+		set
+		{
+			_staminaBurn = value;
 			OnPropertyChanged();
 		}
 	}

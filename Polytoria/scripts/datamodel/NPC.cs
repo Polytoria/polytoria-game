@@ -24,6 +24,7 @@ public partial class NPC : Physical
 	private Seat? _sittingIn;
 	private CharacterModel? _sitPoseModel;
 	private CharacterModel? _character;
+	private Vitals? _vitals;
 	private Dynamic? _moveTarget;
 
 	public CharacterBody3D CharBody3D = null!;
@@ -32,9 +33,7 @@ public partial class NPC : Physical
 	public const float NameTagHeightMinus = 3f;
 	private Vector3 _vertical = Vector3.Up;
 	private Vector3 _seatOffset = new(0, 1.7f, 0);
-	private float _health = 100;
 	private RemoteTransform3D? _toolRemoteTransform;
-	private float _maxHealth = 100;
 	private float _jumpPower = 36;
 	private float _walkSpeed = 16;
 	private string _displayName = "";
@@ -230,36 +229,18 @@ public partial class NPC : Physical
 		}
 	}
 
-	[Editable, ScriptProperty]
-	public float Health
+	[ScriptProperty, Obsolete("Use Vitals.Health instead")]
+	public float? Health
 	{
-		get => _health;
-		set
-		{
-			if (this is Player plr && !plr.IsReady) return;
-			float oldHealth = _health;
-			_health = value;
-			if (_health <= 0 && !IsDead)
-			{
-				TriggerNPCDead();
-			}
-			OnPropertyChanged();
-			if (_health != oldHealth)
-			{
-				HealthChanged.Invoke(_health, oldHealth);
-			}
-		}
+		get => Vitals?.Health;
+		set => Vitals?.Health = value;
 	}
 
-	[Editable, ScriptProperty]
+	[ScriptProperty, Obsolete("Use Vitals.MaxHealth instead")]
 	public float MaxHealth
 	{
-		get => _maxHealth;
-		set
-		{
-			_maxHealth = value;
-			OnPropertyChanged();
-		}
+		get => Vitals?.MaxHealth;
+		set => Vitals?.MaxHealth = value;
 	}
 
 	[Editable, ScriptProperty]
@@ -391,6 +372,35 @@ public partial class NPC : Physical
 	}
 
 	[Editable, ScriptProperty, SyncVar]
+	public Vitals? Vitals
+	{
+		get
+		{
+			if (_vitals != null && _vitals.IsDeleted)
+			{
+				_vitals = null;
+			}
+			return _vitals;
+		}
+		set
+		{
+			Vitals? old = Vitals;
+			if (old != value)
+			{
+				if (old != null)
+				{
+					old.Died.Disconnect(TriggerNPCDead);
+				}
+				_vitals = value;
+				if (_vitals != null)
+				{
+					_vitals.Died.Connect(TriggerNPCDead);
+				}
+			}
+		}
+	}
+
+	[Editable, ScriptProperty, SyncVar]
 	public Vector3 Vertical
 	{
 		get => _vertical;
@@ -431,11 +441,11 @@ public partial class NPC : Physical
 
 	public Vector3 CharacterVelocity = Vector3.Zero;
 
-	[ScriptProperty]
-	public PTSignal Died { get; private set; } = new();
+	[ScriptProperty, Obsolete("Use Vitals.Died instead")]
+	public PTSignal? Died => Vitals?.Died;
 
-	[ScriptProperty]
-	public PTSignal<float, float> HealthChanged { get; private set; } = new();
+	[ScriptProperty, Obsolete("Use Vitals.HealthChanged instead")]
+	public PTSignal<float, float>? HealthChanged => Vitals?.HealthChanged;
 
 	[ScriptProperty]
 	public PTSignal Jumped { get; private set; } = new();
@@ -785,17 +795,10 @@ public partial class NPC : Physical
 		UpdateVelocityInternal(CharacterVelocity);
 	}
 
-	[ScriptMethod]
+	[ScriptMethod, Obsolete("Use Vitals:Kill() instead")]
 	public void Kill()
 	{
-		Health = 0;
-		RpcId(1, nameof(NetKill));
-	}
-
-	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
-	private void NetKill()
-	{
-		Health = 0;
+		Vitals?.Kill();
 	}
 
 	private void TriggerNPCDead()
@@ -1192,7 +1195,7 @@ public partial class NPC : Physical
 	[ScriptMethod]
 	public void Respawn()
 	{
-		Health = MaxHealth;
+		Vitals.Reset();
 		Anchored = false;
 		IsDead = false;
 
@@ -1206,15 +1209,15 @@ public partial class NPC : Physical
 		UpdateCollision();
 	}
 
-	[ScriptMethod]
+	[ScriptMethod, Obsolete("Use Vitals:TakeDamage() instead")]
 	public void TakeDamage(float dmg)
 	{
-		Health -= dmg;
+		Vitals.TakeDamage(dmg);
 	}
 
-	[ScriptMethod]
+	[ScriptMethod, Obsolete("Use Vitals:Heal() instead")]
 	public void Heal(float amount)
 	{
-		Health += amount;
+		Vitals.TakeDamage(amount);
 	}
 }
