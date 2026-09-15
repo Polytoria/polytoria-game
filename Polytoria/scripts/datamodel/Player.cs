@@ -1098,7 +1098,7 @@ public sealed partial class Player : NPC
 		bool willHaveVitals = Root.PlayerDefaults.UseHealth;
 		if (hasVitals && !willHaveVitals)
 		{
-			Vitals.Destroy();
+			Vitals!.Destroy();
 			Vitals = null;
 		}
 		if (!hasVitals && willHaveVitals)
