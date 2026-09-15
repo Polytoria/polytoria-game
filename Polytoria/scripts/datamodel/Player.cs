@@ -910,7 +910,8 @@ public sealed partial class Player : NPC
 		UpdatePlrReady();
 
 		// Create chat bubble and listen to chat event
-		if (!Root.Network.IsServer) {
+		if (!Root.Network.IsServer)
+		{
 			_bubbleChat = Globals.LoadInstance<VoiceBox>(Root);
 			_bubbleChat.Parent = this;
 			_bubbleChat.LocalPosition = IsLocal ? new Vector3(0, 3, 0) : new Vector3(0, 4, 0);
