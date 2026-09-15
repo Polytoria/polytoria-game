@@ -439,8 +439,25 @@ public partial class LuaState : IDisposable
 
 		_pinnedFunctions[handlePtr] = func;
 
+		// + 1 for userdata
+		n++;
+
+		IntPtr debugNamePtr;
+		if (name != null)
+		{
+			// make lua handle the debugname for us
+			PushString(name);
+			debugNamePtr = NativeBindings.lua_tolstring(_state, -1, out nint _);
+			// + 1 for name
+			n++;
+		}
+		else
+		{
+			debugNamePtr = IntPtr.Zero;
+		}
+
 		lock (_lock)
-			NativeBindings.lua_pushcclosurek(_state, func, name, n + 1, null);
+			NativeBindings.lua_pushcclosurek(_state, func, debugNamePtr, n, null);
 	}
 
 	private static void FunctionGarbageCollect(IntPtr ud)
