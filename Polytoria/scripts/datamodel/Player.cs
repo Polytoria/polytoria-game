@@ -542,10 +542,6 @@ public sealed partial class Player : NPC
 	private void UseRagdollCam(bool enabled)
 	{
 		Root.Environment.CurrentCamera?.Target = enabled ? _ragdollCamTarget : CamAttach;
-		if (enabled == false)
-		{
-			CamAttach.LocalPosition = new Vector3(0, CameraHeight, 0);
-		}
 	}
 
 	private void OnPlayersPropertyChanged(string propName)
