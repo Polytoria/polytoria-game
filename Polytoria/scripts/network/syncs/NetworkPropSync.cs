@@ -81,7 +81,7 @@ public sealed partial class NetworkPropSync : Instance
 	{
 		try
 		{
-			return SerializeUtils.Deserialize<T>(data);
+			return SerializeUtils.Deserialize<T>(data)!;
 		}
 		catch (Exception ex)
 		{
