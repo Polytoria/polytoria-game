@@ -557,8 +557,6 @@ public sealed partial class ClientEntry : Node3D
 			args.AddRange(["-debug", $"{_debugAddress}:{_debugPort.Value}"]);
 		}
 
-		args.AddRange("--rendering-method", RenderingDeviceSwitcher.GetCurrentDriverName());
-
 		// Boot into client's saved renderer
 		string? clientRenderingMethod = CreatorService.GetStoredClientRenderingMethodArg();
 		if (clientRenderingMethod != null)
