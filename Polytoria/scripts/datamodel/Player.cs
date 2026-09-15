@@ -499,7 +499,6 @@ public sealed partial class Player : NPC
 			inventory.NetworkParent = this;
 		}
 
-		Died.Connect(OnPlayerDied);
 		Root.Players.PropertyChanged.Connect(OnPlayersPropertyChanged);
 
 		_bubbleChat = Globals.CreateInstanceFromScene<BubbleChat>(BubbleChatScene);
@@ -512,7 +511,6 @@ public sealed partial class Player : NPC
 	public override void PreDelete()
 	{
 		Root.Input.GodotInputEvent -= OnInput;
-		Died.Disconnect(OnPlayerDied);
 		PlayerMovement = null!;
 		base.PreDelete();
 	}
@@ -824,7 +822,7 @@ public sealed partial class Player : NPC
 			}
 		}
 
-		if (IsDead) { return; }
+		if (Vitals?.IsDead == true) { return; }
 
 		if (@event.IsActionPressed("jump"))
 		{
@@ -842,6 +840,12 @@ public sealed partial class Player : NPC
 		{
 			DropTool();
 		}
+	}
+
+	protected override void OnDied()
+	{
+		base.OnDied();
+		OnPlayerDied();
 	}
 
 	private async void OnPlayerDied()
@@ -917,7 +921,7 @@ public sealed partial class Player : NPC
 
 	internal void PlayEmote(string emoteName)
 	{
-		if (IsSitting || IsDead) return;
+		if (IsSitting || (Vitals?.IsDead == true)) return;
 		if (!EmoteList.Contains(emoteName)) return;
 		bool isOneShot = false;
 		if (OneShotEmoteList.Contains(emoteName))
@@ -1066,7 +1070,6 @@ public sealed partial class Player : NPC
 		CopyInventory();
 
 		// Apply playerdefaults
-		MaxHealth = Root.PlayerDefaults.MaxHealth;
 		WalkSpeed = Root.PlayerDefaults.WalkSpeed;
 		SprintSpeed = Root.PlayerDefaults.SprintSpeed;
 		UseStamina = Root.PlayerDefaults.UseStamina;
@@ -1091,7 +1094,24 @@ public sealed partial class Player : NPC
 		ResetAppearance();
 		WarpToSpawnPoint();
 
-		Health = MaxHealth;
+		bool hasVitals = Vitals != null;
+		bool willHaveVitals = Root.PlayerDefaults.UseHealth;
+		if (hasVitals && !willHaveVitals)
+		{
+			Vitals.Destroy();
+			Vitals = null;
+		}
+		if (!hasVitals && willHaveVitals)
+		{
+			Vitals = Root.New<Vitals>();
+			Vitals.Parent = this;
+		}
+
+		if (willHaveVitals)
+		{
+			Vitals!.MaxHealth = Root.PlayerDefaults.MaxHealth;
+			Vitals!.Reset();
+		}
 		Anchored = false;
 
 		Rpc(nameof(NetRespawned));
@@ -1130,7 +1150,7 @@ public sealed partial class Player : NPC
 
 		OverrideCanCollide = false;
 		UpdateCollision();
-		IsDead = false;
+		Vitals?.Reset();
 	}
 
 	[ScriptMethod]

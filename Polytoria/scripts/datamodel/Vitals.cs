@@ -4,12 +4,18 @@
 
 using Godot;
 using Polytoria.Attributes;
+using Polytoria.Networking;
 using Polytoria.Shared;
+using Polytoria.Scripting;
 
+namespace Polytoria.Datamodel;
+
+[Instantiable]
 public partial class Vitals : Instance
 {
-	private float _health = 100;
 	private float _maxHealth = 100;
+	private float _health = 100;
+	private bool _isdead = false;
 
 	public PTSignal<float, float> HealthChanged { get; private set; } = new();
 
@@ -21,11 +27,11 @@ public partial class Vitals : Instance
 		get => _health;
 		set
 		{
-			if (this is Player plr && !plr.IsReady) return;
 			float oldHealth = _health;
-			_health = value;
+			_health = Mathf.Min(value, MaxHealth);
 			if (_health <= 0 && !IsDead)
 			{
+				_isdead = true;
 				Died.Invoke();
 			}
 			OnPropertyChanged();
@@ -43,15 +49,39 @@ public partial class Vitals : Instance
 		set
 		{
 			_maxHealth = value;
+			if (Health > value) Health = value;
 			OnPropertyChanged();
 		}
 	}
 
+	[Editable, ScriptProperty, SyncVar]
+	public bool IsDead
+	{
+		get => _isdead;
+		set
+		{
+			if (_isdead != value)
+			{
+				if (value)
+				{
+					Kill();
+				}
+				else
+				{
+					Reset();
+				}
+				OnPropertyChanged();
+			}
+		}
+	}
+
+	[ScriptMethod]
 	public void TakeDamage(float dmg)
 	{
 		Health -= dmg;
 	}
 
+	[ScriptMethod]
 	public void Heal(float amount)
 	{
 		Health += amount;
@@ -60,14 +90,25 @@ public partial class Vitals : Instance
 	[ScriptMethod]
 	public void Reset()
 	{
+		_isdead = false;
 		Health = MaxHealth;
+	}
+
+	[ScriptMethod]
+	public void Reset(float target)
+	{
+		_isdead = false;
+		Health = target;
 	}
 
 	[ScriptMethod]
 	public void Kill()
 	{
-		Health = 0;
-		RpcId(1, nameof(NetKill));
+		if (!IsDead)
+		{
+			Health = 0;
+			RpcId(1, nameof(NetKill));
+		}
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]

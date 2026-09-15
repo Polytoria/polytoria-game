@@ -233,14 +233,20 @@ public partial class NPC : Physical
 	public float? Health
 	{
 		get => Vitals?.Health;
-		set => Vitals?.Health = value;
+		set
+		{
+			if (value != null) Vitals?.Health = value.Value;
+		}
 	}
 
 	[ScriptProperty, Obsolete("Use Vitals.MaxHealth instead")]
-	public float MaxHealth
+	public float? MaxHealth
 	{
 		get => Vitals?.MaxHealth;
-		set => Vitals?.MaxHealth = value;
+		set
+		{
+			if (value != null) Vitals?.MaxHealth = value.Value;
+		}
 	}
 
 	[Editable, ScriptProperty]
@@ -326,8 +332,8 @@ public partial class NPC : Physical
 	[SyncVar, ScriptProperty]
 	public bool IsSitting { get; internal set; } = false;
 
-	[SyncVar, ScriptProperty]
-	public bool IsDead { get; internal set; } = false;
+	[ScriptProperty, Obsolete("Use Vitals.IsDead instead")]
+	public bool? IsDead => Vitals?.IsDead;
 
 	[SyncVar, ScriptProperty]
 	public Tool? HoldingTool
@@ -389,12 +395,12 @@ public partial class NPC : Physical
 			{
 				if (old != null)
 				{
-					old.Died.Disconnect(TriggerNPCDead);
+					old.Died.Disconnect(OnDied);
 				}
 				_vitals = value;
 				if (_vitals != null)
 				{
-					_vitals.Died.Connect(TriggerNPCDead);
+					_vitals.Died.Connect(OnDied);
 				}
 			}
 		}
@@ -801,9 +807,8 @@ public partial class NPC : Physical
 		Vitals?.Kill();
 	}
 
-	private void TriggerNPCDead()
+	protected virtual void OnDied()
 	{
-		if (IsDead) return;
 		if (Root.SessionType != World.SessionTypeEnum.Client) return;
 		Anchored = true;
 		OverrideCanCollide = true;
@@ -818,8 +823,6 @@ public partial class NPC : Physical
 		{
 			ptmodel.StartRagdoll(Velocity);
 		}
-		IsDead = true;
-		Died.Invoke();
 	}
 
 	[ScriptMethod]
@@ -1022,7 +1025,7 @@ public partial class NPC : Physical
 	[ScriptMethod]
 	public void EquipTool(Tool tool)
 	{
-		if (IsDead) return;
+		if (Vitals?.IsDead == true) return;
 		// Check if tool is already held
 		if (HoldingTool != null)
 		{
@@ -1195,9 +1198,8 @@ public partial class NPC : Physical
 	[ScriptMethod]
 	public void Respawn()
 	{
-		Vitals.Reset();
+		Vitals?.Reset();
 		Anchored = false;
-		IsDead = false;
 
 		if (Character is PolytorianModel ptmodel)
 		{
@@ -1212,12 +1214,12 @@ public partial class NPC : Physical
 	[ScriptMethod, Obsolete("Use Vitals:TakeDamage() instead")]
 	public void TakeDamage(float dmg)
 	{
-		Vitals.TakeDamage(dmg);
+		Vitals?.TakeDamage(dmg);
 	}
 
 	[ScriptMethod, Obsolete("Use Vitals:Heal() instead")]
 	public void Heal(float amount)
 	{
-		Vitals.TakeDamage(amount);
+		Vitals?.TakeDamage(amount);
 	}
 }

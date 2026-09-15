@@ -1077,7 +1077,7 @@ public partial class Physical : Dynamic
 		NetworkedObject? hit = Root.GetNetObjectFromID(touchedBy);
 
 		// Only allow player hit invoke
-		if (hit != null && hit is Player plr && !plr.IsDead)
+		if (hit != null && hit is Player plr && (plr.Vitals?.IsDead != true))
 		{
 			// Ignore invalid touches (touches that are out of range)
 			if (!IsTouchedValid(plr)) return;
@@ -1120,7 +1120,7 @@ public partial class Physical : Dynamic
 	{
 		if (physical == this) return;
 		// Ignore dead NPCs, their position could be inaccurate
-		if (physical is NPC npc && npc.IsDead) return;
+		if (physical is NPC npc && (npc.Vitals?.IsDead == true)) return;
 
 		// Ignore player that's not ready
 		if (physical is Player plr && !plr.IsReady) return;

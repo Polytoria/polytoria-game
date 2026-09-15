@@ -271,6 +271,7 @@ public sealed partial class PlayerDefaults : HiddenBase
 	[ScriptMethod]
 	public void LoadDefaults()
 	{
+		UseHealth = true;
 		MaxHealth = 100f;
 		WalkSpeed = 16f;
 		JumpPower = 36f;
@@ -279,9 +280,9 @@ public sealed partial class PlayerDefaults : HiddenBase
 		RespawnTime = 5.0f;
 		CanMove = true;
 		SprintSpeed = 25f;
+		UseStamina = true;
 		Stamina = 0f;
 		MaxStamina = 3f;
-		UseStamina = true;
 		StaminaRegen = 1.2f;
 		StaminaBurn = 1.2f;
 		UseHeadTurning = true;

@@ -30,22 +30,31 @@ public partial class UIHealthbar : Control
 
 	public override void _Process(double delta)
 	{
-		if (CoreUI.Root.Players.LocalPlayer != null)
+		if (CoreUI.Root.Players.LocalPlayer is Player localplayer)
 		{
-			Player localplayer = CoreUI.Root.Players.LocalPlayer;
-			float health = localplayer.Health;
-			float maxHealth = localplayer.MaxHealth;
-			Color healthClr = _healthOutColor.Lerp(_healthFullColor, Mathf.Clamp(health / maxHealth, 0, 1));
+			if (localplayer.Vitals is Vitals v)
+			{
+				_healthBar.Visible = true;
+				float health = v.Health;
+				float maxHealth = v.MaxHealth;
+				Color healthClr = _healthOutColor.Lerp(_healthFullColor, Mathf.Clamp(health / maxHealth, 0, 1));
 
-			_heart.Modulate = healthClr;
-			_healthBar.Modulate = healthClr;
+				_heart.Modulate = healthClr;
+				_healthBar.Modulate = healthClr;
+
+				_healthBar.Value = health;
+				_healthBar.MaxValue = maxHealth;
+
+				_healthLabel.Text = (health <= -maxHealth) ? "D:" : _healthLabel.Text = Mathf.Round(health).ToString();
+			}
+			else
+			{
+				_healthBar.Visible = false;
+			}
 
 			_staminaBar.Visible = localplayer.UseStamina;
 			_staminaBar.Value = localplayer.Stamina;
 			_staminaBar.MaxValue = localplayer.MaxStamina;
-
-			_healthBar.Value = health;
-			_healthBar.MaxValue = maxHealth;
 
 			// Hide/Show the stamina bar
 			if (localplayer.Stamina == localplayer.MaxStamina || !localplayer.UseStamina)
@@ -63,15 +72,6 @@ public partial class UIHealthbar : Control
 					_staminaBarAppeared = true;
 					_staminaBarAnim.Play("appear");
 				}
-			}
-
-			if (health <= -100)
-			{
-				_healthLabel.Text = "D:";
-			}
-			else
-			{
-				_healthLabel.Text = Mathf.Round(health).ToString();
 			}
 		}
 	}
