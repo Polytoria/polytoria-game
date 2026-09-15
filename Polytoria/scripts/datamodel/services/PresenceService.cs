@@ -184,7 +184,7 @@ public sealed partial class PresenceService : Instance
 			details = "Testing a game";
 		}
 
-		string defaultImg = "multiplayer";
+		string defaultImg = Root.WorldInfo?.Thumbnail ?? "multiplayer";
 		string defaultSmallImg = "poly-sm";
 		string defaultSmallText = "Polytoria";
 
@@ -218,7 +218,7 @@ public sealed partial class PresenceService : Instance
 				Size =
 				{
 					CurrentSize = Root.Players.PlayersCount,
-					MaxSize = 20,
+					MaxSize = Root.WorldInfo?.MaxPlayers ?? 8,
 				},
 			},
 			Instance = true
