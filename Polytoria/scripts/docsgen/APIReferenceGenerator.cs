@@ -90,40 +90,34 @@ public static class APIReferenceGenerator
 					ScriptType? scriptType = ProcessScriptType(propertyType).FirstOrDefault();
 					if (scriptType == null) continue;
 
-					Attributes.ObsoleteAttribute? obsoleteAttribute = property.GetCustomAttribute<Attributes.ObsoleteAttribute>();
 					propertiesDef.Add(new(
 						property.Name,
 						scriptType,
 						isEditable || isScriptProperty,
 						isScriptProperty && property.GetSetMethod(false) == null,
 						property.GetGetMethod(true)?.IsStatic ?? false,
-						obsoleteAttribute?.Info
+						property.GetCustomAttribute<Attributes.ObsoleteAttribute>()?.Info
 					));
 				}
 			}
 
 			foreach (MethodInfo method in methods)
 			{
+				if (method.IsDefined(typeof(HandlesLuaStateAttribute))) continue;
+
 				ScriptMethodAttribute? methodAttribute = method.GetCustomAttribute<ScriptMethodAttribute>();
 				ScriptMetamethodAttribute? metaMethodAttribute = method.GetCustomAttribute<ScriptMetamethodAttribute>();
 
-				if (methodAttribute == null && metaMethodAttribute == null) continue;
-				if (method.IsDefined(typeof(HandlesLuaStateAttribute))) continue;
+				if (methodAttribute != null)
+				{
+					ScriptLegacyMethodAttribute? legacyMethodAttribute = method.GetCustomAttribute<ScriptLegacyMethodAttribute>();
+					// ignore methods that have ScriptMethodAttribute but are only
+					// meant for legacy scripts (e.g. Datastore.Get)
+					if (legacyMethodAttribute != null && legacyMethodAttribute.MethodName == method.Name) continue;
+				}
+				else if (metaMethodAttribute == null) continue;
 
-				bool asyncFunc = false;
 				Type returnType = method.ReturnType;
-
-				if (returnType == typeof(Task))
-				{
-					asyncFunc = true;
-				}
-				else if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
-				{
-					asyncFunc = true;
-					returnType = returnType.GetGenericArguments()[0];
-				}
-
-				if (returnType == typeof(Node)) continue;
 
 				List<ScriptParameter> paramsDef = [];
 
@@ -146,15 +140,14 @@ public static class APIReferenceGenerator
 					));
 				}
 
-				Attributes.ObsoleteAttribute? obsoleteAttribute = method.GetCustomAttribute<Attributes.ObsoleteAttribute>();
 				methodsDef.Add(new(
 					metaMethodAttribute != null ? GetMetamethodIndexer(metaMethodAttribute.Metamethod) : methodAttribute?.MethodName ?? method.Name,
 					[.. ProcessScriptType(returnType)],
 					[.. paramsDef],
-					asyncFunc,
+					returnType == typeof(Task) || returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>),
 					method.IsStatic,
 					method.IsStatic && (methodAttribute?.SemiStatic ?? false),
-					obsoleteAttribute?.Info
+					method.GetCustomAttribute<Attributes.ObsoleteAttribute>()?.Info
 				));
 			}
 
@@ -435,6 +428,11 @@ public static class APIReferenceGenerator
 		{
 			yield return new ScriptTypeFunction([new(ScriptTypeTuple.Any)], [ScriptTypeTuple.Any], optional);
 		}
+		// this behavior is caused by LuaMetatable
+		else if (type == typeof(Task<object?[]>))
+		{
+			yield return ScriptTypeTuple.Any;
+		}
 		// --- Proxies --- //
 		else if (type == typeof(Aabb))
 		{
@@ -452,6 +450,18 @@ public static class APIReferenceGenerator
 		{
 			yield return new ScriptType(ProcessClassName(type), optional);
 		}
+		else if (type.IsAssignableTo(typeof(IDictionary)))
+		{
+			ScriptType keyType = ScriptType.Any;
+			ScriptType valueType = ScriptType.Any;
+			Type[] args = type.GetGenericArguments();
+			if (args.Length >= 2)
+			{
+				keyType = ProcessScriptType(args[0]).FirstOrDefault(ScriptType.Nil);
+				valueType = ProcessScriptType(args[1]).FirstOrDefault(ScriptType.Nil);
+			}
+			yield return new ScriptTypeDictionary(keyType, valueType, optional);
+		}
 		else if (type.IsGenericType)
 		{
 			Type genericType = type.GetGenericTypeDefinition();
@@ -466,23 +476,10 @@ public static class APIReferenceGenerator
 			{
 				yield return new ScriptTypeFunction([new(ScriptType.Any)], [ProcessScriptType(type.GetGenericArguments()[0]).FirstOrDefault(ScriptType.Nil), ScriptType.Nil, ScriptType.Nil], optional);
 			}
-			yield break;
 		}
 		else if (type.IsArray)
 		{
 			yield return new ScriptTypeArray(ProcessScriptType(type.GetElementType()).FirstOrDefault(ScriptType.Nil), optional);
-		}
-		else if (type.IsAssignableTo(typeof(IDictionary)))
-		{
-			ScriptType? keyType = null;
-			ScriptType? valueType = null;
-			Type[] args = type.GetGenericArguments();
-			if (args.Length >= 2)
-			{
-				keyType = ProcessScriptType(args[0]).FirstOrDefault();
-				valueType = ProcessScriptType(args[1]).FirstOrDefault();
-			}
-			yield return new ScriptTypeDictionary(keyType ?? ScriptType.Nil, valueType ?? ScriptType.Nil, optional);
 		}
 		else if (type.IsEnum)
 		{
