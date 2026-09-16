@@ -67,7 +67,7 @@ public sealed partial class Player : NPC
 	internal bool teleporting = false;
 
 	private BubbleChat _bubbleChat = null!;
-	private Dynamic _ragdollCamTarget = null!;
+	private Dynamic? _ragdollCamTarget = null!;
 	internal Dynamic CamAttach = null!;
 	private Physical? _mouseHoveringOn;
 	private Physical? _grabbing;
