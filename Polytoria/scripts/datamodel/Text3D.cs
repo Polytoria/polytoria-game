@@ -204,7 +204,7 @@ public sealed partial class Text3D : Dynamic
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use FontAsset instead"), CloneIgnore, SaveIgnore]
+	[Editable, ScriptProperty, NoSync, Obsolete(use: "FontAsset"), CloneIgnore, SaveIgnore]
 	public BuiltInFontAsset.BuiltInTextFontPresetEnum Font
 	{
 		get => _fontPreset;
