@@ -9,7 +9,7 @@ using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Enums;
 using System;
-
+using ObsoleteAttribute = Polytoria.Attributes.ObsoleteAttribute;
 
 #if CREATOR
 using Polytoria.Creator.Spatial;
