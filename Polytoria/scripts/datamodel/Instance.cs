@@ -19,6 +19,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Reflection;
+using System.Text;
 
 namespace Polytoria.Datamodel;
 
@@ -164,9 +166,11 @@ public partial class Instance : NetworkedObject
 
 			while (instance != null)
 			{
-				if (instance is World)
+				string? staticAlias = instance.GetType().GetCustomAttribute<StaticAttribute>(false)?.Alias;
+				if (staticAlias != null)
 				{
-					ancestors.Add("world");
+					ancestors.Add(staticAlias);
+					break;
 				}
 				else
 				{
@@ -176,7 +180,58 @@ public partial class Instance : NetworkedObject
 			}
 
 			ancestors.Reverse();
-			return string.Join('.', ancestors);
+
+			StringBuilder builder = new();
+			bool first = true;
+
+			foreach (string name in ancestors)
+			{
+				// can this name be accessed in Lua using dot.notation?
+				// e.g. "Part" or "_Part", not "", "0Part", or "Part!"
+				bool canAccessWithDot = name.Length != 0 &&
+					(char.IsLetter(name[0]) || name[0] == '_') &&
+					(name.Length == 1 || name.Skip(1).All(c => char.IsLetterOrDigit(c) || c == '_'));
+
+				if (canAccessWithDot)
+				{
+					builder.Append(first ? name : '.' + name);
+				}
+				else
+				{
+					// convert name to ["bracket notation"]
+					// also filter the name similar to Lua's %q format option just in
+					// case it's Evil and can't be read by the interpreter
+
+					builder.Capacity += name.Length + 4;
+					builder.Append("[\"");
+
+					foreach (char c in name)
+					{
+						switch (c)
+						{
+							case '"':
+							case '\\':
+							case '\n':
+								builder.Append('\\');
+								goto default;
+							case '\r':
+								builder.Append("\\r");
+								break;
+							case '\0':
+								builder.Append("\\000");
+								break;
+							default:
+								builder.Append(c);
+								break;
+						}
+					}
+
+					builder.Append("\"]");
+				}
+				first = false;
+			}
+
+			return builder.ToString();
 		}
 	}
 
