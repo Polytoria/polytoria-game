@@ -5,15 +5,25 @@
 [resource]
 resource_name = "Morning1"
 shader = ExtResource("1_bgf55")
+
+shader_parameter/clock_time = 7.0
+
 shader_parameter/sun_disc_color = Color(1, 0.96572, 0.904412, 1)
-shader_parameter/sun_disc_multiplier = 2.0
 shader_parameter/sun_disc_exponent = 6250.0
 shader_parameter/sun_halo_color = Color(1, 0.742647, 0.811866, 1)
 shader_parameter/sun_halo_exponent = 25.0
 shader_parameter/sun_halo_contribution = 0.5
+
+shader_parameter/moon_disc_color = Color(0.82, 0.84, 1.0, 1)
+shader_parameter/moon_disc_exponent = 6250.0
+shader_parameter/moon_halo_color = Color(0.65, 0.60, 0.90, 1)
+shader_parameter/moon_halo_exponent = 25.0
+shader_parameter/moon_halo_contribution = 0.35
+
 shader_parameter/horizon_line_color = Color(0, 0, 0, 1)
 shader_parameter/horizon_line_exponent = 4.0
 shader_parameter/horizon_line_contribution = 0.0
+
 shader_parameter/sky_gradient_top = Color(0.768628, 0.792157, 0.807843, 1)
 shader_parameter/sky_gradient_bottom = Color(0.909804, 0.843137, 0.764706, 1)
 shader_parameter/sky_gradient_exponent = 2.5

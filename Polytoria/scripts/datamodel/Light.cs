@@ -31,7 +31,7 @@ public partial class Light : Dynamic
 
 	internal override void OnNodeSizeChanged(Vector3 newSize)
 	{
-		GDLight.Scale = newSize;
+		if (GDLight != null) GDLight.Scale = newSize;
 		base.OnNodeSizeChanged(newSize);
 	}
 
@@ -42,7 +42,7 @@ public partial class Light : Dynamic
 		set
 		{
 			_enabled = value;
-			GDLight.Visible = value;
+			if (GDLight != null) GDLight.Visible = value;
 			OnPropertyChanged();
 		}
 	}
@@ -54,7 +54,7 @@ public partial class Light : Dynamic
 		set
 		{
 			_color = value;
-			GDLight.LightColor = value;
+			if (GDLight != null) GDLight.LightColor = value;
 			OnPropertyChanged();
 		}
 	}
@@ -66,7 +66,7 @@ public partial class Light : Dynamic
 		set
 		{
 			_brightness = value;
-			GDLight.LightEnergy = value / IntensityConversion;
+			if (GDLight != null) GDLight.LightEnergy = value / IntensityConversion;
 			OnPropertyChanged();
 		}
 	}
@@ -78,7 +78,7 @@ public partial class Light : Dynamic
 		set
 		{
 			_lightSize = value;
-			GDLight.LightSize = value;
+			if (GDLight != null) GDLight.LightSize = value;
 			OnPropertyChanged();
 		}
 	}
@@ -90,7 +90,7 @@ public partial class Light : Dynamic
 		set
 		{
 			_specular = value;
-			GDLight.LightSpecular = value;
+			if (GDLight != null) GDLight.LightSpecular = value;
 			OnPropertyChanged();
 		}
 	}
@@ -109,6 +109,7 @@ public partial class Light : Dynamic
 
 	internal void UpdateShadows()
 	{
+		if (GDLight == null) return;
 		bool shadows = Shadows;
 
 		ISettingsContext? settings =
