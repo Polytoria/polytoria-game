@@ -83,14 +83,24 @@ public class DebugServer
 		}
 		finally
 		{
-			client.Close();
-			PT.Print("Debug client disconnected");
+			// remove from lists first before disposing client
 			if (_clientToData.Remove(client, out var data))
 			{
-				// Cleanup local test process
-				CreatorService.Singleton.LocalTestProcesses.Remove(data.ProcessID);
+				// mutate list only on the main thread
+				PT.CallOnMainThread(() =>
+				{
+					// Cleanup local test process
+					CreatorService.Singleton.LocalTestProcesses.Remove(data.ProcessID);
+				});
+
 			}
+
 			_tcpClients.Remove(client);
+			client.Close();
+
+			PT.Print("Debug client disconnected");
+
+
 			foreach ((string id, TcpClient c) in _idToClient)
 			{
 				if (c == client)
@@ -114,7 +124,11 @@ public class DebugServer
 
 			if (data.ProcessID != 0)
 			{
-				CreatorService.Singleton.LocalTestProcesses.Add(data.ProcessID);
+				PT.CallOnMainThread(() =>
+				{
+					CreatorService.Singleton.LocalTestProcesses.Add(data.ProcessID);
+				});
+
 			}
 		}
 		else if (msg is MessageLogDispatch log)
@@ -181,6 +195,7 @@ public class DebugServer
 		byte[] data = SerializeUtils.Serialize(msg);
 		foreach (TcpClient client in _tcpClients)
 		{
+
 			NetworkStream stream = client.GetStream();
 			await stream.WriteAsync(data);
 		}
