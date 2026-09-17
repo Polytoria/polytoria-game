@@ -10,6 +10,11 @@ public class DefaultMovement : IPlayerMovement
 
 	public World Root { get; set; } = null!;
 
+	private bool IsMobile(Player plr)
+	{
+		return plr.CanMove && !plr.IsDead;
+	}
+
 	public InputSnapshot SampleInput(double delta)
 	{
 		Camera? cam = Root.Environment.CurrentCamera;
@@ -20,7 +25,7 @@ public class DefaultMovement : IPlayerMovement
 		bool sprint = false;
 		bool camLocked = false;
 
-		if (cam != null && Root.Input.IsGameFocused && Target.CanMove && !Target.IsDead)
+		if (cam != null && Root.Input.IsGameFocused && IsMobile(Target))
 		{
 			Basis facingRot = cam.Camera3D.GlobalBasis;
 			camRotation = facingRot.Orthonormalized().GetRotationQuaternion();
@@ -91,7 +96,7 @@ public class DefaultMovement : IPlayerMovement
 		Vector3 externalVelocity = Target.ExternalVelocity;
 		bool hasExternalVelocity = externalVelocity.Slide(vertical) != Vector3.Zero;
 
-		if (Target.CanMove && !Target.IsDead)
+		if (IsMobile(Target))
 		{
 			float gdWalkSpeed = Target.WalkSpeed;
 			bool sprinting = snapshot.Sprint;
