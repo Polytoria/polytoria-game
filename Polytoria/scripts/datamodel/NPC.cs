@@ -40,6 +40,7 @@ public partial class NPC : Physical
 	private string _displayName = "";
 	protected RayCast3D FootFwdRaycast = null!;
 	private Sound? _jumpSound;
+	private Sound? _deathSound;
 	private bool _lastOnFloorState = false;
 	private float _timeSinceGrounded = 0f;
 	private bool _coyoteUsed = false;
@@ -338,6 +339,16 @@ public partial class NPC : Physical
 		set
 		{
 			_jumpSound = value;
+			OnPropertyChanged();
+		}
+	}
+	[Editable, ScriptProperty]
+	public Sound? DeathSound
+	{
+		get => _deathSound;
+		set
+		{
+			_deathSound = value;
 			OnPropertyChanged();
 		}
 	}
@@ -810,7 +821,10 @@ public partial class NPC : Physical
 
 		Character?.Animator?.StopAnimation();
 		Character?.Animator?.StopOneShotAnimation();
-
+		if (DeathSound != null && !DeathSound.Playing)
+		{
+			DeathSound.Play();
+		}
 		if (Character is PolytorianModel ptmodel)
 		{
 			ptmodel.StartRagdoll(Velocity);
