@@ -66,7 +66,7 @@ public sealed partial class Player : NPC
 
 	internal bool teleporting = false;
 
-	private BubbleChat _bubbleChat = null!;
+	private VoiceBox? _bubbleChat = null;
 	private RemoteTransform3D _remoteCamAttach = null!;
 	internal Dynamic CamAttach = null!;
 	private Physical? _mouseHoveringOn;
@@ -240,7 +240,6 @@ public sealed partial class Player : NPC
 		set
 		{
 			_useBubbleChat = value;
-			_bubbleChat?.Visible = _useBubbleChat;
 			OnPropertyChanged();
 		}
 	}
@@ -501,18 +500,13 @@ public sealed partial class Player : NPC
 
 		Died.Connect(OnPlayerDied);
 		Root.Players.PropertyChanged.Connect(OnPlayersPropertyChanged);
-
-		_bubbleChat = Globals.CreateInstanceFromScene<BubbleChat>(BubbleChatScene);
-		_bubbleChat.TargetPlayer = this;
-		_bubbleChat.Visible = _useBubbleChat;
-		GDNode.AddChild(_bubbleChat, @internal: Node.InternalMode.Back);
-		excludedBoundNodes.Add(_bubbleChat);
 	}
 
 	public override void PreDelete()
 	{
 		Root.Input.GodotInputEvent -= OnInput;
 		Died.Disconnect(OnPlayerDied);
+		Chatted.Disconnect(OnPlayerChatted);
 		PlayerMovement = null!;
 		base.PreDelete();
 	}
@@ -525,6 +519,14 @@ public sealed partial class Player : NPC
 	private void OnPlayerTouchEnded(Physical obj)
 	{
 		obj.InvokeTouchEnded(this);
+	}
+
+	private void OnPlayerChatted(string msg)
+	{
+		if (_useBubbleChat)
+		{
+			_bubbleChat.Speak(msg);
+		}
 	}
 
 	public override void Ready()
@@ -895,6 +897,9 @@ public sealed partial class Player : NPC
 			ptc.RagdollStarted.Connect(OnRagdollStarted);
 			ptc.RagdollStopped.Connect(OnRagdollStopped);
 		}
+
+		// Fix chat bubble elevation
+		_bubbleChat.LocalPosition = new Vector3(0, 3, 0);
 	}
 
 	// Emit when this player is ready, fired for everyone
@@ -903,6 +908,15 @@ public sealed partial class Player : NPC
 		SetNetworkAuthority(PeerID);
 		UpdatePlayerCollision();
 		UpdatePlrReady();
+
+		// Create chat bubble and listen to chat event
+		if (!Root.Network.IsServer)
+		{
+			_bubbleChat = Globals.LoadInstance<VoiceBox>(Root);
+			_bubbleChat.Parent = this;
+			_bubbleChat.LocalPosition = IsLocal ? new Vector3(0, 3, 0) : new Vector3(0, 4, 0);
+			Chatted.Connect(OnPlayerChatted);
+		}
 	}
 
 	private void OnRagdollStarted()
@@ -960,14 +974,14 @@ public sealed partial class Player : NPC
 	{
 		if (Character == null) return;
 		Character.GDNode3D.Visible = false;
-		_bubbleChat.Visible = false;
+		_bubbleChat.GDNode3D.Visible = false;
 	}
 
 	private void OnFirstPersonExited()
 	{
 		if (Character == null) return;
 		Character.GDNode3D.Visible = true;
-		_bubbleChat.Visible = true;
+		_bubbleChat.GDNode3D.Visible = true;
 	}
 
 	public void WarpToSpawnPoint()
