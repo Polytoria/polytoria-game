@@ -1,7 +1,7 @@
 declare json: {
 	parse: (string?) -> any,
 	serialize: (any?) -> string,
-	null: () -> string,
+	null: () -> JSONNull,
 	isNull: (string?) -> boolean,
 }
 
@@ -101,6 +101,8 @@ declare CreatorGUI: CreatorGUI
 declare Preferences: PreferencesService
 
 declare Hooks: HookService
+
+declare extern type JSONNull with end
 
 declare extern type PTSignalConnection with
 	function Disconnect(self)
