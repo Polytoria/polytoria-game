@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+using System.Text.Json;
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Creator;
@@ -14,6 +15,7 @@ using Polytoria.Creator.Utils;
 using Polytoria.Formats;
 using Polytoria.Scripting;
 using Polytoria.Shared;
+using Polytoria.Shared.Settings;
 using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
@@ -559,6 +561,27 @@ public sealed partial class CreatorService : Node, IScriptObject
 		await PackedFormat.PackProjectToFile(projectPath, placeFilePath, Interface.LoadOverlay.CreateProgressReporter("Starting local test..."));
 		Interface.LoadOverlay?.Hide();
 		StartLocalTestServer(placeFilePath, entryPath, debugID, port, isSubplace, spawnPos);
+	}
+
+	internal static string? GetStoredClientRenderingMethodArg()
+	{
+		string path = ProjectSettings.GlobalizePath("user://settings_client.json");
+		if (!File.Exists(path)) return null;
+
+		try
+		{
+			using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(path));
+			if (doc.RootElement.TryGetProperty(SharedSettingKeys.Graphics.RenderingMethod, out JsonElement el) && el.ValueKind == JsonValueKind.String && Enum.TryParse(el.GetString(), out RenderingMethodOption method) && method != RenderingMethodOption.Auto)
+			{
+				return RenderingDeviceSwitcher.GetRenderingName(RenderingDeviceSwitcher.FromRenderingMethodOption(method));
+			}
+		}
+		catch (Exception ex)
+		{
+			PT.PrintErr("Failed reading stored client rendering method: ", ex);
+		}
+
+		return null;
 	}
 
 	private void StartLocalTestServer(string placeFilePath, string entryPath, string debugID, int port, bool isSubplace = false, Vector3? spawnPos = null)
