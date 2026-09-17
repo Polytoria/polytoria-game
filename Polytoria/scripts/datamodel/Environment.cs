@@ -497,6 +497,89 @@ public sealed partial class Environment : Instance
 		return [.. intersects];
 	}
 
+	[ScriptMethod]
+	public RayResult[] Spherecast(Vector3 origin, float radius, Vector3 direction, float maxDistance = 1000f, Instance[]? ignoreList = null, int maxResults = 1)
+	{
+		return PerformShapecast(new SphereShape3D() { Radius = radius }, new(Basis.Identity, origin), direction, maxDistance, ignoreList, maxResults);
+	}
+
+	private RayResult[] PerformBoxcast(Vector3 size, Transform3D transform, Vector3 direction, float maxDistance, Instance[]? ignoreList, int maxResults)
+	{
+		return PerformShapecast(new BoxShape3D() { Size = size }, transform, direction, maxDistance, ignoreList, maxResults);
+	}
+
+	[ScriptMethod]
+	public RayResult[] Boxcast(Vector3 origin, Vector3 size, Vector3 rot, Vector3 direction, float maxDistance = 1000f, Instance[]? ignoreList = null, int maxResults = 1)
+	{
+		return PerformBoxcast(size, new(Basis.FromEuler(rot.DegToRad()), origin), direction, maxDistance, ignoreList, maxResults);
+	}
+
+	[ScriptMethod]
+	public RayResult[] Boxcast(Vector3 origin, Vector3 size, Quaternion q, Vector3 direction, float maxDistance = 1000f, Instance[]? ignoreList = null, int maxResults = 1)
+	{
+		return PerformBoxcast(size, new(new(q), origin), direction, maxDistance, ignoreList, maxResults);
+	}
+
+	private RayResult[] PerformShapecast(Resource shape, Transform3D transform, Vector3 direction, float maxDistance, Instance[]? ignoreList, int maxResults)
+	{
+		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
+		Godot.Collections.Array<Rid> ignoreRids = [];
+
+		if (ignoreList != null)
+		{
+			ignoreRids = PhysicalsToArray(ignoreList);
+		}
+
+		Vector3 motion = direction.Normalized() * maxDistance;
+
+		PhysicsShapeQueryParameters3D query = new()
+		{
+			Shape = shape,
+			Motion = motion,
+			CollideWithAreas = true,
+			CollideWithBodies = true,
+		};
+
+		List<RayResult> results = new(maxResults);
+
+		while (results.Count < maxResults)
+		{
+			query.Transform = transform;
+			query.Exclude = ignoreRids;
+
+			// where do we hit?
+			float[] fractions = spaceState.CastMotion(query);
+			float collisionFraction = fractions[1];
+			if (collisionFraction == 1f) break; // moved all of the way, no collision
+
+			// what do we hit?
+			query.Transform = transform.Translated(motion * (collisionFraction + 1e-5f));
+			Godot.Collections.Dictionary result = spaceState.GetRestInfo(query);
+			if (result.Count == 0) break;
+
+			Rid colliderRid = (Rid)result["rid"];
+			ignoreRids.Add(colliderRid);
+
+			// GetRestInfo doesn't provide the collider, grab it manually
+			Node collider = (Node)GodotObject.InstanceFromId((ulong)result["collider_id"])!;
+			Instance? instance = ColliderToInstance(collider);
+
+			Vector3 hitPos = (Vector3)result["point"];
+			Vector3 normal = (Vector3)result["normal"];
+			results.Add(new()
+			{
+				Origin = transform.Origin,
+				Direction = direction.Normalized(),
+				Position = hitPos,
+				Normal = normal,
+				Distance = maxDistance * collisionFraction,
+				Instance = instance,
+			});
+		}
+
+		return [.. results];
+	}
+
 	[ScriptMethod, Attributes.Obsolete("Explosion can be created using Instance.New('Explosion')")]
 	public void CreateExplosion(Vector3 position, float radius = 10f, float force = 5000f, bool affectAnchored = true, PTCallback? callback = null, float damage = 10000f)
 	{
