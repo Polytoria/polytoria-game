@@ -203,14 +203,14 @@ public class DefaultMovement : IPlayerMovement
 					{
 						// Stop horizontal movement when no input
 						if (accelerationFactor < 0)
-                    	{
+						{
 							Target.CharacterVelocity = Target.CharacterVelocity.Slide(vertical).MoveToward(Vector3.Zero, gdWalkSpeed) + Target.CharacterVelocity.Project(vertical);
-                    	}
-                    	else
-                    	{
-                    		float maxDeltaV = (float)delta * gdWalkSpeed * accelerationFactor;
-                    		Target.CharacterVelocity = Target.CharacterVelocity.Slide(vertical).MoveToward(Vector3.Zero, maxDeltaV) + Target.CharacterVelocity.Project(vertical);
-                    	}
+						}
+						else
+						{
+							float maxDeltaV = (float)delta * gdWalkSpeed * accelerationFactor;
+							Target.CharacterVelocity = Target.CharacterVelocity.Slide(vertical).MoveToward(Vector3.Zero, maxDeltaV) + Target.CharacterVelocity.Project(vertical);
+						}
 					}
 					Target.Character?.SetAnimSpeed(1);
 				}
