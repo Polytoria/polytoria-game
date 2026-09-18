@@ -43,4 +43,9 @@ public static class SharedSettingKeys
 	{
 		public const string AssetQueue = "advanced.asset_queue";
 	}
+
+	public static class Localization
+	{
+		public const string Language = "localization.language";
+	}
 }

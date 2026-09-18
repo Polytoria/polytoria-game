@@ -34,6 +34,13 @@ public sealed partial class ClientSettingsService : SettingsServiceBase
 		MigrateRenderingMethod();
 		ApplyDefaults();
 
+		string savedLanguage = "automatic";
+		if (_values.TryGetValue(SharedSettingKeys.Localization.Language, out object? langValue))
+		{
+			savedLanguage = langValue?.ToString() ?? "automatic";
+		}
+		ApplyLanguage(savedLanguage);
+
 		if (!settingsExists)
 		{
 			GraphicsPreset autoPreset = GraphicsAutoDetector.Detect();
@@ -147,5 +154,22 @@ public sealed partial class ClientSettingsService : SettingsServiceBase
 	protected override void OnAfterSet(string key, object normalizedValue)
 	{
 		GraphicsPresetManager.HandlePresetChange(this, key, normalizedValue);
+
+		if (key == SharedSettingKeys.Localization.Language)
+		{
+			ApplyLanguage(normalizedValue.ToString() ?? "automatic");
+		}
+	}
+
+	private void ApplyLanguage(string language)
+	{
+		if (language == "automatic")
+		{
+			TranslationServer.SetLocale(OS.GetLocaleLanguage());
+		}
+		else
+		{
+			TranslationServer.SetLocale(language);
+		}
 	}
 }
