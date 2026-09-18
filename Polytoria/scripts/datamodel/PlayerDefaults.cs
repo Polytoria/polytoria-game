@@ -296,7 +296,7 @@ public sealed partial class PlayerDefaults : HiddenBase
 		UseStamina = true;
 		StaminaRegen = 1.2f;
 		StaminaBurn = 1.2f;
-		AccelerationFactor = -1f
+		AccelerationFactor = -1f;
 		AirAccelerationFactor = -1f;
 		UseHeadTurning = true;
 		UseBubbleChat = true;

@@ -158,10 +158,10 @@ public class DefaultMovement : IPlayerMovement
 				float accelerationFactor = Target.IsOnGround ? Target.AccelerationFactor : Target.AirAccelerationFactor;
 				if (isMoving)
 				{
-					Vector3 targetVelocity = moveDirection * gdWalkSpeed + pushVelocity + Target.CharacterVelocity.Project(vertical);
+					Vector3 targetVelocity = moveDirection * gdWalkSpeed + pushVelocity;
 					if (accelerationFactor < 0)
 					{
-						Target.CharacterVelocity = targetVelocity;
+						Target.CharacterVelocity = targetVelocity + Target.CharacterVelocity.Project(vertical);
 					}
 					else
 					{
@@ -173,7 +173,7 @@ public class DefaultMovement : IPlayerMovement
 					{
 						// Apply rotation by move direction
 						Vector3 a = new Quaternion(Target.Up, vertical) * Target.Forward;
-						Vector3 b = targetVelocity.Slide(vertical).Normalized();
+						Vector3 b = targetVelocity.Normalized();
 						float angle = Mathf.Asin(a.Cross(b).Dot(vertical));
 						if (a.Dot(b) < 0) angle = Mathf.Pi - angle;
 						if (angle > Mathf.Pi) angle -= Mathf.Tau;
