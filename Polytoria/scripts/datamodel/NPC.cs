@@ -37,6 +37,8 @@ public partial class NPC : Physical
 	private float _maxHealth = 100;
 	private float _jumpPower = 36;
 	private float _walkSpeed = 16;
+	private float _accelerationFactor = -1f;
+	private float _airAccelerationFactor = -1f;
 	private string _displayName = "";
 	protected RayCast3D FootFwdRaycast = null!;
 	private Sound? _jumpSound;
@@ -398,6 +400,41 @@ public partial class NPC : Physical
 		{
 			_vertical = value;
 			CharBody3D.UpDirection = value;
+			OnPropertyChanged();
+		}
+	}
+
+	/// <summary>
+	/// Acceleration factor of movement speed. Measured in movement speeds per second. -1 means instant acceleration.
+	/// </summary>
+	[Editable, ScriptProperty, SyncVar]
+	public float AccelerationFactor
+	{
+		get
+		{
+			return _accelerationFactor;
+		}
+		set
+		{
+			_accelerationFactor = value;
+			OnPropertyChanged();
+		}
+	}
+
+
+	/// <summary>
+	/// Acceleration factor in air of movement speed. Measured in movement speeds per second. -1 means instant acceleration.
+	/// </summary>
+	[Editable, ScriptProperty, SyncVar]
+	public float AirAccelerationFactor
+	{
+		get
+		{
+			return _airAccelerationFactor;
+		}
+		set
+		{
+			_airAccelerationFactor = value;
 			OnPropertyChanged();
 		}
 	}

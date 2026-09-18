@@ -151,50 +151,69 @@ public class DefaultMovement : IPlayerMovement
 				? externalVelocity.Slide(vertical)
 				: Vector3.Zero;
 
-			if (moveDirection != Vector3.Zero && !Target.IsClimbing)
+			if (!Target.IsClimbing)
 			{
-				Target.IsMoving = true;
-
-				Target.CharacterVelocity = moveDirection * gdWalkSpeed + pushVelocity + Target.CharacterVelocity.Project(vertical);
-
-				if (!snapshot.CamLocked)
+				bool isMoving = moveDirection != Vector3.Zero;
+				Target.IsMoving = isMoving;
+				float accelerationFactor = Target.IsOnGround ? Target.AccelerationFactor : Target.AirAccelerationFactor;
+				if (isMoving)
 				{
-					// Apply rotation by move direction
-					Vector3 a = new Quaternion(Target.Up, vertical) * Target.Forward;
-					Vector3 b = Target.CharacterVelocity.Slide(vertical).Normalized();
-					float angle = Mathf.Asin(a.Cross(b).Dot(vertical));
-					if (a.Dot(b) < 0) angle = Mathf.Pi - angle;
-					if (angle > Mathf.Pi) angle -= Mathf.Tau;
-					Target.Quaternion = new Quaternion(vertical, angle * MathUtils.ExpDecay((float)delta, NPC.BodyRotateLerp)) * Target.Quaternion;
-				}
+					Vector3 targetVelocity = moveDirection * gdWalkSpeed + pushVelocity + Target.CharacterVelocity.Project(vertical);
+					if (accelerationFactor < 0)
+					{
+						Target.CharacterVelocity = targetVelocity;
+					}
+					else
+					{
+						float maxDeltaV = (float)delta * gdWalkSpeed * accelerationFactor;
+						Target.CharacterVelocity = Target.CharacterVelocity.Slide(vertical).MoveToward(targetVelocity, maxDeltaV) + Target.CharacterVelocity.Project(vertical);
+					}
+
+					if (!snapshot.CamLocked)
+					{
+						// Apply rotation by move direction
+						Vector3 a = new Quaternion(Target.Up, vertical) * Target.Forward;
+						Vector3 b = targetVelocity.Slide(vertical).Normalized();
+						float angle = Mathf.Asin(a.Cross(b).Dot(vertical));
+						if (a.Dot(b) < 0) angle = Mathf.Pi - angle;
+						if (angle > Mathf.Pi) angle -= Mathf.Tau;
+						Target.Quaternion = new Quaternion(vertical, angle * MathUtils.ExpDecay((float)delta, NPC.BodyRotateLerp)) * Target.Quaternion;
+					}
 
 
-				float animMoveAmount = Mathf.Max(Mathf.Clamp(moveDirection.Length(), 0f, 1f), 0.15f);
-				if (sprinting && Target.SprintSpeed != Target.WalkSpeed)
-				{
-					finalState = CharacterModel.CharacterModelStateEnum.Running;
-					Target.Character?.SetAnimSpeed(gdWalkSpeed / 20 * animMoveAmount);
+					float animMoveAmount = Mathf.Max(Mathf.Clamp(moveDirection.Length(), 0f, 1f), 0.15f);
+					if (sprinting && Target.SprintSpeed != Target.WalkSpeed)
+					{
+						finalState = CharacterModel.CharacterModelStateEnum.Running;
+						Target.Character?.SetAnimSpeed(gdWalkSpeed / 20 * animMoveAmount);
+					}
+					else
+					{
+						finalState = CharacterModel.CharacterModelStateEnum.Walking;
+						Target.Character?.SetAnimSpeed(gdWalkSpeed / 8 * animMoveAmount);
+					}
 				}
 				else
 				{
-					finalState = CharacterModel.CharacterModelStateEnum.Walking;
-					Target.Character?.SetAnimSpeed(gdWalkSpeed / 8 * animMoveAmount);
+					if (hasExternalVelocity)
+					{
+						Target.CharacterVelocity = pushVelocity + Target.CharacterVelocity.Project(vertical);
+					}
+					else
+					{
+						// Stop horizontal movement when no input
+						if (accelerationFactor < 0)
+                    	{
+							Target.CharacterVelocity = Target.CharacterVelocity.Slide(vertical).MoveToward(Vector3.Zero, gdWalkSpeed) + Target.CharacterVelocity.Project(vertical);
+                    	}
+                    	else
+                    	{
+                    		float maxDeltaV = (float)delta * gdWalkSpeed * accelerationFactor;
+                    		Target.CharacterVelocity = Target.CharacterVelocity.Slide(vertical).MoveToward(Vector3.Zero, maxDeltaV) + Target.CharacterVelocity.Project(vertical);
+                    	}
+					}
+					Target.Character?.SetAnimSpeed(1);
 				}
-			}
-			else if (!Target.IsClimbing)
-			{
-				Target.IsMoving = false;
-
-				if (hasExternalVelocity)
-				{
-					Target.CharacterVelocity = pushVelocity + Target.CharacterVelocity.Project(vertical);
-				}
-				else
-				{
-					// Stop horizontal movement when no input
-					Target.CharacterVelocity = Target.CharacterVelocity.Slide(vertical).MoveToward(Vector3.Zero, gdWalkSpeed) + Target.CharacterVelocity.Project(vertical);
-				}
-				Target.Character?.SetAnimSpeed(1);
 			}
 
 			if (!isOnFloor && !Target.IsClimbing)
