@@ -158,28 +158,8 @@ public class DefaultMovement : IPlayerMovement
 				float accelerationFactor = Target.IsOnGround ? Target.AccelerationFactor : Target.AirAccelerationFactor;
 				if (isMoving)
 				{
-					Vector3 targetVelocity = moveDirection * gdWalkSpeed + pushVelocity;
-					if (accelerationFactor < 0)
-					{
-						Target.CharacterVelocity = targetVelocity + Target.CharacterVelocity.Project(vertical);
-					}
-					else
-					{
-						float maxDeltaV = (float)delta * gdWalkSpeed * accelerationFactor;
-						Target.CharacterVelocity = Target.CharacterVelocity.Slide(vertical).MoveToward(targetVelocity, maxDeltaV) + Target.CharacterVelocity.Project(vertical);
-					}
-
-					if (!snapshot.CamLocked)
-					{
-						// Apply rotation by move direction
-						Vector3 a = new Quaternion(Target.Up, vertical) * Target.Forward;
-						Vector3 b = targetVelocity.Normalized();
-						float angle = Mathf.Asin(a.Cross(b).Dot(vertical));
-						if (a.Dot(b) < 0) angle = Mathf.Pi - angle;
-						if (angle > Mathf.Pi) angle -= Mathf.Tau;
-						Target.Quaternion = new Quaternion(vertical, angle * MathUtils.ExpDecay((float)delta, NPC.BodyRotateLerp)) * Target.Quaternion;
-					}
-
+					Target.TryMovement(moveDirection, delta, !snapshot.CamLocked, gdWalkSpeed);
+					Target.CharacterVelocity += pushVelocity;
 
 					float animMoveAmount = Mathf.Max(Mathf.Clamp(moveDirection.Length(), 0f, 1f), 0.15f);
 					if (sprinting && Target.SprintSpeed != Target.WalkSpeed)
@@ -202,15 +182,7 @@ public class DefaultMovement : IPlayerMovement
 					else
 					{
 						// Stop horizontal movement when no input
-						if (accelerationFactor < 0)
-						{
-							Target.CharacterVelocity = Target.CharacterVelocity.Slide(vertical).MoveToward(Vector3.Zero, gdWalkSpeed) + Target.CharacterVelocity.Project(vertical);
-						}
-						else
-						{
-							float maxDeltaV = (float)delta * gdWalkSpeed * accelerationFactor;
-							Target.CharacterVelocity = Target.CharacterVelocity.Slide(vertical).MoveToward(Vector3.Zero, maxDeltaV) + Target.CharacterVelocity.Project(vertical);
-						}
+						Target.TryMovement(Vector3.Zero, delta, false, gdWalkSpeed);
 					}
 					Target.Character?.SetAnimSpeed(1);
 				}
