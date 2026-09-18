@@ -691,9 +691,6 @@ public partial class NPC : Physical
 			if (_navAgent != null)
 			{
 				walkTarget = _navAgent.GetNextPathPosition();
-
-				// Adjust Nav agent position in-case of unstable vertical changes
-				_navAgentContainer?.GlobalPosition = _navAgentContainer.GlobalPosition.Slide(Vertical) + walkTarget.Value.Project(Vertical);
 			}
 
 			if (walkTarget.HasValue)
@@ -1163,8 +1160,8 @@ public partial class NPC : Physical
 			{
 				PathDesiredDistance = NavigationDistance,
 				TargetDesiredDistance = 0.5f,
-				PathHeightOffset = -(CalculateBounds().Size.Y / 2),
-				PathMaxDistance = 3f
+				PathMaxDistance = 3f,
+				KeepYVelocity = true
 			};
 			Quaternion = q;
 
