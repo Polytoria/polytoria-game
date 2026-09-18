@@ -662,7 +662,8 @@ public enum ToolModeEnum
 	Rotate,
 	Scale,
 	Paint,
-	Brush
+	Brush,
+	CreateBrick,
 }
 
 public enum ScriptTypeEnum
