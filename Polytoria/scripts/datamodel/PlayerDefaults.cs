@@ -23,6 +23,8 @@ public sealed partial class PlayerDefaults : HiddenBase
 	private bool _useStamina;
 	private float _staminaRegen;
 	private float _staminaBurn;
+	private float _accelerationFactor;
+	private float _airAccelerationFactor;
 	private bool _keepInventory;
 	private bool _useHeadTurning;
 	private bool _useBubbleChat;
@@ -180,6 +182,28 @@ public sealed partial class PlayerDefaults : HiddenBase
 		}
 	}
 
+	[Editable, ScriptProperty]
+	public float AccelerationFactor
+	{
+		get => _accelerationFactor;
+		set
+		{
+			_accelerationFactor = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float AirAccelerationFactor
+	{
+		get => _airAccelerationFactor;
+		set
+		{
+			_airAccelerationFactor = value;
+			OnPropertyChanged();
+		}
+	}
+
 
 	[Editable, ScriptProperty]
 	public bool KeepInventory
@@ -272,6 +296,8 @@ public sealed partial class PlayerDefaults : HiddenBase
 		UseStamina = true;
 		StaminaRegen = 1.2f;
 		StaminaBurn = 1.2f;
+		AccelerationFactor = -1f
+		AirAccelerationFactor = -1f;
 		UseHeadTurning = true;
 		UseBubbleChat = true;
 		AutoLoadAppearance = true;

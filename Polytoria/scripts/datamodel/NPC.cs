@@ -410,10 +410,7 @@ public partial class NPC : Physical
 	[Editable, ScriptProperty, SyncVar]
 	public float AccelerationFactor
 	{
-		get
-		{
-			return _accelerationFactor;
-		}
+		get => _accelerationFactor;
 		set
 		{
 			_accelerationFactor = value;
@@ -428,10 +425,7 @@ public partial class NPC : Physical
 	[Editable, ScriptProperty, SyncVar]
 	public float AirAccelerationFactor
 	{
-		get
-		{
-			return _airAccelerationFactor;
-		}
+		get => _airAccelerationFactor;
 		set
 		{
 			_airAccelerationFactor = value;
