@@ -419,7 +419,7 @@ public sealed partial class Environment : Instance
 		return [.. rayResults];
 	}
 
-	private static Instance? ColliderToInstance(Node collider, int shape)
+	internal static Instance? ColliderToInstance(Node collider, int shape)
 	{
 		Instance? instance = null;
 
