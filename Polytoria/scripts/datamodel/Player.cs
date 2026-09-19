@@ -71,6 +71,8 @@ public sealed partial class Player : NPC
 	internal Dynamic CamAttach = null!;
 	private Physical? _mouseHoveringOn;
 	private Physical? _grabbing;
+	private float? _climbSpeedOverride;
+	private bool _autoStopClimbing = true;
 
 	private Vector3 DefaultSpawnLocation = new(0, 5, 0);
 	internal event Action<APIUserInfo>? UserInfoReady;
@@ -108,6 +110,12 @@ public sealed partial class Player : NPC
 
 	[ScriptProperty]
 	public PTSignal<Physical> Ungrabbed { get; private set; } = new();
+
+	[ScriptProperty]
+	public PTSignal<RigidBody> ClimbStart { get; private set; } = new();
+
+	[ScriptProperty]
+	public PTSignal<RigidBody> ClimbEnd { get; private set; } = new();
 
 	[SyncVar, ScriptProperty]
 	public int UserID
@@ -321,6 +329,17 @@ public sealed partial class Player : NPC
 	}
 
 	[ScriptProperty]
+	public bool AutoStopClimbing
+	{
+		get => _autoStopClimbing;
+		set
+		{
+			_autoStopClimbing = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[ScriptProperty]
 	public Physical? Grabbing => _grabbing;
 
 	public void SetGrabbing(Physical phy)
@@ -412,7 +431,10 @@ public sealed partial class Player : NPC
 	public bool IsClimbing { get; internal set; }
 
 	[SyncVar(AllowAuthorWrite = true), ScriptProperty]
-	public Truss? ClimbingTruss { get; internal set; }
+	public RigidBody? ClimbingTruss { get; internal set; }
+
+	[ScriptProperty]
+	public float ClimbSpeed => _climbSpeedOverride ?? (ClimbingTruss is Truss t ? t.ClimbSpeed : 1);
 
 	[SyncVar(ServerOnly = true)]
 	public bool IsReady
@@ -699,22 +721,16 @@ public sealed partial class Player : NPC
 		if (FootFwdRaycast.IsColliding())
 		{
 			Node collider = (Node)FootFwdRaycast.GetCollider();
-			if (collider != null && GetNetObjFromProxy(collider) is Truss truss)
+			if (collider != null && GetNetObjFromProxy(collider) is Truss truss && truss.Climbable)
 			{
-				if (!IsClimbing && !ClimbDebounce && truss.Climbable)
-				{
-					ClimbingTruss = truss;
-					_canJumpWhileClimbing = false;
-					IsClimbing = true;
-					Character?.PlayClimb();
-				}
+				Climb(truss);
 			}
-			else
+			else if (AutoStopClimbing)
 			{
 				EndClimb();
 			}
 		}
-		else
+		else if (AutoStopClimbing)
 		{
 			EndClimb();
 		}
@@ -767,13 +783,16 @@ public sealed partial class Player : NPC
 		ApplyPushForce();
 	}
 
-	internal void EndClimb()
+	[ScriptMethod]
+	public void EndClimb()
 	{
 		if (!IsClimbing) { return; }
 		IsClimbing = false;
 		JustFinishedClimbing = true;
 		ClimbingTruss = null;
+		_climbSpeedOverride = null;
 		Character?.SetAnimSpeed(1);
+		ClimbEnd.Invoke();
 	}
 
 	private void SendPing()
@@ -1029,6 +1048,27 @@ public sealed partial class Player : NPC
 				callback.Invoke(true, false);
 			}
 		});
+	}
+
+	[ScriptMethod]
+	public void Climb(RigidBody? target, float? speed = null)
+	{
+		if (target != null)
+		{
+			if (!IsClimbing && !ClimbDebounce)
+			{
+				ClimbingTruss = target;
+				_canJumpWhileClimbing = false;
+				_climbSpeedOverride = speed;
+				IsClimbing = true;
+				Character?.PlayClimb();
+				ClimbStart.Invoke(target);
+			}
+		}
+		else
+		{
+			EndClimb();
+		}
 	}
 
 	[ScriptMethod]
