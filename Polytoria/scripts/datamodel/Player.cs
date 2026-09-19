@@ -110,6 +110,12 @@ public sealed partial class Player : NPC
 	[ScriptProperty]
 	public PTSignal<Physical> Ungrabbed { get; private set; } = new();
 
+	[ScriptProperty]
+	public PTSignal<RigidBody> ClimbStart { get; private set; } = new();
+
+	[ScriptProperty]
+	public PTSignal<RigidBody> ClimbEnd { get; private set; } = new();
+
 	[SyncVar, ScriptProperty]
 	public int UserID
 	{
@@ -774,6 +780,7 @@ public sealed partial class Player : NPC
 		ClimbingTruss = null;
 		_climbSpeedOverride = null;
 		Character?.SetAnimSpeed(1);
+		ClimbEnd.Invoke();
 	}
 
 	private void SendPing()
@@ -1043,6 +1050,7 @@ public sealed partial class Player : NPC
 				_climbSpeedOverride = speed;
 				IsClimbing = true;
 				Character?.PlayClimb();
+				ClimbStart.Invoke(target);
 			}
 		}
 		else
