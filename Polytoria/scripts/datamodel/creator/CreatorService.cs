@@ -147,7 +147,7 @@ public sealed partial class CreatorService : Node, IScriptObject
 		base._Process(delta);
 	}
 
-	public async Task CreateNewSession(string projectFilePath = "", World? worldOverride = null)
+	public async Task<(CreatorSession?, World?)> CreateNewSession(string projectFilePath = "", World? worldOverride = null)
 	{
 		string? targetPlace = null;
 		projectFilePath = ProjectSettings.GlobalizePath(projectFilePath);
@@ -163,7 +163,7 @@ public sealed partial class CreatorService : Node, IScriptObject
 			if (!File.Exists(projectFileRoot))
 			{
 				Interface.PopupAlert("Couldn't find the project file");
-				return;
+				return (null, null);
 			}
 
 			if (originFilePath.GetExtension() == "poly")
@@ -209,13 +209,14 @@ public sealed partial class CreatorService : Node, IScriptObject
 		Interface.LoadOverlay?.SetProgress(1);
 
 		// Open world
+		World opened;
 		if (targetPlace != null)
 		{
-			session.OpenWorld(Path.GetRelativePath(folder, targetPlace).SanitizePath(), worldOverride);
+			opened = session.OpenWorld(Path.GetRelativePath(folder, targetPlace).SanitizePath(), worldOverride);
 		}
 		else
 		{
-			session.OpenMainWorld(worldOverride);
+			opened = session.OpenMainWorld(worldOverride);
 		}
 
 		Interface.LoadOverlay?.Hide();
@@ -228,6 +229,8 @@ public sealed partial class CreatorService : Node, IScriptObject
 		// Close startup splash on open file
 		StartupSplash.Singleton.Close();
 		Interface.StatusBar?.SetEmpty();
+
+		return (session, opened);
 	}
 
 	public static void SaveCurrentFile(out float savingTime)
