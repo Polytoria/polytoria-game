@@ -113,7 +113,7 @@ public partial class MultiSelectionBox : Control
 		{
 			if (mouseEvent.Pressed)
 			{
-				if (_dragging == false && !gizmos.HoveringGizmos && !gizmos.HoveringObject)
+				if (!_dragging && !gizmos.HoveringGizmos && !gizmos.HoveringObject)
 				{
 					_tween?.Stop();
 
