@@ -789,10 +789,11 @@ public sealed partial class Player : NPC
 		if (!IsClimbing) { return; }
 		IsClimbing = false;
 		JustFinishedClimbing = true;
+		RigidBody oldClimbed = ClimbingTruss;
 		ClimbingTruss = null;
 		_climbSpeedOverride = null;
 		Character?.SetAnimSpeed(1);
-		ClimbEnd.Invoke();
+		ClimbEnd.Invoke(oldClimbed);
 	}
 
 	private void SendPing()
