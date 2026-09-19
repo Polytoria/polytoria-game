@@ -43,6 +43,8 @@ public partial class Part : Entity
 		Root?.Bridge?.MarkDirty(this);
 
 		base.EnterTree();
+
+		SetBridgeVisibility(Visible);
 	}
 
 	public override void Init()
@@ -63,6 +65,8 @@ public partial class Part : Entity
 		}
 
 		Shape = this is Truss ? ShapeEnum.Truss : ShapeEnum.Brick;
+
+		SetBridgeVisibility(Visible);
 	}
 
 	public override void PreDelete()
@@ -79,6 +83,8 @@ public partial class Part : Entity
 		UpdateShape();
 
 		base.Ready();
+
+		SetBridgeVisibility(Visible);
 	}
 
 	public void CreateSeparateMesh()
@@ -285,6 +291,18 @@ public partial class Part : Entity
 		Vector3 center = t.Origin;
 
 		return new(center - worldExtents, worldExtents * 2);
+	}
+
+	private void SetBridgeVisibility(bool v)
+	{
+		Root.Bridge.MarkDirty(this);
+	}
+
+	protected override void OnVisibleChanged(bool v)
+	{
+		base.OnVisibleChanged(v);
+		_mesh?.Visible = v;
+		SetBridgeVisibility(v);
 	}
 
 	[ScriptEnum("PartShape")]

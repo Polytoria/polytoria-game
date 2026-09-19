@@ -208,6 +208,20 @@ public partial class Dynamic : Instance
 		}
 	}
 
+	protected virtual void OnVisibleChanged(bool v) { }
+
+	[Editable, ScriptProperty]
+	public bool Visible
+	{
+		get => GDNode3D.Visible;
+		set
+		{
+			GDNode3D.Visible = value;
+			OnVisibleChanged(value);
+			OnPropertyChanged();
+		}
+	}
+
 	[Editable(IsHidden = true), ScriptProperty, DefaultValue(false)]
 	public bool Locked
 	{
