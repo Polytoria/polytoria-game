@@ -71,6 +71,7 @@ public sealed partial class Player : NPC
 	internal Dynamic CamAttach = null!;
 	private Physical? _mouseHoveringOn;
 	private Physical? _grabbing;
+	private float? _climbSpeedOverride;
 
 	private Vector3 DefaultSpawnLocation = new(0, 5, 0);
 	internal event Action<APIUserInfo>? UserInfoReady;
@@ -412,7 +413,10 @@ public sealed partial class Player : NPC
 	public bool IsClimbing { get; internal set; }
 
 	[SyncVar(AllowAuthorWrite = true), ScriptProperty]
-	public Truss? ClimbingTruss { get; internal set; }
+	public RigidBody? ClimbingTruss { get; internal set; }
+
+	[ScriptProperty]
+	public float ClimbSpeed => _climbSpeedOverride ?? (ClimbingTruss is Truss t ? t.ClimbSpeed : 1)
 
 	[SyncVar(ServerOnly = true)]
 	public bool IsReady
@@ -701,13 +705,7 @@ public sealed partial class Player : NPC
 			Node collider = (Node)FootFwdRaycast.GetCollider();
 			if (collider != null && GetNetObjFromProxy(collider) is Truss truss)
 			{
-				if (!IsClimbing && !ClimbDebounce && truss.Climbable)
-				{
-					ClimbingTruss = truss;
-					_canJumpWhileClimbing = false;
-					IsClimbing = true;
-					Character?.PlayClimb();
-				}
+				if (truss.Climbable) Climb(truss);
 			}
 			else
 			{
@@ -767,12 +765,14 @@ public sealed partial class Player : NPC
 		ApplyPushForce();
 	}
 
-	internal void EndClimb()
+	[ScriptMethod]
+	public void EndClimb()
 	{
 		if (!IsClimbing) { return; }
 		IsClimbing = false;
 		JustFinishedClimbing = true;
 		ClimbingTruss = null;
+		_climbSpeedOverride = null;
 		Character?.SetAnimSpeed(1);
 	}
 
@@ -1029,6 +1029,26 @@ public sealed partial class Player : NPC
 				callback.Invoke(true, false);
 			}
 		});
+	}
+
+	[ScriptMethod]
+	public void Climb(RigidBody? target, float? speed = null)
+	{
+		if (target != null)
+		{
+			if (!IsClimbing && !ClimbDebounce)
+			{
+				ClimbingTruss = target;
+				_canJumpWhileClimbing = false;
+				_climbSpeedOverride = speed;
+				IsClimbing = true;
+				Character?.PlayClimb();
+			}
+		}
+		else
+		{
+			EndClimb();
+		}
 	}
 
 	[ScriptMethod]
