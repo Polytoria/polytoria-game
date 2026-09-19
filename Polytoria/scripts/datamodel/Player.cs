@@ -72,6 +72,7 @@ public sealed partial class Player : NPC
 	private Physical? _mouseHoveringOn;
 	private Physical? _grabbing;
 	private float? _climbSpeedOverride;
+	private bool _autoStopClimbing = true;
 
 	private Vector3 DefaultSpawnLocation = new(0, 5, 0);
 	internal event Action<APIUserInfo>? UserInfoReady;
@@ -323,6 +324,17 @@ public sealed partial class Player : NPC
 		set
 		{
 			_rotationMode = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[ScriptProperty]
+	public bool AutoStopClimbing
+	{
+		get => _autoStopClimbing;
+		set
+		{
+			_autoStopClimbing = value;
 			OnPropertyChanged();
 		}
 	}
@@ -709,16 +721,16 @@ public sealed partial class Player : NPC
 		if (FootFwdRaycast.IsColliding())
 		{
 			Node collider = (Node)FootFwdRaycast.GetCollider();
-			if (collider != null && GetNetObjFromProxy(collider) is Truss truss)
+			if (collider != null && GetNetObjFromProxy(collider) is Truss truss && truss.Climbable)
 			{
-				if (truss.Climbable) Climb(truss);
+				Climb(truss);
 			}
-			else
+			else if (AutoStopClimbing)
 			{
 				EndClimb();
 			}
 		}
-		else
+		else if (AutoStopClimbing)
 		{
 			EndClimb();
 		}
