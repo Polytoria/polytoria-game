@@ -422,7 +422,7 @@ public sealed partial class Player : NPC
 	public RigidBody? ClimbingTruss { get; internal set; }
 
 	[ScriptProperty]
-	public float ClimbSpeed => _climbSpeedOverride ?? (ClimbingTruss is Truss t ? t.ClimbSpeed : 1)
+	public float ClimbSpeed => _climbSpeedOverride ?? (ClimbingTruss is Truss t ? t.ClimbSpeed : 1);
 
 	[SyncVar(ServerOnly = true)]
 	public bool IsReady
