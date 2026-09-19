@@ -18,6 +18,17 @@ public partial class VoiceBox : Dynamic
 	public const string BubbleChatScene = "res://scenes/client/spatial/chat/bubble_text.tscn";
 	public PTSignal<string> CreateChatBubble { get; private set; } = new();
 
+	[Editable, ScriptProperty]
+	public bool Visible
+	{
+		get => GDNode3D.Visible;
+		set
+		{
+			GDNode3D.Visible = value;
+			OnPropertyChanged();
+		}
+	}
+
 	[ScriptMethod]
 	public void Speak(string msg)
 	{
