@@ -17,7 +17,7 @@ namespace Polytoria.Datamodel;
 public partial class NPC : Physical
 {
 	private const float CoyoteTime = 0.15f;
-	private const float NavigationDistance = 2f;
+	private const float NavigationDistance = 2.25f;
 	public const float BodyRotateLerp = 10f;
 	private const float StepHeight = 1.5f;
 	private Tool? _holdingTool;
@@ -690,10 +690,9 @@ public partial class NPC : Physical
 
 			if (_navAgent != null)
 			{
-				walkTarget = _navAgent.GetNextPathPosition();
-
 				// Adjust Nav agent position in-case of unstable vertical changes
-				_navAgentContainer?.GlobalPosition = _navAgentContainer.GlobalPosition.Slide(Vertical) + walkTarget.Value.Project(Vertical);
+				_navAgentContainer?.Position = isOnFloor ? NavigationServer3D.MapGetClosestPoint(Root.World3D.NavigationMap, GetGlobalPosition()) : GetGlobalPosition();
+				walkTarget = _navAgent.GetNextPathPosition();
 			}
 
 			if (walkTarget.HasValue)
@@ -1156,15 +1155,17 @@ public partial class NPC : Physical
 		MoveTarget = null;
 		if (_navAgent == null)
 		{
-			_navAgentContainer = new();
+			_navAgentContainer = new()
+			{
+				TopLevel = true,
+			};
 			Quaternion q = Quaternion;
 			Quaternion = Quaternion.Identity;
 			_navAgent = new()
 			{
 				PathDesiredDistance = NavigationDistance,
 				TargetDesiredDistance = 0.5f,
-				PathHeightOffset = -(CalculateBounds().Size.Y / 2),
-				PathMaxDistance = 3f
+				PathMaxDistance = 3f,
 			};
 			Quaternion = q;
 
@@ -1184,6 +1185,7 @@ public partial class NPC : Physical
 	private void OnNavFinished()
 	{
 		_navAgentContainer?.QueueFree();
+		_navAgentContainer = null;
 		_navAgent = null;
 		NavDestinationReached = true;
 		NavFinished.Invoke();
