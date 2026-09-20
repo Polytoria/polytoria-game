@@ -1284,6 +1284,12 @@ public partial class Physical : Dynamic
 
 	internal virtual void ApplyAddRelativeTorque(Vector3 torque, ForceModeEnum mode) { throw new NotImplementedException(ClassName + " does not support this force function"); }
 
+	[ScriptMethod]
+	public Vector3 GetVelocityAt(Vector3 pos)
+	{
+		return Velocity + (pos - Position).Cross(AngularVelocity);
+	}
+
 	[ScriptEnum("ForceMode")]
 	public enum ForceModeEnum
 	{
