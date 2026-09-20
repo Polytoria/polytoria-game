@@ -160,7 +160,7 @@ public partial class UIEmoteWheel : Control
 
 		// Rotate towards the first divider (bottom rightmost corner)
 		// Half of an interior angle of a regular polygon with `count` sides
-		angle -= (count - 2) * Mathf.Pi / count * 0.5f;
+		angle -= (count - 2) * (Mathf.Pi / 2f) / count;
 
 		if (angle < 0)
 			angle += Mathf.Tau;
