@@ -6,8 +6,9 @@ using Godot;
 using Polytoria.Attributes;
 using Polytoria.Creator;
 using Polytoria.Creator.Debugger;
-using Polytoria.Creator.Settings;
 using Polytoria.Creator.Managers;
+using Polytoria.Creator.Settings;
+using Polytoria.Creator.Tools;
 using Polytoria.Creator.UI;
 using Polytoria.Creator.UI.Splashes;
 using Polytoria.Creator.Utils;
@@ -47,6 +48,11 @@ public sealed partial class CreatorService : Node, IScriptObject
 	public static List<CreatorSession> Sessions { get; private set; } = [];
 	public static Dictionary<string, CreatorSession> LocalTestIDToSession { get; private set; } = [];
 	public static Dictionary<CreatorSession, string> SessionToLocalTestID { get; private set; } = [];
+
+	public static readonly Dictionary<ToolModeEnum, CreatorTool> EnumToTool = new(){
+		{ToolModeEnum.Paint, new PaintTool()},
+		{ToolModeEnum.Brush, new BrushTool()},
+	};
 
 	internal DebugServer DebugServer { get; private set; } = null!;
 

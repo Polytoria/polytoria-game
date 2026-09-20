@@ -16,7 +16,7 @@ public partial class ScaleGizmo : Node, IGizmo
 	private Vector3 _ivec = new(0f, 0f, -1f);
 	private Vector3 _nivec = new(-1f, -1f, 0f);
 
-	public List<Dynamic> Targets { get; set; } = [];
+	public List<Dynamic> Targets { get; set; } = null!;
 	public bool Visible { get; set; }
 	public Gizmos? RootGizmos { get; set; }
 
