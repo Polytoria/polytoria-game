@@ -217,7 +217,7 @@ public static class ProjectManager
 	public static void LoadDefaultScripts(CreatorSession session, string lastversion = "2.0.0")
 	{
 		CreatorService.Interface.PendingCreateScriptAt = null;
-		if (!VersionLessThan(lastversion, "2.0.23+dev"))
+		if (!VersionLessThan(lastversion, "2.0.24+dev"))
 		{
 			return;
 		}
@@ -229,7 +229,7 @@ public static class ProjectManager
 	{
 		string dir = Path.GetRelativePath(session.ProjectFolderPath, session.GlobalizePath("scripts/builtin/"));
 		session.RescanFolder();
-		if (!VersionLessThan(lastversion, "2.0.23+dev")) return;
+		if (!VersionLessThan(lastversion, "2.0.24+dev")) return;
 		if (AddDefaultScriptInstance(world, world.ScriptService, "_ChatBubble", dir, ".client.luau") is Script s)
 		{
 			if (world.PlayerDefaults.FindChild("ChatBubble") == null)
