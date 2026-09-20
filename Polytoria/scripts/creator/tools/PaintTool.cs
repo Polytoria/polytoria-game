@@ -23,12 +23,7 @@ public partial class PaintTool : CreatorTool, IImmediateTool
 		Singleton = this;
 	}
 
-	public SelectionBox GizmoSelection = null!;
-
-	public override void InitGizmo(Node g) {
-		base.InitGizmo(g);
-		GizmoSelection = (SelectionBox)g;
-	}
+	public SelectionBox HoverBox = null!;
 
 	public Color TargetColor => CreatorService.Interface.TargetPartColor;
 
@@ -36,12 +31,12 @@ public partial class PaintTool : CreatorTool, IImmediateTool
 	{
 		if (hoveringOn != null && hoveringOn is Entity && !hoveringOn.Locked)
 		{
-			GizmoSelection.SelectionColor = TargetColor;
-			GizmoSelection.Target = hoveringOn;
+			HoverBox.SelectionColor = TargetColor;
+			HoverBox.Target = hoveringOn;
 		}
 		else
 		{
-			GizmoSelection.Target = null;
+			HoverBox.Target = null;
 		}
 	}
 

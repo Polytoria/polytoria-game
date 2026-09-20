@@ -108,7 +108,7 @@ public sealed partial class Gizmos : Node
 		AddChild(Resize, true);
 		AddChild(_paintBox = new() { Root = Root, Name = "PaintBox", RootGizmos = this });
 		AddChild(_hoverBox = new() { Root = Root, Name = "HoverBox", RootGizmos = this });
-		Tools.PaintTool.Singleton.InitGizmo(_paintBox);
+		Tools.PaintTool.Singleton.HoverBox = _paintBox;
 	}
 
 	private void OnResizeDragStarted()

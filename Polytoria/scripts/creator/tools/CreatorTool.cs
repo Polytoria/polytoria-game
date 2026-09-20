@@ -12,11 +12,5 @@ namespace Polytoria.Creator.Tools;
 [Abstract]
 public partial class CreatorTool
 {
-	public Node? Gizmo;
-
-	public virtual void InitGizmo(Node g) {
-		Gizmo = g;
-	}
-
 	public virtual void ProcessInput(InputEvent @event, Dynamic? hoveringOn) {}
 }
