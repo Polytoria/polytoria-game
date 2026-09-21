@@ -888,7 +888,7 @@ public partial class Dynamic : Instance
 		// Player cannot be hidden
 		if (this is Player) return;
 
-		GDNode3D.Visible = !to;
+		Visible = !to;
 
 #if CREATOR
 		if (_boundArea3D != null)
