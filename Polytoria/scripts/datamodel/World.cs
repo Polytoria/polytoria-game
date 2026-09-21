@@ -14,6 +14,7 @@ using Polytoria.Datamodel.Services;
 using Polytoria.Schemas.API;
 using Polytoria.Scripting;
 using Polytoria.Shared;
+using Polytoria.Shared.AssetLoaders;
 using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
@@ -21,7 +22,6 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Linq;
 using Polytoria.Networking;
-using Polytoria.Shared.AssetLoaders;
 using System.Collections.Concurrent;
 
 namespace Polytoria.Datamodel;
@@ -141,7 +141,10 @@ public sealed partial class World : Instance
 	internal CreatorSession LinkedSession = null!;
 	internal string? WorldFilePath;
 #endif
-	internal Viewport? RootViewport { get; set; }
+	// Why is this here???
+	//internal Viewport? RootViewport { get; set; }
+	public CanvasLayer? RenderCanvas = null!;
+	public PTCompositor? Compositor = null!;
 	internal ClientEntry? Entry { get; set; }
 
 	public static World? Current
@@ -267,6 +270,14 @@ public sealed partial class World : Instance
 		Objects.Clear();
 		_pendingReadyRequests.Clear();
 		_pendingRequests.Clear();
+
+		if (RenderCanvas != null)
+		{
+			RenderCanvas.QueueFree();
+			RenderCanvas = null;
+			Compositor = null;
+		}
+
 		base.PreDelete();
 	}
 
@@ -302,6 +313,7 @@ public sealed partial class World : Instance
 				}
 			}
 		}
+
 		base.Process(delta);
 	}
 
@@ -910,6 +922,28 @@ public sealed partial class World : Instance
 		if (SessionType == SessionTypeEnum.Creator && CreatorContext?.Freelook != null)
 			environment.CurrentCamera = CreatorContext.Freelook;
 #endif
+
+		// TODO: Move this to Compositor Class.
+		if (World3D != null)
+		{
+			RenderCanvas = new() { Layer = 0 };
+			SubViewport initialView = new()
+			{
+				TransparentBg = false,
+				RenderTargetUpdateMode = SubViewport.UpdateMode.Always,
+			};
+			Rid initialViewRid = initialView.GetViewportRid();
+			Rid cameraRid = environment.CurrentCamera.Camera3D.GetCameraRid();
+			RenderingServer.ViewportSetScenario(initialViewRid, World3D.Scenario);
+			RenderingServer.ViewportAttachCamera(initialViewRid, environment.CurrentCamera.Camera3D.GetCameraRid());
+
+			Compositor = new(initialView);
+			Compositor.MouseFilter = Control.MouseFilterEnum.Ignore;
+			Compositor.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+			Compositor.AddChild(initialView);
+			RenderCanvas.AddChild(Compositor);
+			GDNode.AddChild(RenderCanvas);
+		}
 
 		return this;
 	}

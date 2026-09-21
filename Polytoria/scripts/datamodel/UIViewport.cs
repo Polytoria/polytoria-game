@@ -4,31 +4,31 @@
 
 using Godot;
 using Polytoria.Attributes;
+using Polytoria.Shared;
 
 namespace Polytoria.Datamodel;
 
 [Instantiable]
 public partial class UIViewport : UIField
 {
-	private SubViewport _subViewport = null!;
+	internal PTCompositor Compositor = null!;
+	private SubViewport _initialView = null!;
 	private WorldEnvironment _worldEnv = null!;
 
 	public override Node CreateGDNode()
 	{
-		SubViewportContainer container = new() { FocusMode = Control.FocusModeEnum.None };
-		_subViewport = new() { HandleInputLocally = false, TransparentBg = true, OwnWorld3D = true };
+		_initialView = new() { HandleInputLocally = false, TransparentBg = true, OwnWorld3D = true };
+		Compositor = new(_initialView) { FocusMode = Control.FocusModeEnum.None };
 
 		_worldEnv = new();
-		_subViewport.AddChild(_worldEnv);
-
-		container.Stretch = true;
-		container.AddChild(_subViewport);
-		return container;
+		_initialView.AddChild(_worldEnv);
+		Compositor.AddChild(_initialView);
+		return Compositor;
 	}
 
 	public override void InitGDNode()
 	{
-		SlotNode = _subViewport;
+		SlotNode = _initialView;
 		base.InitGDNode();
 	}
 
