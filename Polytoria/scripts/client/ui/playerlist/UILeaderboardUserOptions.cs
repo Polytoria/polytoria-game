@@ -4,6 +4,7 @@
 
 using Godot;
 using Polytoria.Datamodel;
+using Polytoria.Schemas.API;
 
 namespace Polytoria.Client.UI.Playerlist;
 
@@ -72,20 +73,33 @@ public partial class UILeaderboardUserOptions : Control
 		_animPlay.Play("appear");
 
 		// TODO: Do add/remove friend options
-		/*
+		if(_root.Players.LocalPlayer.UserID==item.TargetPlayer.UserID){
+			_addFriendBtn.Visible=_removeFriendBtn.Visible=false;return;
+		}
+		
 		int myReq = _lastReq;
 		
 		ShowLoader(true);
 
 		// Fetch friendship status
-		bool isFriends = await _root.Social.WebCheckAreFriends(_root.Players.LocalPlayer.UserID, item.TargetPlayer.UserID);
-
+		//bool isFriends = await _root.Social.WebCheckAreFriends(_root.Players.LocalPlayer.UserID, item.TargetPlayer.UserID);
+		APIAreFriendsResponse? friendsStatus = await _root.Social.WebCheckFriendsStatus(_root.Players.LocalPlayer.UserID, item.TargetPlayer.UserID);
+		
 		// If another option opened
 		if (myReq != _lastReq) return;
-		_addFriendBtn.Visible = !isFriends;
-		_removeFriendBtn.Visible = isFriends;
+		
+		if (friendsStatus is not APIAreFriendsResponse FriendsStatus){
+			_addFriendBtn.Visible=_removeFriendBtn.Visible=false;
+			ShowLoader(false);return;
+		}
+		bool isFriends=!string.IsNullOrEmpty(FriendsStatus.FriendsSince);
+		bool isPending=FriendsStatus.AreFriends&&!isFriends;
+		
+		_addFriendBtn.Visible=!isFriends&&!isPending;
+		_removeFriendBtn.Visible=isFriends||isPending;
+		_removeFriendBtn.Text=isFriends?"Remove Friend":"Revoke Request";
 		ShowLoader(false);
-		*/
+		
 	}
 
 	public void Disappear()
