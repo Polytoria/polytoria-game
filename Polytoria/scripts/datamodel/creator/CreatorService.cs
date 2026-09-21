@@ -545,23 +545,33 @@ public sealed partial class CreatorService : Node, IScriptObject
 
 		LocalTestIDToSession.Add(debugID, session);
 		SessionToLocalTestID.Add(session, debugID);
-		await StartLocalTestOnEntry(session.ProjectFolderPath, game.WorldFilePath!, debugID, GD.RandRange(20000, 30000), false, atCamera ? game.CreatorContext.Freelook.Position : null);
+		await StartLocalTestOnEntry(
+			session.ProjectFolderPath,
+			game.WorldFilePath!,
+			debugID,
+			GD.RandRange(20000, 30000),
+			false,
+			atCamera ? game.CreatorContext.Freelook.Position : null,
+			atCamera ?
+				Mathf.RadToDeg(Mathf.Atan2(game.CreatorContext.Freelook.Forward.X, game.CreatorContext.Freelook.Forward.Z))
+				: null
+			);
 
 		DebugConsole.Singleton.Clear();
 		LocalTestStarted.Invoke();
 	}
 
-	public async Task StartLocalTestOnEntry(string projectPath, string entryPath, string debugID, int port, bool isSubplace, Vector3? spawnPos = null)
+	public async Task StartLocalTestOnEntry(string projectPath, string entryPath, string debugID, int port, bool isSubplace, Vector3? spawnPos = null, float? spawnRot = null)
 	{
 		string tempPath = Path.GetTempPath();
 		string placeFilePath = tempPath.PathJoin("pt_test_" + new DateTimeOffset(DateTime.Now).Millisecond + ".zip");
 
 		await PackedFormat.PackProjectToFile(projectPath, placeFilePath, Interface.LoadOverlay.CreateProgressReporter("Starting local test..."));
 		Interface.LoadOverlay?.Hide();
-		StartLocalTestServer(placeFilePath, entryPath, debugID, port, isSubplace, spawnPos);
+		StartLocalTestServer(placeFilePath, entryPath, debugID, port, isSubplace, spawnPos, spawnRot);
 	}
 
-	private void StartLocalTestServer(string placeFilePath, string entryPath, string debugID, int port, bool isSubplace = false, Vector3? spawnPos = null)
+	private void StartLocalTestServer(string placeFilePath, string entryPath, string debugID, int port, bool isSubplace = false, Vector3? spawnPos = null, float? spawnRot = null)
 	{
 		string exePath = OS.GetExecutablePath();
 
@@ -570,6 +580,10 @@ public sealed partial class CreatorService : Node, IScriptObject
 		if (spawnPos != null)
 		{
 			args.AddRange(["-spawnpos", $"v{(int)spawnPos.Value.X},{(int)spawnPos.Value.Y},{(int)spawnPos.Value.Z}"]);
+		}
+		if (spawnRot != null)
+		{
+			args.AddRange(["-spawnrot", $"v{spawnRot}"]);
 		}
 
 		if (isSubplace)
