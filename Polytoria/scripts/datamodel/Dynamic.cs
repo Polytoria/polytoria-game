@@ -370,6 +370,10 @@ public partial class Dynamic : Instance
 		{
 			InvokeTransformChanged(old);
 		}
+		if (!_isDirty && this is not NPC { IsSitting: true })
+		{
+			SetPhysicsProcessWAuthor(false);
+		}
 	}
 
 	private void UpdateTransform(double delta)

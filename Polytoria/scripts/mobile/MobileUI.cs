@@ -186,6 +186,7 @@ public partial class MobileUI : Control
 				MobileViewEnum.PlaceInfo => "res://scenes/mobile/views/place_info.tscn",
 				MobileViewEnum.Avatar => "res://scenes/mobile/views/avatar.tscn",
 				MobileViewEnum.Dev => "res://scenes/mobile/views/test.tscn",
+				MobileViewEnum.Profile => "res://scenes/mobile/views/profile.tscn",
 				_ => throw new ArgumentOutOfRangeException(nameof(viewEnum),
 					 $"No scene defined for {viewEnum}")
 			};
@@ -214,5 +215,6 @@ public enum MobileViewEnum
 	Avatar,
 	Store,
 	Dev,
-	PlaceInfo
+	PlaceInfo,
+	Profile
 }

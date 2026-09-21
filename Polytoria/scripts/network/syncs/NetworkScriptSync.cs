@@ -7,10 +7,10 @@ using Polytoria.Attributes;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Services;
 using Polytoria.Shared;
+using Polytoria.Utils;
 using Polytoria.Utils.Compression;
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using static Polytoria.Datamodel.Services.NetworkService;
 
 namespace Polytoria.Networking.Synchronizers;
@@ -54,7 +54,7 @@ public partial class NetworkScriptSync : Instance
 			}
 		}
 
-		byte[] rawData = ZstdCompressionUtils.Compress(JsonSerializer.Serialize([.. data], NetDataGenerationContext.Default.NetBatchScriptDataArray).ToUtf8Buffer());
+		byte[] rawData = ZstdCompressionUtils.Compress(SerializeUtils.Serialize<NetBatchScriptData[]>([.. data]));
 		RpcId(peerID, nameof(NetRecvAllScripts), rawData, true);
 	}
 
@@ -62,7 +62,16 @@ public partial class NetworkScriptSync : Instance
 	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Reliable)]
 	private void NetRecvAllScripts(byte[] rawBytes, bool isFirstInit)
 	{
-		NetBatchScriptData[] scriptsData = JsonSerializer.Deserialize(ZstdCompressionUtils.Decompress(rawBytes), NetDataGenerationContext.Default.NetBatchScriptDataArray)!;
+		NetBatchScriptData[] scriptsData;
+		try
+		{
+			scriptsData = SerializeUtils.Deserialize<NetBatchScriptData[]>(ZstdCompressionUtils.Decompress(rawBytes)) ?? [];
+		}
+		catch (Exception ex)
+		{
+			PT.PrintErr("[ScriptSync] Failed to deserialize script batch: ", ex);
+			return;
+		}
 
 		foreach (NetBatchScriptData item in scriptsData)
 		{

@@ -25,6 +25,7 @@ public partial class DatamodelBridge : Node3D
 	private readonly Dictionary<ChunkKey, ChunkBatch> _batches = [];
 	private readonly Dictionary<(Part.PartMaterialEnum, Part.ShapeEnum), int> _groupCounts = [];
 	private readonly HashSet<Part> _dirty = new(ReferenceEqualityComparer.Instance);
+	private readonly List<Part> _dirtyParts = [];
 	private readonly HashSet<Part> _recheck = new(ReferenceEqualityComparer.Instance);
 	private readonly Dictionary<Part, System.Action<object>> _handlers = new(ReferenceEqualityComparer.Instance);
 	private Rid _scenario;
@@ -139,7 +140,11 @@ public partial class DatamodelBridge : Node3D
 		if (!_renderingEnabled || !isGameReady) return;
 		if (_dirty.Count == 0) return;
 
-		foreach (Part part in _dirty)
+		_dirtyParts.Clear();
+		_dirtyParts.AddRange(_dirty);
+		_dirty.Clear();
+
+		foreach (Part part in _dirtyParts)
 		{
 			if (!_recheck.Remove(part))
 			{
@@ -147,7 +152,8 @@ public partial class DatamodelBridge : Node3D
 
 				if (_handles.TryGetValue(part, out PartHandle? moved))
 				{
-					ChunkKey movedKey = GetKeyForPart(part);
+					Transform3D transform = part.GetGlobalTransform();
+					ChunkKey movedKey = GetKeyForPart(part, transform.Origin);
 					if (!movedKey.Equals(moved.Key))
 					{
 						RemoveFromBatch(part);
@@ -155,7 +161,7 @@ public partial class DatamodelBridge : Node3D
 						continue;
 					}
 
-					moved.Batch.MultiMesh.SetInstanceTransform(moved.Index, part.GetGlobalTransform());
+					moved.Batch.MultiMesh.SetInstanceTransform(moved.Index, transform);
 				}
 				continue;
 			}
@@ -184,8 +190,6 @@ public partial class DatamodelBridge : Node3D
 			}
 			else
 			{
-				DisconnectHandler(part);
-
 				if (inBatch)
 				{
 					RemoveFromBatch(part);
@@ -197,17 +201,20 @@ public partial class DatamodelBridge : Node3D
 				}
 			}
 		}
-
-		_dirty.Clear();
 	}
 
 	private ChunkKey GetKeyForPart(Part part)
+	{
+		return GetKeyForPart(part, part.Position);
+	}
+
+	private ChunkKey GetKeyForPart(Part part, Vector3 position)
 	{
 		bool isDynamic = !part.Anchored;
 		bool split = !isDynamic && _groupCounts.GetValueOrDefault((part.Material, part.Shape)) >= SplitGroupSize;
 		float size = split ? ChunkBaseSize : CoarseChunkSize;
 
-		Vector3 pos = part.Position + new Vector3(size * 0.5f, size * 0.5f, size * 0.5f);
+		Vector3 pos = position + new Vector3(size * 0.5f, size * 0.5f, size * 0.5f);
 		Vector3I coord = new(
 			Mathf.FloorToInt(pos.X / size),
 			Mathf.FloorToInt(pos.Y / size),
@@ -310,7 +317,11 @@ public partial class DatamodelBridge : Node3D
 	private void RemoveFromBatch(Part part)
 	{
 		if (!_handles.TryGetValue(part, out PartHandle? handle)) return;
-		if (!_batches.TryGetValue(handle.Key, out var batch)) return;
+		if (!_batches.TryGetValue(handle.Key, out var batch) || batch.Count <= 0)
+		{
+			_handles.Remove(part);
+			return;
+		}
 
 		int index = handle.Index;
 		int lastIndex = batch.Count - 1;
@@ -320,13 +331,14 @@ public partial class DatamodelBridge : Node3D
 			Part lastPart = batch.Parts[lastIndex];
 			batch.Parts[index] = lastPart;
 
-			_handles[lastPart].Index = index;
+			if (_handles.TryGetValue(lastPart, out PartHandle? lastHandle))
+			{
+				lastHandle.Index = index;
+			}
 
 			// prevents a bunch of error spam. idk why these nodes often arent in the tree but this kept spamming errors
-			if (lastPart.GDNode3D.IsInsideTree())
-			{
-				batch.MultiMesh.SetInstanceTransform(index, lastPart.GetGlobalTransform());
-			}
+			bool inTree = IsInstanceValid(lastPart.GDNode3D) && lastPart.GDNode3D.IsInsideTree();
+			batch.MultiMesh.SetInstanceTransform(index, inTree ? lastPart.GetGlobalTransform() : Transform3D.Identity.Scaled(Vector3.Zero));
 			batch.MultiMesh.SetInstanceColor(index, lastPart.Color.SrgbToLinear());
 		}
 
@@ -374,6 +386,7 @@ public partial class DatamodelBridge : Node3D
 		if (_handles.ContainsKey(part)) return;
 		if (!IsPartEligible(part))
 		{
+			ConnectHandler(part);
 			part.CreateSeparateMesh();
 			return;
 		}
