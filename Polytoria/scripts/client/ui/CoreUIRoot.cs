@@ -8,7 +8,9 @@ using Polytoria.Client.UI.Chat;
 using Polytoria.Client.UI.Playerlist;
 using Polytoria.Client.UI.Purchases;
 using Polytoria.Datamodel;
+using Polytoria.Datamodel.Resources;
 using Polytoria.Datamodel.Services;
+using Polytoria.Shared;
 
 #if DEBUG && !EXPORTDEBUG
 using Polytoria.Shared;
@@ -38,11 +40,8 @@ public partial class CoreUIRoot : CanvasLayer
 	[Export] public UINotification NotificationCenter = null!;
 	[Export] public UICapturePreview CapturePreview = null!;
 	[Export] public UIPurchasePrompt PurchasePrompt = null!;
-	[Export] public TextureRect CtrlLockCursor = null!;
+	[Export] public TextureRect Crosshair = null!;
 	[Export] public DevConsoleWindow DevWindow = null!;
-
-	[ExportSubgroup("Filepaths")]
-	[Export] public string CtrlLockCursorsFilepath = null!;
 
 	/// <summary>
 	/// Determine if CoreUI has active popup, this overrides Input.IsGameFocused
@@ -73,67 +72,82 @@ public partial class CoreUIRoot : CanvasLayer
 		}
 #endif
 
-		Service.CtrlLockCursorChanged.Connect(OnCtrlLockCursorChanged);
+		Service.CrosshairChanged.Connect(OnCrosshairChanged);
 
 		base._EnterTree();
-		OnCtrlLockCursorChanged();
+		OnCrosshairChanged();
 	}
 
 	public override void _ExitTree()
 	{
-		Service.CtrlLockCursorChanged.Disconnect(OnCtrlLockCursorChanged);
+		Service.CrosshairChanged.Disconnect(OnCrosshairChanged);
 		base._ExitTree();
 	}
 
 	public override void _Process(double delta)
 	{
-		SyncCtrlLockCursor();
+		SyncCrosshair();
 		base._Process(delta);
 	}
 
-	private void SyncCtrlLockCursor()
+	private void SyncCrosshair()
 	{
-		CtrlLockCursor?.Visible = Root?.Environment?.CurrentCamera?.CtrlLocked == true;
+		Crosshair?.Visible = Root?.Environment?.CurrentCamera?.CtrlLocked == true;
 	}
 
-	private void OnCtrlLockCursorChanged()
+	private void OnCrosshairChanged()
 	{
-		string filename = "";
-		switch (Service.CtrlLockCursor)
+		if (Service.Crosshair is CursorAsset c)
 		{
-			case CoreUIService.CtrlLockCursorEnum.StereotypicalDot:
-				filename = "stereotypical-dot.svg";
-				break;
-			case CoreUIService.CtrlLockCursorEnum.Stereotypical:
-				filename = "stereotypical.svg";
-				break;
-			case CoreUIService.CtrlLockCursorEnum.Tactical:
-				filename = "tactical.svg";
-				break;
-			case CoreUIService.CtrlLockCursorEnum.TacticalDot:
-				filename = "tactical-dot.svg";
-				break;
-			case CoreUIService.CtrlLockCursorEnum.Dot:
-				filename = "dot.svg";
-				break;
-			case CoreUIService.CtrlLockCursorEnum.Plus:
-				filename = "plus.svg";
-				break;
-			case CoreUIService.CtrlLockCursorEnum.X:
-				filename = "plus.svg";
-				break;
-			case CoreUIService.CtrlLockCursorEnum.Chevron:
-				filename = "chevron.svg";
-				break;
-		}
+			void apply(Image? img)
+			{
+				c.CursorLoaded -= apply;
+				if (img != null)
+				{
+					ImageTexture tex = ImageTexture.CreateFromImage(img);
+					Vector2 texSize = tex.GetSize();
+					Crosshair.Texture = tex;
+					Crosshair.Size = texSize;
+					Crosshair.OffsetTransformPosition = -c.Hotspot * texSize;
+				}
+				else
+				{
+					Crosshair.Texture = null;
+				}
+			}
 
-		if (Service.CtrlLockCursor == CoreUIService.CtrlLockCursorEnum.None)
-		{
-			CtrlLockCursor.Texture = null;
-			return;
+			if (c.IsResourceLoaded)
+			{
+				apply(c.CursorImage);
+			}
+			else
+			{
+				c.CursorLoaded += apply;
+				c.QueueLoadResource();
+			}
 		}
-		var dpiTexture = GD.Load<DpiTexture>(CtrlLockCursorsFilepath + "/" + filename);
-		CtrlLockCursor.Texture = dpiTexture;
+		else
+		{
+			if (Service.CtrlLockCursor == CoreUIService.CtrlLockCursorEnum.None)
+			{
+				Crosshair.Texture = null;
+				return;
+			}
+
+			string filename = Service.CtrlLockCursor switch
+			{
+				CoreUIService.CtrlLockCursorEnum.StereotypicalDot => "crosshair-vertical-dot.svg",
+				CoreUIService.CtrlLockCursorEnum.Stereotypical => "crosshair-vertical.svg",
+				CoreUIService.CtrlLockCursorEnum.Tactical => "crosshair-tactical.svg",
+				CoreUIService.CtrlLockCursorEnum.TacticalDot => "crosshair-tactical-dot.svg",
+				CoreUIService.CtrlLockCursorEnum.Dot => "dot.svg",
+				CoreUIService.CtrlLockCursorEnum.Plus => "plus.svg",
+				CoreUIService.CtrlLockCursorEnum.X => "x.svg",
+				CoreUIService.CtrlLockCursorEnum.Chevron => "chevron.svg",
+				_ => "",
+			};
+			Crosshair.Texture = GD.Load<DpiTexture>(Globals.BuiltInCursorLocation.PathJoin(filename));
+		}
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
