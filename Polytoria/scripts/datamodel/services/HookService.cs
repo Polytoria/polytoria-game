@@ -24,7 +24,7 @@ public sealed partial class HookService : Instance
 	[ScriptProperty]
 	public PTSignal<double> PhysicsUpdated { get; private set; } = new();
 
-	public static List<PTFunction> Scheduled { get; private set; } = [];
+	public static Dictionary<PTCallback, /*milliseconds*/int> Scheduled { get; private set; } = [];
 
 	public override void Init()
 	{
@@ -72,28 +72,38 @@ public sealed partial class HookService : Instance
 	}
 
 	[ScriptMethod("ScheduleEvery")]
-	public async void ScheduleEvery(int milliseconds, PTFunction function)
+	public async void ScheduleEvery(int milliseconds, PTCallback function)
 	{
-		Scheduled.Add(function);
+		Scheduled.Add(function, milliseconds);
 
-		while (Scheduled.Contains(function))
+		while (Scheduled.ContainsKey(function))
 		{
-			await Task.Delay(milliseconds);
-			await function.Call();
+			await Task.Delay(Scheduled[function]);
+			function.Invoke();
 		}
 	}
 
 	[ScriptMethod("Unschedule")]
-	public void Unschedule(PTFunction function)
+	public void Unschedule(PTCallback function)
 	{
 		Scheduled.Remove(function);
 	}
 
 	[ScriptMethod("ScheduleIn")]
-	public async void ScheduleIn(int milliseconds, PTFunction function)
+	public async void ScheduleIn(int milliseconds, PTCallback function)
 	{
-		Scheduled.Add(function);
+		Scheduled.Add(function, milliseconds);
+
 		await Task.Delay(milliseconds);
-		await function.Call();
+
+		function.Invoke();
+		Scheduled.Remove(function);
+	}
+
+	[ScriptMethod("ChangeSchedule")]
+	public void ChangeSchedule(int milliseconds, PTCallback function)
+	{
+		if (!Scheduled.ContainsKey(function)) return;
+		Scheduled[function] = milliseconds;
 	}
 }
