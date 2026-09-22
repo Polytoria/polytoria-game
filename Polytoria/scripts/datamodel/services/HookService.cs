@@ -5,6 +5,8 @@
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Scripting;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Polytoria.Datamodel.Services;
 
@@ -21,6 +23,8 @@ public sealed partial class HookService : Instance
 	public PTSignal<double> PostRendered { get; private set; } = new();
 	[ScriptProperty]
 	public PTSignal<double> PhysicsUpdated { get; private set; } = new();
+
+	public static List<PTFunction> Scheduled { get; private set; } = [];
 
 	public override void Init()
 	{
@@ -65,5 +69,31 @@ public sealed partial class HookService : Instance
 	{
 		if (!GodotObject.IsInstanceValid(GDNode)) return;
 		PostRendered.Invoke(GDNode.GetProcessDeltaTime());
+	}
+
+	[ScriptMethod("ScheduleEvery")]
+	public async void ScheduleEvery(int milliseconds, PTFunction function)
+	{
+		Scheduled.Add(function);
+
+		while (Scheduled.Contains(function))
+		{
+			await Task.Delay(milliseconds);
+			await function.Call();
+		}
+	}
+
+	[ScriptMethod("Unschedule")]
+	public void Unschedule(PTFunction function)
+	{
+		Scheduled.Remove(function);
+	}
+
+	[ScriptMethod("ScheduleIn")]
+	public async void ScheduleIn(int milliseconds, PTFunction function)
+	{
+		Scheduled.Add(function);
+		await Task.Delay(milliseconds);
+		await function.Call();
 	}
 }
