@@ -63,6 +63,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 	{
 		{ "json", typeof(LuaLibJSON) },
 		{ "guid", typeof(LuaLibGUID) },
+		{ "hooks", typeof(LuaLibHOOKS) }
 	};
 
 	public static readonly Dictionary<string, Type> LuaExtensions = new()
