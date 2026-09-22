@@ -362,23 +362,23 @@ public partial class Part : Entity
 				bound.Position += center;
 				return bound;
 			case ShapeEnum.Sphere:
-			{
-				Basis b = t.Basis;
-				Vector3 worldExtents = new(
-					GetSpheroidExtent(b, Vector3.Right, Vector3.Up, Vector3.Back),
-					GetSpheroidExtent(b, Vector3.Up, Vector3.Back, Vector3.Right),
-					GetSpheroidExtent(b, Vector3.Back, Vector3.Right, Vector3.Up)
-				);
-				return new(center - worldExtents * 0.5f, worldExtents);
-			}
+				{
+					Basis b = t.Basis;
+					Vector3 worldExtents = new(
+						GetSpheroidExtent(b, Vector3.Right, Vector3.Up, Vector3.Back),
+						GetSpheroidExtent(b, Vector3.Up, Vector3.Back, Vector3.Right),
+						GetSpheroidExtent(b, Vector3.Back, Vector3.Right, Vector3.Up)
+					);
+					return new(center - worldExtents * 0.5f, worldExtents);
+				}
 			case ShapeEnum.Brick:
 			case ShapeEnum.Truss:
 			case ShapeEnum.Frame:
 			default: // Cylinder Cone Bevel Octant Torus BeveledCorner are currently unimplemented
-			{
-				Vector3 worldExtents = rot.X.Abs() * he.X + rot.Y.Abs() * he.Y + rot.Z.Abs() * he.Z;
-				return new(center - worldExtents, worldExtents * 2);
-			}
+				{
+					Vector3 worldExtents = rot.X.Abs() * he.X + rot.Y.Abs() * he.Y + rot.Z.Abs() * he.Z;
+					return new(center - worldExtents, worldExtents * 2);
+				}
 		}
 	}
 
