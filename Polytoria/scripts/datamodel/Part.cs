@@ -5,6 +5,7 @@
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Shared;
+using Polytoria.Utils;
 using System;
 
 namespace Polytoria.Datamodel;
@@ -272,6 +273,27 @@ public partial class Part : Entity
 		return bound;
 	}
 
+	private Vector3 OrthoNonnormalInv(Basis basis, Vector3 vector)
+	{
+		return new(
+			basis.X.Dot(vector) / basis.X.LengthSquared(),
+			basis.Y.Dot(vector) / basis.Y.LengthSquared(),
+			basis.Z.Dot(vector) / basis.Z.LengthSquared()
+		);
+	}
+
+	private float GetSpheroidExtent(Basis transform, Vector3 dir, Vector3 perp, Vector3 perp2) // `transform` is orthogonal by godot's definition
+	{
+		// adapted from https://www.desmos.com/3d/hjyn4si0gd
+		return transform.Xform(
+			OrthoNonnormalInv(transform, dir).Project(
+				OrthoNonnormalInv(transform, perp2).Cross(
+					OrthoNonnormalInv(transform, perp)
+				).Normalized()
+			).Normalized()
+		).Dot(dir);
+	}
+
 	public override Aabb GetSelfBound()
 	{
 		Transform3D t = GetGlobalTransform();
@@ -339,12 +361,24 @@ public partial class Part : Entity
 				], rot.ScaledLocal(he));
 				bound.Position += center;
 				return bound;
+			case ShapeEnum.Sphere:
+			{
+				Basis b = t.Basis;
+				Vector3 worldExtents = new(
+					GetSpheroidExtent(b, Vector3.Right, Vector3.Up, Vector3.Back),
+					GetSpheroidExtent(b, Vector3.Up, Vector3.Back, Vector3.Right),
+					GetSpheroidExtent(b, Vector3.Back, Vector3.Right, Vector3.Up)
+				);
+				return new(center - worldExtents * 0.5f, worldExtents);
+			}
 			case ShapeEnum.Brick:
 			case ShapeEnum.Truss:
 			case ShapeEnum.Frame:
-			default: // Sphere Cylinder Cone Bevel Octant Torus BeveledCorner are currently unimplemented
+			default: // Cylinder Cone Bevel Octant Torus BeveledCorner are currently unimplemented
+			{
 				Vector3 worldExtents = rot.X.Abs() * he.X + rot.Y.Abs() * he.Y + rot.Z.Abs() * he.Z;
 				return new(center - worldExtents, worldExtents * 2);
+			}
 		}
 	}
 
