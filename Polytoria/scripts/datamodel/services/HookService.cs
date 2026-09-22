@@ -101,7 +101,7 @@ public sealed partial class HookService : Instance
 	}
 
 	[ScriptMethod("ChangeSchedule")]
-	public void ChangeSchedule(int milliseconds, PTCallback function)
+	public void ChangeSchedule(PTCallback function, int milliseconds)
 	{
 		if (!Scheduled.ContainsKey(function)) return;
 		Scheduled[function] = milliseconds;
