@@ -525,10 +525,10 @@ public sealed partial class Environment : Instance
 		_navBaking = true;
 		_navMesh = new()
 		{
-			AgentRadius = 1.25f,
+			AgentRadius = 2.25f,
 			AgentHeight = 6,
 			AgentMaxSlope = 70,
-			CellSize = 1,
+			CellSize = 0.75f,
 			CellHeight = 1,
 			AgentMaxClimb = 1.5f
 		};

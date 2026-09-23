@@ -37,7 +37,7 @@ public sealed partial class Camera : Dynamic
 	private float _scrollLerpSpeed;
 	private float _orthographicSize;
 	private Vector3 _positionOffset;
-	private Quaternion _rotationOffset;
+	private Quaternion _rotationOffset = Quaternion.Identity;
 	private bool _isFirstPerson;
 	private float _sensitivityMultipler = 1f;
 	private bool _canLock = true;
@@ -229,7 +229,7 @@ public sealed partial class Camera : Dynamic
 		}
 	}
 
-	[Editable, ScriptProperty]
+	[ScriptProperty, CloneIgnore, SaveIgnore]
 	public Quaternion QuaternionOffset
 	{
 		get => _rotationOffset;
@@ -966,15 +966,13 @@ public sealed partial class Camera : Dynamic
 
 	private void LimitRotation()
 	{
-		if (_targetRotation.X > 89)
+		if (!_targetRotation.IsFinite())
 		{
-			_targetRotation.X = 89;
+			_targetRotation = new Vector3(0, 180, 0);
 		}
 
-		if (_targetRotation.X < -89)
-		{
-			_targetRotation.X = -89;
-		}
+		_targetRotation.X = Mathf.Clamp(_targetRotation.X, -89, 89);
+		_targetRotation.Y = Mathf.Wrap(_targetRotation.Y, -180, 180);
 	}
 
 	[ScriptMethod]

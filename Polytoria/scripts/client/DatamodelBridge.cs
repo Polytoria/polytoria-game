@@ -14,13 +14,20 @@ namespace Polytoria.Client;
 /// </summary>
 public partial class DatamodelBridge : Node3D
 {
-	private const float ChunkBaseSize = 64f;
+	private const float ChunkBaseSize = 128f;
+	private const float CoarseChunkSize = 1024f;
+	private const int SplitGroupSize = 512;
+
 	private World Root = null!;
 	public long SeparatedPartCount = 0;
 
-	private readonly Dictionary<Part, PartHandle> _handles = [];
+	private readonly Dictionary<Part, PartHandle> _handles = new(ReferenceEqualityComparer.Instance);
 	private readonly Dictionary<ChunkKey, ChunkBatch> _batches = [];
-	private readonly HashSet<Part> _dirty = [];
+	private readonly Dictionary<(Part.PartMaterialEnum, Part.ShapeEnum), int> _groupCounts = [];
+	private readonly HashSet<Part> _dirty = new(ReferenceEqualityComparer.Instance);
+	private readonly List<Part> _dirtyParts = [];
+	private readonly HashSet<Part> _recheck = new(ReferenceEqualityComparer.Instance);
+	private readonly Dictionary<Part, System.Action<object>> _handlers = new(ReferenceEqualityComparer.Instance);
 	private Rid _scenario;
 
 	private readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materials = [];
@@ -75,10 +82,18 @@ public partial class DatamodelBridge : Node3D
 				Root.Loaded.Disconnect(OnGameReady);
 
 				// Cleanup parts
+				foreach (Part item in new List<Part>(_handlers.Keys))
+				{
+					DisconnectHandler(item);
+				}
+
 				foreach (Part item in new List<Part>(_handles.Keys))
 				{
-					RemovePart(item);
+					RemoveFromBatch(item);
 				}
+
+				_dirty.Clear();
+				_recheck.Clear();
 			}
 
 			Root.Bridge = null!;
@@ -125,18 +140,42 @@ public partial class DatamodelBridge : Node3D
 		if (!_renderingEnabled || !isGameReady) return;
 		if (_dirty.Count == 0) return;
 
-		foreach (Part part in _dirty)
+		_dirtyParts.Clear();
+		_dirtyParts.AddRange(_dirty);
+		_dirty.Clear();
+
+		foreach (Part part in _dirtyParts)
 		{
+			if (!_recheck.Remove(part))
+			{
+				if (part.IsDeleted || !IsInstanceValid(part.GDNode3D)) continue;
+
+				if (_handles.TryGetValue(part, out PartHandle? moved))
+				{
+					Transform3D transform = part.GetGlobalTransform();
+					ChunkKey movedKey = GetKeyForPart(part, transform.Origin);
+					if (!movedKey.Equals(moved.Key))
+					{
+						RemoveFromBatch(part);
+						AddToBatch(part, movedKey);
+						continue;
+					}
+
+					moved.Batch.MultiMesh.SetInstanceTransform(moved.Index, transform);
+				}
+				continue;
+			}
+
 			bool inBatch = _handles.TryGetValue(part, out PartHandle? handle);
 			bool shouldBatch = IsPartEligible(part);
+			ChunkKey newKey = shouldBatch ? GetKeyForPart(part) : default;
 
 			if (shouldBatch)
 			{
-				ChunkKey newKey = GetKeyForPart(part);
-
 				if (!inBatch)
 				{
 					AddToBatch(part, newKey);
+					ConnectHandler(part);
 				}
 				else if (!newKey.Equals(handle!.Key))
 				{
@@ -145,9 +184,8 @@ public partial class DatamodelBridge : Node3D
 				}
 				else
 				{
-					ChunkBatch batch = _batches[handle.Key];
-					batch.MultiMesh.SetInstanceTransform(handle.Index, part.GetGlobalTransform());
-					batch.MultiMesh.SetInstanceColor(handle.Index, part.Color.SrgbToLinear());
+					handle!.Batch.MultiMesh.SetInstanceTransform(handle.Index, part.GetGlobalTransform());
+					handle.Batch.MultiMesh.SetInstanceColor(handle.Index, part.Color.SrgbToLinear());
 				}
 			}
 			else
@@ -157,43 +195,32 @@ public partial class DatamodelBridge : Node3D
 					RemoveFromBatch(part);
 				}
 
-				if (!part.IsMeshSeparated)
+				if (!part.IsMeshSeparated && !part.IsDeleted)
 				{
 					part.CreateSeparateMesh();
 				}
 			}
 		}
-
-		_dirty.Clear();
 	}
 
-	private static ChunkKey GetKeyForPart(Part part)
+	private ChunkKey GetKeyForPart(Part part)
 	{
-		uint scaleLevel = 1;
-		float size = ChunkBaseSize;
-
-		while (part.Size.X > size || part.Size.Y > size || part.Size.Z > size)
-		{
-			size *= 2;
-			scaleLevel++;
-
-			if (scaleLevel > 10) break;
-		}
-
-
-		Vector3I coord = GetChunkCoord(part.Position, scaleLevel);
-		return new ChunkKey { Coord = coord, Material = part.Material, Shape = part.Shape, IsTransparent = part.Color.A < 1f, CastShadows = part.CastShadows, ScaleLevel = scaleLevel };
+		return GetKeyForPart(part, part.Position);
 	}
 
-	private static Vector3I GetChunkCoord(Vector3 pos, uint scaleLevel = 1)
+	private ChunkKey GetKeyForPart(Part part, Vector3 position)
 	{
-		float size = ChunkBaseSize * Mathf.Pow(2, scaleLevel - 1);
+		bool isDynamic = !part.Anchored;
+		bool split = !isDynamic && _groupCounts.GetValueOrDefault((part.Material, part.Shape)) >= SplitGroupSize;
+		float size = split ? ChunkBaseSize : CoarseChunkSize;
 
-		int cx = Mathf.FloorToInt(pos.X / size);
-		int cy = Mathf.FloorToInt(pos.Y / size);
-		int cz = Mathf.FloorToInt(pos.Z / size);
+		Vector3 pos = position + new Vector3(size * 0.5f, size * 0.5f, size * 0.5f);
+		Vector3I coord = new(
+			Mathf.FloorToInt(pos.X / size),
+			Mathf.FloorToInt(pos.Y / size),
+			Mathf.FloorToInt(pos.Z / size));
 
-		return new Vector3I(cx, cy, cz);
+		return new ChunkKey(coord, part.Material, part.Shape, part.Color.A < 1f, part.CastShadows, isDynamic);
 	}
 
 	private void OnInstanceAdded(Instance instance)
@@ -238,7 +265,7 @@ public partial class DatamodelBridge : Node3D
 			RenderingServer.InstanceSetTransform(rid, Transform3D.Identity);
 			RenderingServer.InstanceGeometrySetCastShadowsSetting(rid, key.CastShadows ? RenderingServer.ShadowCastingSetting.On : RenderingServer.ShadowCastingSetting.Off);
 
-			Material mat = GetMaterial(part.Material, part.Color.A < 1f);
+			Material mat = GetMaterial(key.Material, key.IsTransparent);
 			RenderingServer.InstanceGeometrySetMaterialOverride(rid, mat.GetRid());
 
 			batch = new ChunkBatch
@@ -265,14 +292,34 @@ public partial class DatamodelBridge : Node3D
 		batch.MultiMesh.SetInstanceTransform(index, part.GetGlobalTransform());
 		batch.MultiMesh.SetInstanceColor(index, part.Color.SrgbToLinear());
 
-		_handles[part] = new PartHandle { Key = key, Index = index };
+		_handles[part] = new PartHandle { Key = key, Batch = batch, Index = index };
+
+		UpdateGroupCount(key.Material, key.Shape, key.IsDynamic, 1);
+	}
+
+	private void UpdateGroupCount(Part.PartMaterialEnum material, Part.ShapeEnum shape, bool isDynamic, int delta)
+	{
+		if (isDynamic) return;
+
+		(Part.PartMaterialEnum, Part.ShapeEnum) group = (material, shape);
+		int count = _groupCounts.GetValueOrDefault(group) + delta;
+
+		if (count <= 0)
+		{
+			_groupCounts.Remove(group);
+		}
+		else
+		{
+			_groupCounts[group] = count;
+		}
 	}
 
 	private void RemoveFromBatch(Part part)
 	{
 		if (!_handles.TryGetValue(part, out PartHandle? handle)) return;
-		if (!_batches.TryGetValue(handle.Key, out var batch))
+		if (!_batches.TryGetValue(handle.Key, out var batch) || batch.Count <= 0)
 		{
+			_handles.Remove(part);
 			return;
 		}
 
@@ -281,22 +328,25 @@ public partial class DatamodelBridge : Node3D
 
 		if (index != lastIndex)
 		{
-			var lastPart = batch.Parts[lastIndex];
+			Part lastPart = batch.Parts[lastIndex];
 			batch.Parts[index] = lastPart;
 
-			_handles[lastPart] = new PartHandle { Key = handle.Key, Index = index };
+			if (_handles.TryGetValue(lastPart, out PartHandle? lastHandle))
+			{
+				lastHandle.Index = index;
+			}
 
 			// prevents a bunch of error spam. idk why these nodes often arent in the tree but this kept spamming errors
-			if (lastPart.GDNode3D.IsInsideTree())
-			{
-				batch.MultiMesh.SetInstanceTransform(index, lastPart.GetGlobalTransform());
-			}
+			bool inTree = IsInstanceValid(lastPart.GDNode3D) && lastPart.GDNode3D.IsInsideTree();
+			batch.MultiMesh.SetInstanceTransform(index, inTree ? lastPart.GetGlobalTransform() : Transform3D.Identity.Scaled(Vector3.Zero));
 			batch.MultiMesh.SetInstanceColor(index, lastPart.Color.SrgbToLinear());
 		}
 
 		batch.Parts.RemoveAt(lastIndex);
 		batch.Count--;
 		batch.MultiMesh.VisibleInstanceCount = batch.Count;
+
+		UpdateGroupCount(batch.Key.Material, batch.Key.Shape, batch.Key.IsDynamic, -1);
 
 		if (batch.Count == 0)
 		{
@@ -336,66 +386,112 @@ public partial class DatamodelBridge : Node3D
 		if (_handles.ContainsKey(part)) return;
 		if (!IsPartEligible(part))
 		{
+			ConnectHandler(part);
 			part.CreateSeparateMesh();
 			return;
 		}
 
-		void propertyChangedHandler() { if (isGameReady) _dirty.Add(part); }
-
-		part.PropertyChanged.Connect(propertyChangedHandler);
-
-		var key = GetKeyForPart(part);
-		AddToBatch(part, key);
-
-		if (_handles.TryGetValue(part, out var handle))
-		{
-			handle.PropertyChangedHandler = propertyChangedHandler;
-		}
+		AddToBatch(part, GetKeyForPart(part));
+		ConnectHandler(part);
 
 		_dirty.Add(part);
+		_recheck.Add(part);
+	}
+
+	private void ConnectHandler(Part part)
+	{
+		if (_handlers.ContainsKey(part)) return;
+
+		void propertyChangedHandler(object name)
+		{
+			if (!isGameReady) return;
+
+			_dirty.Add(part);
+
+			if (name is not (nameof(Dynamic.Position) or nameof(Dynamic.Rotation) or nameof(Dynamic.Size)
+				or nameof(Dynamic.LocalPosition) or nameof(Dynamic.LocalRotation) or nameof(Dynamic.LocalSize)
+				or nameof(Dynamic.Quaternion) or nameof(Dynamic.LocalQuaternion)))
+			{
+				_recheck.Add(part);
+			}
+		}
+
+		_handlers[part] = propertyChangedHandler;
+		part.PropertyChanged.Connect(propertyChangedHandler);
+	}
+
+	private void DisconnectHandler(Part part)
+	{
+		if (!_handlers.Remove(part, out System.Action<object>? handler)) return;
+
+		part.PropertyChanged.Disconnect(handler);
+	}
+
+	public void MarkMoved(Part part)
+	{
+		if (!isGameReady) return;
+		MarkMovedTree(part);
+	}
+
+	private void MarkMovedTree(Instance instance)
+	{
+		if (instance is Part part && _handles.ContainsKey(part))
+		{
+			_dirty.Add(part);
+		}
+
+		foreach (Instance child in instance.Children)
+		{
+			MarkMovedTree(child);
+		}
+	}
+
+	public void MarkDirty(Part part)
+	{
+		if (!isGameReady) return;
+
+		_dirty.Add(part);
+		_recheck.Add(part);
 	}
 
 	public void RemovePart(Part part)
 	{
 		if (!_renderingEnabled) return;
-		if (_handles.TryGetValue(part, out var handle))
+
+		DisconnectHandler(part);
+
+		if (!part.IsDeleted)
 		{
-			part.PropertyChanged.Disconnect(handle.PropertyChangedHandler);
+			part.CreateSeparateMesh();
 		}
 
-		part.CreateSeparateMesh();
 		RemoveFromBatch(part);
 	}
 
 	public static bool IsPartEligible(Part part)
 	{
 		if (part.IsHidden || part.IsInTemporary) return false;
-		if (part.Anchored && !part.OverrideNoMultiMesh)
-		{
-			if (!IsInstanceValid(part.GDNode3D) || !part.GDNode3D.IsInsideTree()) return false;
-			if (part.IsDeleted) return false;
-			if (part.IsDescendantOfClass<Camera>()) return false;
-			return true;
-		}
-		return false;
+		if (part.OverrideNoMultiMesh) return false;
+		if (!IsInstanceValid(part.GDNode3D) || !part.GDNode3D.IsInsideTree()) return false;
+		if (part.IsDeleted) return false;
+		if (part.IsDescendantOfClass<Camera>()) return false;
+		return true;
 	}
 
 	private class PartHandle
 	{
 		public ChunkKey Key;
+		public ChunkBatch Batch = null!;
 		public int Index;
-		public System.Action PropertyChangedHandler = null!;
 	}
 
-	private struct ChunkKey
-	{
-		public Vector3I Coord;
-		public Part.PartMaterialEnum Material;
-		public Part.ShapeEnum Shape;
-		public bool IsTransparent;
-		public bool CastShadows;
-		public uint ScaleLevel;
-	}
+	private record struct ChunkKey(
+		Vector3I Coord,
+		Part.PartMaterialEnum Material,
+		Part.ShapeEnum Shape,
+		bool IsTransparent,
+		bool CastShadows,
+		bool IsDynamic);
 
 	private class ChunkBatch
 	{

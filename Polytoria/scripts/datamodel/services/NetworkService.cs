@@ -416,27 +416,20 @@ public sealed partial class NetworkService : Instance
 	private async void ServerSendHeartbeat()
 	{
 		if (IsShuttingDown) return;
+		_heartbeatCount++;
 
 		try
 		{
 			APIHeartbeatResponse res = await PolyServerAPI.SendHeartbeat(Root.Players.GetPlayerIDArray());
 			if (IsShuttingDown || IsDeleted) return;
-			_heartbeatCount++;
 
-			foreach (int r in res.Remove)
+			foreach (int r in res.Remove ?? [])
 			{
 				Player? player = Root.Players.GetPlayerByID(r);
 				if (player != null)
 				{
 					DisconnectPeer(player.PeerID, TerminationMessage, DisconnectionCodeEnum.UserTerminated);
 				}
-			}
-
-			// Check for players in the server
-			if (_heartbeatCount > HeartbeatBeforeCheckPlayers && Root.Players.AbsolutePlayersCount <= 0)
-			{
-				PT.Print("No players, shutting down");
-				ShutdownServer();
 			}
 		}
 		catch (Exception ex)
@@ -449,6 +442,13 @@ public sealed partial class NetworkService : Instance
 			{
 				_heartbeatTimer.Start(HeartbeatIntervalSec);
 			}
+		}
+
+		// Check for players in the server
+		if (_heartbeatCount > HeartbeatBeforeCheckPlayers && Root.Players.AbsolutePlayersCount <= 0)
+		{
+			PT.Print("No players, shutting down");
+			ShutdownServer();
 		}
 	}
 
@@ -1022,51 +1022,6 @@ public sealed partial class NetworkService : Instance
 		public string NetID = null!;
 		[JsonInclude]
 		public byte[] Bytecode = null!;
-	}
-
-	[JsonSerializable(typeof(string))]
-	[JsonSerializable(typeof(bool))]
-	[JsonSerializable(typeof(byte))]
-	[JsonSerializable(typeof(sbyte))]
-	[JsonSerializable(typeof(short))]
-	[JsonSerializable(typeof(ushort))]
-	[JsonSerializable(typeof(int))]
-	[JsonSerializable(typeof(uint))]
-	[JsonSerializable(typeof(long))]
-	[JsonSerializable(typeof(ulong))]
-	[JsonSerializable(typeof(float))]
-	[JsonSerializable(typeof(double))]
-	[JsonSerializable(typeof(decimal))]
-
-	[JsonSerializable(typeof(string[]))]
-	[JsonSerializable(typeof(byte[]))]
-
-	[JsonSerializable(typeof(Vector2))]
-	[JsonSerializable(typeof(Vector3))]
-	[JsonSerializable(typeof(Color))]
-
-	[JsonSerializable(typeof(VariantDto))]
-	[JsonSerializable(typeof(Vector2Dto))]
-	[JsonSerializable(typeof(Vector3Dto))]
-	[JsonSerializable(typeof(ColorDto))]
-	[JsonSerializable(typeof(Transform3DDto))]
-	[JsonSerializable(typeof(UnitQuaternionDto))]
-	[JsonSerializable(typeof(UnitQuaternionUInt64Dto))]
-	[JsonSerializable(typeof(TransformPayloadDto))]
-
-	[JsonSerializable(typeof(NetPropNetworkedObjectRef))]
-	[JsonSerializable(typeof(NetPropReplicateData))]
-	[JsonSerializable(typeof(NetBatchScriptData))]
-	[JsonSerializable(typeof(NetBatchTransformData))]
-	[JsonSerializable(typeof(List<NetPropReplicateData>))]
-	[JsonSerializable(typeof(List<NetBatchTransformData>))]
-	[JsonSerializable(typeof(List<NetReplicateData>))]
-	[JsonSerializable(typeof(NetPropReplicateData[]))]
-	[JsonSerializable(typeof(NetBatchTransformData[]))]
-	[JsonSerializable(typeof(NetReplicateData[]))]
-	[JsonSerializable(typeof(NetBatchScriptData[]))]
-	internal partial class NetDataGenerationContext : JsonSerializerContext
-	{
 	}
 
 	public enum DisconnectionCodeEnum

@@ -16,7 +16,12 @@ namespace Polytoria.Datamodel;
 public partial class UIField : Instance
 {
 	internal Control NodeControl = null!;
-	internal StyleBoxFlat _styleBox = new() { AntiAliasing = true, AntiAliasingSize = 2 };
+	internal StyleBoxFlat _styleBox = new()
+	{
+		AntiAliasing = true,
+		AntiAliasingSize = 1,
+		CornerDetail = 20,
+	};
 	private Panel? _bgPanel;
 	private Vector2 _positionOffset = new(0, 0);
 	private Vector2 _positionRelative = new(0.5f, 0.5f);
