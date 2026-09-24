@@ -71,8 +71,8 @@ public sealed partial class NetworkEvent : Instance
 	/// <summary>
 	/// Sends a network event to a specific player from the server
 	/// </summary>
-	/// <param name="msg">message</param>
 	/// <param name="player">player</param>
+	/// <param name="msg">message</param>
 	/// <exception cref="System.InvalidOperationException"></exception>
 	[ScriptMethod]
 	public void InvokeClient(Player? player = null, NetMessage? msg = null)
