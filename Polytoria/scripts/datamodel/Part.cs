@@ -458,7 +458,7 @@ public partial class Part : Entity
 				{
 					Basis b = t.Basis;
 					Vector3 halfUp = b.Y * 0.5f;
-					b = new(b.X,b.Y.Normalized() * 0.001f,b.Z);
+					b = new(b.X, b.Y.Normalized() * 0.001f, b.Z);
 					Vector3 worldExtents = new(
 						GetSpheroidExtent(b, Vector3.Right, Vector3.Up, Vector3.Back),
 						GetSpheroidExtent(b, Vector3.Up, Vector3.Back, Vector3.Right),
