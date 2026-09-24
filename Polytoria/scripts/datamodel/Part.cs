@@ -309,6 +309,19 @@ public partial class Part : Entity
 		return pos + new Vector3(0, -1, 1);
 	}
 
+	private Vector3 UnitOctantExtent(Vector3 dir)
+	{
+		if (dir.Y < 0 && dir.Z > 0 || dir.X < 0 && dir.Z > 0 || dir.X < 0 && dir.Y < 0)
+		{
+			return dir.Sign();
+		}
+		Vector3 pos = UnitSphereExtent(dir);
+		if (pos.X < 0) pos.X = 0;
+		if (pos.Y < 0) pos.Y = 0;
+		if (pos.Z > 0) pos.Z = 0;
+		return pos.Normalized() * 2 + new Vector3(-1, -1, 1);
+	}
+
 	private float GetSpheroidExtent(Basis transform, Vector3 dir, Vector3 perp, Vector3 perp2) // `transform` is orthogonal by godot's definition
 	{
 		// adapted from https://www.desmos.com/3d/hjyn4si0gd
@@ -336,6 +349,17 @@ public partial class Part : Entity
 	{
 		return transform.Xform(
 			UnitBevelExtent(OrthoNonnormalInv(transform, dir).Project(
+				OrthoNonnormalInv(transform, perp2).Cross(
+					OrthoNonnormalInv(transform, perp)
+				).Normalized()
+			))
+		).Dot(dir);
+	}
+
+	private float GetOctantExtent(Basis transform, Vector3 dir, Vector3 perp, Vector3 perp2)
+	{
+		return transform.Xform(
+			UnitOctantExtent(OrthoNonnormalInv(transform, dir).Project(
 				OrthoNonnormalInv(transform, perp2).Cross(
 					OrthoNonnormalInv(transform, perp)
 				).Normalized()
@@ -455,6 +479,21 @@ public partial class Part : Entity
 						GetBevelExtent(b, Vector3.Left, Vector3.Up, Vector3.Back),
 						GetBevelExtent(b, Vector3.Down, Vector3.Back, Vector3.Right),
 						GetBevelExtent(b, Vector3.Forward, Vector3.Right, Vector3.Up)
+					);
+					return new(center - negativeWorldExtents * 0.5f, (negativeWorldExtents + positiveWorldExtents) * 0.5f);
+				}
+			case ShapeEnum.Octant:
+				{
+					Basis b = t.Basis;
+					Vector3 positiveWorldExtents = new(
+						GetOctantExtent(b, Vector3.Right, Vector3.Up, Vector3.Back),
+						GetOctantExtent(b, Vector3.Up, Vector3.Back, Vector3.Right),
+						GetOctantExtent(b, Vector3.Back, Vector3.Right, Vector3.Up)
+					);
+					Vector3 negativeWorldExtents = new(
+						GetOctantExtent(b, Vector3.Left, Vector3.Up, Vector3.Back),
+						GetOctantExtent(b, Vector3.Down, Vector3.Back, Vector3.Right),
+						GetOctantExtent(b, Vector3.Forward, Vector3.Right, Vector3.Up)
 					);
 					return new(center - negativeWorldExtents * 0.5f, (negativeWorldExtents + positiveWorldExtents) * 0.5f);
 				}
