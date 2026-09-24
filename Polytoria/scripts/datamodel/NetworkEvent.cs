@@ -75,7 +75,7 @@ public sealed partial class NetworkEvent : Instance
 	/// <param name="player">player</param>
 	/// <exception cref="System.InvalidOperationException"></exception>
 	[ScriptMethod]
-	public void InvokeClient(NetMessage? msg = null, Player? player = null)
+	public void InvokeClient(Player? player = null, NetMessage? msg = null)
 	{
 		if (!Root.Network.IsServer) throw new System.InvalidOperationException("InvokeClient can only be called from server");
 		ArgumentNullException.ThrowIfNull(player);
@@ -89,6 +89,18 @@ public sealed partial class NetworkEvent : Instance
 		{
 			RpcId(player.PeerID, nameof(NetClientRecvMsgUnreliable), msg.Serialize());
 		}
+	}
+
+	/// <summary>
+	/// Sends a network event to a specific player from the server
+	/// </summary>
+	/// <param name="msg">message</param>
+	/// <param name="player">player</param>
+	/// <exception cref="System.InvalidOperationException"></exception>
+	[ScriptMethod]
+	public void InvokeClient(NetMessage? msg = null, Player? player = null)
+	{
+		InvokeClient(player, msg);
 	}
 
 	/// <summary>
@@ -128,7 +140,7 @@ public sealed partial class NetworkEvent : Instance
 			}
 			else
 			{
-				InvokeClient(msg, player);
+				InvokeClient(player, msg);
 			}
 		}
 		else
