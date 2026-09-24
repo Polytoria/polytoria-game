@@ -116,6 +116,7 @@ public sealed partial class NetworkEvent : Instance
 	/// Sends a network event to the server on clients, or on the server, sends a network event event to a player if the player is specified, or all players otherwise.
 	/// </summary>
 	/// <param name="msg">NetMessage to send</param>
+	/// <param name="player">Target player. Only valid on the server. Sends to all players if omitted.</param>
 	[ScriptMethod]
 	public void Invoke(NetMessage? msg = null, Player? player = null)
 	{
