@@ -500,7 +500,7 @@ public partial class Part : Entity
 			case ShapeEnum.Brick:
 			case ShapeEnum.Truss:
 			case ShapeEnum.Frame:
-			default: // Octant Torus BeveledCorner are currently unimplemented
+			default: // BeveledCorner Torus are currently unimplemented
 				{
 					Vector3 worldExtents = rot.X.Abs() * he.X + rot.Y.Abs() * he.Y + rot.Z.Abs() * he.Z;
 					return new(center - worldExtents, worldExtents * 2);
