@@ -158,6 +158,7 @@ public class PTVector2 : IScriptGDObject
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float Angle(PTVector2 from, PTVector2 to) => from.vector.AngleTo(to.vector);
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float Cross(PTVector2 lhs, PTVector2 rhs) => lhs.vector.Cross(rhs.vector);
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float Distance(PTVector2 a, PTVector2 b) => a.vector.DistanceTo(b.vector);
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float SqrDistance(PTVector2 a, PTVector2 b) => a.vector.DistanceSquaredTo(b.vector);
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float Dot(PTVector2 lhs, PTVector2 rhs) => lhs.vector.Dot(rhs.vector);
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTVector2 Lerp(PTVector2 a, PTVector2 b, float t) => FromGDClass(a.vector.Lerp(b.vector, t));
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTVector2 Max(PTVector2 lhs, PTVector2 rhs) => FromGDClass(lhs.vector.Max(rhs.vector));

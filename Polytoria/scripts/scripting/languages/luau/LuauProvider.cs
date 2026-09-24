@@ -1841,7 +1841,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 		object objKey = (object?)obj ?? specifyType!;
 		Type type = specifyType ?? obj!.GetType();
-		bool isValueType = type.IsValueType;
+		bool isValueType = type.IsValueType || typeof(IScriptGDObject).IsAssignableFrom(type);
 
 		if (!isValueType)
 		{

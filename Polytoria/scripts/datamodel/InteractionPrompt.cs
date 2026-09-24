@@ -14,7 +14,7 @@ using Polytoria.Shared;
 namespace Polytoria.Datamodel;
 
 [Instantiable]
-public sealed partial class InteractionPrompt : Physical
+public sealed partial class InteractionPrompt : Dynamic
 {
 	public const string PromptScenePath = "res://scenes/datamodel/InteractionPrompt.tscn";
 
