@@ -22,6 +22,7 @@ using Mesh = Godot.Mesh;
 using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Metadata;
+using Polytoria.Extensions;
 
 namespace Polytoria.Shared;
 
@@ -173,6 +174,8 @@ public sealed partial class Globals : Node
 		Polytoria.Private.PrivateNode pv = new();
 		AddChild(pv);
 #endif
+
+		RuntimeExtensions.Initialize();
 
 		// Initialize Native
 		try
@@ -571,6 +574,8 @@ public sealed partial class Globals : Node
 			if (!await CreatorService.Interface.OnQuitRequested()) return;
 		}
 #endif
+
+		RuntimeExtensions.Shutdown();
 
 		// Starts quit the app
 		_isExiting = true;
