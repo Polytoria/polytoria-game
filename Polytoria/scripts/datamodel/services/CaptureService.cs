@@ -6,6 +6,7 @@ using Godot;
 using Polytoria.Attributes;
 using Polytoria.Client.UI;
 using Polytoria.Client.UI.Notification;
+using Polytoria.Enums;
 using Polytoria.Providers.CapturePublish;
 using Polytoria.Shared;
 using Polytoria.Utils;
@@ -17,19 +18,33 @@ namespace Polytoria.Datamodel.Services;
 [Static("Capture")]
 public sealed partial class CaptureService : Instance
 {
+	//Which optional UI layers the player chose to include into the final image
+	public readonly struct LayerSelection
+	{
+		public bool CoreUi { get; init; }
+		public bool GameUi { get; init; }
+
+		public static readonly LayerSelection All = new() { CoreUi = true, GameUi = true };
+	}
+
 	private const int CaptureCooldownSec = 3;
 	private const string CaptureSoundPath = "res://assets/audio/built-in/capture.ogg";
 
 	private Vector2 _photoSizeLimit = new(2000, 2000);
 	private bool _debounce = false;
+	private bool _isQuickScreenshot = false;
+	private LayerSelection? _layerPreferences = null;
 
 	public ImageTexture? CurrentPhoto = null;
 	public string? CurrentPhotoPath = null;
+	public ImageTexture? CoreUiLayer { get; private set; }
+	public ImageTexture? GameUiLayer { get; private set; }
 
 	[ScriptProperty] public bool OnCooldown => _debounce;
 	[Editable, ScriptProperty] public bool CanCapture { get; set; } = true;
 	[ScriptProperty] public UIField? DefaultCaptureOverlay { get; set; } = null;
 	[ScriptProperty] public Dynamic? SpectatorAttach { get; set; } = null;
+	[Editable, ScriptProperty] public CaptureLayersEnum DefaultCaptureLayers { get; set; } = CaptureLayersEnum.All;
 	internal static ICapturePublisher? CapturePublisher { get; set; }
 
 	private AudioStreamPlayer _shutterSound = null!;
@@ -64,7 +79,20 @@ public sealed partial class CaptureService : Instance
 		await TakePhotoAtDynamic(Root.Environment.CurrentCamera);
 		// Override debounce
 		_debounce = false;
-		SaveCurrentPhoto();
+
+		bool wasQuick = _isQuickScreenshot;
+		_isQuickScreenshot = false;
+
+		//Save on the spot if this is a quick screenshot, otheriwse trigger preview
+		if (wasQuick)
+		{
+			SaveCurrentPhoto(CurrentLayerPreferences);
+			PostPhotoTaken();
+		}
+		else
+		{
+			Root.CoreUI.CoreUI.CapturePreview.Open();
+		}
 	}
 
 	public override void Process(double delta)
@@ -119,9 +147,59 @@ public sealed partial class CaptureService : Instance
 		SetProcess(false);
 	}
 
-	public void SaveCurrentPhoto()
+	// Remembers the chosen layers for future quick screenshots.
+	public void PersistLayerPreferences(LayerSelection selection)
+	{
+		_layerPreferences = selection;
+	}
+
+	// Falls back to the dev-configured default until the player explicitly
+	// picks a selection via the preview.
+	private LayerSelection CurrentLayerPreferences => _layerPreferences ?? LayersFromEnum(DefaultCaptureLayers);
+
+	private static LayerSelection LayersFromEnum(CaptureLayersEnum layers) => layers switch
+	{
+		CaptureLayersEnum.None => new LayerSelection(),
+		CaptureLayersEnum.CoreOnly => new LayerSelection { CoreUi = true },
+		CaptureLayersEnum.GameOnly => new LayerSelection { GameUi = true },
+		_ => LayerSelection.All
+	};
+
+	// Flattens the base photo with whichever layers are selected.
+	private Image ComposeFinalImage(LayerSelection selection)
+	{
+		Image final = (Image)CurrentPhoto!.GetImage().Duplicate();
+
+		final.ClearMipmaps();
+		if (final.GetFormat() != Image.Format.Rgba8)
+		{
+			final.Convert(Image.Format.Rgba8);
+		}
+
+		if (selection.CoreUi && CoreUiLayer != null)
+		{
+			Image layer = CoreUiLayer.GetImage();
+			final.BlendRect(layer, new Rect2I(Vector2I.Zero, layer.GetSize()), Vector2I.Zero);
+		}
+		if (selection.GameUi && GameUiLayer != null)
+		{
+			Image layer = GameUiLayer.GetImage();
+			final.BlendRect(layer, new Rect2I(Vector2I.Zero, layer.GetSize()), Vector2I.Zero);
+		}
+		return final;
+	}
+
+	// Live preview texture (caller owns and must dispose it).
+	public ImageTexture ComposePreview(LayerSelection selection)
+	{
+		return ImageTexture.CreateFromImage(ComposeFinalImage(selection));
+	}
+
+	public void SaveCurrentPhoto(LayerSelection selection)
 	{
 		if (CurrentPhoto == null) return;
+		Image final = ComposeFinalImage(selection);
+
 		DateTime time = DateTime.Now;
 		string formattedTime = time.ToString("yyyyMMdd-hhmmss");
 		string filename = "PolytoriaScreenshot-" + formattedTime + ".png";
@@ -132,17 +210,31 @@ public sealed partial class CaptureService : Instance
 		}
 		string photoPath = baseFolder.PathJoin(filename);
 		CurrentPhotoPath = photoPath;
-		CurrentPhoto.GetImage().SavePng(photoPath);
+		final.SavePng(photoPath);
 	}
 
-	public async void UploadCurrentPhoto(string caption = "")
+	public async void UploadCurrentPhoto(string caption, LayerSelection selection)
 	{
 		if (CurrentPhoto == null) return;
 		if (CapturePublisher == null) throw new MissingComponentException("Missing capture publisher component");
 
-		byte[] screenshotBytes = CurrentPhoto.GetImage().SavePngToBuffer();
+		byte[] screenshotBytes = ComposeFinalImage(selection).SavePngToBuffer();
 
 		await CapturePublisher.Publish(screenshotBytes, caption, true);
+	}
+
+	// Cancels the pending photo without saving.
+	public void DiscardCurrentPhoto()
+	{
+		CurrentPhoto?.Dispose();
+		CurrentPhoto = null;
+		CurrentPhotoPath = null;
+
+		CoreUiLayer?.Dispose();
+		CoreUiLayer = null;
+
+		GameUiLayer?.Dispose();
+		GameUiLayer = null;
 	}
 
 	public void ViewCurrentPhoto()
@@ -154,6 +246,77 @@ public sealed partial class CaptureService : Instance
 	{
 		if (CurrentPhotoPath == null) return;
 		OS.ShellOpen(CurrentPhotoPath);
+	}
+
+	// Wraps a UIField for offscreen rendering
+	private async Task<GUI> PrepareOverlayGui(UIField source)
+	{
+		GUI gui = New<GUI>();
+		UIField clone = (UIField)source.Clone();
+		clone.Visible = true;
+		clone.Parent = gui;
+		gui.Parent = this;
+
+		// Wait one frame for all node control to init
+		await Globals.Singleton.WaitFrame();
+
+		// Override parent check for visible
+		foreach (Instance des in gui.GetDescendants())
+		{
+			if (des is UIField field)
+			{
+				field.OverrideParentCheck = true;
+				field.RecomputeVisible();
+			}
+		}
+
+		return gui;
+	}
+
+	// GameMenu shares CoreUIRoot's canvas, so a mid-fade close would otherwise
+	// show in the captured layer. Hides it for the render and restores it after.
+	private async Task<ImageTexture?> CaptureCoreUiLayer(Vector2I size)
+	{
+		CoreUIRoot? core = CoreUIRoot.Singleton;
+		if (core == null) return null;
+
+		bool wasMenuVisible = core.GameMenu.Visible;
+		core.GameMenu.Visible = false;
+
+		ImageTexture? result = await CaptureLiveCanvasLayer(core, size);
+
+		core.GameMenu.Visible = wasMenuVisible;
+
+		return result;
+	}
+
+	// Renders a live CanvasLayer into an offscreen viewport by attaching its
+	// existing rendering-server canvas to a second viewport.
+	private async Task<ImageTexture?> CaptureLiveCanvasLayer(CanvasLayer? liveLayer, Vector2I size)
+	{
+		if (liveLayer == null) return null;
+
+		SubViewport layerView = new()
+		{
+			Size = size,
+			TransparentBg = true,
+			RenderTargetClearMode = SubViewport.ClearMode.Once,
+			RenderTargetUpdateMode = SubViewport.UpdateMode.Once
+		};
+		GDNode.AddChild(layerView, @internal: Node.InternalMode.Back);
+
+		Rid canvas = liveLayer.GetCanvas();
+		RenderingServer.ViewportAttachCanvas(layerView.GetViewportRid(), canvas);
+
+		await Globals.Singleton.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+
+		Image img = layerView.GetTexture().GetImage();
+		ImageTexture texture = ImageTexture.CreateFromImage(img);
+
+		RenderingServer.ViewportRemoveCanvas(layerView.GetViewportRid(), canvas);
+		layerView.QueueFree();
+
+		return texture;
 	}
 
 	[ScriptMethod]
@@ -194,25 +357,7 @@ public sealed partial class CaptureService : Instance
 
 		if (overlay != null)
 		{
-			guiOverlay = New<GUI>();
-			UIField clone = (UIField)overlay.Clone();
-			clone.Visible = true;
-			clone.Parent = guiOverlay;
-			guiOverlay.Parent = this;
-
-			// Wait one frame for all node control to init
-			await Globals.Singleton.WaitFrame();
-
-			// Override parent check for visible
-			foreach (Instance des in guiOverlay.GetDescendants())
-			{
-				if (des is UIField field)
-				{
-					field.OverrideParentCheck = true;
-					field.RecomputeVisible();
-				}
-			}
-
+			guiOverlay = await PrepareOverlayGui(overlay);
 			guiOverlay.GDNode.Reparent(subview);
 		}
 
@@ -239,28 +384,30 @@ public sealed partial class CaptureService : Instance
 		img.FixAlphaEdges();
 		img.GenerateMipmaps();
 
-
 		CurrentPhoto?.Dispose();
 		CurrentPhoto = ImageTexture.CreateFromImage(img);
 
-		subview.QueueFree();
+		CoreUiLayer?.Dispose();
+		GameUiLayer?.Dispose();
+		CoreUiLayer = await CaptureCoreUiLayer(subview.Size);
+		GameUiLayer = overlay == null ? await CaptureLiveCanvasLayer(Root.PlayerGUI?.GDNode as CanvasLayer, subview.Size) : null;
 
-		PostPhotoTaken();
+		subview.QueueFree();
 	}
 
 	private async void PostPhotoTaken()
 	{
+		ImageTexture icon = ComposePreview(CurrentLayerPreferences);
 		Root.CoreUI.CoreUI.NotificationCenter.FireNotification(
 			UINotification.NotificationType.Screenshot,
 			new UIScreenshotNotification.ScreenshotNotifyPayload()
 			{
-				Icon = CurrentPhoto
+				Icon = icon
 			}
 		);
 		await Globals.Singleton.WaitAsync(CaptureCooldownSec);
 		_debounce = false;
 	}
-
 
 	private void PrePhotoTake()
 	{
@@ -271,6 +418,7 @@ public sealed partial class CaptureService : Instance
 	{
 		if (@event.IsActionPressed("screenshot"))
 		{
+			_isQuickScreenshot = true;
 			TakePhoto();
 		}
 	}

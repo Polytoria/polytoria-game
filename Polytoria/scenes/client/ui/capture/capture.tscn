@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://413x81bcug4h" path="res://scripts/client/ui/capture/UICapturePreview.cs" id="1_pv180"]
 [ext_resource type="Texture2D" uid="uid://b4v43t5eftodu" path="res://assets/textures/client/placeholder/place_thumbnail.png" id="2_eeble"]
+[ext_resource type="Texture2D" uid="uid://cj3q8kltscs14" path="res://assets/textures/datamodel/BoolValue.svg" id="3_eeble"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_02uox"]
 bg_color = Color(0, 0, 0, 0.54901963)
@@ -339,7 +340,7 @@ _data = {
 &"disappear": SubResource("Animation_ns0ro")
 }
 
-[node name="Capture" type="Panel" unique_id=1148407156 node_paths=PackedStringArray("_pictureRect", "_firstShareBtn", "_saveBtn", "_firstCloseBtn", "_shareBtn", "_cancelBtn", "_captionWritePage", "_firstMenuPage", "_captionTextEdit", "_animPlay", "_shareAnimPlay")]
+[node name="Capture" type="Panel" unique_id=1148407156 node_paths=PackedStringArray("_pictureRect", "_firstShareBtn", "_saveBtn", "_firstCloseBtn", "_shareBtn", "_cancelBtn", "_captionWritePage", "_firstMenuPage", "_captionTextEdit", "_animPlay", "_shareAnimPlay", "_coreUiToggle", "_gameUiToggle", "_layerLayout")]
 visible = false
 z_index = 5
 anchors_preset = 15
@@ -350,9 +351,9 @@ grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_02uox")
 script = ExtResource("1_pv180")
 _pictureRect = NodePath("Control/Panel/Control/Aspect/Pivot/TextureRect3/Picture")
-_firstShareBtn = NodePath("Control/Panel/Menu/FirstMenu/Layout/Share")
-_saveBtn = NodePath("Control/Panel/Menu/FirstMenu/Layout/Save")
-_firstCloseBtn = NodePath("Control/Panel/Menu/FirstMenu/Layout/Close")
+_firstShareBtn = NodePath("Control/Panel/Menu/FirstMenu/Layout2/Share")
+_saveBtn = NodePath("Control/Panel/Menu/FirstMenu/Layout2/Save")
+_firstCloseBtn = NodePath("Control/Panel/Menu/FirstMenu/Layout2/Close")
 _shareBtn = NodePath("Control/Panel/Menu/CaptionWrite/CaptionWrite/HBoxContainer/Share")
 _cancelBtn = NodePath("Control/Panel/Menu/CaptionWrite/CaptionWrite/HBoxContainer/Cancel")
 _captionWritePage = NodePath("Control/Panel/Menu/CaptionWrite")
@@ -360,6 +361,9 @@ _firstMenuPage = NodePath("Control/Panel/Menu/FirstMenu")
 _captionTextEdit = NodePath("Control/Panel/Menu/CaptionWrite/CaptionWrite/EditContainer/TextEdit")
 _animPlay = NodePath("AnimPlay")
 _shareAnimPlay = NodePath("Control/Panel/Menu/ShareAnim")
+_coreUiToggle = NodePath("Control/Panel/Menu/FirstMenu/Layout/LayerLayout/CoreUI")
+_gameUiToggle = NodePath("Control/Panel/Menu/FirstMenu/Layout/LayerLayout/GameUI")
+_layerLayout = NodePath("Control/Panel/Menu/FirstMenu/Layout/LayerLayout")
 
 [node name="Control" type="Control" parent="." unique_id=876182044]
 layout_mode = 1
@@ -478,29 +482,103 @@ offset_bottom = 145.0
 size_flags_vertical = 3
 theme_override_constants/separation = 8
 
-[node name="Layout2" type="VBoxContainer" parent="Control/Panel/Menu/FirstMenu" unique_id=581129892]
+[node name="Layout" type="HBoxContainer" parent="Control/Panel/Menu/FirstMenu" unique_id=1791370820]
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_constants/separation = 200
 alignment = 1
 
-[node name="Label" type="Label" parent="Control/Panel/Menu/FirstMenu/Layout2" unique_id=41714090]
+[node name="InfoLayout" type="VBoxContainer" parent="Control/Panel/Menu/FirstMenu/Layout" unique_id=1159238899]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Control/Panel/Menu/FirstMenu/Layout/InfoLayout" unique_id=41714090]
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
 text = "Photo Taken!"
 horizontal_alignment = 1
 
-[node name="Label2" type="Label" parent="Control/Panel/Menu/FirstMenu/Layout2" unique_id=1679371006]
+[node name="Label2" type="Label" parent="Control/Panel/Menu/FirstMenu/Layout/InfoLayout" unique_id=1679371006]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 text = "Memory: Captured"
 horizontal_alignment = 1
 
-[node name="Layout" type="HBoxContainer" parent="Control/Panel/Menu/FirstMenu" unique_id=843048881]
+[node name="LayerLayout" type="VBoxContainer" parent="Control/Panel/Menu/FirstMenu/Layout" unique_id=948221168]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+
+[node name="CoreUI" type="Button" parent="Control/Panel/Menu/FirstMenu/Layout/LayerLayout" unique_id=227853216]
+custom_minimum_size = Vector2(0, 30)
+custom_maximum_size = Vector2(200, -1)
+layout_mode = 2
+toggle_mode = true
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Control/Panel/Menu/FirstMenu/Layout/LayerLayout/CoreUI" unique_id=962588791]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="TextureRect" type="TextureRect" parent="Control/Panel/Menu/FirstMenu/Layout/LayerLayout/CoreUI/HBoxContainer" unique_id=2117687651]
+custom_minimum_size = Vector2(28, 0)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("3_eeble")
+expand_mode = 2
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="Control/Panel/Menu/FirstMenu/Layout/LayerLayout/CoreUI/HBoxContainer" unique_id=302137327]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Show Core UI"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="GameUI" type="Button" parent="Control/Panel/Menu/FirstMenu/Layout/LayerLayout" unique_id=1941438685]
+custom_minimum_size = Vector2(0, 30)
+custom_maximum_size = Vector2(200, -1)
+propagate_maximum_size = true
+layout_mode = 2
+toggle_mode = true
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Control/Panel/Menu/FirstMenu/Layout/LayerLayout/GameUI" unique_id=1376362937]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 5.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="TextureRect" type="TextureRect" parent="Control/Panel/Menu/FirstMenu/Layout/LayerLayout/GameUI/HBoxContainer" unique_id=1026439778]
+custom_minimum_size = Vector2(28, 0)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("3_eeble")
+expand_mode = 2
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="Control/Panel/Menu/FirstMenu/Layout/LayerLayout/GameUI/HBoxContainer" unique_id=1027267477]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Show Game UI"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Layout2" type="HBoxContainer" parent="Control/Panel/Menu/FirstMenu" unique_id=843048881]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="Share" type="Button" parent="Control/Panel/Menu/FirstMenu/Layout" unique_id=837719853]
+[node name="Share" type="Button" parent="Control/Panel/Menu/FirstMenu/Layout2" unique_id=837719853]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_default_cursor_shape = 2
@@ -515,7 +593,7 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_gbck0")
 theme_override_styles/hover = SubResource("StyleBoxFlat_ns0ro")
 text = "Share"
 
-[node name="Save" type="Button" parent="Control/Panel/Menu/FirstMenu/Layout" unique_id=1381379384]
+[node name="Save" type="Button" parent="Control/Panel/Menu/FirstMenu/Layout2" unique_id=1381379384]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_default_cursor_shape = 2
@@ -531,7 +609,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_dsnfc")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_dsnfc")
 text = "Save"
 
-[node name="Close" type="Button" parent="Control/Panel/Menu/FirstMenu/Layout" unique_id=227682114]
+[node name="Close" type="Button" parent="Control/Panel/Menu/FirstMenu/Layout2" unique_id=227682114]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_default_cursor_shape = 2
