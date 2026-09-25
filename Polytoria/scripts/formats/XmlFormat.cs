@@ -385,7 +385,7 @@ public static class XmlFormat
 							value = ParseInt(value2);
 						}
 
-						SetProperty(item, property, value);
+						SetProperty(item, property, value!);
 					}
 
 					_propName = null;

@@ -367,4 +367,5 @@ public partial class RigidBody : Physical
 	}
 
 	internal override bool IsAsleep => !GDRigidBody.Freeze && GDRigidBody.Sleeping;
+	internal override bool IsFrozen => GDRigidBody.Freeze;
 }

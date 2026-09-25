@@ -37,7 +37,7 @@ public sealed partial class Camera : Dynamic
 	private float _scrollLerpSpeed;
 	private float _orthographicSize;
 	private Vector3 _positionOffset;
-	private Quaternion _rotationOffset;
+	private Quaternion _rotationOffset = Quaternion.Identity;
 	private bool _isFirstPerson;
 	private float _sensitivityMultipler = 1f;
 	private bool _canLock = true;

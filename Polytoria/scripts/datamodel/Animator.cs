@@ -26,7 +26,6 @@ public partial class Animator : Instance
 	private AnimationNodeStateMachinePlayback _dynPlayback = null!;
 	private const string DynBlendPath = "parameters/DynBlend/blend_amount";
 	private float _targetDynBlendValue = 0f;
-	private bool _isPlaying = false;
 	public HashSet<string> AnimationList = [];
 	public Dictionary<string, MeshAnimationAsset> AnimationAssetList = [];
 
@@ -509,7 +508,6 @@ public partial class Animator : Instance
 				_dynPlayback.Start(filteredAnimKey);
 			}
 			_targetDynBlendValue = 1;
-			_isPlaying = true;
 		}).CallDeferred();
 	}
 
@@ -583,7 +581,6 @@ public partial class Animator : Instance
 		CurrentAnimation = "";
 		// Stop Dyn playback & Reset blend value to zero
 		_targetDynBlendValue = 0;
-		_isPlaying = false;
 	}
 
 	private void AbortCurrentOneShot()

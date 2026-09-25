@@ -24,6 +24,7 @@ public partial class Physical : Dynamic
 	private static readonly Dictionary<Node, Physical> _proxyToPhysical = [];
 	private static readonly ConditionalWeakTable<CollisionShape3D, RemoteLinkConfig> _remoteLinkConfigs = [];
 	private static readonly ConditionalWeakTable<CollisionShape3D, TrackedNodesState> _trackedNodes = [];
+	internal readonly Dictionary<int, Physical> _rootShapeIndexToPhysical = [];
 
 	private sealed class RemoteLinkConfig
 	{
@@ -225,8 +226,10 @@ public partial class Physical : Dynamic
 	{
 		if (OverridePhysicsProcess) return;
 
-		SetPhysicsProcess(!_anchored && !IsAsleep);
+		SetPhysicsProcess(!_anchored && !IsAsleep && !IsFrozen);
 	}
+
+	internal virtual bool IsFrozen => false;
 
 	protected virtual void ApplyFreeze(bool to) { }
 

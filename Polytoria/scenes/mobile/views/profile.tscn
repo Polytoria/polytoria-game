@@ -1,0 +1,75 @@
+[gd_scene format=3 uid="uid://c1cil142g8nde"]
+
+[ext_resource type="Theme" uid="uid://dofh67vfwf6qe" path="res://resources/themes/mobile.tres" id="1_ce93kd"]
+[ext_resource type="Script" uid="uid://l0idfs5x4p8u" path="res://scripts/mobile/ui/views/profile/ViewProfilePage.cs" id="2_juo4d3"]
+
+[node name="Control" type="Control" unique_id=1423770553]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_ce93kd")
+script = ExtResource("2_juo4d3")
+
+[node name="ScrollContainer" type="ScrollContainer" parent="." unique_id=6478972]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ScrollContainer" unique_id=1729516494]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="Spacer" type="Control" parent="ScrollContainer/VBoxContainer" unique_id=1817787239]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+
+[node name="AvatarCenter" type="CenterContainer" parent="ScrollContainer/VBoxContainer" unique_id=76571564]
+layout_mode = 2
+
+[node name="Avatar" type="TextureRect" parent="ScrollContainer/VBoxContainer/AvatarCenter" unique_id=1433010078]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 160)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Username" type="Label" parent="ScrollContainer/VBoxContainer" unique_id=1562478107]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+
+[node name="MemberSince" type="Label" parent="ScrollContainer/VBoxContainer" unique_id=1362199164]
+modulate = Color(1, 1, 1, 0.6)
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="DescriptionMargin" type="MarginContainer" parent="ScrollContainer/VBoxContainer" unique_id=472160907]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="Description" type="Label" parent="ScrollContainer/VBoxContainer/DescriptionMargin" unique_id=770032699]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="LogoutMargin" type="MarginContainer" parent="ScrollContainer/VBoxContainer" unique_id=1526839617]
+layout_mode = 2
+theme_override_constants/margin_left = 100
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 100
+theme_override_constants/margin_bottom = 0
+
+[node name="Button" type="Button" parent="ScrollContainer/VBoxContainer/LogoutMargin" unique_id=1701048513]
+layout_mode = 2
+text = "Log out"
