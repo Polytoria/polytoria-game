@@ -58,7 +58,7 @@ public sealed partial class CreatorSelections : Instance
 	[ScriptMethod]
 	public void Select(Instance instance)
 	{
-		if (SelectedInstances.Contains(instance))
+		if (SelectedInstances.Any(item => ReferenceEquals(item, instance)))
 		{
 			return;
 		}
@@ -136,7 +136,7 @@ public sealed partial class CreatorSelections : Instance
 	[ScriptMethod]
 	public void Deselect(Instance instance)
 	{
-		if (!SelectedInstances.Contains(instance))
+		if (!SelectedInstances.Any(item => ReferenceEquals(item, instance)))
 		{
 			return;
 		}
@@ -349,7 +349,7 @@ public sealed partial class CreatorSelections : Instance
 	}
 
 	[ScriptMethod]
-	public bool HasSelected(Instance instance) => SelectedInstances.Contains(instance);
+	public bool HasSelected(Instance instance) => SelectedInstances.Any(item => ReferenceEquals(item, instance));
 
 	public Task<Instance> RequestPickInstance()
 	{
