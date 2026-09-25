@@ -591,6 +591,15 @@ public sealed partial class Mesh : Entity
 		_meshContainer.Scale = newSize;
 	}
 
+	protected override void OnVisibleChanged(bool v)
+	{
+		foreach (MeshInstance3D v3d in _meshInstances)
+		{
+			v3d.Visible = v;
+		}
+		base.OnVisibleChanged(v);
+	}
+
 	public struct MeshAnimationInfo : IScriptObject
 	{
 		[ScriptProperty] public string Name { get; set; }

@@ -32,7 +32,6 @@ public sealed partial class Image3D : Dynamic
 	private bool _doubleSided;
 	private bool _fixedSize;
 	private bool _alwaysOnTop;
-	private bool _visible;
 	private TextureFilterEnum _textureFilter;
 
 	[Editable, ScriptProperty]
@@ -197,18 +196,6 @@ public sealed partial class Image3D : Dynamic
 		{
 			_alwaysOnTop = value;
 			_material.NoDepthTest = value;
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty, DefaultValue(true)]
-	public bool Visible
-	{
-		get => _visible;
-		set
-		{
-			_visible = value;
-			_mesh.Visible = value;
 			OnPropertyChanged();
 		}
 	}

@@ -208,6 +208,20 @@ public partial class Dynamic : Instance
 		}
 	}
 
+	protected virtual void OnVisibleChanged(bool v) { }
+
+	[Editable, ScriptProperty]
+	public bool Visible
+	{
+		get => GDNode3D.Visible;
+		set
+		{
+			GDNode3D.Visible = value;
+			OnVisibleChanged(value);
+			OnPropertyChanged();
+		}
+	}
+
 	[Editable(IsHidden = true), ScriptProperty, DefaultValue(false)]
 	public bool Locked
 	{
@@ -874,7 +888,7 @@ public partial class Dynamic : Instance
 		// Player cannot be hidden
 		if (this is Player) return;
 
-		GDNode3D.Visible = !to;
+		Visible = !to;
 
 #if CREATOR
 		if (_boundArea3D != null)
