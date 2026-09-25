@@ -66,7 +66,7 @@ public sealed partial class Image3D : Dynamic
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Asset instead"), CloneIgnore, SaveIgnore]
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete(use: "Image"), CloneIgnore, SaveIgnore]
 	public string ImageID
 	{
 		get => _imageID;
@@ -78,7 +78,7 @@ public sealed partial class Image3D : Dynamic
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Asset instead"), CloneIgnore, SaveIgnore]
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete(use: "Image"), CloneIgnore, SaveIgnore]
 	public ImageTypeEnum ImageType
 	{
 		get => _imageType;

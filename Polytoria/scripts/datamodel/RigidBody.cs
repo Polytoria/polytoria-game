@@ -70,7 +70,7 @@ public partial class RigidBody : Physical
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use GravityScale instead"), CloneIgnore, SaveIgnore]
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete(use: "GravityScale"), CloneIgnore, SaveIgnore]
 	public bool UseGravity
 	{
 		get => GravityScale != 0f;
