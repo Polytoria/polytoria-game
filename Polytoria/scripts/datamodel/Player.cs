@@ -68,7 +68,7 @@ public sealed partial class Player : NPC
 	internal bool teleporting = false;
 
 	private BubbleChat _bubbleChat = null!;
-	private RemoteTransform3D _remoteCamAttach = null!;
+	private Dynamic? _ragdollCamTarget = null!;
 	internal Dynamic CamAttach = null!;
 	private Physical? _mouseHoveringOn;
 	private Physical? _grabbing;
@@ -541,14 +541,9 @@ public sealed partial class Player : NPC
 		GDNode3D?.Visible = _isReady;
 	}
 
-	private void SetCamRemoteAttachEnabled(bool enabled)
+	private void UseRagdollCam(bool enabled)
 	{
-		_remoteCamAttach.UpdatePosition = enabled;
-		_remoteCamAttach.UpdateRotation = enabled;
-		if (enabled == false)
-		{
-			CamAttach.LocalPosition = new Vector3(0, CameraHeight, 0);
-		}
+		Root.Environment.CurrentCamera?.Target = enabled ? _ragdollCamTarget : CamAttach;
 	}
 
 	private void OnPlayersPropertyChanged(string propName)
@@ -583,10 +578,6 @@ public sealed partial class Player : NPC
 	public override void Process(double delta)
 	{
 		base.Process(delta);
-		if (!Root.Network.IsServer)
-		{
-			UpdateCamera(delta);
-		}
 		if (!IsLocal)
 		{
 			UpdateTransformTick(delta);
@@ -602,14 +593,6 @@ public sealed partial class Player : NPC
 		if (!IsLocal || !IsReady)
 		{
 			return;
-		}
-	}
-
-	private void UpdateCamera(double delta)
-	{
-		if (Root.Environment.CurrentCamera?.Mode != Camera.CameraModeEnum.Scripted)
-		{
-			Root.Environment.CurrentCamera?.CameraProcess(delta);
 		}
 	}
 
@@ -674,8 +657,6 @@ public sealed partial class Player : NPC
 
 		if (Character is PolytorianModel pt && pt.Ragdolling)
 		{
-			// ragdoll camera update
-			UpdateCamera(delta);
 			return;
 		}
 
@@ -723,11 +704,6 @@ public sealed partial class Player : NPC
 
 		if (Anchored)
 		{
-			// just in case it's anchored cuz ragdoll
-			if (Character is PolytorianModel pt2 && pt2.Ragdolling == false)
-			{
-				UpdateCamera(delta);
-			}
 			AfkTick(delta);
 			return;
 		}
@@ -744,7 +720,6 @@ public sealed partial class Player : NPC
 		{
 			// Add stamina while sitting
 			AddStaminaTick(delta);
-			UpdateCamera(delta);
 			return;
 		}
 
@@ -871,18 +846,17 @@ public sealed partial class Player : NPC
 		CamAttach.Parent = this;
 		CamAttach.AutoUpdateNetTransform = false;
 
-		_remoteCamAttach = new();
-		Character?.GetAttachment(CharacterModel.CharacterAttachmentEnum.Head).GDNode.AddChild(_remoteCamAttach, @internal: Node.InternalMode.Back);
-		_remoteCamAttach.RemotePath = _remoteCamAttach.GetPathTo(CamAttach.GDNode3D);
+		_ragdollCamTarget = Character?.GetAttachment(CharacterModel.CharacterAttachmentEnum.Head);
 
-		SetCamRemoteAttachEnabled(false);
+		CamAttach.LocalPosition = new Vector3(0, CameraHeight, 0);
+		UseRagdollCam(false);
 
 		Camera? cam = Root.Environment.CurrentCamera;
-		if (cam == null) return;
-		cam.Target = CamAttach;
-		cam.UpdateCameraSelf = false;
-		cam.FirstPersonEntered.Connect(OnFirstPersonEntered);
-		cam.FirstPersonExited.Connect(OnFirstPersonExited);
+		if (cam != null)
+		{
+			cam.FirstPersonEntered.Connect(OnFirstPersonEntered);
+			cam.FirstPersonExited.Connect(OnFirstPersonExited);
+		}
 
 		// Listen to touch events
 		Touched.Connect(OnPlayerTouched);
@@ -909,12 +883,12 @@ public sealed partial class Player : NPC
 
 	private void OnRagdollStarted()
 	{
-		SetCamRemoteAttachEnabled(true);
+		UseRagdollCam(true);
 	}
 
 	private void OnRagdollStopped()
 	{
-		SetCamRemoteAttachEnabled(false);
+		UseRagdollCam(false);
 	}
 
 	internal void PlayEmote(string emoteName)

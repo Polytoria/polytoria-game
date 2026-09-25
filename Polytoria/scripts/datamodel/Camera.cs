@@ -384,11 +384,6 @@ public sealed partial class Camera : Dynamic
 	[ScriptProperty]
 	public PTSignal FirstPersonExited { get; private set; } = new();
 
-	/// <summary>
-	/// Should camera be updating itself or not.
-	/// </summary>
-	internal bool UpdateCameraSelf = true;
-
 	public override void EnterTree()
 	{
 		// keep the current camera current
@@ -453,10 +448,7 @@ public sealed partial class Camera : Dynamic
 
 	public override void Process(double delta)
 	{
-		if (UpdateCameraSelf)
-		{
-			CameraProcess(delta);
-		}
+		CameraProcess(delta);
 		base.Process(delta);
 	}
 
