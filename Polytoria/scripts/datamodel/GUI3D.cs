@@ -18,6 +18,10 @@ public partial class GUI3D : Dynamic
 	private bool _shaded = true;
 	private bool _faceCamera = false;
 	private bool _transparent = false;
+	private bool _doubleSided = false;
+	private bool _alwaysOnTop = false;
+	private bool _fixedSize = false;
+	private bool _visible = true;
 
 	private bool _mouseInArea = false;
 	private Vector2? _lastPos;
@@ -25,6 +29,8 @@ public partial class GUI3D : Dynamic
 	private SubViewport _subViewport = null!;
 	private PlaneMesh _plane = null!;
 	private Area3D _area = null!;
+
+	private int _maxViewportSize = 2048;
 
 	[Editable, ScriptProperty]
 	public bool Shaded
@@ -38,7 +44,6 @@ public partial class GUI3D : Dynamic
 		}
 	}
 
-
 	[Editable, ScriptProperty]
 	public bool FaceCamera
 	{
@@ -49,6 +54,8 @@ public partial class GUI3D : Dynamic
 			_material.BillboardMode = value ? BaseMaterial3D.BillboardModeEnum.Enabled : BaseMaterial3D.BillboardModeEnum.Disabled;
 			UpdateSize();
 			SetProcess(value);
+			if (!value) { _area.Rotation = Vector3.Zero; }
+
 			OnPropertyChanged();
 		}
 	}
@@ -66,13 +73,65 @@ public partial class GUI3D : Dynamic
 		}
 	}
 
+	[Editable, ScriptProperty]
+	public bool DoubleSided
+	{
+		get => _doubleSided;
+		set
+		{
+			_doubleSided = value;
+			_material.CullMode = value ? BaseMaterial3D.CullModeEnum.Disabled : BaseMaterial3D.CullModeEnum.Back;
+
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool AlwaysOnTop
+	{
+		get => _alwaysOnTop;
+		set
+		{
+			_alwaysOnTop = value;
+			_material.NoDepthTest = value;
+
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool FixedSize
+	{
+		get => _fixedSize;
+		set
+		{
+			_fixedSize = value;
+			_material.FixedSize = value;
+
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool Visible
+	{
+		get => _visible;
+		set
+		{
+			_visible = value;
+			_mesh.Visible = value;
+
+			OnPropertyChanged();
+		}
+	}
+
 	[ScriptProperty]
 	public Vector2 AbsoluteSize => _subViewport.Size;
 
 	public override Node CreateGDNode()
 	{
 		Node gui3D = Globals.LoadNetworkedObjectScene("GUI3D")!;
-		_subViewport = new() { HandleInputLocally = false };
+		_subViewport = new() { HandleInputLocally = false, Disable3D = true };
 		_area = gui3D.GetNode<Area3D>("Area3D");
 		gui3D.AddChild(_subViewport);
 		return gui3D;
@@ -95,29 +154,38 @@ public partial class GUI3D : Dynamic
 		Shaded = true;
 		FaceCamera = false;
 		Transparent = false;
+		DoubleSided = false;
+		AlwaysOnTop = false;
+		FixedSize = false;
+		Visible = true;
 
 		TransformChanged += UpdateCanvasSize;
 
 		_area.MouseEntered += OnAreaMouseEnter;
+		_area.MouseExited += OnAreaMouseExit;
 
 		base.Init();
 	}
 
 	public override void Ready()
 	{
+		UpdateSize();
 		UpdateCanvasSize();
 		base.Ready();
 	}
 
 	private void UpdateCanvasSize()
 	{
-		_subViewport.Size = new((int)(Size.X * 512), (int)(Size.Y * 512));
+		Vector2 initialSize = new((int)(Size.X * 128), (int)(Size.Y * 128));
+		float scale = Mathf.Min(1.0f, _maxViewportSize / Mathf.Max(initialSize.X, initialSize.Y));
+		_subViewport.Size = new((int)(initialSize.X * scale), (int)(initialSize.Y * scale));
 		RecomputeChildTransforms();
 	}
 
 	public override void PreDelete()
 	{
 		_area.MouseEntered -= OnAreaMouseEnter;
+		_area.MouseExited -= OnAreaMouseExit;
 		TransformChanged -= UpdateCanvasSize;
 		base.PreDelete();
 	}
@@ -136,6 +204,7 @@ public partial class GUI3D : Dynamic
 
 	public void OnInput(InputEvent @event)
 	{
+		if (!_visible) return;
 		if (_mouseInArea)
 		{
 			GDNode.GetViewport().SetInputAsHandled();
@@ -153,14 +222,15 @@ public partial class GUI3D : Dynamic
 	private void HandleMouse(InputEventMouse @event)
 	{
 		Vector3? pre = FindMouse(@event.GlobalPosition);
-		if (pre == null) { _mouseInArea = false; return; }
+		if (pre == null) { _mouseInArea = false; _lastPos = null; return; }
 
 		Vector3 mousePos3D = pre.Value;
 		mousePos3D = _area.GlobalTransform.AffineInverse() * mousePos3D;
 
 		Vector2 mousePos2D = new(mousePos3D.X, mousePos3D.Y);
-		Vector2 viewportPos = new(Mathf.Remap(mousePos2D.X, 0.5f, -0.5f, 0, AbsoluteSize.X), Mathf.Remap(mousePos2D.Y, 0.5f, -0.5f, 0, AbsoluteSize.Y));
+		if (FaceCamera) { mousePos2D.X *= -1; }
 
+		Vector2 viewportPos = new(Mathf.Remap(mousePos2D.X, 0.5f, -0.5f, 0, AbsoluteSize.X), Mathf.Remap(mousePos2D.Y, 0.5f, -0.5f, 0, AbsoluteSize.Y));
 		@event.Position = viewportPos;
 		@event.GlobalPosition = viewportPos;
 
@@ -181,6 +251,11 @@ public partial class GUI3D : Dynamic
 	private void OnAreaMouseEnter()
 	{
 		_mouseInArea = true;
+	}
+
+	private void OnAreaMouseExit()
+	{
+		if (!_alwaysOnTop) { _mouseInArea = false; }
 	}
 
 	protected void RecomputeChildTransforms()
@@ -250,6 +325,8 @@ public partial class GUI3D : Dynamic
 	{
 		_mesh.Scale = newSize;
 		_area.Scale = newSize;
+		UpdateSize();
+		UpdateCanvasSize();
 		base.OnNodeSizeChanged(newSize);
 	}
 
@@ -272,14 +349,11 @@ public partial class GUI3D : Dynamic
 		if (FaceCamera)
 		{
 			Camera3D cam = Globals.Singleton.GetViewport().GetCamera3D();
-			Vector3 look = cam.ToGlobal(new(0, 0, -100)) - cam.GlobalTransform.Origin;
-
-			_area.LookAt(look);
-			_area.RotateObjectLocal(Vector3.Back, cam.Rotation.Z);
-		}
-		else
-		{
-			_area.Rotation = Vector3.Zero;
+			if (cam != null)
+			{
+				_area.LookAt(_area.GlobalPosition - cam.GlobalTransform.Basis.Z);
+				_area.RotateObjectLocal(Vector3.Back, cam.Rotation.Z);
+			}
 		}
 	}
 }
