@@ -62,7 +62,7 @@ public sealed partial class World : Instance
 	[ScriptProperty]
 	public PTSignal<double> Rendered { get; private set; } = new();
 
-	[ScriptProperty]
+	[ScriptProperty, Attributes.Obsolete("Use 'ScriptService.IsLocalTest' instead.")]
 	public bool IsLocalTest => _worldID == 0;
 
 	public SessionTypeEnum SessionType { get; set; } = SessionTypeEnum.Client;
