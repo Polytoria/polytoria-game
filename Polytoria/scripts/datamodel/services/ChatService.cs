@@ -226,6 +226,9 @@ public sealed partial class ChatService : Instance
 
 	public static string FormatEmojis(string msg, float scale = 1f)
 	{
+		if (string.IsNullOrEmpty(msg) || !msg.Contains(':'))
+			return msg;
+
 		int size = Mathf.RoundToInt(24 * scale);
 		return _emojiRegex.Replace(msg, match =>
 		{

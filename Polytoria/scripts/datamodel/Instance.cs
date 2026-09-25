@@ -343,16 +343,18 @@ public partial class Instance : NetworkedObject
 	public Instance[] GetDescendants()
 	{
 		List<Instance> instances = [];
-
-		foreach (Instance child in Children)
-		{
-			instances.Add(child);
-
-			// Recursively add descendants
-			instances.AddRange(child.GetDescendants());
-		}
-
+		GetDescendantsInternal(instances);
 		return [.. instances];
+	}
+
+	private void GetDescendantsInternal(List<Instance> list)
+	{
+		for (int i = 0; i < Children.Count; i++)
+		{
+			Instance child = Children[i];
+			list.Add(child);
+			child.GetDescendantsInternal(list);
+		}
 	}
 
 	[ScriptMethod]

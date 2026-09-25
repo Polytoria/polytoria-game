@@ -40,7 +40,8 @@ public partial class Nametag : Node3D
 		// Check distance from camera if is with-in radius
 		if (cam != null && useNametag)
 		{
-			useNametag = (cam.Position - GlobalPosition).Length() < Target.NametagVisibleRadius;
+			float maxRadius = Target.NametagVisibleRadius;
+			useNametag = (cam.Position - GlobalPosition).LengthSquared() < maxRadius * maxRadius;
 		}
 
 		// Hide if self is Target

@@ -2059,7 +2059,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		{
 			return HashCode.Combine(
 				Type,
-				MethodName.ToLowerInvariant(),
+				StringComparer.OrdinalIgnoreCase.GetHashCode(MethodName),
 				IsCompatibility
 			);
 		}

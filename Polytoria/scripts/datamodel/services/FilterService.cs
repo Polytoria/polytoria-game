@@ -94,7 +94,7 @@ public sealed partial class FilterService : Instance
 			}
 		}
 
-		string[] words = input.Split([" "], StringSplitOptions.RemoveEmptyEntries);
+		string[] words = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		List<string> filteredWords = [];
 		foreach (string word in words)
 		{

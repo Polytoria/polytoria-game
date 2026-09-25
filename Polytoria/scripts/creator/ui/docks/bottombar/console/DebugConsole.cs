@@ -28,6 +28,9 @@ public partial class DebugConsole : Control
 
 	private readonly StringBuilder _textBuilder = new();
 
+	private static readonly IComparer<LogData> LogDateComparer =
+	Comparer<LogData>.Create(static (a, b) => a.LoggedAt.CompareTo(b.LoggedAt));
+
 	[Export] private RichTextLabel _richLabel = null!;
 	[Export] private LineEdit _searchEdit = null!;
 	[Export] private Button _clearBtn = null!;
@@ -212,7 +215,7 @@ public partial class DebugConsole : Control
 
 
 		// Binary search insertion to maintain sorted order
-		var index = _logs.BinarySearch(data, Comparer<LogData>.Create((a, b) => a.LoggedAt.CompareTo(b.LoggedAt)));
+		var index = _logs.BinarySearch(data, LogDateComparer);
 		if (index < 0) index = ~index;
 		_logs.Insert(index, data);
 

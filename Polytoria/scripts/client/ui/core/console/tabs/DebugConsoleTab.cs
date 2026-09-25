@@ -12,6 +12,7 @@ namespace Polytoria.Client.UI;
 
 public partial class DebugConsoleTab : Control
 {
+
 	private const int MaxLogLength = 16384;
 	public const string ErrorColorHex = "#F95D5D";
 	public const string WarningColorHex = "#FFBC58";
@@ -27,6 +28,9 @@ public partial class DebugConsoleTab : Control
 
 	public List<LogData> Logs = [];
 	public HashSet<string> ShownLogs = [];
+
+	private static readonly IComparer<LogData> LogDateComparer =
+	Comparer<LogData>.Create(static (a, b) => a.LoggedAt.CompareTo(b.LoggedAt));
 
 	[Export] public RichTextLabel TextLabel = null!;
 	public LogDispatcher Logger = null!;
@@ -74,7 +78,7 @@ public partial class DebugConsoleTab : Control
 		ShownLogs.Add(data.ID);
 
 		// Binary search insertion to maintain sorted order
-		int index = Logs.BinarySearch(data, Comparer<LogData>.Create((a, b) => a.LoggedAt.CompareTo(b.LoggedAt)));
+		int index = Logs.BinarySearch(data, LogDateComparer);
 		if (index < 0) index = ~index;
 		Logs.Insert(index, data);
 
