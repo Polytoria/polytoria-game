@@ -5,15 +5,25 @@
 [resource]
 resource_name = "Night2"
 shader = ExtResource("1_jfhfr")
-shader_parameter/sun_disc_color = Color(0.643137, 0.85098, 0.809908, 1)
-shader_parameter/sun_disc_multiplier = 2271.9
+
+shader_parameter/clock_time = 0.0
+
+shader_parameter/sun_disc_color = Color(1.0, 0.65, 0.40, 1)
 shader_parameter/sun_disc_exponent = 250000.0
-shader_parameter/sun_halo_color = Color(0.145098, 0.376471, 0.327236, 1)
+shader_parameter/sun_halo_color = Color(0.85, 0.38, 0.15, 1)
 shader_parameter/sun_halo_exponent = 50.0
-shader_parameter/sun_halo_contribution = 0.587
+shader_parameter/sun_halo_contribution = 0.2
+
+shader_parameter/moon_disc_color = Color(0.643137, 0.85098, 0.809908, 1)
+shader_parameter/moon_disc_exponent = 250000.0
+shader_parameter/moon_halo_color = Color(0.145098, 0.376471, 0.327236, 1)
+shader_parameter/moon_halo_exponent = 50.0
+shader_parameter/moon_halo_contribution = 0.587
+
 shader_parameter/horizon_line_color = Color(0.102127, 0.801887, 0.724136, 1)
 shader_parameter/horizon_line_exponent = 4.0
 shader_parameter/horizon_line_contribution = 0.182
+
 shader_parameter/sky_gradient_top = Color(0.172549, 0.270588, 0.431373, 1)
 shader_parameter/sky_gradient_bottom = Color(0.082147, 0.153659, 0.245283, 1)
 shader_parameter/sky_gradient_exponent = 2.5
