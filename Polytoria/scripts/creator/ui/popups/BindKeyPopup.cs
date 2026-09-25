@@ -13,16 +13,16 @@ namespace Polytoria.Creator.UI.Popups;
 public sealed partial class BindKeyPopup : PopupWindowBase
 {
 	[Export] private Button _bindBtn = null!;
+	[Export] private OptionButton _keyTypeOpt = null!;
 	[Export] private LineEdit _searchEdit = null!;
 	[Export] private Tree _viewTree = null!;
 	[Export] private Button _okBtn = null!;
 	[Export] private Button _cancelBtn = null!;
 
-	private KeyCodeEnum _selectedKeycode = KeyCodeEnum.None;
 	private readonly Dictionary<KeyCodeEnum, TreeItem> _keycodeToItem = [];
 	private readonly Dictionary<TreeItem, KeyCodeEnum> _itemToKeycode = [];
 
-	public event Action<KeyCodeEnum>? KeyBinded;
+	public event Action<(KeyCodeEnum Key, KeyTypeEnum Type)>? KeyBinded;
 	public event Action? Canceled;
 
 	public override void _Ready()
@@ -73,7 +73,7 @@ public sealed partial class BindKeyPopup : PopupWindowBase
 	{
 		if (_itemToKeycode.TryGetValue(_viewTree.GetSelected(), out KeyCodeEnum val))
 		{
-			KeyBinded?.Invoke(val);
+			KeyBinded?.Invoke((val, (KeyTypeEnum)_keyTypeOpt.Selected));
 		}
 		QueueFree();
 	}

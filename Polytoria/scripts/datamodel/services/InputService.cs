@@ -218,11 +218,12 @@ public sealed partial class InputService : Instance
 		{MouseButton.Middle, "Mouse2" },
 	};
 
-	private readonly Dictionary<string, bool> _legacyKeydowns = [];
+	private readonly HashSet<string> _legacyKeydowns = [];
 	private readonly Dictionary<string, bool> _legacyFrameKeydowns = [];
-	private readonly Dictionary<KeyCodeEnum, bool> _keyStates = [];
+	private readonly HashSet<KeyCodeEnum> _keyStates = [];
+	private readonly HashSet<KeyCodeEnum> _physicalKeyStates = [];
 	private readonly Dictionary<KeyCodeEnum, float> _keyWeight = [];
-	private readonly Dictionary<MouseButton, bool> _mouseBtnDown = [];
+	private readonly HashSet<MouseButton> _mouseBtnDown = [];
 	private readonly Dictionary<MouseButton, bool> _mouseFrameBtnDown = [];
 	private float _mouseScrollDelta = 0;
 	private Vector2 _lastMouseDelta = Vector2.Zero;
@@ -369,6 +370,7 @@ public sealed partial class InputService : Instance
 			else
 			{
 				_keyStates.Clear();
+				_physicalKeyStates.Clear();
 				_keyWeight.Clear();
 				GameUnfocused?.Invoke();
 			}
@@ -431,22 +433,22 @@ public sealed partial class InputService : Instance
 		float axisYVal = MouseDelta.Y;
 		float axisXVal = MouseDelta.X;
 
-		if (oldXVal != axisXVal && Enum.TryParse("MouseAxisX", false, out KeyCodeEnum axisEnumX))
+		if (oldXVal != axisXVal)
 		{
-			_keyWeight[axisEnumX] = axisXVal;
-			AxisValueChanged.Invoke(axisEnumX, axisXVal);
+			_keyWeight[KeyCodeEnum.MouseAxisX] = axisXVal;
+			AxisValueChanged.Invoke(KeyCodeEnum.MouseAxisX, axisXVal);
 			_lastMouseDelta.X = axisXVal;
 		}
 
-		if (oldYVal != axisYVal && Enum.TryParse("MouseAxisY", false, out KeyCodeEnum axisEnumY))
+		if (oldYVal != axisYVal)
 		{
-			_keyWeight[axisEnumY] = axisYVal;
-			AxisValueChanged.Invoke(axisEnumY, axisYVal);
+			_keyWeight[KeyCodeEnum.MouseAxisY] = axisYVal;
+			AxisValueChanged.Invoke(KeyCodeEnum.MouseAxisY, axisYVal);
 			_lastMouseDelta.Y = axisYVal;
 		}
 	}
 
-	public void OnInput(Godot.InputEvent @event)
+	public void OnInput(InputEvent @event)
 	{
 		if (@event.IsEcho()) return;
 		if (IsGameFocused)
@@ -468,14 +470,27 @@ public sealed partial class InputService : Instance
 		{
 			if (Enum.TryParse(key.Keycode.ToString(), false, out KeyCodeEnum keyVal))
 			{
-				_keyStates[keyVal] = key.Pressed;
 				if (key.Pressed)
 				{
 					KeyDown.Invoke(keyVal, IsGameFocused);
+					_keyStates.Add(keyVal);
 				}
 				else
 				{
 					KeyUp.Invoke(keyVal, IsGameFocused);
+					_keyStates.Remove(keyVal);
+				}
+			}
+
+			if (Enum.TryParse(key.PhysicalKeycode.ToString(), false, out KeyCodeEnum physKeyVal))
+			{
+				if (key.Pressed)
+				{
+					_physicalKeyStates.Add(physKeyVal);
+				}
+				else
+				{
+					_physicalKeyStates.Remove(physKeyVal);
 				}
 			}
 
@@ -484,26 +499,27 @@ public sealed partial class InputService : Instance
 				if (key.Pressed)
 				{
 					LegacyKeyDown.Invoke(btn);
+					_legacyKeydowns.Add(btn);
 				}
 				else
 				{
 					LegacyKeyUp.Invoke(btn);
+					_legacyKeydowns.Remove(btn);
 				}
-
-				_legacyKeydowns[btn] = key.Pressed;
 				_legacyFrameKeydowns[btn] = key.Pressed;
 			}
 		}
 		else if (@event is InputEventJoypadButton joypadBtn)
 		{
-			_keyStates[btnEnum] = joypadBtn.Pressed;
 			if (joypadBtn.Pressed)
 			{
 				KeyDown.Invoke(btnEnum, IsGameFocused);
+				_keyStates.Add(btnEnum);
 			}
 			else
 			{
 				KeyUp.Invoke(btnEnum, IsGameFocused);
+				_keyStates.Remove(btnEnum);
 			}
 		}
 		else if (@event is InputEventJoypadMotion joypadMotion)
@@ -515,14 +531,15 @@ public sealed partial class InputService : Instance
 		}
 		else if (@event is InputEventMouseButton mouseBtn)
 		{
-			_keyStates[btnEnum] = mouseBtn.Pressed;
 			if (mouseBtn.Pressed)
 			{
 				KeyDown.Invoke(btnEnum, IsGameFocused);
+				_keyStates.Add(btnEnum);
 			}
 			else
 			{
 				KeyUp.Invoke(btnEnum, IsGameFocused);
+				_keyStates.Remove(btnEnum);
 			}
 
 			if (CompatMouseButtonMapping.TryGetValue(mouseBtn.ButtonIndex, out string? btn))
@@ -530,15 +547,16 @@ public sealed partial class InputService : Instance
 				if (mouseBtn.Pressed)
 				{
 					LegacyKeyDown.Invoke(btn);
+					_legacyKeydowns.Add(btn);
+					_mouseBtnDown.Add(mouseBtn.ButtonIndex);
 				}
 				else
 				{
 					LegacyKeyUp.Invoke(btn);
+					_legacyKeydowns.Remove(btn);
+					_mouseBtnDown.Remove(mouseBtn.ButtonIndex);
 				}
-
-				_legacyKeydowns[btn] = mouseBtn.Pressed;
 				_legacyFrameKeydowns[btn] = mouseBtn.Pressed;
-				_mouseBtnDown[mouseBtn.ButtonIndex] = mouseBtn.Pressed;
 				_mouseFrameBtnDown[mouseBtn.ButtonIndex] = mouseBtn.Pressed;
 			}
 
@@ -695,10 +713,10 @@ public sealed partial class InputService : Instance
 				float weight = 0;
 				foreach (InputButton item in btn.Buttons)
 				{
-					if (IsKeyPressed(item.KeyCode))
+					if (IsKeyPressed(item))
 					{
 						pressed = true;
-						weight = GetKeyWeight(item.KeyCode);
+						weight = GetKeyWeight(item);
 						break;
 					}
 				}
@@ -727,7 +745,7 @@ public sealed partial class InputService : Instance
 				// Positive
 				foreach (InputButton item in axis.Positive)
 				{
-					pos = GetKeyWeight(item.KeyCode);
+					pos = GetKeyWeight(item);
 					if (pos > 0)
 					{
 						break;
@@ -737,7 +755,7 @@ public sealed partial class InputService : Instance
 				// Negative
 				foreach (InputButton item in axis.Negative)
 				{
-					neg = GetKeyWeight(item.KeyCode);
+					neg = GetKeyWeight(item);
 					if (neg > 0)
 					{
 						break;
@@ -756,7 +774,7 @@ public sealed partial class InputService : Instance
 
 				foreach (InputButton item in v2.Up)
 				{
-					up = GetKeyWeight(item.KeyCode);
+					up = GetKeyWeight(item);
 					if (up > 0)
 					{
 						break;
@@ -765,7 +783,7 @@ public sealed partial class InputService : Instance
 
 				foreach (InputButton item in v2.Down)
 				{
-					down = GetKeyWeight(item.KeyCode);
+					down = GetKeyWeight(item);
 					if (down > 0)
 					{
 						break;
@@ -774,7 +792,7 @@ public sealed partial class InputService : Instance
 
 				foreach (InputButton item in v2.Left)
 				{
-					left = GetKeyWeight(item.KeyCode);
+					left = GetKeyWeight(item);
 					if (left > 0)
 					{
 						break;
@@ -783,7 +801,7 @@ public sealed partial class InputService : Instance
 
 				foreach (InputButton item in v2.Right)
 				{
-					right = GetKeyWeight(item.KeyCode);
+					right = GetKeyWeight(item);
 					if (right > 0)
 					{
 						break;
@@ -802,24 +820,29 @@ public sealed partial class InputService : Instance
 		}
 	}
 
-	public bool IsKeyPressed(KeyCodeEnum keyCode)
+	private bool IsKeyPressed(KeyCodeEnum keyCode, KeyTypeEnum keyType)
 	{
-		if (_keyWeight.TryGetValue(keyCode, out float weight))
+		if (_keyWeight.TryGetValue(keyCode, out float weight) && weight > 0.5f)
 		{
-			if (weight > 0.5f)
-			{
-				return true;
-			}
+			return true;
 		}
-		if (_keyStates.TryGetValue(keyCode, out bool state)) return state;
-		return false;
+		return keyType switch
+		{
+			KeyTypeEnum.KeyCode => _keyStates.Contains(keyCode),
+			KeyTypeEnum.PhysicalKeyCode => _physicalKeyStates.Contains(keyCode),
+			_ => false
+		};
 	}
 
-	public float GetKeyWeight(KeyCodeEnum keyCode)
+	private bool IsKeyPressed(InputButton button) => IsKeyPressed(button.KeyCode, button.KeyType);
+
+	private float GetKeyWeight(KeyCodeEnum keyCode, KeyTypeEnum keyType)
 	{
 		if (_keyWeight.TryGetValue(keyCode, out float state)) return state;
-		return IsKeyPressed(keyCode) ? 1 : 0;
+		return IsKeyPressed(keyCode, keyType) ? 1 : 0;
 	}
+
+	private float GetKeyWeight(InputButton button) => GetKeyWeight(button.KeyCode, button.KeyType);
 
 	[ScriptLegacyMethod("GetMouseWorldPosition")]
 	public Vector3 LegacyGetMouseWorldPosition(object? _ = null)
@@ -842,7 +865,7 @@ public sealed partial class InputService : Instance
 		Vector3 rayOrigin = camera.ProjectRayOrigin(mousePos);
 		Vector3 rayDir = camera.ProjectRayNormal(mousePos);
 
-		return (rayOrigin + rayDir * z);
+		return rayOrigin + rayDir * z;
 	}
 
 	[ScriptLegacyMethod("ScreenToWorldPoint")]
@@ -855,7 +878,7 @@ public sealed partial class InputService : Instance
 
 		Vector3 rayOrigin = camera.ProjectRayOrigin(new Vector2(pos.X, pos.Y));
 		Vector3 rayDir = camera.ProjectRayNormal(new Vector2(pos.X, pos.Y));
-		return (rayOrigin + rayDir * pos.Z);
+		return rayOrigin + rayDir * pos.Z;
 	}
 
 	[ScriptLegacyMethod("ScreenToViewportPoint")]
@@ -887,7 +910,7 @@ public sealed partial class InputService : Instance
 		{
 			throw new Exception("Camera is missing");
 		}
-		Vector2 size = Root.Environment.CurrentCamera!.WorldToViewportPoint(pos);
+		Vector2 size = Root.Environment.CurrentCamera.WorldToViewportPoint(pos);
 		return new(size.X, size.Y, pos.Z);
 	}
 
@@ -903,7 +926,7 @@ public sealed partial class InputService : Instance
 		Vector2 screenPos = new(pos.X * size.X, pos.Y * size.Y);
 		Vector3 origin = camera.ProjectRayOrigin(screenPos);
 		Vector3 direction = camera.ProjectRayNormal(screenPos);
-		return (origin + direction * pos.Z);
+		return origin + direction * pos.Z;
 	}
 
 	[ScriptLegacyMethod("ViewportToScreenPoint")]
@@ -913,7 +936,7 @@ public sealed partial class InputService : Instance
 		{
 			throw new Exception("Camera is missing");
 		}
-		Vector2 size = Root.Environment.CurrentCamera!.ViewportToScreenPoint(new(pos.X, pos.Y));
+		Vector2 size = Root.Environment.CurrentCamera.ViewportToScreenPoint(new(pos.X, pos.Y));
 		return new(size.X, size.Y, pos.Z);
 	}
 
@@ -925,7 +948,7 @@ public sealed partial class InputService : Instance
 		{
 			throw new Exception("Camera is missing");
 		}
-		return Root.Environment.CurrentCamera!.ScreenPointToRay(pos, ignoreList, maxDistance);
+		return Root.Environment.CurrentCamera.ScreenPointToRay(pos, ignoreList, maxDistance);
 	}
 
 	[ScriptLegacyMethod("ScreenPointToRay")]
@@ -935,7 +958,7 @@ public sealed partial class InputService : Instance
 		{
 			throw new Exception("Camera is missing");
 		}
-		return Root.Environment.CurrentCamera!.ScreenPointToRay(new(pos.X, pos.Y), ignoreList, maxDistance);
+		return Root.Environment.CurrentCamera.ScreenPointToRay(new(pos.X, pos.Y), ignoreList, maxDistance);
 	}
 
 	[ScriptLegacyMethod("ViewportPointToRay")]
@@ -945,18 +968,14 @@ public sealed partial class InputService : Instance
 		{
 			throw new Exception("Camera is missing");
 		}
-		return Root.Environment.CurrentCamera!.ViewportPointToRay(new(pos.X, pos.Y), ignoreList, maxDistance);
+		return Root.Environment.CurrentCamera.ViewportPointToRay(new(pos.X, pos.Y), ignoreList, maxDistance);
 	}
 
 
 	[ScriptLegacyMethod("GetButton")]
 	public bool LegacyGetButton(string buttonName)
 	{
-		if (_legacyKeydowns.TryGetValue(buttonName, out bool isDown))
-		{
-			return isDown;
-		}
-		return false;
+		return _legacyKeydowns.Contains(buttonName);
 	}
 
 	[ScriptLegacyMethod("GetButtonDown")]
@@ -1040,11 +1059,7 @@ public sealed partial class InputService : Instance
 	[ScriptLegacyMethod("GetKey")]
 	public bool LegacyGetKey(LegacyKeyCode key)
 	{
-		if (_legacyKeydowns.TryGetValue(key.ToString(), out bool isDown))
-		{
-			return isDown;
-		}
-		return false;
+		return _legacyKeydowns.Contains(key.ToString());
 	}
 
 	[ScriptLegacyMethod("GetKeyDown")]
@@ -1070,11 +1085,7 @@ public sealed partial class InputService : Instance
 	[ScriptLegacyMethod("GetMouseButton")]
 	public bool LegacyGetMouseButton(int button)
 	{
-		if (_mouseBtnDown.TryGetValue((MouseButton)button + 1, out bool isDown))
-		{
-			return isDown;
-		}
-		return false;
+		return _mouseBtnDown.Contains((MouseButton)button + 1);
 	}
 
 	[ScriptLegacyMethod("GetMouseButtonDown")]

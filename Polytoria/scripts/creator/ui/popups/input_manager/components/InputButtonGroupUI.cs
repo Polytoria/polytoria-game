@@ -28,10 +28,10 @@ public partial class InputButtonGroupUI : FoldableContainer
 
 	private void PromptAddNew()
 	{
-		CreatorService.Interface.PromptBindKey(k =>
+		CreatorService.Interface.PromptBindKey(t =>
 		{
 			InputButtonCollection val = GetButtons();
-			val.AddButton(new() { KeyCode = k });
+			val.AddButton(new() { KeyCode = t.Key, KeyType = t.Type });
 			Refresh();
 		});
 	}

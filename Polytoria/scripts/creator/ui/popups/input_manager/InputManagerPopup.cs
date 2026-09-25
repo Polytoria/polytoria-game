@@ -14,10 +14,12 @@ public sealed partial class InputManagerPopup : PopupWindowBase
 {
 	private const string ActionItemPath = "res://scenes/creator/popups/input_manager/components/action_item.tscn";
 	private const string ActionViewPath = "res://scenes/creator/popups/input_manager/components/action_view.tscn";
+
 	[Export] private LineEdit _searchEdit = null!;
 	[Export] private MenuButton _addButton = null!;
 	[Export] private Control _viewContainer = null!;
 	[Export] private Control _inputList = null!;
+
 	private CreatorSession _session = null!;
 	private ButtonGroup _btnGroup = new();
 	private Control? _currentView;
@@ -75,26 +77,13 @@ public sealed partial class InputManagerPopup : PopupWindowBase
 
 			PT.Print("Add new: ", str);
 
-			InputAction newz = null!;
-
-			switch (idx)
+			InputAction newz = idx switch
 			{
-				case 0: // Button
-					{
-						newz = new InputActionButton() { Name = str };
-						break;
-					}
-				case 1: // Axis
-					{
-						newz = new InputActionAxis() { Name = str };
-						break;
-					}
-				case 2: // Vector2
-					{
-						newz = new InputActionVector2() { Name = str };
-						break;
-					}
-			}
+				1 => new InputActionAxis() { Name = str },
+				2 => new InputActionVector2() { Name = str },
+				_ => new InputActionButton() { Name = str }
+			};
+
 			_session.InputMap.Actions.Add(newz);
 
 			RefreshActions();
@@ -112,10 +101,6 @@ public sealed partial class InputManagerPopup : PopupWindowBase
 	{
 		foreach (Node item in _inputList.GetChildren())
 		{
-			if (item is InputActionItemUI i)
-			{
-				i.TargetAction.Renamed -= RefreshActions;
-			}
 			item.QueueFree();
 		}
 	}
@@ -128,7 +113,6 @@ public sealed partial class InputManagerPopup : PopupWindowBase
 			item.TargetAction = action;
 			item.ButtonGroup = _btnGroup;
 
-			item.Renamed += RefreshActions;
 			_inputList.AddChild(item);
 		}
 	}

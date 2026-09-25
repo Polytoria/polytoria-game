@@ -4,6 +4,7 @@
 
 using Godot;
 using Polytoria.Datamodel.Data;
+using Polytoria.Enums;
 
 namespace Polytoria.Creator.UI.Components;
 
@@ -18,7 +19,12 @@ public partial class InputButtonItemUI : Control
 
 	public override void _Ready()
 	{
-		_keyNameLabel.Text = TargetButton.KeyCode.ToString();
+		string keyTypePart = TargetButton.KeyType switch
+		{
+			KeyTypeEnum.PhysicalKeyCode => " (Physical)",
+			_ => "",
+		};
+		_keyNameLabel.Text = TargetButton.KeyCode.ToString() + keyTypePart;
 		_removeBtn.Pressed += OnRemovePressed;
 	}
 

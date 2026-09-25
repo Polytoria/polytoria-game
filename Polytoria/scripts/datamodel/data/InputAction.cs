@@ -83,9 +83,10 @@ public abstract class InputAction : IScriptObject
 	[JsonIgnore] public InputService InputService = null!;
 }
 
-public class InputButton : IScriptObject
+public record InputButton : IScriptObject
 {
 	[ScriptProperty] public KeyCodeEnum KeyCode { get; set; } = KeyCodeEnum.None;
+	[ScriptProperty] public KeyTypeEnum KeyType { get; set; } = KeyTypeEnum.KeyCode;
 
 	[ScriptMethod]
 	public static InputButton New()
@@ -99,20 +100,16 @@ public class InputButton : IScriptObject
 		return new() { KeyCode = key };
 	}
 
+	[ScriptMethod]
+	public static InputButton New(KeyCodeEnum key, KeyTypeEnum type)
+	{
+		return new() { KeyCode = key, KeyType = type };
+	}
+
 	[ScriptMetamethod(ScriptObjectMetamethod.Eq)]
 	public static bool MetamethodEquals(InputButton a, InputButton b)
 	{
 		return a.Equals(b);
-	}
-
-	public override bool Equals(object? obj)
-	{
-		return obj is InputButton b && b.KeyCode.Equals(KeyCode);
-	}
-
-	public override int GetHashCode()
-	{
-		return KeyCode.GetHashCode();
 	}
 }
 
