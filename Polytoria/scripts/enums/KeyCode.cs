@@ -47,6 +47,18 @@ public enum KeyCodeEnum
 	/// </summary>
 	Delete = 4194312,
 	/// <summary>
+	/// <para>Print screen key.</para>
+	/// </summary>
+	Print = 4194314,
+	/// <summary>
+	/// <para>Home key.</para>
+	/// </summary>
+	Home = 4194317,
+	/// <summary>
+	/// <para>End key.</para>
+	/// </summary>
+	End = 4194318,
+	/// <summary>
 	/// <para>Left arrow key.</para>
 	/// </summary>
 	Left = 4194319,
@@ -65,11 +77,11 @@ public enum KeyCodeEnum
 	/// <summary>
 	/// <para>Page Up key.</para>
 	/// </summary>
-	PageUp = 4194323,
+	Pageup = 4194323,
 	/// <summary>
 	/// <para>Page Down key.</para>
 	/// </summary>
-	PageDown = 4194324,
+	Pagedown = 4194324,
 	/// <summary>
 	/// <para>Shift key.</para>
 	/// </summary>
@@ -89,15 +101,15 @@ public enum KeyCodeEnum
 	/// <summary>
 	/// <para>Caps Lock key.</para>
 	/// </summary>
-	CapsLock = 4194329,
+	Capslock = 4194329,
 	/// <summary>
 	/// <para>Num Lock key.</para>
 	/// </summary>
-	NumLock = 4194330,
+	Numlock = 4194330,
 	/// <summary>
 	/// <para>Scroll Lock key.</para>
 	/// </summary>
-	ScrollLock = 4194331,
+	Scrolllock = 4194331,
 	/// <summary>
 	/// <para>F1 key.</para>
 	/// </summary>
@@ -457,7 +469,7 @@ public enum KeyCodeEnum
 	/// <summary>
 	/// <para>Left bracket (<c>[lb]</c>) key.</para>
 	/// </summary>
-	BracketLeft = 91,
+	Bracketleft = 91,
 	/// <summary>
 	/// <para>Backslash (<c>\</c>) key.</para>
 	/// </summary>
@@ -465,7 +477,7 @@ public enum KeyCodeEnum
 	/// <summary>
 	/// <para>Right bracket (<c>[rb]</c>) key.</para>
 	/// </summary>
-	BracketRight = 93,
+	Bracketright = 93,
 	/// <summary>
 	/// <para>Caret (<c>^</c>) key.</para>
 	/// </summary>
@@ -477,7 +489,7 @@ public enum KeyCodeEnum
 	/// <summary>
 	/// <para>Backtick (<c>`</c>) key.</para>
 	/// </summary>
-	QuoteLeft = 96,
+	Quoteleft = 96,
 	/// <summary>
 	/// <para>Left brace (<c>{</c>) key.</para>
 	/// </summary>
