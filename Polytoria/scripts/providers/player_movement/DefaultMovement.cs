@@ -108,17 +108,22 @@ public class DefaultMovement : IPlayerMovement
 			// Sprint/Stamina
 			if (sprinting && moveDirection != Vector3.Zero)
 			{
-				if (Target.Stamina > 0 || !Target.UseStamina)
+				bool canSprint = !Target.UseStamina || (Target.Stamina > 0 && !Target.IsExhausted);
+				if (canSprint)
 				{
 					gdWalkSpeed = Target.SprintSpeed;
+					Target.RemoveStaminaTick(delta);
 				}
 				else
 				{
 					sprinting = false;
-					Target.SprintHoldAgain = true;
+					Target.SprintOverride = false;
+					if (!Target.IsExhausted)
+					{
+						Target.SprintHoldAgain = true;
+					}
+					Target.AddStaminaTick(delta);
 				}
-
-				Target.RemoveStaminaTick(delta);
 			}
 			else
 			{
@@ -170,7 +175,7 @@ public class DefaultMovement : IPlayerMovement
 
 
 				float animMoveAmount = Mathf.Max(Mathf.Clamp(moveDirection.Length(), 0f, 1f), 0.15f);
-				if (sprinting && Target.SprintSpeed != Target.WalkSpeed)
+				if (gdWalkSpeed > Mathf.Min(Target.WalkSpeed, Target.SprintSpeed))
 				{
 					finalState = CharacterModel.CharacterModelStateEnum.Running;
 					Target.Character?.SetAnimSpeed(gdWalkSpeed / 20 * animMoveAmount);

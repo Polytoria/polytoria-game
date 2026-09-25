@@ -20,11 +20,15 @@ public partial class UIHealthbar : Control
 
 	private Color _healthFullColor;
 	private Color _healthOutColor;
+	private Color _staminaFullColor;
+	private Color _staminaOutColor;
 
 	public override void _EnterTree()
 	{
 		_healthFullColor = Color.FromHtml("#4fe883");
 		_healthOutColor = Color.FromHtml("#DD5555");
+		_staminaFullColor = Color.FromHtml("#0097ff");
+		_staminaOutColor = Color.FromHtml("#026fbdff");
 		base._EnterTree();
 	}
 
@@ -43,6 +47,7 @@ public partial class UIHealthbar : Control
 			_staminaBar.Visible = localplayer.UseStamina;
 			_staminaBar.Value = localplayer.Stamina;
 			_staminaBar.MaxValue = localplayer.MaxStamina;
+			_staminaBar.SelfModulate = localplayer.IsExhausted ? _staminaOutColor : _staminaFullColor;
 
 			_healthBar.Value = health;
 			_healthBar.MaxValue = maxHealth;
