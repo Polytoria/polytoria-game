@@ -462,9 +462,7 @@ public sealed partial class InputService : Instance
 			MouseMoved.Invoke(mouseMotion.Relative);
 		}
 
-		KeyCodeEnum? btnEnumPre = InputEventToKeyCode(@event);
-		if (!btnEnumPre.HasValue) return;
-		KeyCodeEnum btnEnum = btnEnumPre.Value;
+		if (!TryGetKeyCodeFromEvent(@event, KeyModeEnum.KeyCode, out var btnEnum)) return;
 
 		if (@event is InputEventKey key)
 		{
@@ -571,37 +569,22 @@ public sealed partial class InputService : Instance
 		}
 	}
 
-	public static KeyCodeEnum? InputEventToKeyCode(InputEvent @event)
+	public static bool TryGetKeyCodeFromEvent(InputEvent @event, KeyModeEnum mode, out KeyCodeEnum result)
 	{
-		if (@event is InputEventKey key)
+		string? keyName = @event switch
 		{
-			if (Enum.TryParse(key.Keycode.ToString(), false, out KeyCodeEnum keyVal))
+			InputEventKey key => mode switch
 			{
-				return keyVal;
-			}
-		}
-		else if (@event is InputEventJoypadButton joypadBtn)
-		{
-			if (Enum.TryParse("Gamepad" + joypadBtn.ButtonIndex, false, out KeyCodeEnum btnEnum))
-			{
-				return btnEnum;
-			}
-		}
-		else if (@event is InputEventJoypadMotion joypadMotion)
-		{
-			if (Enum.TryParse("GamepadAxis" + joypadMotion.Axis, false, out KeyCodeEnum btnEnum))
-			{
-				return btnEnum;
-			}
-		}
-		else if (@event is InputEventMouseButton mouseBtn)
-		{
-			if (Enum.TryParse("Mouse" + mouseBtn.ButtonIndex, false, out KeyCodeEnum btnEnum))
-			{
-				return btnEnum;
-			}
-		}
-		return null;
+				KeyModeEnum.PhysicalKeyCode => key.PhysicalKeycode.ToString(),
+				_ => key.Keycode.ToString()
+			},
+			InputEventJoypadButton joypadBtn => "Gamepad" + joypadBtn.ButtonIndex,
+			InputEventJoypadMotion joypadMotion => "GamepadAxis" + joypadMotion.Axis,
+			InputEventMouseButton mouseBtn => "Mouse" + mouseBtn.ButtonIndex,
+			_ => null
+		};
+		result = Enum.TryParse(keyName, false, out KeyCodeEnum keyCode) ? keyCode : KeyCodeEnum.Unknown;
+		return result is not (KeyCodeEnum.None or KeyCodeEnum.Unknown);
 	}
 
 	[ScriptMethod]
@@ -820,29 +803,28 @@ public sealed partial class InputService : Instance
 		}
 	}
 
-	private bool IsKeyPressed(KeyCodeEnum keyCode, KeyTypeEnum keyType)
+	private bool IsKeyPressed(KeyCodeEnum keyCode, KeyModeEnum keyMode)
 	{
 		if (_keyWeight.TryGetValue(keyCode, out float weight) && weight > 0.5f)
 		{
 			return true;
 		}
-		return keyType switch
+		return keyMode switch
 		{
-			KeyTypeEnum.KeyCode => _keyStates.Contains(keyCode),
-			KeyTypeEnum.PhysicalKeyCode => _physicalKeyStates.Contains(keyCode),
-			_ => false
+			KeyModeEnum.PhysicalKeyCode => _physicalKeyStates.Contains(keyCode),
+			_ => _keyStates.Contains(keyCode)
 		};
 	}
 
-	private bool IsKeyPressed(InputButton button) => IsKeyPressed(button.KeyCode, button.KeyType);
+	private bool IsKeyPressed(InputButton button) => IsKeyPressed(button.KeyCode, button.KeyMode);
 
-	private float GetKeyWeight(KeyCodeEnum keyCode, KeyTypeEnum keyType)
+	private float GetKeyWeight(KeyCodeEnum keyCode, KeyModeEnum keyMode)
 	{
 		if (_keyWeight.TryGetValue(keyCode, out float state)) return state;
-		return IsKeyPressed(keyCode, keyType) ? 1 : 0;
+		return IsKeyPressed(keyCode, keyMode) ? 1 : 0;
 	}
 
-	private float GetKeyWeight(InputButton button) => GetKeyWeight(button.KeyCode, button.KeyType);
+	private float GetKeyWeight(InputButton button) => GetKeyWeight(button.KeyCode, button.KeyMode);
 
 	[ScriptLegacyMethod("GetMouseWorldPosition")]
 	public Vector3 LegacyGetMouseWorldPosition(object? _ = null)

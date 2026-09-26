@@ -86,7 +86,7 @@ public abstract class InputAction : IScriptObject
 public record InputButton : IScriptObject
 {
 	[ScriptProperty] public KeyCodeEnum KeyCode { get; set; } = KeyCodeEnum.None;
-	[ScriptProperty] public KeyTypeEnum KeyType { get; set; } = KeyTypeEnum.KeyCode;
+	[ScriptProperty] public KeyModeEnum KeyMode { get; set; } = KeyModeEnum.KeyCode;
 
 	[ScriptMethod]
 	public static InputButton New()
@@ -101,9 +101,9 @@ public record InputButton : IScriptObject
 	}
 
 	[ScriptMethod]
-	public static InputButton New(KeyCodeEnum key, KeyTypeEnum type)
+	public static InputButton New(KeyCodeEnum key, KeyModeEnum mode)
 	{
-		return new() { KeyCode = key, KeyType = type };
+		return new() { KeyCode = key, KeyMode = mode };
 	}
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Eq)]

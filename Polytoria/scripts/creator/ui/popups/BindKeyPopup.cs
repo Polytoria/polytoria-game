@@ -12,17 +12,17 @@ namespace Polytoria.Creator.UI.Popups;
 
 public sealed partial class BindKeyPopup : PopupWindowBase
 {
+	private readonly Dictionary<KeyCodeEnum, TreeItem> _keycodeToItem = [];
+	private readonly Dictionary<TreeItem, KeyCodeEnum> _itemToKeycode = [];
+
 	[Export] private Button _bindBtn = null!;
-	[Export] private OptionButton _keyTypeOpt = null!;
+	[Export] private OptionButton _keyModeOpt = null!;
 	[Export] private LineEdit _searchEdit = null!;
 	[Export] private Tree _viewTree = null!;
 	[Export] private Button _okBtn = null!;
 	[Export] private Button _cancelBtn = null!;
 
-	private readonly Dictionary<KeyCodeEnum, TreeItem> _keycodeToItem = [];
-	private readonly Dictionary<TreeItem, KeyCodeEnum> _itemToKeycode = [];
-
-	public event Action<(KeyCodeEnum Key, KeyTypeEnum Type)>? KeyBinded;
+	public event Action<(KeyCodeEnum Key, KeyModeEnum Mode)>? KeyBinded;
 	public event Action? Canceled;
 
 	public override void _Ready()
@@ -37,11 +37,12 @@ public sealed partial class BindKeyPopup : PopupWindowBase
 		TreeItem root = _viewTree.CreateItem();
 		bool isFirst = true;
 
-		foreach (string k in Enum.GetNames<KeyCodeEnum>())
+		foreach (var v in Enum.GetValues<KeyCodeEnum>())
 		{
-			KeyCodeEnum v = Enum.Parse<KeyCodeEnum>(k);
+			if (v is KeyCodeEnum.None or KeyCodeEnum.Unknown) continue;
+
 			TreeItem ch = root.CreateChild();
-			ch.SetText(0, k);
+			ch.SetText(0, v.ToString());
 			ch.SetSelectable(0, true);
 			_keycodeToItem[v] = ch;
 			_itemToKeycode[ch] = v;
@@ -63,6 +64,8 @@ public sealed partial class BindKeyPopup : PopupWindowBase
 		base._ExitTree();
 	}
 
+	private KeyModeEnum GetKeyMode() => (KeyModeEnum)_keyModeOpt.Selected;
+
 	private void OnCancel()
 	{
 		Canceled?.Invoke();
@@ -73,23 +76,19 @@ public sealed partial class BindKeyPopup : PopupWindowBase
 	{
 		if (_itemToKeycode.TryGetValue(_viewTree.GetSelected(), out KeyCodeEnum val))
 		{
-			KeyBinded?.Invoke((val, (KeyTypeEnum)_keyTypeOpt.Selected));
+			KeyBinded?.Invoke((val, GetKeyMode()));
 		}
 		QueueFree();
 	}
 
 	private void OnBindGuiInput(InputEvent @event)
 	{
-		KeyCodeEnum? k = InputService.InputEventToKeyCode(@event);
-		if (k.HasValue)
+		if (InputService.TryGetKeyCodeFromEvent(@event, GetKeyMode(), out var k) && _keycodeToItem.TryGetValue(k, out TreeItem? ch))
 		{
-			if (_keycodeToItem.TryGetValue(k.Value, out TreeItem? ch))
-			{
-				_bindBtn.Text = k.Value.ToString();
-				_viewTree.DeselectAll();
-				ch.Select(0);
-				_viewTree.ScrollToItem(ch, true);
-			}
+			_bindBtn.Text = k.ToString();
+			_viewTree.DeselectAll();
+			ch.Select(0);
+			_viewTree.ScrollToItem(ch, true);
 		}
 	}
 }

@@ -7,9 +7,14 @@ using Polytoria.Attributes;
 namespace Polytoria.Enums;
 
 [ScriptEnum]
-public enum KeyTypeEnum
+public enum KeyModeEnum
 {
-	Unknown = -1,
+	/// <summary>
+	/// <para>The key is tested using its Latin equivalent.</para>
+	/// </summary>
 	KeyCode,
+	/// <summary>
+	/// <para>The key is tested using its position on US QWERTY Keyboard.</para>
+	/// </summary>
 	PhysicalKeyCode,
 }

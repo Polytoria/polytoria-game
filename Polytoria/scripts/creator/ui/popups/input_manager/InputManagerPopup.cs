@@ -62,7 +62,7 @@ public sealed partial class InputManagerPopup : PopupWindowBase
 
 	private void ClearView()
 	{
-		if (_currentView != null && IsInstanceValid(_currentView))
+		if (IsInstanceValid(_currentView))
 		{
 			_currentView.QueueFree();
 			_currentView = null;

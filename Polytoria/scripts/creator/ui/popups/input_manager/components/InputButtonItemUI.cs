@@ -13,18 +13,19 @@ public partial class InputButtonItemUI : Control
 	[Export] private Label _keyNameLabel = null!;
 	[Export] private TextureRect _iconRect = null!;
 	[Export] private Button _removeBtn = null!;
+
 	public InputAction TargetAction = null!;
 	public InputButton TargetButton = null!;
 	public InputButtonGroupUI GroupParent = null!;
 
 	public override void _Ready()
 	{
-		string keyTypePart = TargetButton.KeyType switch
+		string keyModePart = TargetButton.KeyMode switch
 		{
-			KeyTypeEnum.PhysicalKeyCode => " (Physical)",
+			KeyModeEnum.PhysicalKeyCode => " (Physical)",
 			_ => "",
 		};
-		_keyNameLabel.Text = TargetButton.KeyCode.ToString() + keyTypePart;
+		_keyNameLabel.Text = TargetButton.KeyCode.ToString() + keyModePart;
 		_removeBtn.Pressed += OnRemovePressed;
 	}
 
