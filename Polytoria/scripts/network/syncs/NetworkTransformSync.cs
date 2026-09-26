@@ -90,7 +90,7 @@ public partial class NetworkTransformSync : Instance
 				data.Add(new()
 				{
 					NetID = dyn.NetworkedObjectID,
-					Value = TransformPayloadDto.ToArray(dyn.GetLocalTransform())
+					Value = TransformPayloadDto.ToArrayUInt64(dyn.GetLocalTransform())
 				});
 			}
 		}
@@ -106,7 +106,7 @@ public partial class NetworkTransformSync : Instance
 		{
 			// There might be newer pending transforms
 			if (_pendingTransforms.ContainsKey(item.NetID)) { continue; }
-			RecvUpdateTransformHandler(item.NetID, TransformPayloadDto.FromArray(item.Value), 1, true, false);
+			RecvUpdateTransformHandler(item.NetID, new(item.Value), 1, true, false);
 		}
 
 		if (isFirstInit)
@@ -127,7 +127,8 @@ public partial class NetworkTransformSync : Instance
 		// Check if self has the network authority
 		if (!CheckDynAuthor(dyn, NetService.LocalPeerID)) return;
 
-		TransformPayloadDto payload = TransformPayloadDto.FromGDTransform(dyn.GetLocalTransform());
+		Transform3D transform = dyn.GetLocalTransform();
+		TransformPayloadDto payload = isReliable ? TransformPayloadDto.FromGDTransformUInt64(transform) : TransformPayloadDto.FromGDTransform(transform);
 		string objID = dyn.NetworkedObjectID;
 
 		if (sendTo != 0)
@@ -248,8 +249,6 @@ public partial class NetworkTransformSync : Instance
 				return;
 			}
 
-			if (transform?.Data is not { Length: 16 }) return;
-
 			// server-side validation
 			if (!dyn.TransformNetworkCheck(transform))
 			{
@@ -262,7 +261,7 @@ public partial class NetworkTransformSync : Instance
 			TransformPayloadDto processed = dyn.TransformNetworkPass(fromPeer, transform);
 
 			// If is equal approx to last, return
-			if (processed.IsEqualApprox(TransformPayloadDto.FromGDTransform(dyn.GetLocalTransform())))
+			if (processed.IsEqualApprox(dyn.GetLocalTransform()))
 				return;
 
 			// Update on server
@@ -381,7 +380,7 @@ public partial class NetworkTransformSync : Instance
 		{
 			if (NetService.Root.GetNetObjectFromID(data.ObjID) is Dynamic dyn)
 			{
-				dyn.UpdateTransformFromNet(TransformPayloadDto.FromArray(data.Transform), isReliable, data.Lerp);
+				dyn.UpdateTransformFromNet(new(data.Transform), isReliable, data.Lerp);
 			}
 		}
 	}
