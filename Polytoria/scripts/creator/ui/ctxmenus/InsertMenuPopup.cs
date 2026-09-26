@@ -139,6 +139,7 @@ public partial class InsertMenuPopup : PopupPanel
 			"RigidBody",
 			"BodyPosition",
 			"BodyRotation",
+			"BodyForce",
 			"Grabbable",
 			"Weld",
 		},
