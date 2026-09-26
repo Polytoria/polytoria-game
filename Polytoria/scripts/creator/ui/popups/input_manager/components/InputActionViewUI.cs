@@ -49,7 +49,7 @@ public partial class InputActionViewUI : Control
 			}
 		}
 
-		_actionNameEdit.TextSubmitted += _ => OnActionNameChange();;
+		_actionNameEdit.TextSubmitted += _ => OnActionNameChange();
 		_actionNameEdit.FocusExited += OnActionNameChange;
 		_deleteBtn.Pressed += OnDeletePressed;
 	}
