@@ -160,7 +160,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		LuaState state;
 		try
 		{
-			state = InitalizeScript(script);
+			state = InitializeScript(script);
 		}
 		catch (Exception e)
 		{
@@ -205,7 +205,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		return LuaState.Compile(source);
 	}
 
-	public LuaState InitalizeScript(Script script)
+	public LuaState InitializeScript(Script script)
 	{
 		LuaState state = NewThread(GlobalLuaState);
 		script.LuauStateRef = GlobalLuaState.Ref();
@@ -840,7 +840,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		LuaState co;
 		try
 		{
-			co = InitalizeScript(ms);
+			co = InitializeScript(ms);
 		}
 		catch (Exception ex)
 		{
