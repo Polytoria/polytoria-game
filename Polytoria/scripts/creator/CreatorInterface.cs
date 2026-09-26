@@ -588,7 +588,7 @@ public partial class CreatorInterface : Control, IScriptObject
 		return await tcs.Task;
 	}
 
-	public void PromptBindKey(Action<KeyCodeEnum> callback)
+	public void PromptBindKey(Action<(KeyCodeEnum Key, KeyModeEnum Mode)> callback)
 	{
 		BindKeyPopup popup = Globals.CreateInstanceFromScene<BindKeyPopup>(BindKeyPopupPath);
 		popup.KeyBinded += callback.Invoke;

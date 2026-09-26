@@ -13,10 +13,12 @@ namespace Polytoria.Creator.UI.Components;
 public partial class InputActionViewUI : Control
 {
 	private const string ButtonGroupPath = "res://scenes/creator/popups/input_manager/components/button_group.tscn";
+
 	[Export] private Label _actionTypeLabel = null!;
 	[Export] private Label _actionNameLabel = null!;
 	[Export] private LineEdit _actionNameEdit = null!;
 	[Export] private Button _deleteBtn = null!;
+
 	public InputManagerPopup Manager = null!;
 	public InputAction TargetAction = null!;
 
@@ -24,27 +26,18 @@ public partial class InputActionViewUI : Control
 	{
 		_actionNameLabel.Text = TargetAction.Name;
 
-		string actionType = "";
-
-		if (TargetAction is InputActionButton)
+		string actionType = TargetAction switch
 		{
-			actionType = "Button Action";
-		}
-		else if (TargetAction is InputActionAxis)
-		{
-			actionType = "Axis Action";
-		}
-		else if (TargetAction is InputActionVector2)
-		{
-			actionType = "Vector2 Action";
-		}
+			InputActionButton => "Button Action",
+			InputActionAxis => "Axis Action",
+			InputActionVector2 => "Vector2 Action",
+			_ => "Action",
+		};
 
 		_actionTypeLabel.Text = actionType;
 		_actionNameLabel.GuiInput += OnActionLabelGuiInput;
 
-		PropertyInfo[] props = TargetAction.GetType().GetProperties();
-
-		foreach (PropertyInfo prop in props)
+		foreach (PropertyInfo prop in TargetAction.GetType().GetProperties())
 		{
 			if (prop.PropertyType == typeof(InputButtonCollection))
 			{
@@ -56,7 +49,7 @@ public partial class InputActionViewUI : Control
 			}
 		}
 
-		_actionNameEdit.TextSubmitted += (_) => { OnActionNameChange(); };
+		_actionNameEdit.TextSubmitted += _ => OnActionNameChange();
 		_actionNameEdit.FocusExited += OnActionNameChange;
 		_deleteBtn.Pressed += OnDeletePressed;
 	}
@@ -82,13 +75,10 @@ public partial class InputActionViewUI : Control
 
 	private void OnActionLabelGuiInput(InputEvent @event)
 	{
-		if (@event is InputEventMouseButton m)
+		if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
 		{
-			if (m.Pressed && m.ButtonIndex == MouseButton.Left)
-			{
-				_actionNameEdit.Visible = true;
-				_actionNameEdit.GrabFocus();
-			}
+			_actionNameEdit.Visible = true;
+			_actionNameEdit.GrabFocus();
 		}
 	}
 }

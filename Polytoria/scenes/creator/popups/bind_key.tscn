@@ -34,7 +34,7 @@ expand_margin_top = 2.0
 expand_margin_right = 2.0
 expand_margin_bottom = 2.0
 
-[node name="BindKeyPopup" type="Window" unique_id=1539327050 node_paths=PackedStringArray("_bindBtn", "_searchEdit", "_viewTree", "_okBtn", "_cancelBtn")]
+[node name="BindKeyPopup" type="Window" unique_id=1539327050 node_paths=PackedStringArray("_bindBtn", "_keyModeOpt", "_searchEdit", "_viewTree", "_okBtn", "_cancelBtn")]
 oversampling_override = 1.0
 title = "Bind Key"
 position = Vector2i(0, 36)
@@ -47,6 +47,7 @@ minimize_disabled = true
 maximize_disabled = true
 script = ExtResource("1_3qgo3")
 _bindBtn = NodePath("Control/VBoxContainer/Bind")
+_keyModeOpt = NodePath("Control/VBoxContainer/KeyMode")
 _searchEdit = NodePath("Control/VBoxContainer/LineEdit2")
 _viewTree = NodePath("Control/VBoxContainer/Tree")
 _okBtn = NodePath("Control/VBoxContainer/HBoxContainer/Button")
@@ -94,6 +95,18 @@ layout_mode = 2
 size_flags_vertical = 3
 hide_root = true
 scroll_horizontal_enabled = false
+
+[node name="KeyMode" type="OptionButton" parent="Control/VBoxContainer" unique_id=1010759435]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_3qgo3")
+theme_override_styles/focus = SubResource("StyleBoxFlat_qhw8l")
+alignment = 1
+selected = 1
+item_count = 2
+popup/item_0/text = "KeyCode (Latin Equivalent)"
+popup/item_0/id = 0
+popup/item_1/text = "Physical KeyCode (Position on US QWERTY Keyboard)"
+popup/item_1/id = 1
 
 [node name="HBoxContainer" type="HBoxContainer" parent="Control/VBoxContainer" unique_id=314471091]
 layout_mode = 2
