@@ -7,7 +7,7 @@ using Godot;
 using Polytoria.Attributes;
 using Polytoria.Client.Settings;
 using Polytoria.Shared.Settings;
-
+using Polytoria.Datamodel.Resources;
 #if CREATOR
 using Polytoria.Creator.Settings;
 using Polytoria.Creator.Spatial;
@@ -26,6 +26,8 @@ public partial class Light : Dynamic
 	private float _lightSize = 0;
 	private float _specular = 0.5f;
 	private bool _shadows = false;
+	private ImageAsset? _projector;
+	private Texture2D? _prevImg;
 
 	private static Action? ShadowSettingsChanged;
 
@@ -107,6 +109,36 @@ public partial class Light : Dynamic
 		}
 	}
 
+	[Editable, ScriptProperty]
+	public ImageAsset? Projector
+	{
+		get => _projector;
+		set
+		{
+			if (_projector != null && _projector != value)
+			{
+				_projector.ResourceLoaded -= OnResourceLoaded;
+				_projector.UnlinkFrom(this);
+			}
+			_projector = value;
+			OnResourceLoaded(null);
+			if (_projector != null)
+			{
+				_projector.LinkTo(this);
+				_projector.ResourceLoaded += OnResourceLoaded;
+				if (_projector.IsResourceLoaded && _projector.Resource != null)
+				{
+					OnResourceLoaded(_projector.Resource);
+				}
+				else
+				{
+					_projector.QueueLoadResource();
+				}
+			}
+			OnPropertyChanged();
+		}
+	}
+
 	internal void UpdateShadows()
 	{
 		bool shadows = Shadows;
@@ -125,6 +157,21 @@ public partial class Light : Dynamic
 			}
 		}
 		GDLight.ShadowEnabled = shadows;
+	}
+
+	private void OnResourceLoaded(Resource? r)
+	{
+		if (r is Texture2D tex)
+		{
+			if (_prevImg == tex) return;
+			_prevImg = tex;
+			GDLight.LightProjector = tex;
+		}
+		else
+		{
+			_prevImg = null;
+			GDLight.LightProjector = null;
+		}
 	}
 
 	public override void Init()
