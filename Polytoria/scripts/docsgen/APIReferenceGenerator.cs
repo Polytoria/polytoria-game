@@ -11,8 +11,10 @@ using Polytoria.Shared;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -20,7 +22,7 @@ using static Polytoria.DocsGen.APIReferenceGenerator;
 
 namespace Polytoria.DocsGen;
 
-public class APIReferenceGenerator
+public static class APIReferenceGenerator
 {
 	public static APIReferenceRoot GenerateReferences()
 	{
@@ -29,8 +31,8 @@ public class APIReferenceGenerator
 		Type[] types = assembly.GetTypes();
 #pragma warning restore IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
 
-		APIReferenceRoot apiRef = new() { Version = Globals.AppVersion, Classes = [], InstanceClasses = [] };
 		List<ScriptEnum> enums = [];
+		List<string> instanceClasses = [];
 		List<Type> missingEnums = [];
 		Dictionary<Type, ScriptClass> classMap = [];
 
@@ -44,9 +46,10 @@ public class APIReferenceGenerator
 			if (type.FullName.Contains("Polytoria.Scripting.Libraries")) continue;
 			if (type.IsGenericType) continue;
 
+			string name = ProcessClassName(type);
 			if (type.IsAssignableTo(typeof(Instance)))
 			{
-				apiRef.InstanceClasses.Add(ProcessClassName(type));
+				instanceClasses.Add(name);
 			}
 
 #pragma warning disable IL2075 // Datamodel types has the reflections needed
@@ -60,93 +63,61 @@ public class APIReferenceGenerator
 
 			foreach (PropertyInfo property in properties)
 			{
-				ScriptPropertyAttribute? propAttribute = property.GetCustomAttribute<ScriptPropertyAttribute>();
-				EditableAttribute? editableAttribute = property.GetCustomAttribute<EditableAttribute>();
+				bool isScriptProperty = property.IsDefined(typeof(ScriptPropertyAttribute));
+				bool isEditable = property.IsDefined(typeof(EditableAttribute));
 
-				if (propAttribute == null && editableAttribute == null) continue;
+				if (!isScriptProperty && !isEditable) continue;
 
-				if (property.PropertyType == typeof(PTSignal) ||
-					(property.PropertyType.IsGenericType &&
-					 property.PropertyType.GetGenericTypeDefinition().Name.StartsWith(nameof(PTSignal))))
+				Type propertyType = property.PropertyType;
+				if (propertyType == typeof(PTSignal) ||
+					(propertyType.IsGenericType &&
+					 propertyType.GetGenericTypeDefinition().Name.StartsWith(nameof(PTSignal))))
 				{
-					ScriptEvent eventDef = new()
-					{
-						Name = property.Name,
-					};
-
-					Type propertyType = property.PropertyType;
-					if (propertyType.IsGenericType)
-					{
-						Type[] genericArgs = propertyType.GetGenericArguments();
-						List<ScriptParameter> paramsDef = [];
-
-						for (int i = 0; i < genericArgs.Length; i++)
-						{
-							string tn = ProcessTypeName(genericArgs[i]) ?? "any";
-							ScriptParameter param = new()
-							{
-								Name = tn.ToCamelCase(),
-								Type = tn,
-								IsOptional = false,
-								DefaultValue = null
-							};
-							paramsDef.Add(param);
-						}
-
-						eventDef.Parameters = paramsDef;
-					}
-
-					eventsDef.Add(eventDef);
+					eventsDef.Add(new(
+						property.Name,
+						propertyType.IsGenericType
+							? [.. propertyType.GetGenericArguments().Select(a => new ScriptParameter(ProcessScriptType(a).FirstOrDefault(ScriptType.Nil)))]
+							: []
+					));
 				}
 				else
 				{
-					ScriptProperty propDef = new()
+					if (propertyType.IsEnum && !ScriptService.EnumMap.ContainsValue(propertyType))
 					{
-						Name = property.Name,
-						Type = ProcessTypeName(property.PropertyType),
-						IsAccessibleByScripts = !(editableAttribute != null && propAttribute == null),
-						IsObsolete = property.GetCustomAttribute<Attributes.ObsoleteAttribute>() != null,
-						IsStatic = property.GetAccessors(true)[0].IsStatic
-					};
-
-					if (propAttribute != null)
-					{
-						MethodInfo? setMethod = property.GetSetMethod(false);
-						propDef.IsReadOnly = setMethod == null;
+						missingEnums.Add(propertyType);
 					}
 
-					if (property.PropertyType.IsEnum)
-					{
-						if (!ScriptService.EnumMap.ContainsValue(property.PropertyType))
-						{
-							missingEnums.Add(property.PropertyType);
-						}
-					}
+					ScriptType? scriptType = ProcessScriptType(propertyType).FirstOrDefault();
+					if (scriptType == null) continue;
 
-					propertiesDef.Add(propDef);
+					propertiesDef.Add(new(
+						property.Name,
+						scriptType,
+						isEditable || isScriptProperty,
+						isScriptProperty && property.GetSetMethod(false) == null,
+						property.GetGetMethod(true)?.IsStatic ?? false,
+						property.GetCustomAttribute<Attributes.ObsoleteAttribute>()?.Info
+					));
 				}
 			}
 
 			foreach (MethodInfo method in methods)
 			{
+				if (method.IsDefined(typeof(HandlesLuaStateAttribute))) continue;
+
 				ScriptMethodAttribute? methodAttribute = method.GetCustomAttribute<ScriptMethodAttribute>();
 				ScriptMetamethodAttribute? metaMethodAttribute = method.GetCustomAttribute<ScriptMetamethodAttribute>();
 
-				if (methodAttribute == null && metaMethodAttribute == null) continue;
-				if (method.IsDefined(typeof(HandlesLuaStateAttribute))) continue;
+				if (methodAttribute != null)
+				{
+					ScriptLegacyMethodAttribute? legacyMethodAttribute = method.GetCustomAttribute<ScriptLegacyMethodAttribute>();
+					// ignore methods that have ScriptMethodAttribute but are only
+					// meant for legacy scripts (e.g. Datastore.Get)
+					if (legacyMethodAttribute != null && legacyMethodAttribute.MethodName == method.Name) continue;
+				}
+				else if (metaMethodAttribute == null) continue;
 
-				bool asyncFunc = false;
 				Type returnType = method.ReturnType;
-
-				if (returnType == typeof(Task))
-				{
-					asyncFunc = true;
-				}
-				else if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
-				{
-					asyncFunc = true;
-					returnType = returnType.GetGenericArguments()[0];
-				}
 
 				List<ScriptParameter> paramsDef = [];
 
@@ -154,89 +125,90 @@ public class APIReferenceGenerator
 				{
 					if (item.ParameterType == typeof(Node)) continue;
 					if (item.IsDefined(typeof(ScriptingCallerAttribute))) continue;
-					ScriptParameter param = new()
-					{
-						Name = item.Name ?? "",
-						Type = ProcessTypeName(item.ParameterType),
-						IsOptional = item.HasDefaultValue,
-						DefaultValue = item.DefaultValue?.ToString() ?? null
-					};
 
-					paramsDef.Add(param);
+					bool isVarArg = item.IsDefined(typeof(ParamArrayAttribute));
+					Type? paramType = isVarArg ? item.ParameterType.GetElementType() : item.ParameterType;
+					if (paramType == null) continue;
+
+					ScriptType? scriptType = ProcessScriptType(paramType, item.HasDefaultValue).FirstOrDefault();
+					if (scriptType == null) continue;
+
+					paramsDef.Add(new(
+						isVarArg ? new ScriptTypeTuple(scriptType) : scriptType,
+						item.Name,
+						item.HasDefaultValue ? item.DefaultValue?.ToString() : null
+					));
 				}
 
-				if (returnType == typeof(Node)) continue;
-
-				ScriptMethod methodDef = new()
-				{
-					Name = metaMethodAttribute != null ? GetMetamethodIndexer(metaMethodAttribute.Metamethod) : methodAttribute?.MethodName ?? method.Name,
-					ReturnType = ProcessTypeName(returnType),
-					IsAsync = asyncFunc,
-					Parameters = paramsDef,
-					IsObsolete = method.GetCustomAttribute<Attributes.ObsoleteAttribute>() != null,
-					IsStatic = method.IsStatic,
-					IsSemiStatic = method.IsStatic && (methodAttribute?.SemiStatic ?? false),
-				};
-
-				methodsDef.Add(methodDef);
+				methodsDef.Add(new(
+					metaMethodAttribute != null ? GetMetamethodIndexer(metaMethodAttribute.Metamethod) : methodAttribute?.MethodName ?? method.Name,
+					[.. ProcessScriptType(returnType)],
+					[.. paramsDef],
+					returnType == typeof(Task) || returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>),
+					method.IsStatic,
+					method.IsStatic && (methodAttribute?.SemiStatic ?? false),
+					method.GetCustomAttribute<Attributes.ObsoleteAttribute>()?.Info
+				));
 			}
 
 			// __index & __newindex for Instance
 			if (type == typeof(Instance))
 			{
-				methodsDef.Add(new()
-				{
-					Name = "__index",
-					ReturnType = "any",
-					IsAsync = false,
-					Parameters =
+				methodsDef.Add(new(
+					"__index",
 					[
-						new() { Name = "indexer", Type = "any" }
+						ScriptType.Any,
 					],
-					IsObsolete = false,
-					IsStatic = false,
-				});
-				methodsDef.Add(new()
-				{
-					Name = "__newindex",
-					ReturnType = "nil",
-					IsAsync = false,
-					Parameters =
 					[
-						new() { Name = "indexer", Type = "any" }
+						new(ScriptType.Any, "index"),
+					]
+				));
+				methodsDef.Add(new(
+					"__newindex",
+					[],
+					[
+						new(ScriptType.Any, "index"),
+						new(ScriptType.Any, "value"),
+					]
+				));
+			}
+
+			bool isInstantiable = type.IsDefined(typeof(InstantiableAttribute), false);
+			if (isInstantiable)
+			{
+				methodsDef.Add(new(
+					"New",
+					[
+						new ScriptType(name),
 					],
-					IsObsolete = false,
-					IsStatic = false,
-				});
+					[
+						new(new ScriptType(nameof(NetworkedObject), true), "parent")
+					],
+					IsStatic: true
+				));
 			}
 
 			StaticAttribute? staticA = type.GetCustomAttribute<StaticAttribute>();
-
-			ScriptClass typeDef = new()
-			{
-				Name = ProcessClassName(type),
-				BaseType = ((type.BaseType != null && type.BaseType.IsAssignableTo(typeof(Node))) || type.BaseType == typeof(object) || type.BaseType == typeof(ValueType)) ? null : type.BaseType?.Name ?? null,
-				IsStatic = staticA != null,
-				StaticAlias = staticA?.Alias,
-				IsAbstract = type.IsDefined(typeof(AbstractAttribute), false),
-				IsInstantiable = type.IsDefined(typeof(InstantiableAttribute), false),
-				Properties = propertiesDef,
-				Methods = methodsDef,
-				Events = eventsDef,
-			};
-
-			classMap[type] = typeDef;
+			classMap[type] = new(
+				name,
+				((type.BaseType != null && type.BaseType.IsAssignableTo(typeof(Node))) || type.BaseType == typeof(object) || type.BaseType == typeof(ValueType)) ? null : type.BaseType?.Name,
+				[.. propertiesDef],
+				[.. methodsDef],
+				[.. eventsDef],
+				staticA != null,
+				type.IsDefined(typeof(AbstractAttribute), false),
+				isInstantiable,
+				staticA?.Alias
+			);
 		}
 
 		// Order classes by inheritance hierarchy
-		List<ScriptClass> orderedClasses = OrderClassesByInheritance(classMap);
-		apiRef.Classes = orderedClasses;
+		List<ScriptClass> classes = OrderClassesByInheritance(classMap);
 
 		foreach ((string key, Type enumType) in ScriptService.EnumMap)
 		{
-			enums.Add(new() { Name = key, InternalName = enumType.Name, Options = Enum.GetNames(enumType) });
+			enums.Add(new(key, enumType.Name, [.. Enum.GetNames(enumType)]));
 		}
-		apiRef.Enums = enums;
 
 		if (Globals.IsInGDEditor)
 		{
@@ -249,7 +221,12 @@ public class APIReferenceGenerator
 			}
 		}
 
-		return apiRef;
+		return new(
+			Globals.AppVersion,
+			[.. classes],
+			[.. enums],
+			[.. instanceClasses]
+		);
 	}
 
 	private static string GetMetamethodIndexer(ScriptObjectMetamethod metamethod)
@@ -290,9 +267,9 @@ public class APIReferenceGenerator
 
 			// Find the actual base type
 			while (baseType != null &&
-				   baseType != typeof(object) &&
-				   baseType != typeof(ValueType) &&
-				   !baseType.IsAssignableTo(typeof(Node)))
+					baseType != typeof(object) &&
+					baseType != typeof(ValueType) &&
+					!baseType.IsAssignableTo(typeof(Node)))
 			{
 				if (classMap.ContainsKey(baseType))
 				{
@@ -313,14 +290,14 @@ public class APIReferenceGenerator
 		void AddTypeAndChildren(Type type)
 		{
 			if (processed.Contains(type)) return;
-			if (!classMap.TryGetValue(type, out ScriptClass v)) return;
+			if (!classMap.TryGetValue(type, out ScriptClass? v)) return;
 
 			// Ensure parent is added
 			Type? baseType = type.BaseType;
 			while (baseType != null &&
-				   baseType != typeof(object) &&
-				   baseType != typeof(ValueType) &&
-				   !baseType.IsAssignableTo(typeof(Node)))
+					baseType != typeof(object) &&
+					baseType != typeof(ValueType) &&
+					!baseType.IsAssignableTo(typeof(Node)))
 			{
 				if (classMap.ContainsKey(baseType) && !processed.Contains(baseType))
 				{
@@ -351,9 +328,9 @@ public class APIReferenceGenerator
 			bool hasParentInSet = false;
 
 			while (baseType != null &&
-				   baseType != typeof(object) &&
-				   baseType != typeof(ValueType) &&
-				   !baseType.IsAssignableTo(typeof(Node)))
+					baseType != typeof(object) &&
+					baseType != typeof(ValueType) &&
+					!baseType.IsAssignableTo(typeof(Node)))
 			{
 				if (classMap.ContainsKey(baseType))
 				{
@@ -395,11 +372,22 @@ public class APIReferenceGenerator
 		return type.Name;
 	}
 
-	private static string? ProcessTypeName(Type? type)
+	private static IEnumerable<ScriptType> ProcessScriptType(Type? type, bool optional = false)
 	{
-		if (type == null) return "nil";
-		if (Nullable.GetUnderlyingType(type) is Type underlying)
+		if (type == null ||
+			type == typeof(void) ||
+			type == typeof(Task) ||
+			type == typeof(ValueType))
+		{
+			yield break;
+		}
+
+		Type? underlying = Nullable.GetUnderlyingType(type);
+		if (underlying != null)
+		{
 			type = underlying;
+			optional = true;
+		}
 
 		if (type == typeof(byte) ||
 			type == typeof(sbyte) ||
@@ -413,161 +401,168 @@ public class APIReferenceGenerator
 			type == typeof(double) ||
 			type == typeof(decimal))
 		{
-			return "number";
+			yield return new ScriptType("number", optional);
 		}
-
-		if (type.IsAssignableTo(typeof(IScriptGDObject)))
+		else if (type == typeof(string))
 		{
-			return ProcessClassName(type);
+			yield return new ScriptType("string", optional);
 		}
-
-		if (type == typeof(Task))
+		else if (type == typeof(bool))
 		{
-			return "nil";
+			yield return new ScriptType("boolean", optional);
 		}
-		else if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Task<>))
+		else if (type == typeof(object))
 		{
-			return ProcessTypeName(type.GetGenericArguments()[0]);
+			yield return new ScriptType("any", optional);
 		}
-
-		if (type == typeof(string))
+		else if (type == typeof(byte[]))
 		{
-			return "string";
+			yield return new ScriptType("buffer", optional);
 		}
-
-		if (type == typeof(byte[]))
+		// TODO: make PTFunction and PTCallback generic so these aren't garbage types
+		else if (type == typeof(PTCallback))
 		{
-			return "buffer";
+			yield return new ScriptTypeFunction([new(ScriptTypeTuple.Any)], [], optional);
 		}
-
-		if (type == typeof(bool))
+		else if (type == typeof(PTFunction))
 		{
-			return "boolean";
+			yield return new ScriptTypeFunction([new(ScriptTypeTuple.Any)], [ScriptTypeTuple.Any], optional);
 		}
-
-		if (type == typeof(Nullable) || type == typeof(void))
+		// this behavior is caused by LuaMetatable
+		else if (type == typeof(Task<object?[]>))
 		{
-			return "nil";
+			yield return ScriptTypeTuple.Any;
 		}
-
-		if (type == typeof(object[]))
-		{
-			return "any";
-		}
-
-		if (type.IsAssignableTo(typeof(IDictionary)))
-		{
-			return "table";
-		}
-
-		if (type.IsArray)
-		{
-			string elementTypeName = ProcessTypeName(type.GetElementType()) ?? "nil";
-			return "{ " + elementTypeName + " }";
-		}
-
-		if (type == typeof(PTCallback))
-		{
-			return "() -> ()";
-		}
-
-		if (type == typeof(PTFunction))
-		{
-			return "() -> ()";
-		}
-
 		// --- Proxies --- //
-
-		if (type == typeof(Aabb))
+		else if (type == typeof(Aabb))
 		{
-			return "Bounds";
+			yield return new ScriptType("Bounds", optional);
 		}
-
-		// -------------- //
-
-		if (type == typeof(object))
+		// --------------- //
+		else if (type.IsAssignableTo(typeof(ITuple)))
 		{
-			return "any";
+			foreach (ScriptType t in type.GetGenericArguments().SelectMany(arg => ProcessScriptType(arg)))
+			{
+				yield return t;
+			}
 		}
-
-		if (type == typeof(ValueType))
+		else if (type.IsAssignableTo(typeof(IScriptGDObject)))
 		{
-			return null;
+			yield return new ScriptType(ProcessClassName(type), optional);
 		}
-
-		if (type.IsEnum)
+		else if (type.IsAssignableTo(typeof(IDictionary)))
+		{
+			ScriptType keyType = ScriptType.Any;
+			ScriptType valueType = ScriptType.Any;
+			Type[] args = type.GetGenericArguments();
+			if (args.Length >= 2)
+			{
+				keyType = ProcessScriptType(args[0]).FirstOrDefault(ScriptType.Nil);
+				valueType = ProcessScriptType(args[1]).FirstOrDefault(ScriptType.Nil);
+			}
+			yield return new ScriptTypeDictionary(keyType, valueType, optional);
+		}
+		else if (type.IsGenericType)
+		{
+			Type genericType = type.GetGenericTypeDefinition();
+			if (genericType == typeof(Task<>))
+			{
+				foreach (ScriptType t in ProcessScriptType(type.GetGenericArguments()[0]))
+				{
+					yield return t;
+				}
+			}
+			else if (genericType == typeof(IEnumerable<>))
+			{
+				yield return new ScriptTypeFunction([new(ScriptType.Any)], [ProcessScriptType(type.GetGenericArguments()[0]).FirstOrDefault(ScriptType.Nil), ScriptType.Nil, ScriptType.Nil], optional);
+			}
+		}
+		else if (type.IsArray)
+		{
+			yield return new ScriptTypeArray(ProcessScriptType(type.GetElementType()).FirstOrDefault(ScriptType.Nil), optional);
+		}
+		else if (type.IsEnum)
 		{
 			// Find the Enum's external name
 			string name = ScriptService.EnumMap.FirstOrDefault(x => x.Value == type).Key;
 			if (!string.IsNullOrEmpty(name))
-				return name;
+				yield return new ScriptType(name, optional);
 		}
-
-		return type.Name;
+		else
+		{
+			yield return new ScriptType(type.Name, optional);
+		}
 	}
 
-	public struct ScriptParameter
+	public record APIReferenceRoot(string Version, ImmutableArray<ScriptClass> Classes, ImmutableArray<ScriptEnum> Enums, ImmutableArray<string> InstanceClasses);
+}
+
+public record ScriptParameter(ScriptType Type, string? Name = null, string? DefaultValue = null)
+{
+	public string LuaifyForFuncType()
 	{
-		public string Name;
-		public string? Type;
-		public bool IsOptional;
-		public string? DefaultValue;
+		string luaType = Type.Luaify();
+		if (Type is not ScriptTypeTuple && Name != null) return $"{Name}: {luaType}";
+
+		return luaType;
 	}
 
-	public struct ScriptMethod
+	public string LuaifyForFuncDef()
 	{
-		public string Name;
-		public string? ReturnType;
-		public List<ScriptParameter> Parameters;
-		public bool IsAsync;
-		public bool IsObsolete;
-		public bool IsStatic;
-		public bool IsSemiStatic;
-	}
+		if (Type is ScriptTypeTuple t) return $"...: {t.ElementType.Luaify()}";
 
-	public struct ScriptProperty
-	{
-		public string Name;
-		public string? Type;
-		public bool IsAccessibleByScripts;
-		public bool IsReadOnly;
-		public bool IsObsolete;
-		public bool IsStatic;
+		return $"{Name ?? "_"}: {Type.Luaify()}";
 	}
+}
 
-	public struct ScriptEvent
-	{
-		public string Name;
-		public List<ScriptParameter> Parameters;
-	}
+public record ScriptMethod(string Name, ImmutableArray<ScriptType> Returns, ImmutableArray<ScriptParameter> Parameters, bool IsAsync = false, bool IsStatic = false, bool IsSemiStatic = false, ObsoletionInfo? ObsoletionInfo = null)
+{
+	[JsonIgnore]
+	public readonly bool IsMetamethod = Name.StartsWith("__");
+}
 
-	public struct ScriptEnum
-	{
-		public string Name;
-		public string InternalName;
-		public string[] Options;
-	}
+public record ScriptProperty(string Name, ScriptType Type, bool IsAccessibleByScripts, bool IsReadOnly, bool IsStatic, ObsoletionInfo? ObsoletionInfo = null);
 
-	public struct ScriptClass
-	{
-		public string Name;
-		public string? BaseType;
-		public List<ScriptProperty> Properties;
-		public List<ScriptMethod> Methods;
-		public List<ScriptEvent> Events;
-		public bool IsStatic;
-		public bool IsAbstract;
-		public bool IsInstantiable;
-		public string? StaticAlias;
-	}
+public record ScriptEvent(string Name, ImmutableArray<ScriptParameter> Parameters);
 
-	public struct APIReferenceRoot
-	{
-		public string Version;
-		public List<ScriptClass> Classes;
-		public List<ScriptEnum> Enums;
-		public List<string> InstanceClasses;
-	}
+public record ScriptEnum(string Name, string InternalName, ImmutableArray<string> Options);
+
+public record ScriptClass(string Name, string? BaseType, ImmutableArray<ScriptProperty> Properties, ImmutableArray<ScriptMethod> Methods, ImmutableArray<ScriptEvent> Events, bool IsStatic, bool IsAbstract, bool IsInstantiable, string? StaticAlias);
+
+[JsonDerivedType(typeof(ScriptTypeTuple))]
+[JsonDerivedType(typeof(ScriptTypeFunction))]
+[JsonDerivedType(typeof(ScriptTypeArray))]
+[JsonDerivedType(typeof(ScriptTypeDictionary))]
+public record ScriptType(string Name, bool IsOptional = false)
+{
+	public static readonly ScriptType Nil = new("nil");
+	public static readonly ScriptType Any = new("any");
+
+	protected virtual string InternalLuaType => Name;
+
+	public string Luaify() => IsOptional ? InternalLuaType + '?' : InternalLuaType;
+}
+
+public record ScriptTypeTuple(ScriptType ElementType) : ScriptType("Tuple", false)
+{
+	public new static readonly ScriptTypeTuple Any = new(ScriptType.Any);
+
+	protected override string InternalLuaType => $"...{ElementType.Luaify()}";
+}
+
+public record ScriptTypeFunction(ImmutableArray<ScriptParameter> Parameters, ImmutableArray<ScriptType> Returns, bool IsOptional = false) : ScriptType("function", IsOptional)
+{
+	protected override string InternalLuaType => $"({string.Join(", ", Parameters.Select(p => p.LuaifyForFuncType()))}) -> ({string.Join(", ", Returns.Select(t => t.Luaify()))})";
+}
+
+public record ScriptTypeArray(ScriptType ElementType, bool IsOptional = false) : ScriptType("Array", IsOptional)
+{
+	protected override string InternalLuaType => $"{{ {ElementType.Luaify()} }}";
+}
+
+public record ScriptTypeDictionary(ScriptType KeyType, ScriptType ValueType, bool IsOptional = false) : ScriptType("Dictionary", IsOptional)
+{
+	protected override string InternalLuaType => $"{{ [{KeyType.Luaify()}]: {ValueType.Luaify()} }}";
 }
 
 [JsonSourceGenerationOptions(IncludeFields = true)]
@@ -576,17 +571,20 @@ public class APIReferenceGenerator
 [JsonSerializable(typeof(ScriptEnum))]
 [JsonSerializable(typeof(ScriptEvent))]
 [JsonSerializable(typeof(ScriptProperty))]
+[JsonSerializable(typeof(ObsoletionInfo))]
 [JsonSerializable(typeof(ScriptMethod))]
 [JsonSerializable(typeof(ScriptParameter))]
+[JsonSerializable(typeof(ScriptType))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(double))]
 [JsonSerializable(typeof(float))]
 [JsonSerializable(typeof(bool))]
-[JsonSerializable(typeof(List<ScriptClass>))]
-[JsonSerializable(typeof(List<ScriptEnum>))]
-[JsonSerializable(typeof(List<string>))]
-[JsonSerializable(typeof(List<ScriptProperty>))]
-[JsonSerializable(typeof(List<ScriptMethod>))]
-[JsonSerializable(typeof(List<ScriptEvent>))]
-[JsonSerializable(typeof(List<ScriptParameter>))]
+[JsonSerializable(typeof(ImmutableArray<ScriptClass>))]
+[JsonSerializable(typeof(ImmutableArray<ScriptEnum>))]
+[JsonSerializable(typeof(ImmutableArray<string>))]
+[JsonSerializable(typeof(ImmutableArray<ScriptProperty>))]
+[JsonSerializable(typeof(ImmutableArray<ScriptMethod>))]
+[JsonSerializable(typeof(ImmutableArray<ScriptEvent>))]
+[JsonSerializable(typeof(ImmutableArray<ScriptParameter>))]
+[JsonSerializable(typeof(ImmutableArray<ScriptType>))]
 internal partial class APIRefGenerationContext : JsonSerializerContext { }

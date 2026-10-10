@@ -404,7 +404,7 @@ public sealed partial class Player : NPC
 		return result;
 	}
 
-	[ScriptProperty, Attributes.Obsolete("Use Input.IsInputFocused instead")]
+	[ScriptProperty, Attributes.Obsolete(use: "Input.IsInputFocused")]
 	public bool IsInputFocused => Root.Input.IsInputFocused;
 
 	[ScriptProperty]
@@ -440,7 +440,7 @@ public sealed partial class Player : NPC
 	[ScriptProperty]
 	public Inventory Inventory => FindChild<Inventory>("Inventory")!;
 
-	[Attributes.Obsolete("Use Inventory instead"), ScriptProperty]
+	[Attributes.Obsolete(use: "Inventory"), ScriptProperty]
 	public Inventory Backpack => Inventory;
 
 	// Emotes visible in emote wheel
@@ -1030,7 +1030,7 @@ public sealed partial class Player : NPC
 		}
 	}
 
-	[ScriptMethod, Attributes.Obsolete("Use PurchasesService.OwnsItem instead")]
+	[ScriptMethod, Attributes.Obsolete(use: "PurchasesService.OwnsItemAsync")]
 	public void OwnsItem(int assetId, PTCallback callback)
 	{
 		Root.Purchases.OwnsItemAsync(this, assetId).ContinueWith(tsk =>
