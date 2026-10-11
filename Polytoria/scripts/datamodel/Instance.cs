@@ -13,6 +13,7 @@ using Polytoria.Formats;
 using Polytoria.Scripting;
 using Polytoria.Networking.Synchronizers;
 using Polytoria.Shared;
+using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -55,7 +56,7 @@ public partial class Instance : NetworkedObject
 		}
 		set
 		{
-			if (GetType().IsDefined(typeof(StaticAttribute), false))
+			if (GetType().IsDefinedCached(typeof(StaticAttribute), false))
 			{
 				throw new InvalidOperationException("Cannot reparent a static class");
 			}
@@ -809,7 +810,14 @@ public partial class Instance : NetworkedObject
 
 	public bool IsDescendantOfClass<T>()
 	{
-		return IsDescendantOfClass(typeof(T).Name);
+		Instance? parent = Parent;
+		while (parent != null)
+		{
+			if (parent is T)
+				return true;
+			parent = parent.Parent;
+		}
+		return false;
 	}
 
 	[ScriptMethod("New")]
