@@ -60,9 +60,9 @@ public sealed partial class BaseAssetProperty : Control, IProperty<BaseAsset?>
 
 			// TODO: Kinda hardcoded, we should look into this
 			if (baseAsset is AudioAsset)
-			{
 				typeToLoad = typeof(AudioAsset);
-			}
+			else if (baseAsset is CursorAsset)
+				typeToLoad = typeof(CursorAsset);
 
 			IPropertySubview? subview = Globals.LoadSubviewProperty(typeToLoad);
 			if (subview != null)

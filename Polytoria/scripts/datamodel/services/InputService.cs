@@ -241,10 +241,6 @@ public sealed partial class InputService : Instance
 
 		if (Root != null && Root.Network != null)
 		{
-			if (Root.SessionType == World.SessionTypeEnum.Client)
-			{
-				SetupCursors();
-			}
 			if (Root.Network.IsServer)
 			{
 				Root.Network.PeerPreInit += OnPeerPreInit;
@@ -296,14 +292,6 @@ public sealed partial class InputService : Instance
 		Globals.GodotNotification -= OnNotification;
 		Input.Singleton.JoyConnectionChanged -= OnJoyConnectionChanged;
 		base.PreDelete();
-	}
-
-	private static void SetupCursors()
-	{
-		Input.SetCustomMouseCursor(GD.Load<Image>("res://assets/textures/client/cursor/arrow.png"), Input.CursorShape.Arrow);
-		Input.SetCustomMouseCursor(GD.Load<Image>("res://assets/textures/client/cursor/click.png"), Input.CursorShape.PointingHand);
-		Input.SetCustomMouseCursor(GD.Load<Image>("res://assets/textures/client/cursor/grab.png"), Input.CursorShape.Drag);
-		Input.SetCustomMouseCursor(GD.Load<Image>("res://assets/textures/client/cursor/grabbing.png"), Input.CursorShape.CanDrop);
 	}
 
 	private void OnPeerPreInit(int peerID)
