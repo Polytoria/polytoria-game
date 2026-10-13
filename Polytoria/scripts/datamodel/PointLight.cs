@@ -36,6 +36,7 @@ public sealed partial class PointLight : Light
 #if CREATOR
 		GDNode.AddChild(_sphere = new() { Visible = false }, @internal: Node.InternalMode.Back);
 #endif
+		excludedBoundNodes.Add(GDLight);
 		base.Init();
 	}
 
