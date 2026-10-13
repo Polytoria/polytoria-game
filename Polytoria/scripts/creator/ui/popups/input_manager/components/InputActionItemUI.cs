@@ -12,22 +12,32 @@ public partial class InputActionItemUI : Button
 {
 	[Export] private Label _nameLabel = null!;
 	[Export] private TextureRect _iconRect = null!;
+
 	public InputAction TargetAction = null!;
 
 	public override void _Ready()
 	{
+		UpdateAppearance();
+		TargetAction.Renamed += UpdateAppearance;
+		base._Ready();
+	}
+
+	public override void _ExitTree()
+	{
+		TargetAction.Renamed -= UpdateAppearance;
+		base._ExitTree();
+	}
+
+	private void UpdateAppearance()
+	{
 		_nameLabel.Text = TargetAction.Name;
 
-		string iconName = "button";
-
-		if (TargetAction is InputActionAxis)
+		string iconName = TargetAction switch
 		{
-			iconName = "axis";
-		}
-		else if (TargetAction is InputActionVector2)
-		{
-			iconName = "vector2";
-		}
+			InputActionAxis => "axis",
+			InputActionVector2 => "vector2",
+			_ => "button"
+		};
 
 		_iconRect.Texture = Globals.LoadUIIcon("input-" + iconName);
 	}
