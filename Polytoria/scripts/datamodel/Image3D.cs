@@ -30,6 +30,9 @@ public sealed partial class Image3D : Dynamic
 	private bool _shaded;
 	private bool _faceCamera;
 	private bool _doubleSided;
+	private bool _fixedSize;
+	private bool _alwaysOnTop;
+	private bool _visible;
 	private TextureFilterEnum _textureFilter;
 
 	[Editable, ScriptProperty]
@@ -174,6 +177,42 @@ public sealed partial class Image3D : Dynamic
 		}
 	}
 
+	[Editable, ScriptProperty, DefaultValue(false)]
+	public bool FixedSize
+	{
+		get => _fixedSize;
+		set
+		{
+			_fixedSize = value;
+			_material.FixedSize = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue(false)]
+	public bool AlwaysOnTop
+	{
+		get => _alwaysOnTop;
+		set
+		{
+			_alwaysOnTop = value;
+			_material.NoDepthTest = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue(true)]
+	public bool Visible
+	{
+		get => _visible;
+		set
+		{
+			_visible = value;
+			_mesh.Visible = value;
+			OnPropertyChanged();
+		}
+	}
+
 	[Editable, ScriptProperty, DefaultValue(TextureFilterEnum.Linear)]
 	public TextureFilterEnum TextureFilter
 	{
@@ -208,6 +247,7 @@ public sealed partial class Image3D : Dynamic
 
 		Shaded = true;
 		CastShadows = true;
+		Visible = true;
 
 		base.Init();
 	}

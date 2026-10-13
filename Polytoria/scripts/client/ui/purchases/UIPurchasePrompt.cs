@@ -14,14 +14,20 @@ namespace Polytoria.Client.UI.Purchases;
 public partial class UIPurchasePrompt : Control
 {
 	private const float PurchaseDelaySec = 1.25f;
+	private const float PurchaseHoldSec = 1.5f;
+	private const float PurchaseHoldReleaseSec = 0.15f;
 
 	[Export] private Label _purchaseText = null!;
 	[Export] private Label _priceLabel = null!;
 	[Export] private Button _purchaseButton = null!;
+	[Export] private Control _purchaseHoldFill = null!;
+	[Export] private Control _purchaseHoldDarken = null!;
 	[Export] private Button _cancelButton = null!;
 	[Export] private TextureRect _iconRect = null!;
 	[Export] private AnimationPlayer _animPlay = null!;
 	private PTImageAsset? _iconImg;
+	private Tween? _holdTween;
+	private bool _purchaseTriggered;
 
 	public event Action<bool>? Requested;
 
@@ -29,7 +35,8 @@ public partial class UIPurchasePrompt : Control
 
 	public override void _Ready()
 	{
-		_purchaseButton.Pressed += OnPurchase;
+		_purchaseButton.ButtonDown += OnPurchaseHoldStart;
+		_purchaseButton.ButtonUp += OnPurchaseHoldEnd;
 		_cancelButton.Pressed += OnCancel;
 		base._Ready();
 	}
@@ -40,8 +47,35 @@ public partial class UIPurchasePrompt : Control
 		base._ExitTree();
 	}
 
-	private void OnPurchase()
+	private void OnPurchaseHoldStart()
 	{
+		_purchaseTriggered = false;
+
+		_holdTween?.Kill();
+		_holdTween = CreateTween();
+		_holdTween.SetParallel(true);
+		_holdTween.TweenProperty(_purchaseHoldFill, "size:x", _purchaseButton.Size.X, PurchaseHoldSec)
+			.From(0f);
+		_holdTween.TweenProperty(_purchaseHoldDarken, "size:x", _purchaseButton.Size.X, PurchaseHoldSec)
+			.From(0f);
+		_holdTween.Chain().TweenCallback(Callable.From(OnPurchaseHoldCompleted));
+	}
+
+	private void OnPurchaseHoldEnd()
+	{
+		if (_purchaseTriggered)
+			return;
+
+		_holdTween?.Kill();
+		_holdTween = CreateTween();
+		_holdTween.SetParallel(true);
+		_holdTween.TweenProperty(_purchaseHoldFill, "size:x", 0f, PurchaseHoldReleaseSec);
+		_holdTween.TweenProperty(_purchaseHoldDarken, "size:x", 0f, PurchaseHoldReleaseSec);
+	}
+
+	private void OnPurchaseHoldCompleted()
+	{
+		_purchaseTriggered = true;
 		Requested?.Invoke(true);
 		_purchaseButton.Disabled = true;
 		_cancelButton.Disabled = true;
@@ -59,6 +93,10 @@ public partial class UIPurchasePrompt : Control
 		_priceLabel.Text = item.Price!.Value.ToString();
 
 		// Reset button state
+		_holdTween?.Kill();
+		_purchaseTriggered = false;
+		_purchaseHoldFill.Size = new Vector2(0f, _purchaseHoldFill.Size.Y);
+		_purchaseHoldDarken.Size = new Vector2(0f, _purchaseHoldDarken.Size.Y);
 		_cancelButton.Disabled = false;
 		_purchaseButton.Disabled = true;
 		_purchaseButton.GrabFocus();

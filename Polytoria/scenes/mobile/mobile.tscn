@@ -139,6 +139,7 @@ text = "Places"
 horizontal_alignment = 1
 
 [node name="Avatar" type="Button" parent="Layout/Navbar/HBoxContainer" unique_id=1210270017]
+visible = false
 modulate = Color(1, 1, 1, 0.49803922)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -167,7 +168,37 @@ layout_mode = 2
 text = "Avatar"
 horizontal_alignment = 1
 
+[node name="Profile" type="Button" parent="Layout/Navbar/HBoxContainer" unique_id=1141738403]
+modulate = Color(1, 1, 1, 0.49803922)
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("4_xbpss")
+SwitchTo = 7
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Layout/Navbar/HBoxContainer/Profile" unique_id=1526074079]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="Layout/Navbar/HBoxContainer/Profile/VBoxContainer" unique_id=841671420]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+texture = ExtResource("6_xbpss")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="Layout/Navbar/HBoxContainer/Profile/VBoxContainer" unique_id=874463613]
+layout_mode = 2
+text = "Profile"
+horizontal_alignment = 1
+
 [node name="Store" type="Button" parent="Layout/Navbar/HBoxContainer" unique_id=25185480]
+visible = false
 modulate = Color(1, 1, 1, 0.49803922)
 layout_mode = 2
 size_flags_horizontal = 3

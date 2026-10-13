@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 
@@ -8,6 +9,7 @@ public static class ReflectionCache
 {
 	private static readonly Dictionary<MemberInfo, Dictionary<Type, bool>> _isDefinedCache = new();
 	private static readonly Dictionary<MemberInfo, Dictionary<Type, Attribute?>> _customAttributeCache = new();
+	private static readonly ConcurrentDictionary<(MemberInfo, Type, bool), bool> _isDefinedInheritCache = new();
 
 	public static bool IsDefinedCached(this MemberInfo mi, Type attributeType)
 	{
@@ -24,6 +26,10 @@ public static class ReflectionCache
 		inner[attributeType] = result;
 
 		return result;
+	}
+	public static bool IsDefinedCached(this MemberInfo mi, Type attributeType, bool inherit)
+	{
+		return _isDefinedInheritCache.GetOrAdd((mi, attributeType, inherit), static key => key.Item1.IsDefined(key.Item2, key.Item3));
 	}
 
 	public static T? GetCustomAttributeCached<T>(this MemberInfo mi) where T : Attribute

@@ -51,7 +51,7 @@ public partial class Datastore : IScriptObject
 		await Provider.WriteData(key, null);
 	}
 
-	[ScriptLegacyMethod(nameof(Get))]
+	[ScriptMethod, ScriptLegacyMethod(nameof(Get))]
 	public void Get(string key, PTCallback? callback)
 	{
 		_ = GetAsync(key).ContinueWith(tsk =>
@@ -68,7 +68,7 @@ public partial class Datastore : IScriptObject
 		});
 	}
 
-	[ScriptLegacyMethod(nameof(Set))]
+	[ScriptMethod, ScriptLegacyMethod(nameof(Set))]
 	public void Set(string key, object value, PTCallback? callback)
 	{
 		_ = SetAsync(key, value).ContinueWith(tsk =>
@@ -84,7 +84,7 @@ public partial class Datastore : IScriptObject
 		});
 	}
 
-	[ScriptLegacyMethod(nameof(Remove))]
+	[ScriptMethod, ScriptLegacyMethod(nameof(Remove))]
 	public void Remove(string key, PTCallback? callback)
 	{
 		_ = RemoveAsync(key).ContinueWith(tsk =>

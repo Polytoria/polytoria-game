@@ -42,6 +42,12 @@
 [ext_resource type="PackedScene" uid="uid://dccewf7osrg82" path="res://scenes/creator/popups/search/search.tscn" id="38_ce354"]
 [ext_resource type="PackedScene" uid="uid://dauvdi8d2yqpy" path="res://scenes/creator/wizard/introduction_wizard.tscn" id="39_dfqoe"]
 [ext_resource type="PackedScene" uid="uid://b7voaj38vy8xd" path="res://scenes/creator/docks/bottombar/console_filters.tscn" id="40_console_filters"]
+[ext_resource type="Script" path="res://scripts/creator/ui/Splitter.cs" id="50_splitr"]
+[ext_resource type="Script" path="res://scripts/creator/ui/layout/CollapsiblePanel.cs" id="50_colpnl"]
+[ext_resource type="Script" path="res://scripts/creator/ui/docking/DockHost.cs" id="50_dckhst"]
+[ext_resource type="Script" path="res://scripts/creator/ui/docking/DockTabBar.cs" id="50_dcktab"]
+[ext_resource type="Script" path="res://scripts/creator/ui/docking/DockRegion.cs" id="50_dckrgn"]
+[ext_resource type="Script" path="res://scripts/creator/ui/docking/DockDragSurface.cs" id="50_dckprv"]
 
 [sub_resource type="FontVariation" id="FontVariation_khfyn"]
 variation_opentype = {
@@ -1040,6 +1046,7 @@ theme_override_constants/separation = 0
 theme_override_icons/grabber = ExtResource("26_bc04q")
 split_offsets = PackedInt32Array(320, 0, 320)
 split_offset = 320
+script = ExtResource("50_splitr")
 
 [node name="Left" type="PanelContainer" parent="GUI/Splitter" unique_id=1145487419]
 custom_minimum_size = Vector2(320, 0)
@@ -1047,16 +1054,98 @@ layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_4pher")
 theme_override_styles/panel = SubResource("StyleBoxFlat_5xv5o")
+script = ExtResource("50_colpnl")
+PanelId = "left_dock"
+Edge = 0
 
-[node name="Split" type="VSplitContainer" parent="GUI/Splitter/Left" unique_id=1589463682]
-custom_minimum_size = Vector2(300, 0)
+[node name="DockRegion" type="Control" parent="GUI/Splitter/Left"]
+layout_mode = 2
+mouse_filter = 0
+size_flags_vertical = 3
+script = ExtResource("50_dckrgn")
+RegionId = "left"
+
+[node name="Single" type="VBoxContainer" parent="GUI/Splitter/Left/DockRegion"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+script = ExtResource("50_dckhst")
+HostId = "left_single"
+
+[node name="Bar" type="HBoxContainer" parent="GUI/Splitter/Left/DockRegion/Single"]
+custom_minimum_size = Vector2(0, 26)
 layout_mode = 2
 
-[node name="Toolbox" parent="GUI/Splitter/Left/Split" unique_id=1950152327 instance=ExtResource("26_dfqoe")]
+[node name="TabBar" type="TabBar" parent="GUI/Splitter/Left/DockRegion/Single/Bar"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("50_dcktab")
+
+[node name="Body" type="PanelContainer" parent="GUI/Splitter/Left/DockRegion/Single"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Toolbox" parent="GUI/Splitter/Left/DockRegion/Single/Body" unique_id=1950152327 instance=ExtResource("26_dfqoe")]
 layout_mode = 2
 
-[node name="FileBrowser" parent="GUI/Splitter/Left/Split" unique_id=1200544874 instance=ExtResource("27_4n5gq")]
+[node name="FileBrowser" parent="GUI/Splitter/Left/DockRegion/Single/Body" unique_id=1200544874 instance=ExtResource("27_4n5gq")]
 layout_mode = 2
+
+[node name="Split" type="VSplitContainer" parent="GUI/Splitter/Left/DockRegion"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 2
+split_offset = 0
+
+[node name="Primary" type="VBoxContainer" parent="GUI/Splitter/Left/DockRegion/Split"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("50_dckhst")
+HostId = "left_top"
+
+[node name="Bar" type="HBoxContainer" parent="GUI/Splitter/Left/DockRegion/Split/Primary"]
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+
+[node name="TabBar" type="TabBar" parent="GUI/Splitter/Left/DockRegion/Split/Primary/Bar"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("50_dcktab")
+
+[node name="Body" type="PanelContainer" parent="GUI/Splitter/Left/DockRegion/Split/Primary"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Secondary" type="VBoxContainer" parent="GUI/Splitter/Left/DockRegion/Split"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("50_dckhst")
+HostId = "left_bottom"
+
+[node name="Bar" type="HBoxContainer" parent="GUI/Splitter/Left/DockRegion/Split/Secondary"]
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+
+[node name="TabBar" type="TabBar" parent="GUI/Splitter/Left/DockRegion/Split/Secondary/Bar"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("50_dcktab")
+
+[node name="Body" type="PanelContainer" parent="GUI/Splitter/Left/DockRegion/Split/Secondary"]
+layout_mode = 2
+size_flags_vertical = 3
 
 [node name="Center" type="VSplitContainer" parent="GUI/Splitter" unique_id=906556874]
 layout_mode = 2
@@ -1140,6 +1229,9 @@ layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_0tvsp")
 theme_override_styles/panel = SubResource("StyleBoxFlat_ubkni")
+script = ExtResource("50_colpnl")
+PanelId = "bottom_dock"
+Edge = 1
 
 [node name="Tabs" type="TabContainer" parent="GUI/Splitter/Center/BottomTabs" unique_id=1589727556]
 layout_mode = 2
@@ -1214,18 +1306,110 @@ layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_4pher")
 theme_override_styles/panel = SubResource("StyleBoxFlat_5xv5o")
+script = ExtResource("50_colpnl")
+PanelId = "right_dock"
+Edge = 1
 
-[node name="Split" type="VSplitContainer" parent="GUI/Splitter/Right" unique_id=670313949]
-custom_minimum_size = Vector2(300, 0)
+[node name="DockRegion" type="Control" parent="GUI/Splitter/Right"]
 layout_mode = 2
-split_offsets = PackedInt32Array(-250)
-split_offset = -250
+mouse_filter = 0
+size_flags_vertical = 3
+script = ExtResource("50_dckrgn")
+RegionId = "right"
 
-[node name="Explorer" parent="GUI/Splitter/Right/Split" unique_id=63511104 instance=ExtResource("32_4fw2t")]
+[node name="Single" type="VBoxContainer" parent="GUI/Splitter/Right/DockRegion"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+script = ExtResource("50_dckhst")
+HostId = "right_single"
+
+[node name="Bar" type="HBoxContainer" parent="GUI/Splitter/Right/DockRegion/Single"]
+custom_minimum_size = Vector2(0, 26)
 layout_mode = 2
 
-[node name="Properties" parent="GUI/Splitter/Right/Split" unique_id=2034223215 instance=ExtResource("34_bc04q")]
+[node name="TabBar" type="TabBar" parent="GUI/Splitter/Right/DockRegion/Single/Bar"]
 layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("50_dcktab")
+
+[node name="Body" type="PanelContainer" parent="GUI/Splitter/Right/DockRegion/Single"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Explorer" parent="GUI/Splitter/Right/DockRegion/Single/Body" unique_id=63511104 instance=ExtResource("32_4fw2t")]
+layout_mode = 2
+
+[node name="Properties" parent="GUI/Splitter/Right/DockRegion/Single/Body" unique_id=2034223215 instance=ExtResource("34_bc04q")]
+layout_mode = 2
+
+[node name="Split" type="VSplitContainer" parent="GUI/Splitter/Right/DockRegion"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 2
+split_offset = 0
+
+[node name="Primary" type="VBoxContainer" parent="GUI/Splitter/Right/DockRegion/Split"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("50_dckhst")
+HostId = "right_top"
+
+[node name="Bar" type="HBoxContainer" parent="GUI/Splitter/Right/DockRegion/Split/Primary"]
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+
+[node name="TabBar" type="TabBar" parent="GUI/Splitter/Right/DockRegion/Split/Primary/Bar"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("50_dcktab")
+
+[node name="Body" type="PanelContainer" parent="GUI/Splitter/Right/DockRegion/Split/Primary"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Secondary" type="VBoxContainer" parent="GUI/Splitter/Right/DockRegion/Split"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("50_dckhst")
+HostId = "right_bottom"
+
+[node name="Bar" type="HBoxContainer" parent="GUI/Splitter/Right/DockRegion/Split/Secondary"]
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+
+[node name="TabBar" type="TabBar" parent="GUI/Splitter/Right/DockRegion/Split/Secondary/Bar"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("50_dcktab")
+
+[node name="Body" type="PanelContainer" parent="GUI/Splitter/Right/DockRegion/Split/Secondary"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DockDragSurface" type="Control" parent="GUI"]
+z_index = 100
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("50_dckprv")
+
 
 [node name="Footer" type="PanelContainer" parent="GUI" unique_id=1811719814 node_paths=PackedStringArray("_titleLabel", "_versionLabel")]
 layout_mode = 1

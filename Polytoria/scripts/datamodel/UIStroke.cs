@@ -128,7 +128,8 @@ public partial class UIStroke : Instance
 		StyleBoxFlat sb = new()
 		{
 			AntiAliasing = true,
-			AntiAliasingSize = 2,
+			AntiAliasingSize = 1,
+			CornerDetail = 20,
 			CornerRadiusTopLeft = Mathf.RoundToInt(corners.TopLeft),
 			CornerRadiusTopRight = Mathf.RoundToInt(corners.TopRight),
 			CornerRadiusBottomLeft = Mathf.RoundToInt(corners.BottomLeft),

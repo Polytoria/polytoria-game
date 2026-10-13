@@ -25,11 +25,6 @@ public partial class PTMeshAnimationAsset : MeshAnimationAsset
 		}
 	}
 
-	public static void RegisterAsset()
-	{
-		RegisterType<PTMeshAnimationAsset>();
-	}
-
 	public override void LoadResource()
 	{
 		AssetLoader.Singleton.GetResource(

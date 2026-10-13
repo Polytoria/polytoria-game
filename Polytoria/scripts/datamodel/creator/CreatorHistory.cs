@@ -123,6 +123,11 @@ public sealed partial class CreatorHistory : Instance
 		_currentAction = null;
 	}
 
+	public void CancelAction()
+	{
+		_currentAction = null;
+	}
+
 	/// <summary>
 	/// Group the instances and add to history
 	/// </summary>
@@ -205,6 +210,8 @@ public sealed partial class CreatorHistory : Instance
 
 	public void DuplicateInstances(Instance[] instances)
 	{
+		Root.CreatorContext.Gizmos.PauseDrag();
+
 		Instance[]? child = null;
 
 		NewAction("Duplicate instances");
@@ -224,6 +231,8 @@ public sealed partial class CreatorHistory : Instance
 			}
 		}));
 		CommitAction();
+
+		Root.CreatorContext.Gizmos.ResumeDrag();
 	}
 
 	public void DeleteInstances(Instance[] instances)

@@ -258,6 +258,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_t4bjj")
 layout_mode = 1
 
 [node name="Close" type="Button" parent="HBoxContainer/VBoxContainer/Layout" unique_id=1267073792]
+visible = false
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxEmpty_lfm17")

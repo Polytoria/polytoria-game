@@ -68,6 +68,7 @@ public sealed partial class Mesh : Entity
 					_asset.QueueLoadResource();
 				}
 			}
+			_asset?.PropertyChanged.Connect(UpdateColor);
 			OnPropertyChanged();
 		}
 	}
@@ -314,6 +315,7 @@ public sealed partial class Mesh : Entity
 						{
 							mat.SetMeta("_origin_clr", sm3d.AlbedoColor);
 							mat.SetMeta("_origin_hasalpha", sm3d.Transparency != BaseMaterial3D.TransparencyEnum.Disabled);
+							mat.SetMeta("_origin_texture", sm3d.AlbedoTexture);
 						}
 					}
 				}
@@ -415,9 +417,20 @@ public sealed partial class Mesh : Entity
 		{
 			if (item is StandardMaterial3D sm)
 			{
+				Texture2D originalTexture = sm.GetMeta("_origin_texture").As<Texture2D>();
 				Color origin = sm.GetMeta("_origin_clr").AsColor();
 				bool hasAlpha = sm.GetMeta("_origin_hasalpha").AsBool();
 				Color setto = _color;
+
+				if (Asset is PTMeshAsset ptma && ptma.Texture?.Resource is Texture2D t2d)
+				{
+					sm.AlbedoTexture = t2d;
+				}
+				else
+				{
+					sm.AlbedoTexture = originalTexture;
+				}
+
 				if (!UsePartColor)
 				{
 					setto = origin;

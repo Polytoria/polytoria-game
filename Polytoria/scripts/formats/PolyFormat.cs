@@ -15,11 +15,8 @@ using Semver;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
@@ -28,8 +25,6 @@ namespace Polytoria.Formats;
 
 public static partial class PolyFormat
 {
-	private static readonly ConditionalWeakTable<Type, Dictionary<string, PropertyInfo>> _propertyCache = [];
-
 	public static object? SerializePropValue(object? propValue)
 	{
 		if (propValue == null) return null;
@@ -471,7 +466,7 @@ public static partial class PolyFormat
 		return [.. i];
 	}
 
-	private static void QueuePendingRef(string objID, NetworkedObject requester, PropertyInfo prop, PolyLoadContext ctx)
+	private static void QueuePendingRef(string objID, NetworkedObject requester, DatamodelMetaProp prop, PolyLoadContext ctx)
 	{
 		if (!ctx.PendingReferences.TryGetValue(objID, out var list))
 		{
@@ -496,7 +491,7 @@ public static partial class PolyFormat
 
 			try
 			{
-				property.SetValue(requester, resolvedObj);
+				property.Set(requester, resolvedObj);
 			}
 			catch (Exception ex)
 			{
@@ -513,7 +508,7 @@ public static partial class PolyFormat
 	{
 		Type dataModelType = netObj.GetType();
 
-		Dictionary<string, PropertyInfo> propertyCache = GetOrCreatePropertyCache(dataModelType);
+		Dictionary<string, DatamodelMetaProp> propertyCache = DatamodelMetaRegistry.GetProps(dataModelType);
 
 		foreach (KeyValuePair<string, object?> prop in obj.Properties)
 		{
@@ -523,16 +518,15 @@ public static partial class PolyFormat
 			string propName = prop.Key;
 			object? propVal = prop.Value;
 
-			if (!propertyCache.TryGetValue(propName, out PropertyInfo? property))
+			if (!propertyCache.TryGetValue(propName, out DatamodelMetaProp? property) || !(property.IsEditable || property.HasSaveInclude))
 			{
 				PT.Print("Unknown property: ", dataModelType.Name, ".", propName);
 				continue;
 			}
 
 			object? val = null;
-			Type propType = property.PropertyType;
 
-			if (propType.IsAssignableTo(typeof(FileLinkAsset)))
+			if (property.IsFileLink)
 			{
 				string? linkedID = (string?)DeserializePropValue(propVal, typeof(string));
 				if (linkedID != null)
@@ -549,7 +543,7 @@ public static partial class PolyFormat
 					}
 				}
 			}
-			else if (propType.IsAssignableTo(typeof(NetworkedObject)))
+			else if (property.IsObjectRef)
 			{
 				string? objID = (string?)DeserializePropValue(propVal, typeof(string));
 
@@ -573,7 +567,7 @@ public static partial class PolyFormat
 			}
 			else
 			{
-				val = DeserializePropValue(propVal, propType);
+				val = DeserializePropValue(propVal, property.PropertyType);
 			}
 
 			if (loadContext.ForceCordMigration)
@@ -583,33 +577,13 @@ public static partial class PolyFormat
 
 			try
 			{
-				property.SetValue(netObj, val);
+				property.Set(netObj, val);
 			}
 			catch (Exception ex)
 			{
 				GD.PushError(ex);
 			}
 		}
-	}
-
-	private static Dictionary<string, PropertyInfo> GetOrCreatePropertyCache(
-		[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type type)
-	{
-		return _propertyCache.GetValue(type, static t =>
-		{
-			Dictionary<string, PropertyInfo> cache = [];
-#pragma warning disable IL2070 // Datamodel types has the reflections needed
-			PropertyInfo[] properties = t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy);
-#pragma warning restore IL2070
-			foreach (PropertyInfo prop in properties)
-			{
-				if (prop.IsDefined(typeof(EditableAttribute)) || prop.IsDefined(typeof(SaveIncludeAttribute)))
-				{
-					cache[prop.Name] = prop;
-				}
-			}
-			return cache;
-		});
 	}
 
 	public static PolyObject? ToPolyObject(NetworkedObject obj, PolyRoot root, bool isLinkedChild = false)
@@ -620,77 +594,69 @@ public static partial class PolyFormat
 		if (objType.IsDefined(typeof(SaveIgnoreAttribute))) return null;
 		if (obj is Instance preI && !preI.Archivable) return null;
 
-		IEnumerable<PropertyInfo> creatorProperties = obj.GetEditableProperties();
+		Dictionary<string, DatamodelMetaProp> saveProps = DatamodelMetaRegistry.GetProps(objType);
 
-		IEnumerable<PropertyInfo> saveIncludes = objType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
-			.Where(p => p.GetCustomAttributeCached<SaveIncludeAttribute>() != null);
-
-		HashSet<string> existingNames = [.. creatorProperties.Select(p => p.Name)];
-		creatorProperties = creatorProperties.Concat(
-			saveIncludes.Where(p => !existingNames.Contains(p.Name))
-		);
-
-		foreach (PropertyInfo prop in creatorProperties)
+		foreach (DatamodelMetaProp prop in saveProps.Values)
 		{
-			if (prop.IsDefinedCached(typeof(Attributes.ObsoleteAttribute))) continue;
-			if (prop.IsDefinedCached(typeof(SaveIgnoreAttribute))) continue;
-			if (prop.CanRead)
+			if (!(prop.IsEditable || prop.HasSaveInclude)) continue;
+			if (prop.IsObsolete) continue;
+			if (prop.HasSaveIgnore) continue;
+			if (!prop.Property.CanRead) continue;
+
+			object? val = prop.Get(obj);
+			if (val == null) continue;
+
+			DefaultValueAttribute? df = prop.Property.GetCustomAttributeCached<DefaultValueAttribute>();
+			if (df != null)
 			{
-				object? val = prop.GetValue(obj);
-				if (val == null) continue;
-
-				DefaultValueAttribute? df = prop.GetCustomAttributeCached<DefaultValueAttribute>();
-				if (df != null)
+				try
 				{
-					try
-					{
-						object? convertedDefault = Convert.ChangeType(df.DefaultValue, prop.PropertyType);
+					object? convertedDefault = Convert.ChangeType(df.DefaultValue, prop.Property.PropertyType);
 
-						if (Equals(convertedDefault, val))
-						{
-							// Ignore default values
-							continue;
-						}
-					}
-					catch (Exception ex)
+					if (Equals(convertedDefault, val))
 					{
-						// Failed to change type, continue anyway
-						PT.PrintErr(ex);
+						// Ignore default values
 						continue;
 					}
 				}
-
-				if (val is FileLinkAsset fl)
-				{
-					// Special handling of filelinks
-					val = fl.LinkedID;
-				}
-				else if (val is NetworkedObject netObj)
-				{
-					if (netObj is not Instance)
-					{
-						// Add non instance
-						if (!root.NonInstanceAdded.TryGetValue(netObj.ObjectID, out PolyObject? refObj))
-						{
-							refObj = ToPolyObject(netObj, root);
-							if (refObj != null)
-							{
-								root.NonInstanceObjects.Add(refObj);
-								root.NonInstanceAdded.Add(netObj.ObjectID, refObj);
-							}
-						}
-					}
-					val = netObj.ObjectID;
-				}
-
-				try
-				{
-					objProps.Add(prop.Name, SerializePropValue(val));
-				}
 				catch (Exception ex)
 				{
-					PT.PrintWarn("error when serialize: ", ex);
+					// Failed to change type, continue anyway
+					PT.PrintErr(ex);
+					continue;
 				}
+			}
+
+			if (val is FileLinkAsset fl)
+			{
+				// Special handling of filelinks
+				val = fl.LinkedID;
+			}
+			else if (val is NetworkedObject netObj)
+			{
+				if (netObj is not Instance)
+				{
+					// Add non instance
+					if (!root.NonInstanceAdded.TryGetValue(netObj.ObjectID, out PolyObject? refObj))
+					{
+						refObj = ToPolyObject(netObj, root);
+						if (refObj != null)
+						{
+							root.NonInstanceObjects.Add(refObj);
+							root.NonInstanceAdded.Add(netObj.ObjectID, refObj);
+						}
+					}
+				}
+				val = netObj.ObjectID;
+			}
+
+			try
+			{
+				objProps.Add(prop.Name, SerializePropValue(val));
+			}
+			catch (Exception ex)
+			{
+				PT.PrintWarn("error when serialize: ", ex);
 			}
 		}
 
@@ -887,7 +853,7 @@ public static partial class PolyFormat
 		public PolyRootData RootData;
 		public World Root = null!;
 		public Dictionary<string, NetworkedObject> SpawnedObjects = [];
-		public Dictionary<string, List<(NetworkedObject obj, PropertyInfo prop)>> PendingReferences = [];
+		public Dictionary<string, List<(NetworkedObject obj, DatamodelMetaProp prop)>> PendingReferences = [];
 		public bool IsRootHint = false;
 		public Instance? ModelRoot = null;
 		public bool AssignModelRoot = true;

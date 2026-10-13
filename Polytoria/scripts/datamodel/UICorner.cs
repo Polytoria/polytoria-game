@@ -17,7 +17,7 @@ public partial class UICorner : Instance
 	private UIScale _bottomLeftRadius;
 	private UIScale _bottomRightRadius;
 
-	[Editable, ScriptProperty]
+	[Editable, ScriptProperty, NoSync, CloneIgnore, SaveIgnore]
 	public UIScale CornerRadius
 	{
 		get => _topLeftRadius;
@@ -29,6 +29,10 @@ public partial class UICorner : Instance
 			_bottomRightRadius = value;
 			ApplyToParent();
 			OnPropertyChanged();
+			OnPropertyChanged(nameof(TopLeftRadius));
+			OnPropertyChanged(nameof(TopRightRadius));
+			OnPropertyChanged(nameof(BottomLeftRadius));
+			OnPropertyChanged(nameof(BottomRightRadius));
 		}
 	}
 
@@ -41,6 +45,7 @@ public partial class UICorner : Instance
 			_topLeftRadius = value;
 			ApplyToParent();
 			OnPropertyChanged();
+			OnPropertyChanged(nameof(CornerRadius), syncToNet: false);
 		}
 	}
 

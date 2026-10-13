@@ -29,6 +29,8 @@ public partial class MoveGizmo : Node, IGizmo
 	private Vector3? _startRayOrigin;
 	private Vector3? _startRayNormal;
 
+	public bool IsDragging => _isMouseDragging;
+
 	public event Action? DragStarted;
 	public event Action? DragEnded;
 	public event Action<Vector3>? Dragged;
@@ -147,6 +149,12 @@ public partial class MoveGizmo : Node, IGizmo
 
 	public override void _Process(double delta)
 	{
+		if (_isMouseDragging && !Input.IsMouseButtonPressed(MouseButton.Left))
+		{
+			DragEnded?.Invoke();
+			_isMouseDragging = false;
+		}
+
 		SetVisiblity();
 		RedrawGizmo();
 	}
@@ -235,6 +243,13 @@ public partial class MoveGizmo : Node, IGizmo
 		{
 			_moveGizmoInstance[i].Visible = Visible;
 		}
+	}
+
+	public void ResetDragOrigin()
+	{
+		Vector2 mousePos = GDCamera.GetViewport().GetMousePosition();
+		_startRayOrigin = GDCamera.ProjectRayOrigin(mousePos);
+		_startRayNormal = GDCamera.ProjectRayNormal(mousePos);
 	}
 
 	private void UpdateAxis(Vector3 rayOrigin, Vector3 rayNormal)

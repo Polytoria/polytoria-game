@@ -24,6 +24,7 @@ public partial class Physical : Dynamic
 	private static readonly Dictionary<Node, Physical> _proxyToPhysical = [];
 	private static readonly ConditionalWeakTable<CollisionShape3D, RemoteLinkConfig> _remoteLinkConfigs = [];
 	private static readonly ConditionalWeakTable<CollisionShape3D, TrackedNodesState> _trackedNodes = [];
+	internal readonly Dictionary<int, Physical> _rootShapeIndexToPhysical = [];
 
 	private sealed class RemoteLinkConfig
 	{
@@ -44,6 +45,7 @@ public partial class Physical : Dynamic
 	private uint _collisionLayers = 1, _collisionMask = 1;
 	private Vector3 _velocity = Vector3.Zero;
 	private Vector3 _angularVelocity = Vector3.Zero;
+	private uint _rayPassthrough = 0;
 
 	private bool _netEnsureTouchArea = false;
 
@@ -217,11 +219,17 @@ public partial class Physical : Dynamic
 			}
 		}
 
-		if (!OverridePhysicsProcess)
-		{
-			SetPhysicsProcess(!_anchored);
-		}
+		UpdatePhysicsTick();
 	}
+
+	protected void UpdatePhysicsTick()
+	{
+		if (OverridePhysicsProcess) return;
+
+		SetPhysicsProcess(!_anchored && !IsAsleep && !IsFrozen);
+	}
+
+	internal virtual bool IsFrozen => false;
 
 	protected virtual void ApplyFreeze(bool to) { }
 
@@ -324,11 +332,23 @@ public partial class Physical : Dynamic
 		}
 	}
 
+	[Editable(CustomPropertyControl = "Bitmap32"), ScriptProperty]
+	public uint RayPassthrough
+	{
+		get => _rayPassthrough;
+		set
+		{
+			_rayPassthrough = value;
+			OnPropertyChanged();
+		}
+	}
+
 	public Physical? PhysicalRoot { get; private set; }
 
 	internal bool OverrideCanCollide = false;
 	internal bool OverrideCanCollideTo = false;
 	internal bool OverridePhysicsProcess = false;
+	internal virtual bool IsAsleep => false;
 
 	public override void HiddenChanged(bool to)
 	{
@@ -430,7 +450,10 @@ public partial class Physical : Dynamic
 		ClearCollisionBody();
 		Root?.Loaded.Disconnect(OnRootReady);
 		// _proxyToPhysical.Remove(PhysicalArea);
-		_proxyToPhysical.Remove(GDNode);
+		if (GDNode != null)
+		{
+			_proxyToPhysical.Remove(GDNode);
+		}
 
 		if (PhysicalArea != null)
 		{
@@ -580,13 +603,21 @@ public partial class Physical : Dynamic
 
 	public override void PhysicsProcess(double delta)
 	{
+		bool asleep = IsAsleep;
 		UpdateTransformTick(delta);
 		if (Root == null || Root?.Network == null) { return; }
 
+		bool localSim = NetTransformAuthority == Root.Network.LocalPeerID || !ExistInNetwork;
+
 		// Sync if has authority and not anchored, if so. sync in interval
-		if (NetTransformAuthority == Root.Network.LocalPeerID && !Anchored)
+		if (NetTransformAuthority == Root.Network.LocalPeerID && !Anchored && !asleep)
 		{
 			UpdateNetTransform();
+		}
+
+		if (localSim && !Anchored && !asleep && this is Part part)
+		{
+			Root.Bridge?.MarkMoved(part);
 		}
 		base.PhysicsProcess(delta);
 	}

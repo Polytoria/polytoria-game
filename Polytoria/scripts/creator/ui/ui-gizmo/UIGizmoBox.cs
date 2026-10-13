@@ -151,7 +151,7 @@ public partial class UIGizmoBox : Control
 		return expanded.HasPoint(localPos);
 	}
 
-	private Vector2 GetLocalMousePosition() => GetLocalMousePosition(GetGlobalMousePosition());
+	private new Vector2 GetLocalMousePosition() => GetLocalMousePosition(GetGlobalMousePosition());
 
 	private Vector2 GetLocalMousePosition(Vector2 globalMouse)
 	{

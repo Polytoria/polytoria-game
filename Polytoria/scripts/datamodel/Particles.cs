@@ -340,7 +340,7 @@ public sealed partial class Particles : Dynamic
 	public NumberSeries RadialAccelerationOverLifetime
 	{
 		get => _radialAccelerationOverLifetime;
-		private set
+		internal set
 		{
 			_radialAccelerationOverLifetime = value;
 			_particle.RadialAccelCurve = value.ToCurveTexture();
@@ -367,7 +367,7 @@ public sealed partial class Particles : Dynamic
 	public NumberSeries TangentialAccelerationOverLifetime
 	{
 		get => _tangentialAccelerationOverLifetime;
-		private set
+		internal set
 		{
 			_tangentialAccelerationOverLifetime = value;
 			_particle.TangentialAccelCurve = value.ToCurveTexture();
@@ -394,7 +394,7 @@ public sealed partial class Particles : Dynamic
 	public NumberSeries OrbitalVelocityOverLifetime
 	{
 		get => _orbitalVelocityOverLifetime;
-		private set
+		internal set
 		{
 			_orbitalVelocityOverLifetime = value;
 			_particle.OrbitVelocityCurve = value.ToCurveTexture();
@@ -421,7 +421,7 @@ public sealed partial class Particles : Dynamic
 	public NumberSeries DampingOverLifetime
 	{
 		get => _dampingOverLifetime;
-		private set
+		internal set
 		{
 			_dampingOverLifetime = value;
 			_particle.DampingCurve = value.ToCurveTexture();
@@ -448,7 +448,7 @@ public sealed partial class Particles : Dynamic
 	public NumberSeries ScaleOverVelocityCurve
 	{
 		get => _scaleOverVelocityCurve;
-		private set
+		internal set
 		{
 			_scaleOverVelocityCurve = value;
 
@@ -495,7 +495,7 @@ public sealed partial class Particles : Dynamic
 	public NumberSeries TurbulenceOverLifetime
 	{
 		get => _turbulenceOverLifetime;
-		private set
+		internal set
 		{
 			_turbulenceOverLifetime = value;
 			_particle.TurbulenceInfluenceOverLife = value.ToCurveTexture();

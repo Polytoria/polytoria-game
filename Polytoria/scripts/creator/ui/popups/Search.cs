@@ -11,12 +11,12 @@ using System.Threading.Tasks;
 
 public partial class Search : Panel
 {
-	[Export] public LineEdit? searchBar;
-	[Export] public PackedScene? searchResult;
-	[Export] public VBoxContainer? searchResultsContainer;
+	[Export] public LineEdit searchBar = null!;
+	[Export] public PackedScene searchResult = null!;
+	[Export] public VBoxContainer searchResultsContainer = null!;
 	[Export] public Control? loadingSpinner;
 
-	[Export] public Label? statusText;
+	[Export] public Label statusText = null!;
 
 	private int searchResultIndex = 0;
 
@@ -201,7 +201,7 @@ public partial class Search : Panel
 				{
 					continue; // mainly to avoid .git and .poly dirs
 				}
-				NavigateDirectory(rootPath, dir, maxSize);
+				_ = NavigateDirectory(rootPath, dir, maxSize);
 			}
 		});
 		Loading = false;
@@ -221,7 +221,7 @@ public partial class Search : Panel
 		{ // skip loading file assets
 			return;
 		}
-		NavigateDirectory(path, path, 1048576); // 1mb
+		_ = NavigateDirectory(path, path, 1048576); // 1mb
 	}
 	private void ProcessSearch()
 	{

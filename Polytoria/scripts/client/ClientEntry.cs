@@ -54,6 +54,7 @@ public sealed partial class ClientEntry : Node3D
 #endif
 #if ALLOW_SELFHOST
 	public Vector3? DebugSpawnPos { get; private set; }
+	public float? DebugSpawnRot { get; private set; }
 #endif
 
 	private string? _debugAddress;
@@ -92,6 +93,7 @@ public sealed partial class ClientEntry : Node3D
 		cmdargs.TryGetValue("solo", out string? soloPath);
 		cmdargs.TryGetValue("nplr", out string? nPlrStr);
 		cmdargs.TryGetValue("spawnpos", out string? spawnPosStr);
+		cmdargs.TryGetValue("spawnrot", out string? spawnRotStr);
 		cmdargs.TryGetValue("ctoken", out string? ctoken); // Creator test token
 
 		connectAddress ??= "127.0.0.1";
@@ -157,11 +159,16 @@ public sealed partial class ClientEntry : Node3D
 		}
 
 #if ALLOW_SELFHOST
-		// Debug spawn position
+		// Debug spawn position and rotation
 		if (spawnPosStr != null)
 		{
 			string[] splited = spawnPosStr.TrimStart('v').Split(',');
 			DebugSpawnPos = new(int.Parse(splited[0]), int.Parse(splited[1]), int.Parse(splited[2]));
+		}
+		if (spawnRotStr != null)
+		{
+			string splited = spawnRotStr.TrimStart('v');
+			DebugSpawnRot = float.Parse(splited);
 		}
 
 		// If localtest, spawn instance
@@ -201,7 +208,7 @@ public sealed partial class ClientEntry : Node3D
 			DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
 		}
 
-		// Setup essentials 
+		// Setup essentials
 		ClientSettingsService settings = new()
 		{
 			Name = "ClientSettings",

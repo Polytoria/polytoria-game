@@ -64,6 +64,8 @@ public sealed partial class PolytorianModel : CharacterModel
 	private PhysicalBoneSimulator3D _ragdollBoneSim = null!;
 	private PhysicalBoneSimulator3D? _lastPhysicalBoneSim = null!;
 	private readonly Dictionary<string, float> _blendTargets = [];
+	private static readonly Dictionary<string, StringName> _blendParamNames = [];
+	private static StringName? _timeScaleParamName;
 	private int _toBeLoadedCount = 0;
 	private bool _faceLoaded = false;
 	private float _lastLookBlendX = 0;
@@ -401,7 +403,17 @@ public sealed partial class PolytorianModel : CharacterModel
 		{
 			string propName = kvp.Key;
 			float target = kvp.Value;
-			float current = (float)AnimTree.Get(propName);
+
+			if (!_blendParamNames.TryGetValue(propName, out StringName? paramName))
+			{
+				paramName = propName;
+				_blendParamNames[propName] = paramName;
+			}
+
+			float rawCurrent = (float)AnimTree.Get(paramName);
+			float current = rawCurrent;
+
+			if (!float.IsFinite(current)) current = 0f;
 
 			float targetBlendSpeed = BlendSpeed;
 			float newValue;
@@ -416,8 +428,8 @@ public sealed partial class PolytorianModel : CharacterModel
 			{
 				newValue = Mathf.MoveToward(current, target, (float)delta * targetBlendSpeed);
 			}
-
-			AnimTree.Set(propName, newValue);
+			if (newValue == rawCurrent) continue;
+			AnimTree.Set(paramName, newValue);
 		}
 	}
 
@@ -618,6 +630,8 @@ public sealed partial class PolytorianModel : CharacterModel
 
 	public override void RecvBlendValue(CharacterModelBlendEnum blendName, float blendValue)
 	{
+		if (!float.IsFinite(blendValue)) return;
+
 		string propName = "";
 		switch (blendName)
 		{
@@ -646,8 +660,11 @@ public sealed partial class PolytorianModel : CharacterModel
 
 	public override void RecvSpeedValue(float speedValue)
 	{
+		if (!float.IsFinite(speedValue)) return;
+
 		if (AnimTree == null) return;
-		AnimTree.Set("parameters/TimeScale/scale", speedValue);
+		_timeScaleParamName ??= "parameters/TimeScale/scale";
+		AnimTree.Set(_timeScaleParamName, speedValue);
 	}
 
 	public override void ApplyCameraModifier(Camera camera)

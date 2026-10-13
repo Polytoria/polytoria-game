@@ -101,7 +101,7 @@ public partial class FileItemContextMenu : ContextMenu
 				CreatorService.Interface.PromptCreateFolder(Target!);
 				break;
 			case 2: // New File
-				CreatorService.Interface.PromptCreateFile(atPath: Target);
+				CreatorService.Interface.PromptCreateFile(atPath: Target!);
 				break;
 			case 3: // New Script
 				CreatorService.Interface.PromptCreateScript(atPath: Target);

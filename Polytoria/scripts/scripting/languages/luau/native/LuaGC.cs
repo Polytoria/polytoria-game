@@ -2,8 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-using System;
-
 namespace Polytoria.Scripting.Luau;
 /// <summary>
 /// Garbage Collector operations
@@ -33,27 +31,21 @@ public enum LuaGC
 	/// <summary>
 	///  Performs an incremental step of garbage collection. 
 	/// </summary>
-	Step = 5,
+	IsRunning = 5,
 	/// <summary>
-	/// The options LUA_GCSETPAUSE and LUA_GCSETSTEPMUL of the function lua_gc are deprecated. You should use the new option LUA_GCINC to set them. 
+	/// Performs an incremental step of garbage collection.
 	/// </summary>
-	[Obsolete("Deprecatad since Lua 5.4, Use Incremental instead")]
-	SetPause = 6,
+	Step = 6,
 	/// <summary>
-	/// The options LUA_GCSETPAUSE and LUA_GCSETSTEPMUL of the function lua_gc are deprecated. You should use the new option LUA_GCINC to set them. 
+	/// Sets the target heap size as a percentage of live data.
 	/// </summary>
-	[Obsolete("Deprecatad since Lua 5.4, Use Incremental instead")]
-	SetStepMultiplier = 7,
+	SetGoal = 7,
 	/// <summary>
-	///  returns a boolean that tells whether the collector is running
+	/// Sets the garbage collection work multiplier.
 	/// </summary>
-	IsRunning = 9,
+	SetStepMultiplier = 8,
 	/// <summary>
-	///  Changes the collector to generational mode with the given parameters (see §2.5.2). Returns the previous mode (LUA_GCGEN or LUA_GCINC). 
+	/// Sets the garbage collector step size.
 	/// </summary>
-	Generational = 10,
-	/// <summary>
-	/// Changes the collector to incremental mode with the given parameters (see §2.5.1). Returns the previous mode (LUA_GCGEN or LUA_GCINC). 
-	/// </summary>
-	Incremental = 11,
+	SetStepSize = 9,
 }

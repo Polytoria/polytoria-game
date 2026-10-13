@@ -213,6 +213,10 @@ internal partial class NativeBindings
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+	internal static partial int lua_isthreadreset(IntPtr L);
+
+	[LibraryImport(LuaLibraryName)]
+	[UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
 	internal static partial void lua_xmove(IntPtr from, IntPtr to, int n);
 
 	[LibraryImport(LuaLibraryName)]

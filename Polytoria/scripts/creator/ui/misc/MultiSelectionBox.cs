@@ -51,9 +51,13 @@ public partial class MultiSelectionBox : Control
 		}
 		Instance[] allObjects = Overlay.World.Environment.GetDescendants();
 
-		Overlay.World.CreatorContext.Selections.DeselectAll();
-
 		bool altPressed = Input.IsKeyPressed(Key.Alt);
+		bool multiSelect = Input.IsActionPressed("gizmo_multi_select");
+
+		if (!multiSelect)
+		{
+			Overlay.World.CreatorContext.Selections.DeselectAll();
+		}
 
 		foreach (Instance item in allObjects)
 		{
@@ -88,6 +92,17 @@ public partial class MultiSelectionBox : Control
 		Overlay.Container.GrabFocus();
 	}
 
+	public override void _Process(double delta)
+	{
+		if (_dragging && !Input.IsMouseButtonPressed(MouseButton.Left))
+		{
+			_dragging = false;
+			_panel.Visible = false;
+			_panel.Size = Vector2.Zero;
+		}
+		base._Process(delta);
+	}
+
 	public override void _UnhandledInput(InputEvent @event)
 	{
 		Gizmos gizmos = Overlay.World.CreatorContext.Gizmos;
@@ -98,7 +113,7 @@ public partial class MultiSelectionBox : Control
 		{
 			if (mouseEvent.Pressed)
 			{
-				if (_dragging == false && !gizmos.HoveringGizmos && selections.SelectedInstances.Count == 0)
+				if (_dragging == false && !gizmos.HoveringGizmos && !gizmos.HoveringObject)
 				{
 					_tween?.Stop();
 

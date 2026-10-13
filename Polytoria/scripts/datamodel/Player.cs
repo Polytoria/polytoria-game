@@ -17,6 +17,7 @@ using Polytoria.Utils.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Polytoria.Providers.PlayerMovement;
 
 namespace Polytoria.Datamodel;
@@ -77,6 +78,7 @@ public sealed partial class Player : NPC
 
 #if CREATOR
 	private bool _spawnedAtCreatorPos = false;
+	private bool _spawnedAtCreatorRot = false;
 #endif
 
 	// internal peer ID
@@ -677,15 +679,23 @@ public sealed partial class Player : NPC
 			return;
 		}
 
-		Environment.RayResult? ray = Root.Environment.CurrentCamera?.ScreenPointToRay(Root.Input.MousePosition);
+		Environment.RayResult? ray = Root.Environment.CurrentCamera?.ScreenPointToRay(Root.Input.MousePosition, passthroughMask: 1 << 0);
 		if (ray.HasValue && ray.Value.Instance is Physical p)
 		{
-			if (_mouseHoveringOn != null && _mouseHoveringOn != p)
+			if (_mouseHoveringOn != p)
 			{
-				_mouseHoveringOn.MouseExit.Invoke();
+				if (_mouseHoveringOn != null)
+				{
+					_mouseHoveringOn.MouseExit.Invoke();
+				}
+				_mouseHoveringOn = p;
+				_mouseHoveringOn.MouseEnter.Invoke();
 			}
-			_mouseHoveringOn = p;
-			_mouseHoveringOn.MouseEnter.Invoke();
+		}
+		else if (_mouseHoveringOn != null)
+		{
+			_mouseHoveringOn.MouseExit.Invoke();
+			_mouseHoveringOn = null;
 		}
 
 		if (FootFwdRaycast.IsColliding())
@@ -795,7 +805,7 @@ public sealed partial class Player : NPC
 
 		if (@event.IsActionPressed("activate"))
 		{
-			Environment.RayResult? ray = Root.Environment.CurrentCamera?.ScreenPointToRay(Root.Input.MousePosition);
+			Environment.RayResult? ray = Root.Environment.CurrentCamera?.ScreenPointToRay(Root.Input.MousePosition, passthroughMask: 1 << 1);
 			if (ray.HasValue && ray.Value.Instance is Physical p)
 			{
 				p.InvokeClicked(this);
@@ -962,29 +972,43 @@ public sealed partial class Player : NPC
 		_bubbleChat.Visible = true;
 	}
 
-	public void WarpToSpawnPoint()
+	public async Task WarpToSpawnPoint()
 	{
 		if (Root.Environment.SpawnPoints.Count > 0)
 		{
 			Entity spawnpoint = ArrayUtils.GetRandom(Root.Environment.SpawnPoints);
 			Position = spawnpoint.Position + spawnpoint.Up * (spawnpoint.Size.Y / 2 + 3.0f);
-			Rotation = new(0, spawnpoint.Rotation.Y, 0);
+			Quaternion = new Quaternion(spawnpoint.Up, Vertical) * spawnpoint.Quaternion;
 		}
 		else
 		{
 			Position = DefaultSpawnLocation;
-			Rotation = new(0, 0, 0);
+			Quaternion = new Quaternion(Vector3.Up, Vertical);
 		}
 
-		// Spawn at custom position
+		// Spawn at custom position and rotation
 #if CREATOR
-		if (Root.Entry != null && Root.Entry.DebugSpawnPos != null)
+		if (Root.Entry != null && Root.Entry.DebugSpawnPos != null && Root.Entry.DebugSpawnRot != null)
 		{
 			if (!_spawnedAtCreatorPos)
 			{
 				_spawnedAtCreatorPos = true;
 				Position = Root.Entry.DebugSpawnPos.Value;
-				Rotation = Vector3.Zero;
+			}
+			if (!_spawnedAtCreatorRot)
+			{
+				_spawnedAtCreatorRot = true;
+				Rotation = new(
+					0,
+					Root.Entry.DebugSpawnRot.Value,
+					0
+				);
+				while (Root.Environment.CurrentCamera == null) await Task.Delay(100);
+				Root.Environment.CurrentCamera.RotationOffset = new Vector3(
+					0,
+					Root.Entry.DebugSpawnRot.Value,
+					0
+				);
 			}
 		}
 #endif

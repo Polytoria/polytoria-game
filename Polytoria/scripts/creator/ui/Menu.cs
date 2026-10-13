@@ -4,6 +4,7 @@
 
 using Godot;
 using Polytoria.Creator.UI.Splashes;
+using Polytoria.Creator.UI.Layout;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Creator;
 using Polytoria.Shared;
@@ -27,6 +28,7 @@ public sealed partial class Menu : PanelContainer
 		public string? Icon;
 		public Shortcut? KeyShortcut;
 		public Action? Pressed;
+		public Func<bool>? Checked;
 		public bool RequireGameOpen = false;
 		public int Id = 0;
 		public int Index = 0;
@@ -414,6 +416,17 @@ public sealed partial class Menu : PanelContainer
 						CreatorInterface.ToggleFullscreen();
 					}
 				},
+				new MenuSeperatorItem(),
+				new MenuButtonItem() {
+					Text = "Toggle Left Dock",
+					Pressed = () => ToggleSideDock("Left"),
+					Checked = () => IsSideDockVisible("Left")
+				},
+				new MenuButtonItem() {
+					Text = "Toggle Right Dock",
+					Pressed = () => ToggleSideDock("Right"),
+					Checked = () => IsSideDockVisible("Right")
+				},
 			]
 		);
 
@@ -494,6 +507,7 @@ public sealed partial class Menu : PanelContainer
 				if (mbtn.IdToItem[(int)idx] is MenuButtonItem btn)
 				{
 					btn.Pressed?.Invoke();
+					RefreshCheckedItems(mbtn);
 				}
 			};
 
@@ -517,6 +531,12 @@ public sealed partial class Menu : PanelContainer
 					int index = menu.GetItemIndex(id);
 
 					btnI.Index = index;
+
+					if (btnI.Checked != null)
+					{
+						menu.SetItemAsCheckable(index, true);
+						menu.SetItemChecked(index, btnI.Checked.Invoke());
+					}
 
 					if (btnI.Icon != null)
 					{
@@ -546,6 +566,7 @@ public sealed partial class Menu : PanelContainer
 			}
 
 			_menuButtons.AddChild(btnRoot);
+			menu.AboutToPopup += () => RefreshCheckedItems(mbtn);
 		}
 
 		foreach (Timer timer in FindChildren("*", "Timer", true, false).Cast<Timer>())
@@ -555,6 +576,48 @@ public sealed partial class Menu : PanelContainer
 		}
 
 		SwitchTo(null);
+	}
+
+	private Control? GetSideDock(string sideName)
+	{
+		return GetNodeOrNull<Control>($"../Splitter/{sideName}");
+	}
+
+	private void ToggleSideDock(string sideName)
+	{
+		Control? dock = GetSideDock(sideName);
+		switch (dock)
+		{
+			case null:
+				GD.PushWarning($"View menu could not find GUI/Splitter/{sideName}.");
+				return;
+			case CollapsiblePanel collapsible:
+				collapsible.Toggle();
+				return;
+			default:
+				dock.Visible = !dock.Visible;
+				dock.MouseFilter = dock.Visible ? Control.MouseFilterEnum.Stop : Control.MouseFilterEnum.Ignore;
+				break;
+		}
+	}
+
+	private bool IsSideDockVisible(string sideName)
+	{
+		return GetSideDock(sideName) switch
+		{
+			CollapsiblePanel collapsible => !collapsible.Collapsed,
+			Control dock => dock.Visible,
+			_ => false
+		};
+	}
+
+	private static void RefreshCheckedItems(MenuButtonMenus menuDefinition)
+	{
+		foreach (MenuItem item in menuDefinition.IdToItem.Values)
+		{
+			if (item is MenuButtonItem { Checked: not null } button)
+				menuDefinition.Popup.SetItemChecked(button.Index, button.Checked.Invoke());
+		}
 	}
 
 	public void UpdateAddonMenu(AddonObject obj)

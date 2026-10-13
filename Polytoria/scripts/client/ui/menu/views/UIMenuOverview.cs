@@ -59,6 +59,7 @@ public sealed partial class UIMenuOverview : UIMenuViewBase
 
 	private void OnRespawn()
 	{
+		if (!Menu.CoreUI.Service.CanRespawn) { return; }
 		Menu.CoreUI.GameMenu.HideMenu();
 		Menu.CoreUI.Root.Players.LocalPlayer.Kill();
 	}
