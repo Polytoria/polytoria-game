@@ -108,6 +108,14 @@ public sealed partial class SocialService : Instance
 	{
 		return (await _client.GetFromJsonAsync(Globals.ApiEndpoint.PathJoin($"/v1/users/{fromID}/friends/{toID}"), SocialAPIGenerationContext.Default.APIAreFriendsResponse)).AreFriends;
 	}
+	
+	public async Task<APIAreFriendsResponse?> WebCheckFriendsStatus(int fromID, int toID)
+	{
+		return await _client.GetFromJsonAsync(
+			Globals.ApiEndpoint.PathJoin($"/v1/users/{fromID}/friends/{toID}"),
+			SocialAPIGenerationContext.Default.APIAreFriendsResponse
+		);
+	}
 
 	public enum FriendshipRequestType
 	{
