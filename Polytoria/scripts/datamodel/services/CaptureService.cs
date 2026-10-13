@@ -24,6 +24,7 @@ public sealed partial class CaptureService : Instance
 	private bool _debounce = false;
 
 	public ImageTexture? CurrentPhoto = null;
+	public Image? CurrentPhotoImage = null;
 	public string? CurrentPhotoPath = null;
 
 	[ScriptProperty] public bool OnCooldown => _debounce;
@@ -119,9 +120,9 @@ public sealed partial class CaptureService : Instance
 		SetProcess(false);
 	}
 
-	public void SaveCurrentPhoto()
+	public async void SaveCurrentPhoto()
 	{
-		if (CurrentPhoto == null) return;
+		if (CurrentPhoto == null || CurrentPhotoImage == null) return;
 		DateTime time = DateTime.Now;
 		string formattedTime = time.ToString("yyyyMMdd-hhmmss");
 		string filename = "PolytoriaScreenshot-" + formattedTime + ".png";
@@ -132,15 +133,17 @@ public sealed partial class CaptureService : Instance
 		}
 		string photoPath = baseFolder.PathJoin(filename);
 		CurrentPhotoPath = photoPath;
-		CurrentPhoto.GetImage().SavePng(photoPath);
+
+		Image snapshot = CurrentPhotoImage;
+		await Task.Run(() => snapshot.SavePng(photoPath));
 	}
 
 	public async void UploadCurrentPhoto(string caption = "")
 	{
-		if (CurrentPhoto == null) return;
+		if (CurrentPhoto == null || CurrentPhotoImage == null) return;
 		if (CapturePublisher == null) throw new MissingComponentException("Missing capture publisher component");
 
-		byte[] screenshotBytes = CurrentPhoto.GetImage().SavePngToBuffer();
+		byte[] screenshotBytes = CurrentPhotoImage.SavePngToBuffer();
 
 		await CapturePublisher.Publish(screenshotBytes, caption, true);
 	}
@@ -219,6 +222,7 @@ public sealed partial class CaptureService : Instance
 		pivot.GlobalPosition = pos;
 		pivot.GlobalRotationDegrees = rot;
 		cam.RotationDegrees = new Vector3(0, 0, 0);
+
 		if (photoSize != null && photoSize != Vector2.Zero && !(photoSize > _photoSizeLimit))
 		{
 			subview.Size = (Vector2I)photoSize;
@@ -232,18 +236,25 @@ public sealed partial class CaptureService : Instance
 		subview.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
 
 		await Globals.Singleton.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+		await Globals.Singleton.WaitFrame();
 
 		guiOverlay?.Delete();
 
-		Image img = subview.GetTexture().GetImage();
-		img.FixAlphaEdges();
-		img.GenerateMipmaps();
+		Rid textureRid = subview.GetTexture().GetRid();
+		subview.QueueFree();
 
+		Image img = await Task.Run(() =>
+		{
+			Image raw = RenderingServer.Singleton.Texture2DGet(textureRid);
+			raw.FixAlphaEdges();
+			raw.GenerateMipmaps();
+			return raw;
+		});
+
+		CurrentPhotoImage = img;
 
 		CurrentPhoto?.Dispose();
 		CurrentPhoto = ImageTexture.CreateFromImage(img);
-
-		subview.QueueFree();
 
 		PostPhotoTaken();
 	}
@@ -260,7 +271,6 @@ public sealed partial class CaptureService : Instance
 		await Globals.Singleton.WaitAsync(CaptureCooldownSec);
 		_debounce = false;
 	}
-
 
 	private void PrePhotoTake()
 	{
