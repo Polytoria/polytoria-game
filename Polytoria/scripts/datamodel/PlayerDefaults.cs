@@ -10,6 +10,7 @@ namespace Polytoria.Datamodel;
 [Static("PlayerDefaults")]
 public sealed partial class PlayerDefaults : HiddenBase
 {
+	private float _cameraHeight;
 	private float _maxHealth;
 	private float _walkSpeed;
 	private float _jumpPower;
@@ -29,6 +30,17 @@ public sealed partial class PlayerDefaults : HiddenBase
 	private bool _autoLoadAppearance;
 	private bool _loadAppearanceTools;
 	private Player.PlayerMovementModeEnum _movementMode;
+
+	[Editable, ScriptProperty]
+	public float CameraHeight
+	{
+		get => _cameraHeight;
+		set
+		{
+			_cameraHeight = value;
+			OnPropertyChanged();
+		}
+	}
 
 	[Editable, ScriptProperty]
 	public float MaxHealth
@@ -259,6 +271,7 @@ public sealed partial class PlayerDefaults : HiddenBase
 	[ScriptMethod]
 	public void LoadDefaults()
 	{
+		CameraHeight = 2f;
 		MaxHealth = 100f;
 		WalkSpeed = 16f;
 		JumpPower = 36f;
