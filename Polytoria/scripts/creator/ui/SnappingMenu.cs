@@ -13,6 +13,7 @@ public partial class SnappingMenu : Control
 	[Export] private SpinBox _moveValue = null!;
 	[Export] private CheckBox _rotateCheck = null!;
 	[Export] private SpinBox _rotateValue = null!;
+	[Export] private CheckBox _rotateAlignCheck = null!;
 
 	public override void _Ready()
 	{
@@ -22,7 +23,14 @@ public partial class SnappingMenu : Control
 		_moveCheck.Toggled += MoveCheckToggled;
 		_rotateCheck.Toggled += RotateCheckToggled;
 
+		_rotateAlignCheck.Toggled += RotateAlignCheckToggled;
+
 		base._Ready();
+	}
+
+	private void RotateAlignCheckToggled(bool toggledOn)
+	{
+		CreatorService.Interface.RotateAlignEnabled = toggledOn;
 	}
 
 	private void MoveCheckToggled(bool toggledOn)
