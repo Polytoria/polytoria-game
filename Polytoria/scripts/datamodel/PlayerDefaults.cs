@@ -18,11 +18,13 @@ public sealed partial class PlayerDefaults : HiddenBase
 	private float _respawnTime;
 	private bool _canMove;
 	private float _sprintSpeed;
-	private float _stamina;
-	private float _maxStamina;
 	private bool _useStamina;
+	private float _maxStamina;
 	private float _staminaRegen;
 	private float _staminaBurn;
+	private bool _useExhaustion;
+	private float _exhaustionRegen;
+	private float _exhaustionCeil;
 	private bool _keepInventory;
 	private bool _useHeadTurning;
 	private bool _useBubbleChat;
@@ -96,13 +98,13 @@ public sealed partial class PlayerDefaults : HiddenBase
 		}
 	}
 
-
 	[Editable, ScriptProperty]
 	public bool ChatColorsEnabled
 	{
 		get => _chatColorsEnabled;
 		set { _chatColorsEnabled = value; OnPropertyChanged(); }
 	}
+
 	[Editable, ScriptProperty]
 	public bool CanMove
 	{
@@ -110,18 +112,6 @@ public sealed partial class PlayerDefaults : HiddenBase
 		set
 		{
 			_canMove = value;
-			OnPropertyChanged();
-		}
-	}
-
-
-	[Editable, ScriptProperty]
-	public float StaminaBurn
-	{
-		get => _staminaBurn;
-		set
-		{
-			_staminaBurn = value;
 			OnPropertyChanged();
 		}
 	}
@@ -137,25 +127,11 @@ public sealed partial class PlayerDefaults : HiddenBase
 		}
 	}
 
-	[Editable(IsHidden = true)]
-	public bool StaminaEnabled
-	{
-		get => UseStamina;
-		set
-		{
-			UseStamina = value;
-		}
-	}
-
-	[Editable, ScriptProperty, SyncVar(Unreliable = true)]
+	[Attributes.Obsolete("Use Player.Stamina instead.")]
 	public float Stamina
 	{
-		get => _stamina;
-		set
-		{
-			_stamina = value;
-			OnPropertyChanged();
-		}
+		get => 100f;
+		set { }
 	}
 
 	[Editable, ScriptProperty]
@@ -164,7 +140,7 @@ public sealed partial class PlayerDefaults : HiddenBase
 		get => _maxStamina;
 		set
 		{
-			_maxStamina = value;
+			_maxStamina = Mathf.Max(value, 0f);
 			OnPropertyChanged();
 		}
 	}
@@ -180,6 +156,49 @@ public sealed partial class PlayerDefaults : HiddenBase
 		}
 	}
 
+	[Editable, ScriptProperty]
+	public float StaminaBurn
+	{
+		get => _staminaBurn;
+		set
+		{
+			_staminaBurn = Mathf.Max(value, 0f);
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool UseExhaustion
+	{
+		get => _useExhaustion;
+		set
+		{
+			_useExhaustion = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float ExhaustionRegen
+	{
+		get => _exhaustionRegen;
+		set
+		{
+			_exhaustionRegen = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public float ExhaustionCeil
+	{
+		get => _exhaustionCeil;
+		set
+		{
+			_exhaustionCeil = Mathf.Clamp(value, 0f, 1f);
+			OnPropertyChanged();
+		}
+	}
 
 	[Editable, ScriptProperty]
 	public bool KeepInventory
@@ -191,7 +210,6 @@ public sealed partial class PlayerDefaults : HiddenBase
 			OnPropertyChanged();
 		}
 	}
-
 
 	[Editable, ScriptProperty]
 	public bool UseHeadTurning
@@ -267,11 +285,13 @@ public sealed partial class PlayerDefaults : HiddenBase
 		RespawnTime = 5.0f;
 		CanMove = true;
 		SprintSpeed = 25f;
-		Stamina = 0f;
 		MaxStamina = 3f;
 		UseStamina = true;
-		StaminaRegen = 1.2f;
-		StaminaBurn = 1.2f;
+		StaminaRegen = 1f / 1.2f;
+		StaminaBurn = 1f / 1.2f;
+		UseExhaustion = false;
+		ExhaustionRegen = 1f / 0.6f;
+		ExhaustionCeil = 0.5f;
 		UseHeadTurning = true;
 		UseBubbleChat = true;
 		AutoLoadAppearance = true;
