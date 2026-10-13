@@ -28,7 +28,6 @@ public sealed partial class Player : NPC
 	private const double MaxAFKTime = 60 * 15;
 	private const float CameraHeight = 2f;
 	public const string CreatorHeadScene = "res://scenes/creator/livecollab/head.tscn";
-	public const string BubbleChatScene = "res://scenes/client/spatial/chat/bubble_chat.tscn";
 	public const string BadgeImageDirPath = "res://assets/textures/client/ui/playerlist/badges/";
 	private static readonly Dictionary<string, string> _badgePathCache = [];
 	private bool _isReady = false;
@@ -67,7 +66,6 @@ public sealed partial class Player : NPC
 
 	internal bool teleporting = false;
 
-	private BubbleChat _bubbleChat = null!;
 	private RemoteTransform3D _remoteCamAttach = null!;
 	internal Dynamic CamAttach = null!;
 	private Physical? _mouseHoveringOn;
@@ -242,7 +240,6 @@ public sealed partial class Player : NPC
 		set
 		{
 			_useBubbleChat = value;
-			_bubbleChat?.Visible = _useBubbleChat;
 			OnPropertyChanged();
 		}
 	}
@@ -504,11 +501,7 @@ public sealed partial class Player : NPC
 		Died.Connect(OnPlayerDied);
 		Root.Players.PropertyChanged.Connect(OnPlayersPropertyChanged);
 
-		_bubbleChat = Globals.CreateInstanceFromScene<BubbleChat>(BubbleChatScene);
-		_bubbleChat.TargetPlayer = this;
-		_bubbleChat.Visible = _useBubbleChat;
-		GDNode.AddChild(_bubbleChat, @internal: Node.InternalMode.Back);
-		excludedBoundNodes.Add(_bubbleChat);
+		//excludedBoundNodes.Add(_bubbleChat);
 	}
 
 	public override void PreDelete()
@@ -962,14 +955,12 @@ public sealed partial class Player : NPC
 	{
 		if (Character == null) return;
 		Character.GDNode3D.Visible = false;
-		_bubbleChat.Visible = false;
 	}
 
 	private void OnFirstPersonExited()
 	{
 		if (Character == null) return;
 		Character.GDNode3D.Visible = true;
-		_bubbleChat.Visible = true;
 	}
 
 	public async Task WarpToSpawnPoint()
