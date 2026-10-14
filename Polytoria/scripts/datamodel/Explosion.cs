@@ -121,6 +121,9 @@ public partial class Explosion : Dynamic
 	{
 		if (!IsNetworkReady || IsHidden) return;
 
+		// Waits a frame since Changing a parent comes before Explosion.Touched
+		await Globals.Singleton.WaitFrame();
+		
 		Sound? s = null;
 		if (_useEffects)
 		{
