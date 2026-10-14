@@ -634,7 +634,12 @@ public static partial class PolyFormat
 			}
 			else if (val is NetworkedObject netObj)
 			{
-				if (netObj is not Instance)
+				// We do not want to save the path to the image as it may leak sensitive details in the image path.
+				if (netObj is LocalImageAsset)
+				{
+					val = "";
+				}
+				else if (netObj is not Instance)
 				{
 					// Add non instance
 					if (!root.NonInstanceAdded.TryGetValue(netObj.ObjectID, out PolyObject? refObj))
