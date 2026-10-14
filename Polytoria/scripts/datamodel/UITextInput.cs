@@ -351,6 +351,14 @@ public partial class UITextInput : UIView
 		if (_lineEdit.Visible) { _lineEdit.GrabFocus(); }
 	}
 
+	[ScriptMethod]
+	public void Unfocus()
+	{
+		_textEdit.ReleaseFocus();
+		_lineEdit.ReleaseFocus();
+	}
+
+
 	private void OnTextEditFocusEntered()
 	{
 		FocusEnter.Invoke();
