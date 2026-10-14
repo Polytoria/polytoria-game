@@ -14,6 +14,7 @@ public partial class UILeaderboardUserOptions : Control
 	[Export] private Button _addFriendBtn = null!;
 	[Export] private Button _removeFriendBtn = null!;
 	[Export] private Button _viewProfileBtn = null!;
+	[Export] private Button _reportUserBtn = null!;
 	[Export] private Control _loaderView = null!;
 	public bool Active { get; private set; } = false;
 	public UILeaderboardUserItem? Target;
@@ -24,6 +25,7 @@ public partial class UILeaderboardUserOptions : Control
 	{
 		Visible = false;
 		_viewProfileBtn.Pressed += OnViewProfile;
+		_reportUserBtn.Pressed += OnReportUser;
 		_addFriendBtn.Pressed += OnAddFriend;
 		_removeFriendBtn.Pressed += OnRemoveFriend;
 		base._Ready();
@@ -50,6 +52,13 @@ public partial class UILeaderboardUserOptions : Control
 		// Open profile on Polytoria
 		OS.ShellOpen($"https://polytoria.com/u/{Target.TargetPlayer.Name}");
 
+		Disappear();
+	}
+	
+	private void OnReportUser()
+	{
+		if (Target == null) return;
+		OS.ShellOpen("https://polytoria.com/report/user/" + Target.TargetPlayer.UserID);
 		Disappear();
 	}
 
