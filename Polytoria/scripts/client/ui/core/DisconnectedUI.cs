@@ -40,7 +40,7 @@ public partial class DisconnectedUI : CanvasLayer
 	{
 		Input.MouseMode = Input.MouseModeEnum.Visible;
 		_reasonLabel.Text = reason;
-		_codeLabel.Text = "Code: " + code;
+		_codeLabel.Text = Tr("Code: ") + code;
 		_animPlay.Play("appear");
 	}
 }

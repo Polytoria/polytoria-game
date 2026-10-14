@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+using Godot;
 using Polytoria.Shared.Settings;
 using System.Collections.Generic;
 
@@ -183,6 +184,34 @@ public static class ClientSettingsRegistry
 				ValueKind = SettingValueKind.Bool,
 				ControlKind = SettingControlKind.Toggle,
 				DefaultValue = true,
+			});
+
+		var languageOptions = new List<SettingOption<string>>
+		{
+			new() { Value = "automatic", Label = "Automatic" },
+			new() { Value = "en", Label = "English" }
+		};
+
+		foreach (string locale in TranslationServer.GetLoadedLocales())
+		{
+			languageOptions.Add(new()
+			{
+				Value = locale,
+				Label = TranslationServer.GetLocaleName(locale)
+			});
+		}
+
+		defs.Add(SharedSettingKeys.Localization.Language,
+			new SettingDef<string>
+			{
+				Key = SharedSettingKeys.Localization.Language,
+				SectionKey = "general",
+				Label = "Language",
+				Description = "Select the game language.",
+				ValueKind = SettingValueKind.String,
+				ControlKind = SettingControlKind.Dropdown,
+				DefaultValue = "automatic",
+				Options = languageOptions
 			});
 
 		SettingDef.ValidateAll(defs.Values);
