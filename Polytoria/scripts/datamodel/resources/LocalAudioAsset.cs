@@ -4,8 +4,6 @@
 
 using Godot;
 using Polytoria.Attributes;
-using Polytoria.Shared.AssetLoaders;
-using System;
 
 namespace Polytoria.Datamodel.Resources;
 
