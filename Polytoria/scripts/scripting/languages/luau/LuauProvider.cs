@@ -827,10 +827,10 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		co.SandboxGlobals();
 
 		// Global to identify if calling from server/client
-		bool isClient = script is ClientScript;
-		co.PushBoolean(isClient);
+		bool isServer = script.Root.Network.IsServer;
+		co.PushBoolean(!isServer);
 		co.SetGlobal("_CLIENT");
-		co.PushBoolean(!isClient);
+		co.PushBoolean(isServer);
 		co.SetGlobal("_SERVER");
 
 		Exception? capturedException1 = null;
