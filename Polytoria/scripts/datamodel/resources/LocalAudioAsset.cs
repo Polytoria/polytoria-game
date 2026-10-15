@@ -8,10 +8,10 @@ using Polytoria.Attributes;
 namespace Polytoria.Datamodel.Resources;
 
 [Instantiable]
-public partial class LocalAudioAsset: AudioAsset
+public partial class LocalAudioAsset : AudioAsset
 {
-	private string _audioPath;
-	private AudioStream _audio;
+	private string _audioPath = null!;
+	private AudioStream _audio = null!;
 
 	[Editable, ScriptProperty]
 	public string AudioPath

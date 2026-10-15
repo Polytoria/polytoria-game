@@ -10,9 +10,9 @@ namespace Polytoria.Datamodel.Resources;
 [Instantiable]
 public partial class LocalImageAsset : ImageAsset
 {
-	private string _imagePath;
-	private Image _image;
-	private Texture2D _texture;
+	private string _imagePath = null!;
+	private Image? _image;
+	private Texture2D _texture = null!;
 
 	[Editable, ScriptProperty]
 	public string ImagePath
