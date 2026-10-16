@@ -4,6 +4,7 @@
 
 using Godot;
 using Polytoria.Attributes;
+using Polytoria.Shared;
 using Polytoria.Utils;
 using System;
 
@@ -17,6 +18,7 @@ public class PTVector3 : IScriptGDObject
 	[ScriptProperty] public float Y { get => vector.Y; set => vector.Y = value; }
 	[ScriptProperty] public float Z { get => vector.Z; set => vector.Z = value; }
 
+	// Constants
 	[ScriptProperty] public static PTVector3 Forward { get; private set; } = new() { X = 0, Y = 0, Z = -1 };
 	[ScriptProperty] public static PTVector3 Back { get; private set; } = new() { X = 0, Y = 0, Z = 1 };
 	[ScriptProperty] public static PTVector3 Down { get; private set; } = new() { X = 0, Y = -1, Z = 0 };
@@ -25,6 +27,8 @@ public class PTVector3 : IScriptGDObject
 	[ScriptProperty] public static PTVector3 Zero { get; private set; } = new() { X = 0, Y = 0, Z = 0 };
 	[ScriptProperty] public static PTVector3 Right { get; private set; } = new() { X = 1, Y = 0, Z = 0 };
 	[ScriptProperty] public static PTVector3 Up { get; private set; } = new() { X = 0, Y = 1, Z = 0 };
+
+
 
 	[ScriptProperty] public float Magnitude => vector.Length();
 	[ScriptProperty] public PTVector3 Normalized => FromGDClass(vector.Normalized());
@@ -44,7 +48,7 @@ public class PTVector3 : IScriptGDObject
 	}
 
 	[ScriptMethod]
-	public static PTVector3 New()
+	public static PTVector3 New() // Returns a vector3 object with values (0, 0 ,0)
 	{
 		return new()
 		{
@@ -55,7 +59,7 @@ public class PTVector3 : IScriptGDObject
 	}
 
 	[ScriptMethod]
-	public static PTVector3 New(float d)
+	public static PTVector3 New(float d) // Returns a vector3 object with values (d, d ,d)
 	{
 		return new()
 		{
@@ -66,7 +70,7 @@ public class PTVector3 : IScriptGDObject
 	}
 
 	[ScriptMethod]
-	public static PTVector3 New(float x, float y)
+	public static PTVector3 New(float x, float y) // Returns a vector3 object with values (x, y ,0)
 	{
 		return new()
 		{
@@ -77,9 +81,8 @@ public class PTVector3 : IScriptGDObject
 	}
 
 	[ScriptMethod]
-	public static PTVector3 New(float x, float y, float z)
+	public static PTVector3 New(float x, float y, float z) // Returns a vector3 object with values (x, y ,z)
 	{
-		//PT.Print("New vector3: ", x, y, z);
 		return new()
 		{
 			X = x,
@@ -89,7 +92,7 @@ public class PTVector3 : IScriptGDObject
 	}
 
 	[ScriptMethod]
-	public static PTVector3 New(PTVector2 v)
+	public static PTVector3 New(PTVector2 v) // Returns a vector3 object with values (v.X, v.Y, 0)
 	{
 		return new()
 		{
@@ -99,44 +102,84 @@ public class PTVector3 : IScriptGDObject
 		};
 	}
 
+	[ScriptMethod]
+	public static PTVector3 New(PTVector2 v, float d) // Returns a vector3 object with values (v.X, v.Y, d)
+	{
+		return new()
+		{
+			X = v.X,
+			Y = v.Y,
+			Z = d
+		};
+	}
+
+	[ScriptMethod]
+	public static PTVector3 New(float d, PTVector2 v) // Returns a vector3 object with values (v.X, v.Y, d)
+	{
+		return new()
+		{
+			X = v.X,
+			Y = v.Y,
+			Z = d
+		};
+	}
+
+	[ScriptMethod]
+	public static PTVector3 New(bool a) // Returns a vector3 object based on boolean values (false = 0, true = 1)
+	{
+		// Conditional to convert boolean to a float
+		float data = 0;
+		if (a)
+		{
+			data = 1;
+		}
+
+		return new()
+		{
+			X = data,
+			Y = data,
+			Z = data
+		};
+	}
+
 	[ScriptMetamethod(ScriptObjectMetamethod.Add)]
-	public static PTVector3 Add(PTVector3 a, PTVector3 b)
+	public static PTVector3 Add(PTVector3 a, PTVector3 b) // Adds two vectors together and returns
 	{
 		return FromGDClass(a.vector + b.vector);
 	}
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Sub)]
-	public static PTVector3 SubVectorVector(PTVector3 a, PTVector3 b)
+	public static PTVector3 SubVectorVector(PTVector3 a, PTVector3 b) // Subtracts two vectors and returns
 	=> FromGDClass(a.vector - b.vector);
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Sub)]
-	public static PTVector3 SubVectorQuaternion(PTVector3 a, PTQuaternion q)
+	public static PTVector3 SubVectorQuaternion(PTVector3 a, PTQuaternion q) // Subtracts two quaternions and returns it as as a vector
 		=> FromGDClass(a.vector - new Vector3(q.X, q.Y, q.Z));
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Mul)]
-	public static PTVector3 MulVectorVector(PTVector3 a, PTVector3 b)
+	public static PTVector3 MulVectorVector(PTVector3 a, PTVector3 b) // Multiplies two vectors and returns
 	=> FromGDClass(a.vector * b.vector);
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Mul)]
-	public static PTVector3 MulVectorScalar(PTVector3 a, double scalar)
+	public static PTVector3 MulVectorScalar(PTVector3 a, double scalar) // multiplies a vector by a double
 		=> FromGDClass(a.vector * (float)scalar);
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Mul)]
-	public static PTVector3 MulScalarVector(double scalar, PTVector3 b)
+	public static PTVector3 MulScalarVector(double scalar, PTVector3 b) // multiplies a vector by a double but flipped
 		=> FromGDClass(b.vector * (float)scalar);
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Mul)]
-	public static PTVector3 MulVectorQuaternion(PTVector3 a, PTQuaternion q)
+	public static PTVector3 MulVectorQuaternion(PTVector3 a, PTQuaternion q) // multiplies a vector by a quaternion which gets normalized
 		=> FromGDClass(a.vector * q.quat.Normalized());
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Div)]
-	public static PTVector3 Div(PTVector3 a, double b)
+	public static PTVector3 Div(PTVector3 a, double b) // divides a vector by a double
 	{
 		return FromGDClass(a.vector / (float)b);
 	}
 
-	[ScriptMetamethod(ScriptObjectMetamethod.Mod)]
-	public static PTVector3 Mod(PTVector3 a, PTVector3 b)
+	[ScriptMetamethod(ScriptObjectMetamethod.Mod)] 
+	public static PTVector3 Mod(PTVector3 a, PTVector3 b) // returns the modulo between two vectors
 	{
 		return FromGDClass(new Vector3(
 			a.vector.X % b.vector.X,
@@ -146,13 +189,13 @@ public class PTVector3 : IScriptGDObject
 	}
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Unm)]
-	public static PTVector3 Unm(PTVector3 a)
+	public static PTVector3 Unm(PTVector3 a) // returns a negated vector
 	{
 		return FromGDClass(-a.vector);
 	}
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Pow)]
-	public static PTVector3 Pow(PTVector3 a, PTVector3 b)
+	public static PTVector3 Pow(PTVector3 a, PTVector3 b) // returns a vector to the power of another vector
 	{
 		return FromGDClass(new Vector3(
 			(float)Math.Pow(a.vector.X, b.vector.X),
@@ -161,32 +204,42 @@ public class PTVector3 : IScriptGDObject
 		));
 	}
 
-	[ScriptMetamethod(ScriptObjectMetamethod.Eq)]
+	[ScriptMetamethod(ScriptObjectMetamethod.Pow)]
+	public static PTVector3 Pow(PTVector3 a, float d) // returns a vector to the power of a float
+	{
+		return FromGDClass(new Vector3(
+			(float)Math.Pow(a.vector.X, d),
+			(float)Math.Pow(a.vector.Y, d),
+			(float)Math.Pow(a.vector.Z, d)
+		));
+	}
+
+	[ScriptMetamethod(ScriptObjectMetamethod.Eq)] // returns if two vectors are equal
 	public static bool Eq(PTVector3 a, PTVector3 b)
 	{
 		return a.vector == b.vector;
 	}
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Lt)]
-	public static bool Lt(PTVector3 a, PTVector3 b)
+	public static bool Lt(PTVector3 a, PTVector3 b) // returns if vector a is less than vector b
 	{
 		return a.vector.LengthSquared() < b.vector.LengthSquared();
 	}
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Le)]
-	public static bool Le(PTVector3 a, PTVector3 b)
+	public static bool Le(PTVector3 a, PTVector3 b) // returns if vector a is less or equal to vector b
 	{
 		return a.vector.LengthSquared() <= b.vector.LengthSquared();
 	}
 
 	[ScriptMetamethod(ScriptObjectMetamethod.Len)]
-	public static double Len(PTVector3 a)
+	public static double Len(PTVector3 a) // returns the length of a vector
 	{
 		return a.vector.Length();
 	}
 
 	[ScriptMetamethod(ScriptObjectMetamethod.ToString)]
-	public static string ToString(PTVector3? v)
+	public static string ToString(PTVector3? v) // Converts a vector3 to a string to be printed out
 	{
 		if (v == null) return "<Vector3>";
 		return $"<Vector3:({v.vector.X}, {v.vector.Y}, {v.vector.Z})>";
@@ -196,7 +249,6 @@ public class PTVector3 : IScriptGDObject
 	//[ScriptMethod] public static Vector3 ClampMagnitude(Vector3 vector, float maxLength) => vector.Clamp(vector, maxLength);
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTVector3 Cross(PTVector3 lhs, PTVector3 rhs) => FromGDClass(lhs.vector.Cross(rhs.vector));
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float Distance(PTVector3 a, PTVector3 b) => a.vector.DistanceTo(b.vector);
-	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float SqrDistance(PTVector3 a, PTVector3 b) => a.vector.DistanceSquaredTo(b.vector);
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float Dot(PTVector3 lhs, PTVector3 rhs) => lhs.vector.Dot(rhs.vector);
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTVector3 Lerp(PTVector3 a, PTVector3 b, float t) => FromGDClass(a.vector.Lerp(b.vector, t));
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTVector3 Max(PTVector3 lhs, PTVector3 rhs) => FromGDClass(lhs.vector.Max(rhs.vector));
