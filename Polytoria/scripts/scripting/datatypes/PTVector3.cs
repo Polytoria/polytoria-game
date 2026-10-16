@@ -130,15 +130,59 @@ public class PTVector3 : IScriptGDObject
 		// Conditional to convert boolean to a float
 		float data = 0;
 		if (a)
-		{
 			data = 1;
-		}
 
 		return new()
 		{
 			X = data,
 			Y = data,
 			Z = data
+		};
+	}
+
+	public static PTVector3 New(bool x, bool y, bool z) // Returns a vector3 object based on boolean values (false = 0, true = 1)
+	{
+		// Conditional to convert boolean to a float
+		float X = 0;
+		float Y = 0;
+		float Z = 0;
+
+		if (x)
+			X = 1;
+
+		if (y)
+			Y = 1;
+
+		if (z)
+			Z = 1;
+		return new()
+		{
+			X = X,
+			Y = Y,
+			Z = Z
+		};
+	}
+
+	public static PTVector3 New(bool x, bool y, bool z, float multiplier) // Returns a vector3 object based on boolean values and a multiplier (false = 0, true = multiplier)
+	{
+		// Conditional to convert boolean to a float
+		float X = 0;
+		float Y = 0;
+		float Z = 0;
+
+		if (x)
+			X = multiplier;
+
+		if (y)
+			Y = multiplier;
+
+		if (z)
+			Z = multiplier;
+		return new()
+		{
+			X = X,
+			Y = Y,
+			Z = Z
 		};
 	}
 
