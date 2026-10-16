@@ -29,7 +29,7 @@ public sealed partial class Text3D : Dynamic
 
 	private float _fontSize = 16;
 	private bool _useRichText = false;
-	private bool _shaded = false;
+	private bool _shaded = true;
 	private bool _visible = false;
 	private bool _fixedSize = false;
 	private bool _alwaysOnTop = false;
