@@ -1121,7 +1121,7 @@ public partial class Physical : Dynamic
 	{
 		if (physical == this) return;
 		// Ignore dead NPCs, their position could be inaccurate
-		if (physical is NPC npc && npc.IsDead) return;
+		if (physical is NPC npc && !npc.IsDead) return;
 
 		// Ignore player that's not ready
 		if (physical is Player plr && !plr.IsReady) return;
