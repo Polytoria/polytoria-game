@@ -603,6 +603,21 @@ public partial class Instance : NetworkedObject
 	}
 
 	[ScriptMethod]
+	public Instance[] GetDescendantsOfClass(string className)
+	{
+		List<Instance> des = [];
+		foreach (Instance child in GetDescendants())
+		{
+			if (child.ClassName == className)
+			{
+				des.Add(child);
+			}
+		}
+
+		return [.. des];
+	}
+
+	[ScriptMethod]
 	public Instance? FindAncestorByClass(string className)
 	{
 		Instance? parent = Parent;
@@ -619,6 +634,51 @@ public partial class Instance : NetworkedObject
 			parent = parent.Parent;
 		}
 		return null;
+	}
+
+	[ScriptMethod]
+	public Instance? FindAncestorWithTag(string tagName)
+	{
+		Instance? parent = Parent;
+		while (parent != null)
+		{
+			if (parent.HasTag(tagName))
+				return parent;
+			parent = parent.Parent;
+		}
+		return null;
+	}
+
+	[ScriptMethod]
+	public Instance[] GetAncestorsWithTag(string tagName)
+	{
+		List<Instance> instances = [];
+		Instance? parent = Parent;
+		while (parent != null)
+		{
+			if (parent.HasTag(tagName))
+			{
+				instances.Add(parent);
+			}
+			parent = parent.Parent;
+		}
+		return [.. instances];
+	}
+
+	[ScriptMethod]
+	public Instance[] GetAncestorsOfClass(string className)
+	{
+		List<Instance> instances = [];
+		Instance? parent = Parent;
+		while (parent != null)
+		{
+			if (parent.ClassName == className)
+			{
+				instances.Add(parent);
+			}
+			parent = parent.Parent;
+		}
+		return [.. instances];
 	}
 
 	[ScriptLegacyMethod("FindChildByClass")]
