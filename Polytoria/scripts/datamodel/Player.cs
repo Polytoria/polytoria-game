@@ -1133,7 +1133,10 @@ public sealed partial class Player : NPC
 				NetworkedObject a = item.Clone();
 				if (a is Instance i)
 				{
-					i.Parent = Inventory;
+					if (Backpack.FindChild(i.Name) == null)
+					{
+						i.Parent = Inventory;
+					}
 				}
 			}
 		}
