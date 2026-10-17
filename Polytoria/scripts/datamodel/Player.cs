@@ -1097,6 +1097,8 @@ public sealed partial class Player : NPC
 		UseBubbleChat = Root.PlayerDefaults.UseBubbleChat;
 		AutoLoadAppearance = Root.PlayerDefaults.AutoLoadAppearance;
 		MovementMode = Root.PlayerDefaults.MovementMode;
+		AccelerationFactor = Root.PlayerDefaults.AccelerationFactor;
+		AirAccelerationFactor = Root.PlayerDefaults.AirAccelerationFactor;
 
 		if (Character is PolytorianModel ptmodel)
 		{

@@ -25,6 +25,7 @@ public partial class NPC : Physical
 	private CharacterModel? _sitPoseModel;
 	private CharacterModel? _character;
 	private Dynamic? _moveTarget;
+	private bool _stopsWithoutTarget = true;
 
 	public CharacterBody3D CharBody3D = null!;
 	public const float ForwardRaycastRange = 1;
@@ -37,6 +38,8 @@ public partial class NPC : Physical
 	private float _maxHealth = 100;
 	private float _jumpPower = 36;
 	private float _walkSpeed = 16;
+	private float _accelerationFactor = -1f;
+	private float _airAccelerationFactor = -1f;
 	private string _displayName = "";
 	protected RayCast3D FootFwdRaycast = null!;
 	private Sound? _jumpSound;
@@ -402,6 +405,35 @@ public partial class NPC : Physical
 		}
 	}
 
+	/// <summary>
+	/// Acceleration factor of movement speed. Measured in movement speeds per second. -1 means instant acceleration.
+	/// </summary>
+	[Editable, ScriptProperty, SyncVar]
+	public float AccelerationFactor
+	{
+		get => _accelerationFactor;
+		set
+		{
+			_accelerationFactor = value;
+			OnPropertyChanged();
+		}
+	}
+
+
+	/// <summary>
+	/// Acceleration factor in air of movement speed. Measured in movement speeds per second. -1 means instant acceleration.
+	/// </summary>
+	[Editable, ScriptProperty, SyncVar]
+	public float AirAccelerationFactor
+	{
+		get => _airAccelerationFactor;
+		set
+		{
+			_airAccelerationFactor = value;
+			OnPropertyChanged();
+		}
+	}
+
 	[SyncVar, ScriptProperty]
 	public Dynamic? MoveTarget
 	{
@@ -414,6 +446,17 @@ public partial class NPC : Physical
 			return _moveTarget;
 		}
 		set => _moveTarget = value;
+	}
+
+	[Editable, ScriptProperty, SyncVar]
+	public bool StopsWithoutTarget
+	{
+		get => _stopsWithoutTarget;
+		set
+		{
+			_stopsWithoutTarget = value;
+			OnPropertyChanged();
+		}
 	}
 
 	[ScriptProperty, ScriptLegacyProperty("Grounded")]
@@ -698,13 +741,7 @@ public partial class NPC : Physical
 			if (walkTarget.HasValue)
 			{
 				Vector3 dir = (walkTarget.Value - GetGlobalPosition()).Slide(Vertical).Normalized();
-				CharacterVelocity = (dir * WalkSpeed).Slide(Vertical) + CharacterVelocity.Project(Vertical);
-				// Apply rotation by move direction
-				Vector3 a = new Quaternion(Up, Vertical) * Forward;
-				float angle = Mathf.Asin(a.Cross(dir).Dot(Vertical));
-				if (a.Dot(dir) < 0) angle = Mathf.Pi - angle;
-				if (angle > Mathf.Pi) angle -= Mathf.Tau;
-				Quaternion = new Quaternion(Vertical, angle * MathUtils.ExpDecay((float)delta, BodyRotateLerp)) * Quaternion;
+				TryMovement(dir, delta);
 
 				float distanceToTarget = GetGlobalPosition().DistanceTo(walkTarget.Value);
 
@@ -715,9 +752,9 @@ public partial class NPC : Physical
 					TryStepUp();
 				}
 			}
-			else if (this is not Player || playerNPCOverride)
+			else if ((this is not Player || playerNPCOverride) && StopsWithoutTarget)
 			{
-				CharacterVelocity = CharacterVelocity.Project(Vertical);
+				TryMovement(Vector3.Zero, delta, false);
 			}
 
 			if (!isOnFloor)
@@ -770,6 +807,32 @@ public partial class NPC : Physical
 					LeftGround.Invoke();
 				}
 			}
+		}
+	}
+
+	[ScriptMethod]
+	public void TryMovement(Vector3 moveDir, double delta, bool rotate = true, float? speedOverride = null)
+	{
+		float speed = speedOverride ?? WalkSpeed;
+		float accelerationFactor = IsOnGround ? AccelerationFactor : AirAccelerationFactor;
+		if (accelerationFactor < 0)
+		{
+			CharacterVelocity = moveDir * speed + CharacterVelocity.Project(Vertical);
+		}
+		else
+		{
+			float maxDeltaV = (float)delta * speed * accelerationFactor;
+			CharacterVelocity = CharacterVelocity.Slide(Vertical).MoveToward(moveDir * speed, maxDeltaV) + CharacterVelocity.Project(Vertical);
+		}
+		if (rotate)
+		{
+			// Apply rotation by move direction
+			Vector3 a = new Quaternion(Up, Vertical) * Forward;
+			Vector3 dir = moveDir.Normalized();
+			float angle = Mathf.Asin(a.Cross(dir).Dot(Vertical));
+			if (a.Dot(dir) < 0) angle = Mathf.Pi - angle;
+			if (angle > Mathf.Pi) angle -= Mathf.Tau;
+			Quaternion = new Quaternion(Vertical, angle * MathUtils.ExpDecay((float)delta, BodyRotateLerp)) * Quaternion;
 		}
 	}
 
