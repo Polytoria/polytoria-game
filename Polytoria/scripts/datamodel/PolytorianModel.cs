@@ -805,7 +805,8 @@ public sealed partial class PolytorianModel : CharacterModel
 					else if (Parent is Player plr && loadTool)
 					{
 						hasTool = true;
-						if(plr.Inventory.FindChild(asset.Name) == null){
+						if (plr.Inventory.FindChild(asset.Name) == null)
+						{
 							Root.Insert.CreateTool(asset.ID, asset.Name).Parent = plr.Inventory;
 						}
 					}
