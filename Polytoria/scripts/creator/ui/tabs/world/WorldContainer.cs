@@ -69,7 +69,7 @@ public sealed partial class WorldContainer : SubViewportContainer
 
 	public override void _GuiInput(InputEvent @event)
 	{
-		if (@event is InputEventMouseButton btn && btn.Pressed)
+		if (@event is InputEventMouseButton { Pressed: true })
 		{
 			GrabFocus();
 		}
@@ -95,13 +95,11 @@ public sealed partial class WorldContainer : SubViewportContainer
 
 	private void OnMouseExited()
 	{
-		if (_draggingFile != null)
-		{
-			_draggingFile = null;
-			_draggingModel?.Delete();
-			_draggingModel = null;
-			_dragFileShown = false;
-		}
+		if (_draggingFile == null) return;
+		_draggingFile = null;
+		_draggingModel?.Delete();
+		_draggingModel = null;
+		_dragFileShown = false;
 	}
 
 	public override bool _CanDropData(Vector2 atPosition, Variant data)
@@ -109,35 +107,29 @@ public sealed partial class WorldContainer : SubViewportContainer
 		if (World.SessionType != World.SessionTypeEnum.Creator) return false;
 		IDragDataUnion? dragData = DragData.Deserialize(data);
 
-		if (dragData is FileDragData fd)
+		if (dragData is not FileDragData fd) return false;
+		// Safety check before accessing the array
+		if (fd.Files.Length == 0)
+			return false;
+
+		string targetFile = fd.Files[0];
+		string fileExt = targetFile.GetExtension();
+
+		if (fileExt != Globals.ModelFileExtension) return false;
+		if (_draggingFile == targetFile && _draggingModel is Dynamic dyn)
 		{
-			string targetFile = fd.Files[0];
-			string fileExt = targetFile.GetExtension();
-
-			if (fileExt == Globals.ModelFileExtension)
-			{
-				if (_draggingFile == targetFile && _draggingModel != null && _draggingModel is Dynamic dyn)
-				{
-					Datamodel.Environment.RayResult? ray = World.CreatorContext.Freelook.ScreenPointToRay(World.Input.MousePosition, [dyn]);
-					if (ray.HasValue)
-					{
-						dyn.Position = ray.Value.Position;
-					}
-					else
-					{
-						dyn.Position = World.CreatorContext.Freelook.GetPlacementPosition([dyn]);
-					}
-				}
-				else if (!_dragFileShown)
-				{
-					_draggingFile = targetFile;
-					ShowInsertModel();
-				}
-				return true;
-			}
+			Datamodel.Environment.RayResult? ray =
+				World.CreatorContext.Freelook.ScreenPointToRay(World.Input.MousePosition, [dyn]);
+			dyn.Position = ray?.Position
+						   ?? World.CreatorContext.Freelook.GetPlacementPosition([dyn]);
 		}
+		else if (!_dragFileShown)
+		{
+			_draggingFile = targetFile;
+			ShowInsertModel();
+		}
+		return true;
 
-		return false;
 	}
 
 	public override void _DropData(Vector2 atPosition, Variant data)
