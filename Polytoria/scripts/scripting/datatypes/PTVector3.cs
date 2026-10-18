@@ -103,7 +103,7 @@ public class PTVector3 : IScriptGDObject
 	}
 
 	[ScriptMethod]
-	public static PTVector3 New(PTVector2 v, float d) // Returns a vector3 object with values (v.X, v.Y, d)
+	public static PTVector3 New(Vector2 v, float d) // Returns a vector3 object with values (v.X, v.Y, d)
 	{
 		return new()
 		{
@@ -114,7 +114,7 @@ public class PTVector3 : IScriptGDObject
 	}
 
 	[ScriptMethod]
-	public static PTVector3 New(float d, PTVector2 v) // Returns a vector3 object with values (v.X, v.Y, d)
+	public static PTVector3 New(float d, Vector2 v) // Returns a vector3 object with values (v.X, v.Y, d)
 	{
 		return new()
 		{
@@ -140,6 +140,23 @@ public class PTVector3 : IScriptGDObject
 		};
 	}
 
+	[ScriptMethod]
+	public static PTVector3 New(bool a, float multiplier) // Returns a vector3 object based on boolean values and  multiplier (false = 0, true = 1)
+	{
+		// Conditional to convert boolean to a float
+		float data = 0;
+		if (a)
+			data = multiplier;
+
+		return new()
+		{
+			X = data,
+			Y = data,
+			Z = data
+		};
+	}
+
+	[ScriptMethod]
 	public static PTVector3 New(bool x, bool y, bool z) // Returns a vector3 object based on boolean values (false = 0, true = 1)
 	{
 		// Conditional to convert boolean to a float
@@ -163,6 +180,7 @@ public class PTVector3 : IScriptGDObject
 		};
 	}
 
+	[ScriptMethod]
 	public static PTVector3 New(bool x, bool y, bool z, float multiplier) // Returns a vector3 object based on boolean values and a multiplier (false = 0, true = multiplier)
 	{
 		// Conditional to convert boolean to a float
