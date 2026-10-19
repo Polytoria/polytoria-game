@@ -315,7 +315,8 @@ public static class APIReferenceGenerator
 		}
 
 		// Find root types
-		IEnumerable<Type> roots = classMap.Keys.Where(type => {
+		IEnumerable<Type> roots = classMap.Keys.Where(type =>
+		{
 			Type? baseType = type.BaseType;
 
 			while (baseType != null &&
