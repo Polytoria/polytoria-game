@@ -31,7 +31,6 @@ public static class APIReferenceGenerator
 		Type[] types = assembly.GetTypes();
 #pragma warning restore IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code
 
-		List<ScriptEnum> enums = [];
 		List<string> instanceClasses = [];
 		List<Type> missingEnums = [];
 		Dictionary<Type, ScriptClass> classMap = [];
@@ -191,7 +190,7 @@ public static class APIReferenceGenerator
 			StaticAttribute? staticA = type.GetCustomAttribute<StaticAttribute>();
 			classMap[type] = new(
 				name,
-				((type.BaseType != null && type.BaseType.IsAssignableTo(typeof(Node))) || type.BaseType == typeof(object) || type.BaseType == typeof(ValueType)) ? null : type.BaseType?.Name,
+				type.BaseType != null && (type.BaseType.IsAssignableTo(typeof(Node)) || type.BaseType == typeof(object) || type.BaseType == typeof(ValueType)) ? null : type.BaseType!.Name,
 				[.. propertiesDef],
 				[.. methodsDef],
 				[.. eventsDef],
@@ -204,11 +203,6 @@ public static class APIReferenceGenerator
 
 		// Order classes by inheritance hierarchy
 		List<ScriptClass> classes = OrderClassesByInheritance(classMap);
-
-		foreach ((string key, Type enumType) in ScriptService.EnumMap)
-		{
-			enums.Add(new(key, enumType.Name, [.. Enum.GetNames(enumType)]));
-		}
 
 		if (Globals.IsInGDEditor)
 		{
@@ -224,7 +218,7 @@ public static class APIReferenceGenerator
 		return new(
 			Globals.AppVersion,
 			[.. classes],
-			[.. enums],
+			[.. ScriptService.EnumMap.Select(kv => new ScriptEnum(kv.Key, kv.Value.Name, [.. Enum.GetNames(kv.Value)]))],
 			[.. instanceClasses]
 		);
 	}
@@ -254,7 +248,7 @@ public static class APIReferenceGenerator
 		};
 	}
 
-	private static List<ScriptClass> OrderClassesByInheritance(Dictionary<Type, ScriptClass> classMap)
+	private static List<ScriptClass> OrderClassesByInheritance(IReadOnlyDictionary<Type, ScriptClass> classMap)
 	{
 		List<ScriptClass> result = [];
 		HashSet<Type> processed = [];
@@ -321,11 +315,8 @@ public static class APIReferenceGenerator
 		}
 
 		// Find root types
-		List<Type> roots = [];
-		foreach (Type type in classMap.Keys)
-		{
+		IEnumerable<Type> roots = classMap.Keys.Where(type => {
 			Type? baseType = type.BaseType;
-			bool hasParentInSet = false;
 
 			while (baseType != null &&
 					baseType != typeof(object) &&
@@ -334,17 +325,13 @@ public static class APIReferenceGenerator
 			{
 				if (classMap.ContainsKey(baseType))
 				{
-					hasParentInSet = true;
-					break;
+					return true;
 				}
 				baseType = baseType.BaseType;
 			}
 
-			if (!hasParentInSet)
-			{
-				roots.Add(type);
-			}
-		}
+			return false;
+		});
 
 		// Process all roots
 		foreach (Type root in roots)

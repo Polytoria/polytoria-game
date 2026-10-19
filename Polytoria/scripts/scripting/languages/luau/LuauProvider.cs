@@ -160,7 +160,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		LuaState state;
 		try
 		{
-			state = InitalizeScript(script);
+			state = InitializeScript(script);
 		}
 		catch (Exception e)
 		{
@@ -205,7 +205,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		return LuaState.Compile(source);
 	}
 
-	public LuaState InitalizeScript(Script script)
+	public LuaState InitializeScript(Script script)
 	{
 		LuaState state = NewThread(GlobalLuaState);
 		script.LuauStateRef = GlobalLuaState.Ref();
@@ -684,68 +684,40 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		_gdToProxy[target] = proxy.GetMethod(nameof(IScriptGDObject.FromGDClass), BindingFlags.Public | BindingFlags.Static);
 	}
 
+	private static string BuildLog(LuaState lua)
+	{
+		int n = lua.GetTop();
+		string?[] strings = new string?[n];
+		for (int i = 0; i < n; i++)
+		{
+			strings[i] = lua.LauxToString(i + 1);
+			lua.Pop(1);
+		}
+		return string.Join('\t', strings);
+	}
+
 	public static int LuaPrint(IntPtr L)
 	{
 		LuaState lua = LuaState.FromIntPtr(L);
+		string logInfo = BuildLog(lua);
+
 		Script script = GetScriptInstance(lua);
 		LogDispatcher logger = GetLogger(lua);
-
-		int n = lua.GetTop();
-		StringBuilder sb = new();
-
-		for (int i = 1; i <= n; i++)
-		{
-			if (i > 1)
-				sb.Append('\t');
-			LuaType dataType = lua.Type(i);
-			if (dataType == LuaType.Boolean)
-			{
-				sb.Append(lua.ToBoolean(i));
-			}
-			else if (dataType == LuaType.Number)
-			{
-				sb.Append(lua.ToNumber(i));
-			}
-			else
-			{
-				sb.Append(lua.ToString(i, true) ?? "<" + lua.TypeName(i) + ">");
-			}
-		}
-		string logInfo = sb.ToString();
 		logger.LogInfo(script, logInfo);
 		return 0;
 	}
+
 	public static int LuaWarn(IntPtr L)
 	{
 		LuaState lua = LuaState.FromIntPtr(L);
+		string logInfo = BuildLog(lua);
+
 		Script script = GetScriptInstance(lua);
 		LogDispatcher logger = GetLogger(lua);
-
-		int n = lua.GetTop();
-		StringBuilder sb = new();
-
-		for (int i = 1; i <= n; i++)
-		{
-			if (i > 1)
-				sb.Append('\t');
-			LuaType dataType = lua.Type(i);
-			if (dataType == LuaType.Boolean)
-			{
-				sb.Append(lua.ToBoolean(i));
-			}
-			else if (dataType == LuaType.Number)
-			{
-				sb.Append(lua.ToNumber(i));
-			}
-			else
-			{
-				sb.Append(lua.ToString(i, true) ?? "<" + lua.TypeName(i) + ">");
-			}
-		}
-		string logInfo = sb.ToString();
 		logger.LogWarning(script, logInfo);
 		return 0;
 	}
+
 	public static int LuaWait(IntPtr L)
 	{
 		LuaState lua = LuaState.FromIntPtr(L);
@@ -840,7 +812,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		LuaState co;
 		try
 		{
-			co = InitalizeScript(ms);
+			co = InitializeScript(ms);
 		}
 		catch (Exception ex)
 		{
@@ -1841,7 +1813,7 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 		object objKey = (object?)obj ?? specifyType!;
 		Type type = specifyType ?? obj!.GetType();
-		bool isValueType = type.IsValueType;
+		bool isValueType = type.IsValueType || typeof(IScriptGDObject).IsAssignableFrom(type);
 
 		if (!isValueType)
 		{

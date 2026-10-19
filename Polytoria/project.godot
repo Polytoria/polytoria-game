@@ -29,7 +29,7 @@ warnings/check_invalid_track_paths=false
 [application]
 
 config/name="Polytoria"
-config/version="2.0.24"
+config/version="2.0.25"
 run/main_scene="uid://c2tql65t73ak5"
 config/use_custom_user_dir=true
 config/custom_user_dir_name="PolytoriaClient"
@@ -444,6 +444,8 @@ pointing/android/enable_pan_and_scale_gestures=true
 jolt_physics_3d/simulation/generate_all_kinematic_contacts=true
 jolt_physics_3d/limits/max_bodies=131070
 3d/default_gravity=17.0
+3d/default_linear_damp=0.0
+3d/default_angular_damp=0.0
 
 [rendering]
 
