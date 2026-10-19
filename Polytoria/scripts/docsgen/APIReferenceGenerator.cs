@@ -325,12 +325,12 @@ public static class APIReferenceGenerator
 			{
 				if (classMap.ContainsKey(baseType))
 				{
-					return true;
+					return false;
 				}
 				baseType = baseType.BaseType;
 			}
 
-			return false;
+			return true;
 		});
 
 		// Process all roots
