@@ -22,6 +22,7 @@ public partial class RigidBody : Physical
 	private float _drag;
 	private float _angularDrag;
 	private float _bounciness;
+	private bool _canSleep;
 
 	[Editable, ScriptProperty, SyncVar(Unreliable = true, AllowAuthorWrite = true)]
 	public override Vector3 Velocity
@@ -185,6 +186,22 @@ public partial class RigidBody : Physical
 			_lockRotation = value;
 
 			GDRigidBody.LockRotation = value;
+
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue(true)]
+	public bool CanSleep
+	{
+		get => _canSleep;
+		set
+		{
+			if (_canSleep == value) return;
+
+			_canSleep = value;
+
+			GDRigidBody.CanSleep = value;
 
 			OnPropertyChanged();
 		}
