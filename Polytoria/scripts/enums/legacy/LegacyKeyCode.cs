@@ -132,8 +132,6 @@ public enum LegacyKeyCode
 	RightCommand = 309, // 0x00000135
 	LeftApple = 310, // 0x00000136
 	LeftCommand = 310, // 0x00000136
-	LeftWindows = 311, // 0x00000137
-	RightWindows = 312, // 0x00000138
 	AltGr = 313, // 0x00000139
 	Help = 315, // 0x0000013B
 	Print = 316, // 0x0000013C

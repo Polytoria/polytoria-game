@@ -50,7 +50,6 @@ body:
       description: Pick all platforms where this happens.
       multiple: true
       options:
-        - Windows
         - macOS
         - Linux
         - Android
@@ -84,7 +83,7 @@ body:
       label: System details
       description: List any relevant system details such as OS version, CPU, GPU, RAM, etc.
       placeholder: |
-        OS: Windows 11 26H1
+        OS: Linux 11 26H1
         CPU: AMD Ryzen 7 9800X3D
         GPU: NVIDIA GeForce RTX 5070 Ti
         RAM: 64 GB

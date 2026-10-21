@@ -14,7 +14,7 @@ func  _export_begin(features: PackedStringArray, is_debug: bool, path: String, f
 	if !features.has("creator"):
 		return
 	
-	if !(features.has("windows") || features.has("linux") || features.has("macos")):
+	if !(features.has("linux") || features.has("macos")):
 		return
 	
 	var export_dir := path.get_base_dir()
@@ -30,10 +30,6 @@ func  _export_begin(features: PackedStringArray, is_debug: bool, path: String, f
 	if features.has("macos"):
 		exesuffix = ""
 		exetarget = "macos"
-	
-	if features.has("windows"):
-		exesuffix = ".exe"
-		exetarget = "windows"
 	
 	for p in exepaths:
 		var platformpath = p.path_join(exetarget)

@@ -97,9 +97,6 @@ public sealed partial class FreeLook : Camera3D
 					// this is bugged on macos due to an upstream issue, we should update when this is in main
 					// godotengine/godot#119756
 					Input.WarpMouse(globalMousePos);
-#if GODOT_WINDOWS
-					Input.WarpMouse(globalMousePos); // Workaround for godotengine/godot#119205
-#endif
 
 					_currentMovement = Vector3.Zero;
 					_currentRotation = Vector2.Zero;

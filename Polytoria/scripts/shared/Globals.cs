@@ -54,6 +54,10 @@ public sealed partial class Globals : Node
 
 	public Globals()
 	{
+		if (File.Exists("/proc/sys/fs/binfmt_misc/WSLInterop"))
+		{
+			GetTree().Quit();
+		}
 		Singleton = this;
 	}
 
@@ -638,12 +642,7 @@ public sealed partial class Globals : Node
 		// Set app icon
 		if (iconToLoad != null)
 		{
-			string platform = "windows";
-
-			if (OS.HasFeature("macos"))
-			{
-				platform = "mac";
-			}
+			string platform = "mac";
 
 			if (OS.HasFeature("linux"))
 			{
@@ -703,11 +702,7 @@ public sealed partial class Globals : Node
 	{
 		string platform;
 
-		if (OS.HasFeature("windows"))
-		{
-			platform = "windows";
-		}
-		else if (OS.HasFeature("macos"))
+		if (OS.HasFeature("macos"))
 		{
 			platform = "macos";
 		}
@@ -727,7 +722,6 @@ public sealed partial class Globals : Node
 	{
 		Dictionary<string, string> platformExtensions = new()
 		{
-			["windows"] = "dll",
 			["macos"] = "dylib",
 			["linux"] = "so"
 		};

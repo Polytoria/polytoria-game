@@ -10,13 +10,13 @@ var dllpaths = [
 	"res://native/discord/"
 ]
 
-var all_platforms = ["linux", "windows", "macos"]
+var all_platforms = ["linux", "macos"]
 
 func _get_name() -> String:
 	return "pt_dllcpy"
 
 func  _export_begin(features: PackedStringArray, is_debug: bool, path: String, flags: int) -> void:
-	if !(features.has("windows") || features.has("linux") || features.has("macos")):
+	if !(features.has("linux") || features.has("macos")):
 		return
 	
 	var export_dir := path.get_base_dir()
@@ -28,10 +28,6 @@ func  _export_begin(features: PackedStringArray, is_debug: bool, path: String, f
 	if features.has("linux"):
 		dllsuffix = ".so"
 		dlltarget = "linux"
-	
-	if features.has("windows"):
-		dllsuffix = ".dll"
-		dlltarget = "windows"
 	
 	if features.has("macos"):
 		dllsuffix = ".dylib"

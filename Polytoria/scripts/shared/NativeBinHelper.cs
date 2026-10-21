@@ -63,13 +63,7 @@ public static partial class NativeBinHelper
 			basePath = OS.GetExecutablePath().GetBaseDir();
 		}
 
-		if (OS.HasFeature("windows"))
-		{
-			exeName = "luau-lsp.exe";
-			if (Globals.IsInGDEditor)
-				basePath = basePath.PathJoin("windows");
-		}
-		else if (OS.HasFeature("macos"))
+		if (OS.HasFeature("macos"))
 		{
 			exeName = "luau-lsp";
 			if (Globals.IsInGDEditor)
@@ -103,13 +97,7 @@ public static partial class NativeBinHelper
 			basePath = OS.GetExecutablePath().GetBaseDir();
 		}
 
-		if (OS.HasFeature("windows"))
-		{
-			exeName = "stylua.exe";
-			if (Globals.IsInGDEditor)
-				basePath = basePath.PathJoin("windows");
-		}
-		else if (OS.HasFeature("macos"))
+		if (OS.HasFeature("macos"))
 		{
 			exeName = "stylua";
 			if (Globals.IsInGDEditor)
