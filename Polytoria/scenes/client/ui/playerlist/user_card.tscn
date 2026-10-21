@@ -54,20 +54,19 @@ stretch_mode = 6
 custom_minimum_size = Vector2(8, 0)
 layout_mode = 2
 
-[node name="Badge" type="TextureRect" parent="Layout" unique_id=856622248]
-custom_minimum_size = Vector2(16, 0)
+[node name="Username" type="Label" parent="Layout" unique_id=627039506]
 layout_mode = 2
-expand_mode = 1
-stretch_mode = 5
+text = "Username"
 
 [node name="Spacer3" type="Control" parent="Layout" unique_id=1829698442]
 custom_minimum_size = Vector2(4, 0)
 layout_mode = 2
 
-[node name="Username" type="Label" parent="Layout" unique_id=627039506]
+[node name="Badge" type="TextureRect" parent="Layout" unique_id=856622248]
+custom_minimum_size = Vector2(16, 0)
 layout_mode = 2
-size_flags_horizontal = 3
-text = "Username"
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Spacer2" type="Control" parent="Layout" unique_id=1845676044]
 custom_minimum_size = Vector2(15, 0)
