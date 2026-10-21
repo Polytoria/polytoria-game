@@ -17,13 +17,17 @@ public sealed partial class NetworkEvent : Instance
 	private bool _reliable;
 
 	/// <summary>
-	/// Fires when the server receives a message from the client.
+	/// Fires when the server receives a message from a client.
 	/// </summary>
 	[ScriptProperty] public PTSignal<Player, NetMessage> InvokedServer { get; private set; } = new();
 	/// <summary>
 	/// Fires when the client receives a message from the server.
 	/// </summary>
 	[ScriptProperty] public PTSignal<NetMessage> InvokedClient { get; private set; } = new();
+	/// <summary>
+	/// Fires when the client receives a message from the server on clients, or when the server receives a message from a client on the server.
+	/// </summary>
+	[ScriptProperty] public PTSignal<NetMessage, Player?> Invoked { get; private set; } = new();
 
 	/// <summary>
 	/// Fires when the client receives a message from the server.
@@ -67,11 +71,11 @@ public sealed partial class NetworkEvent : Instance
 	/// <summary>
 	/// Sends a network event to a specific player from the server
 	/// </summary>
-	/// <param name="msg">message</param>
 	/// <param name="player">player</param>
+	/// <param name="msg">message</param>
 	/// <exception cref="System.InvalidOperationException"></exception>
 	[ScriptMethod]
-	public void InvokeClient(NetMessage? msg = null, Player? player = null)
+	public void InvokeClient(Player? player = null, NetMessage? msg = null)
 	{
 		if (!Root.Network.IsServer) throw new System.InvalidOperationException("InvokeClient can only be called from server");
 		ArgumentNullException.ThrowIfNull(player);
@@ -85,6 +89,18 @@ public sealed partial class NetworkEvent : Instance
 		{
 			RpcId(player.PeerID, nameof(NetClientRecvMsgUnreliable), msg.Serialize());
 		}
+	}
+
+	/// <summary>
+	/// Sends a network event to a specific player from the server
+	/// </summary>
+	/// <param name="msg">message</param>
+	/// <param name="player">player</param>
+	/// <exception cref="System.InvalidOperationException"></exception>
+	[ScriptMethod]
+	public void InvokeClient(NetMessage? msg = null, Player? player = null)
+	{
+		InvokeClient(player, msg);
 	}
 
 	/// <summary>
@@ -105,6 +121,31 @@ public sealed partial class NetworkEvent : Instance
 		else
 		{
 			Rpc(nameof(NetClientRecvMsgUnreliable), msg.Serialize());
+		}
+	}
+
+	/// <summary>
+	/// Sends a network event to the server on clients, or on the server, sends a network event event to a player if the player is specified, or all players otherwise.
+	/// </summary>
+	/// <param name="msg">NetMessage to send</param>
+	/// <param name="player">Target player. Only valid on the server. Sends to all players if omitted.</param>
+	[ScriptMethod]
+	public void Invoke(NetMessage? msg = null, Player? player = null)
+	{
+		if (Root.Network.IsServer)
+		{
+			if (player == null)
+			{
+				InvokeClients(msg);
+			}
+			else
+			{
+				InvokeClient(player, msg);
+			}
+		}
+		else
+		{
+			InvokeServer(msg);
 		}
 	}
 
@@ -144,12 +185,14 @@ public sealed partial class NetworkEvent : Instance
 				if (plr != null)
 				{
 					InvokedServer.Invoke(plr, msg);
+					Invoked.Invoke(msg, plr);
 				}
 			}
 			else
 			{
 				LegacyInvokedClient.Invoke(null, msg);
 				InvokedClient.Invoke(msg);
+				Invoked.Invoke(msg, null);
 			}
 		}
 		catch (Exception e)
