@@ -35,6 +35,7 @@ public sealed partial class NetworkService : Instance
 	private const int HeartbeatIntervalSec = 10; // Server heartbeat interval
 	private const int HeartbeatBeforeCheckPlayers = 5; // Server wait before checking players
 	private const float ConnectTimeoutSec = 90; // Timeout kick if player is not ready
+	private const int NetObjDispatchTimeoutMs = 10000; // Time wait before NetObj dispatch is dropped
 
 	// TODO: Narrow this down
 	private const int MaxBroadcastPacketPerSec = 100;
@@ -263,10 +264,14 @@ public sealed partial class NetworkService : Instance
 	{
 		try
 		{
-			NetworkedObject? netObj = await Root.WaitForNetObjectAsync(networkId, timeoutMs: 10000);
+			NetworkedObject? netObj = await Root.WaitForNetObjectAsync(networkId, NetObjDispatchTimeoutMs);
 			if (netObj != null)
 			{
 				DispatchMessage(fromPeer, netMsg, tfm, netObj);
+			}
+			else
+			{
+				GD.PushWarning($"Deferred packet dropped, NetworkedObject with ID {networkId} did not exist or was not ready within {NetObjDispatchTimeoutMs}ms of dispatch");
 			}
 		}
 		catch (Exception ex)

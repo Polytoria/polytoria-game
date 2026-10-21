@@ -7,7 +7,6 @@ using Polytoria.Attributes;
 using Polytoria.Client.UI;
 using Polytoria.Datamodel.Data;
 using Polytoria.Enums;
-using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
 using System;
@@ -22,8 +21,9 @@ public sealed partial class InputService : Instance
 	private bool _cursorLocked = false;
 	private bool _cursorVisible = true;
 	private InputMapData _mapData = new();
+	private string _mapDataRaw = "";
 
-	internal InputMapData MapData
+	private InputMapData MapData
 	{
 		get
 		{
@@ -38,6 +38,21 @@ public sealed partial class InputService : Instance
 		set
 		{
 			_mapData = value;
+		}
+	}
+
+	[SyncVar(ServerOnly = true)]
+	public string MapDataRaw
+	{
+		get => _mapDataRaw;
+		set
+		{
+			if (_mapDataRaw == value) return;
+
+			_mapDataRaw = value;
+			MapData = InputMapData.LoadFromString(value);
+
+			OnPropertyChanged();
 		}
 	}
 
@@ -245,10 +260,6 @@ public sealed partial class InputService : Instance
 			{
 				SetupCursors();
 			}
-			if (Root.Network.IsServer)
-			{
-				Root.Network.PeerPreInit += OnPeerPreInit;
-			}
 
 #if CREATOR
 			if (Root.Container != null)
@@ -288,10 +299,6 @@ public sealed partial class InputService : Instance
 #else
 		Globals.GodotInputEvent -= OnInput;
 #endif
-		if (Root.Network.IsServer)
-		{
-			Root.Network.PeerPreInit -= OnPeerPreInit;
-		}
 		RenderingServer.FramePostDraw -= ClearInputFrames;
 		Globals.GodotNotification -= OnNotification;
 		Input.Singleton.JoyConnectionChanged -= OnJoyConnectionChanged;
@@ -304,17 +311,6 @@ public sealed partial class InputService : Instance
 		Input.SetCustomMouseCursor(GD.Load<Image>("res://assets/textures/client/cursor/click.png"), Input.CursorShape.PointingHand);
 		Input.SetCustomMouseCursor(GD.Load<Image>("res://assets/textures/client/cursor/grab.png"), Input.CursorShape.Drag);
 		Input.SetCustomMouseCursor(GD.Load<Image>("res://assets/textures/client/cursor/grabbing.png"), Input.CursorShape.CanDrop);
-	}
-
-	private void OnPeerPreInit(int peerID)
-	{
-		RpcId(peerID, nameof(NetRecvKeyMap), MapData.SaveToString());
-	}
-
-	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
-	private void NetRecvKeyMap(string rawMap)
-	{
-		MapData = InputMapData.LoadFromString(rawMap);
 	}
 
 	private void OnJoyConnectionChanged(long device, bool connected)
