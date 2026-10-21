@@ -15,7 +15,24 @@ public partial class CharacterModel : Dynamic
 
 	private CharacterModelStateEnum _currentState = CharacterModelStateEnum.Idle;
 	private float _currentSpeed = 1;
+	private readonly float[] _blendValues = new float[BlendCount];
 	private Animator? _animator = null;
+
+	/// <remarks>
+	/// this is only for replication!!! use <a cref="SetBlendValue" />
+	/// </remarks>
+	[SyncVar]
+	public float[] NetBlendValues
+	{
+		get => _blendValues;
+		set
+		{
+			for (int i = 0; i < BlendCount; i++)
+			{
+				InternalSetBlendValue(i, value[i]);
+			}
+		}
+	}
 
 	[ScriptEnum]
 	public enum CharacterModelStateEnum
@@ -165,6 +182,7 @@ public partial class CharacterModel : Dynamic
 
 	private void InternalSetBlendValue(int blendId, float value)
 	{
+		_blendValues[blendId] = value;
 		RecvBlendValue((CharacterModelBlendEnum)blendId, value);
 	}
 
