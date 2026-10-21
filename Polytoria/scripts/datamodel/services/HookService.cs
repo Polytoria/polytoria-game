@@ -5,6 +5,8 @@
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Scripting;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Polytoria.Datamodel.Services;
 
@@ -21,6 +23,8 @@ public sealed partial class HookService : Instance
 	public PTSignal<double> PostRendered { get; private set; } = new();
 	[ScriptProperty]
 	public PTSignal<double> PhysicsUpdated { get; private set; } = new();
+
+	public static Dictionary<PTCallback, /*milliseconds*/int> Scheduled { get; private set; } = [];
 
 	public override void Init()
 	{
@@ -65,5 +69,41 @@ public sealed partial class HookService : Instance
 	{
 		if (!GodotObject.IsInstanceValid(GDNode)) return;
 		PostRendered.Invoke(GDNode.GetProcessDeltaTime());
+	}
+
+	[ScriptMethod("ScheduleEvery")]
+	public async void ScheduleEvery(int milliseconds, PTCallback function)
+	{
+		Scheduled.Add(function, milliseconds);
+
+		while (Scheduled.ContainsKey(function))
+		{
+			await Task.Delay(Scheduled[function]);
+			function.Invoke();
+		}
+	}
+
+	[ScriptMethod("Unschedule")]
+	public void Unschedule(PTCallback function)
+	{
+		Scheduled.Remove(function);
+	}
+
+	[ScriptMethod("ScheduleIn")]
+	public async void ScheduleIn(int milliseconds, PTCallback function)
+	{
+		Scheduled.Add(function, milliseconds);
+
+		await Task.Delay(milliseconds);
+
+		function.Invoke();
+		Scheduled.Remove(function);
+	}
+
+	[ScriptMethod("ChangeSchedule")]
+	public void ChangeSchedule(PTCallback function, int milliseconds)
+	{
+		if (!Scheduled.ContainsKey(function)) return;
+		Scheduled[function] = milliseconds;
 	}
 }
