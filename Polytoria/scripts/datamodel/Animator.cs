@@ -79,10 +79,10 @@ public partial class Animator : Instance
 
 	public override void Init()
 	{
-		if (HasAuthority)
-		{
-			Root?.Network?.PeerPreInit += OnPeerPreInit;
-		}
+		// if (HasAuthority)
+		// {
+		// 	Root?.Network?.PeerPreInit += OnPeerPreInit;
+		// }
 
 		SetProcess(true);
 		base.Init();
@@ -101,19 +101,23 @@ public partial class Animator : Instance
 		}
 	}
 
-	private void OnPeerPreInit(int peerID)
-	{
-		List<AnimationKeyVal> idPair = [];
-		foreach (var (animKey, asset) in AnimationAssetList)
-		{
-			idPair.Add(new() { Key = animKey, ID = asset.NetworkedObjectID });
-		}
-		RpcId(peerID, nameof(NetRecvAnimationAssets), SerializeUtils.Serialize<AnimationKeyVal[]>([.. idPair]));
-	}
+	// private void OnPeerPreInit(int peerID)
+	// {
+	// 	List<AnimationKeyVal> idPair = [];
+	// 	foreach (var (animKey, asset) in AnimationAssetList)
+	// 	{
+	// 		idPair.Add(new() { Key = animKey, ID = asset.NetworkedObjectID });
+	// 	}
+	// 	RpcId(peerID, nameof(NetRecvAnimationAssets), SerializeUtils.Serialize<AnimationKeyVal[]>([.. idPair]));
+	// }
 
 	public override void PreDelete()
 	{
-		Root?.Network?.PeerPreInit -= OnPeerPreInit;
+		// if (HasAuthority)
+		// {
+		// 	Root?.Network?.PeerPreInit -= OnPeerPreInit;
+		// }
+
 		AnimationList.Clear();
 		base.PreDelete();
 	}
