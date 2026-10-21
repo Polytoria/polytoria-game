@@ -848,10 +848,7 @@ public sealed partial class Player : NPC
 
 	private async void OnPlayerDied()
 	{
-		if (IsLocal)
-		{
-			UnequipTool();
-		}
+		UnequipTool();
 		Velocity = Vector3.Zero;
 		if (!Root.Network.IsServer) return; // Respawn on server only
 
