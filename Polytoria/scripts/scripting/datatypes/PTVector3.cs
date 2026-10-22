@@ -127,32 +127,24 @@ public class PTVector3 : IScriptGDObject
 	[ScriptMethod]
 	public static PTVector3 New(bool a) // Returns a vector3 object based on boolean values (false = 0, true = 1)
 	{
-		// Conditional to convert boolean to a float
-		float data = 0;
-		if (a)
-			data = 1;
 
 		return new()
 		{
-			X = data,
-			Y = data,
-			Z = data
+			X = a ? 1 : 0,
+			Y = a ? 1 : 0,
+			Z = a ? 1 : 0
 		};
 	}
 
 	[ScriptMethod]
 	public static PTVector3 New(bool a, float multiplier) // Returns a vector3 object based on boolean values and  multiplier (false = 0, true = 1)
 	{
-		// Conditional to convert boolean to a float
-		float data = 0;
-		if (a)
-			data = multiplier;
 
 		return new()
 		{
-			X = data,
-			Y = data,
-			Z = data
+			X = a ? multiplier : 0,
+			Y = a ? multiplier : 0,
+			Z = a ? multiplier : 0,
 		};
 	}
 
@@ -160,23 +152,12 @@ public class PTVector3 : IScriptGDObject
 	public static PTVector3 New(bool x, bool y, bool z) // Returns a vector3 object based on boolean values (false = 0, true = 1)
 	{
 		// Conditional to convert boolean to a float
-		float X = 0;
-		float Y = 0;
-		float Z = 0;
-
-		if (x)
-			X = 1;
-
-		if (y)
-			Y = 1;
-
-		if (z)
-			Z = 1;
+		
 		return new()
 		{
-			X = X,
-			Y = Y,
-			Z = Z
+			X = x ? 1 : 0,
+			Y = y ? 1 : 0,
+			Z = z ? 1 : 0
 		};
 	}
 
@@ -184,23 +165,13 @@ public class PTVector3 : IScriptGDObject
 	public static PTVector3 New(bool x, bool y, bool z, float multiplier) // Returns a vector3 object based on boolean values and a multiplier (false = 0, true = multiplier)
 	{
 		// Conditional to convert boolean to a float
-		float X = 0;
-		float Y = 0;
-		float Z = 0;
 
-		if (x)
-			X = multiplier;
-
-		if (y)
-			Y = multiplier;
-
-		if (z)
-			Z = multiplier;
+		
 		return new()
 		{
-			X = X,
-			Y = Y,
-			Z = Z
+			X = x ? multipler : 0,
+			Y = y ? multipler : 0,
+			Z = z ? multipler : 0
 		};
 	}
 
@@ -338,6 +309,7 @@ public class PTVector3 : IScriptGDObject
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTVector3 Round(PTVector3 val) => FromGDClass(val.vector.Round());
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTVector3 Abs(PTVector3 val) => FromGDClass(val.vector.Abs());
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTVector3 Sign(PTVector3 val) => FromGDClass(val.vector.Sign());
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float SqrDistance(PTVector3 a, PTVector3 b) => a.vector.DistanceSquaredTo(b.vector);
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTVector3 Rotated(PTVector3 val, PTVector3 axis, float angle) => FromGDClass(val.vector.Rotated(axis.vector, angle));
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTVector3 LimitLength(PTVector3 val, float length) => FromGDClass(val.vector.LimitLength(length));
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTVector3 Clamp(PTVector3 val, PTVector3 min, PTVector3 max) => FromGDClass(val.vector.Clamp(min.vector, max.vector));
