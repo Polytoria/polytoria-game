@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+using System;
 using Polytoria.Attributes;
 
 namespace Polytoria.Enums;
@@ -650,4 +651,26 @@ public enum KeyCodeEnum
 	/// <para>Mouse movement y-axis.</para>
 	/// </summary>
 	MouseAxisY = 3007,
+}
+
+public static class KeyCodeExtensions
+{
+	/// <summary>
+	/// Checks if the <see cref="KeyCodeEnum"/> is invalid. An "invalid" keycode is a special value that is not actually used, like <see cref="KeyCodeEnum.None"/>.
+	/// </summary>
+	/// <returns>
+	/// Whether the given <paramref name="key"/> is invalid.
+	/// </returns>
+	public static bool IsInvalid(this KeyCodeEnum key) => key is KeyCodeEnum.None or KeyCodeEnum.Special or KeyCodeEnum.Unknown;
+
+	/// <returns>
+	/// Whether the given <paramref name="key"/> references a key.
+	/// </returns>
+	public static bool IsNonKey(this KeyCodeEnum key)
+	{
+		if (key.IsInvalid()) return true;
+
+		string? name = Enum.GetName(key);
+		return name == null || name.StartsWith("Gamepad") || name.StartsWith("Mouse");
+	}
 }

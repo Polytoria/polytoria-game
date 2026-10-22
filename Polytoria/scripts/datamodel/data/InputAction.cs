@@ -83,9 +83,31 @@ public abstract class InputAction : IScriptObject
 	[JsonIgnore] public InputService InputService = null!;
 }
 
-public class InputButton : IScriptObject
+public record InputButton : IScriptObject
 {
-	[ScriptProperty] public KeyCodeEnum KeyCode { get; set; } = KeyCodeEnum.None;
+	private KeyCodeEnum _keyCode = KeyCodeEnum.None;
+	private KeyModeEnum _keyMode = KeyModeEnum.KeyCode;
+
+	[ScriptProperty]
+	public KeyCodeEnum KeyCode
+	{
+		get => _keyCode;
+		set
+		{
+			_keyCode = value;
+			EnforceKeyMode();
+		}
+	}
+	[ScriptProperty]
+	public KeyModeEnum KeyMode
+	{
+		get => _keyMode;
+		set
+		{
+			_keyMode = value;
+			EnforceKeyMode();
+		}
+	}
 
 	[ScriptMethod]
 	public static InputButton New()
@@ -99,39 +121,73 @@ public class InputButton : IScriptObject
 		return new() { KeyCode = key };
 	}
 
+	[ScriptMethod]
+	public static InputButton New(KeyCodeEnum key, KeyModeEnum mode)
+	{
+		return new() { KeyCode = key, KeyMode = mode };
+	}
+
 	[ScriptMetamethod(ScriptObjectMetamethod.Eq)]
 	public static bool MetamethodEquals(InputButton a, InputButton b)
 	{
 		return a.Equals(b);
 	}
 
-	public override bool Equals(object? obj)
+	private void EnforceKeyMode()
 	{
-		return obj is InputButton b && b.KeyCode.Equals(KeyCode);
-	}
-
-	public override int GetHashCode()
-	{
-		return KeyCode.GetHashCode();
+		if (KeyCode.IsNonKey())
+		{
+			_keyMode = KeyModeEnum.KeyCode;
+		}
 	}
 }
 
 public class InputActionVector2 : InputAction
 {
+	private Vector2 _vectorValue;
+
 	[ScriptProperty] public InputButtonCollection Up { get; set; } = [];
 	[ScriptProperty] public InputButtonCollection Down { get; set; } = [];
 	[ScriptProperty] public InputButtonCollection Left { get; set; } = [];
 	[ScriptProperty] public InputButtonCollection Right { get; set; } = [];
 
-	[ScriptProperty, JsonIgnore] public Vector2 Value { get; internal set; }
+	[ScriptProperty, JsonIgnore]
+	public Vector2 Value
+	{
+		get => _vectorValue;
+		internal set
+		{
+			_vectorValue = value.LimitLength();
+		}
+	}
 }
 
 public class InputActionButton : InputAction
 {
+	private bool _isPressed;
+
 	[ScriptProperty] public InputButtonCollection Buttons { get; set; } = [];
 
-	[ScriptProperty, JsonIgnore] public bool IsPressed { get; set; }
-	[ScriptProperty, JsonIgnore] public float Weight { get; set; }
+	[ScriptProperty, JsonIgnore]
+	public bool IsPressed
+	{
+		get => _isPressed;
+		internal set
+		{
+			if (_isPressed == value) return;
+
+			_isPressed = value;
+			if (value)
+			{
+				Pressed.Invoke();
+			}
+			else
+			{
+				Released.Invoke();
+			}
+		}
+	}
+	[ScriptProperty, JsonIgnore] public float Weight { get; internal set; }
 
 	[ScriptProperty, JsonIgnore] public PTSignal Pressed { get; private set; } = new();
 	[ScriptProperty, JsonIgnore] public PTSignal Released { get; private set; } = new();
@@ -139,10 +195,20 @@ public class InputActionButton : InputAction
 
 public class InputActionAxis : InputAction
 {
+	private float _axisValue;
+
 	[ScriptProperty] public InputButtonCollection Negative { get; set; } = [];
 	[ScriptProperty] public InputButtonCollection Positive { get; set; } = [];
 
-	[ScriptProperty, JsonIgnore] public float Value { get; internal set; }
+	[ScriptProperty, JsonIgnore]
+	public float Value
+	{
+		get => _axisValue;
+		internal set
+		{
+			_axisValue = Mathf.Clamp(value, -1f, 1f);
+		}
+	}
 }
 
 public class InputMapData

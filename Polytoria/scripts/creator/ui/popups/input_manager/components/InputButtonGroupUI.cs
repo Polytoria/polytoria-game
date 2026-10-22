@@ -13,8 +13,10 @@ namespace Polytoria.Creator.UI.Components;
 public partial class InputButtonGroupUI : FoldableContainer
 {
 	private const string ButtonItemPath = "res://scenes/creator/popups/input_manager/components/button_item.tscn";
+
 	[Export] private Button _addNewBtn = null!;
 	[Export] private Control _listContainer = null!;
+
 	public InputAction TargetAction = null!;
 	public string PropName = "";
 	public PropertyInfo Property = null!;
@@ -28,10 +30,9 @@ public partial class InputButtonGroupUI : FoldableContainer
 
 	private void PromptAddNew()
 	{
-		CreatorService.Interface.PromptBindKey(k =>
+		CreatorService.Interface.PromptBindKey(t =>
 		{
-			InputButtonCollection val = GetButtons();
-			val.AddButton(new() { KeyCode = k });
+			GetButtons().AddButton(new() { KeyCode = t.Key, KeyMode = t.Mode });
 			Refresh();
 		});
 	}
@@ -63,8 +64,7 @@ public partial class InputButtonGroupUI : FoldableContainer
 
 	private void ListButtons()
 	{
-		InputButtonCollection val = GetButtons();
-		foreach (InputButton btn in val)
+		foreach (InputButton btn in GetButtons())
 		{
 			InputButtonItemUI item = Globals.CreateInstanceFromScene<InputButtonItemUI>(ButtonItemPath);
 			item.TargetAction = TargetAction;
