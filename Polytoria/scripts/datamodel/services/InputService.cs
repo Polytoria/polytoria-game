@@ -11,6 +11,7 @@ using Polytoria.Scripting;
 using Polytoria.Shared;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using static Polytoria.Datamodel.Environment;
 
 namespace Polytoria.Datamodel.Services;
@@ -18,6 +19,9 @@ namespace Polytoria.Datamodel.Services;
 [Static("Input"), ExplorerExclude, SaveIgnore]
 public sealed partial class InputService : Instance
 {
+	private const float StickDeadzone = 0.2f;
+	private const float PressThreshold = 0.5f;
+
 	private bool _cursorLocked = false;
 	private bool _cursorVisible = true;
 	private InputMapData _mapData = new();
@@ -239,6 +243,7 @@ public sealed partial class InputService : Instance
 	private readonly Dictionary<KeyCodeEnum, float> _keyWeight = [];
 	private readonly Dictionary<MouseButton, bool> _mouseBtnDown = [];
 	private readonly Dictionary<MouseButton, bool> _mouseFrameBtnDown = [];
+	private readonly HashSet<KeyCodeEnum> _wheelFrameKeys = [];
 	private float _mouseScrollDelta = 0;
 	private Vector2 _lastMouseDelta = Vector2.Zero;
 
@@ -337,6 +342,16 @@ public sealed partial class InputService : Instance
 	private void OnGamepadDisconnected()
 	{
 		IsGamepadConnected = false;
+
+		foreach (KeyCodeEnum k in _keyStates.Keys.Where(IsGamepadKey).ToArray())
+		{
+			_keyStates.Remove(k);
+		}
+		foreach (KeyCodeEnum k in _keyWeight.Keys.Where(IsGamepadKey).ToArray())
+		{
+			_keyWeight.Remove(k);
+		}
+
 		GamepadDisconnected?.Invoke();
 	}
 
@@ -370,8 +385,8 @@ public sealed partial class InputService : Instance
 			}
 			RecomputeMouseMode();
 		}
-		ProcessInputs();
 		RecomputeMouseAxis();
+		ProcessInputs();
 		base.Process(delta);
 	}
 
@@ -379,6 +394,11 @@ public sealed partial class InputService : Instance
 	{
 		_legacyFrameKeydowns.Clear();
 		_mouseFrameBtnDown.Clear();
+		foreach (KeyCodeEnum wheelKey in _wheelFrameKeys)
+		{
+			_keyStates[wheelKey] = false;
+		}
+		_wheelFrameKeys.Clear();
 		_mouseScrollDelta = 0;
 		MouseDelta = Vector2.Zero;
 	}
@@ -422,24 +442,16 @@ public sealed partial class InputService : Instance
 
 	private void RecomputeMouseAxis()
 	{
-		float oldYVal = _lastMouseDelta.Y;
-		float oldXVal = _lastMouseDelta.X;
-		float axisYVal = MouseDelta.Y;
-		float axisXVal = MouseDelta.X;
+		SetMouseAxis(KeyCodeEnum.MouseAxisX, MouseDelta.X, ref _lastMouseDelta.X);
+		SetMouseAxis(KeyCodeEnum.MouseAxisY, MouseDelta.Y, ref _lastMouseDelta.Y);
+	}
 
-		if (oldXVal != axisXVal && Enum.TryParse("MouseAxisX", false, out KeyCodeEnum axisEnumX))
-		{
-			_keyWeight[axisEnumX] = axisXVal;
-			AxisValueChanged.Invoke(axisEnumX, axisXVal);
-			_lastMouseDelta.X = axisXVal;
-		}
-
-		if (oldYVal != axisYVal && Enum.TryParse("MouseAxisY", false, out KeyCodeEnum axisEnumY))
-		{
-			_keyWeight[axisEnumY] = axisYVal;
-			AxisValueChanged.Invoke(axisEnumY, axisYVal);
-			_lastMouseDelta.Y = axisYVal;
-		}
+	private void SetMouseAxis(KeyCodeEnum axis, float value, ref float lastValue)
+	{
+		if (value == lastValue) return;
+		lastValue = value;
+		_keyWeight[axis] = value;
+		AxisValueChanged.Invoke(axis, value);
 	}
 
 	public void OnInput(Godot.InputEvent @event)
@@ -450,92 +462,58 @@ public sealed partial class InputService : Instance
 			GodotInputEvent?.Invoke(@event);
 		}
 
+		if (@event is InputEventAction action)
+		{
+			if (ActionToKeyEvent(action) is not InputEventKey actionKey) return;
+			@event = actionKey;
+		}
+
 		if (@event is InputEventMouseMotion mouseMotion)
 		{
-			MouseDelta = mouseMotion.Relative;
+			MouseDelta += mouseMotion.Relative;
 			MouseMoved.Invoke(mouseMotion.Relative);
+			return;
 		}
 
-		KeyCodeEnum? btnEnumPre = InputEventToKeyCode(@event);
-		if (!btnEnumPre.HasValue) return;
-		KeyCodeEnum btnEnum = btnEnumPre.Value;
+		if (InputEventToKeyCode(@event) is not KeyCodeEnum keyCode) return;
 
-		if (@event is InputEventKey key)
+		switch (@event)
 		{
-			if (Enum.TryParse(key.Keycode.ToString(), false, out KeyCodeEnum keyVal))
-			{
-				_keyStates[keyVal] = key.Pressed;
-				if (key.Pressed)
+			case InputEventKey key:
+				SetKeyState(keyCode, key.Pressed);
+				if (GetCompatKeyName(key) is string legacyName)
 				{
-					KeyDown.Invoke(keyVal, IsGameFocused);
+					SetLegacyKeyState(legacyName, key.Pressed);
 				}
-				else
-				{
-					KeyUp.Invoke(keyVal, IsGameFocused);
-				}
-			}
+				break;
 
-			if (CompatKeyCodeMapping.TryGetValue(key.Keycode, out string? btn))
-			{
-				if (key.Pressed)
-				{
-					LegacyKeyDown.Invoke(btn);
-				}
-				else
-				{
-					LegacyKeyUp.Invoke(btn);
-				}
+			case InputEventJoypadButton joypadBtn:
+				SetKeyState(keyCode, joypadBtn.Pressed);
+				break;
 
-				_legacyKeydowns[btn] = key.Pressed;
-				_legacyFrameKeydowns[btn] = key.Pressed;
-			}
+			case InputEventJoypadMotion joypadMotion:
+				_keyWeight[keyCode] = joypadMotion.AxisValue;
+				AxisValueChanged.Invoke(keyCode, joypadMotion.AxisValue);
+				break;
+
+			case InputEventMouseButton mouseBtn:
+				OnMouseButton(mouseBtn, keyCode);
+				break;
 		}
-		else if (@event is InputEventJoypadButton joypadBtn)
-		{
-			_keyStates[btnEnum] = joypadBtn.Pressed;
-			if (joypadBtn.Pressed)
-			{
-				KeyDown.Invoke(btnEnum, IsGameFocused);
-			}
-			else
-			{
-				KeyUp.Invoke(btnEnum, IsGameFocused);
-			}
-		}
-		else if (@event is InputEventJoypadMotion joypadMotion)
-		{
-			float axisVal = joypadMotion.AxisValue;
+	}
 
-			_keyWeight[btnEnum] = axisVal;
-			AxisValueChanged.Invoke(btnEnum, axisVal);
-		}
-		else if (@event is InputEventMouseButton mouseBtn)
+	private void OnMouseButton(InputEventMouseButton mouseBtn, KeyCodeEnum keyCode)
+	{
+		if (IsWheel(mouseBtn.ButtonIndex))
 		{
-			_keyStates[btnEnum] = mouseBtn.Pressed;
 			if (mouseBtn.Pressed)
 			{
-				KeyDown.Invoke(btnEnum, IsGameFocused);
+				_wheelFrameKeys.Add(keyCode);
+				SetKeyState(keyCode, true);
 			}
 			else
 			{
-				KeyUp.Invoke(btnEnum, IsGameFocused);
-			}
-
-			if (CompatMouseButtonMapping.TryGetValue(mouseBtn.ButtonIndex, out string? btn))
-			{
-				if (mouseBtn.Pressed)
-				{
-					LegacyKeyDown.Invoke(btn);
-				}
-				else
-				{
-					LegacyKeyUp.Invoke(btn);
-				}
-
-				_legacyKeydowns[btn] = mouseBtn.Pressed;
-				_legacyFrameKeydowns[btn] = mouseBtn.Pressed;
-				_mouseBtnDown[mouseBtn.ButtonIndex] = mouseBtn.Pressed;
-				_mouseFrameBtnDown[mouseBtn.ButtonIndex] = mouseBtn.Pressed;
+				KeyUp.Invoke(keyCode, IsGameFocused);
 			}
 
 			if (mouseBtn.ButtonIndex == MouseButton.WheelUp)
@@ -546,38 +524,101 @@ public sealed partial class InputService : Instance
 			{
 				_mouseScrollDelta = -mouseBtn.Factor;
 			}
+			return;
 		}
+
+		SetKeyState(keyCode, mouseBtn.Pressed);
+
+		if (CompatMouseButtonMapping.TryGetValue(mouseBtn.ButtonIndex, out string? legacyName))
+		{
+			SetLegacyKeyState(legacyName, mouseBtn.Pressed);
+			_mouseBtnDown[mouseBtn.ButtonIndex] = mouseBtn.Pressed;
+			_mouseFrameBtnDown[mouseBtn.ButtonIndex] = mouseBtn.Pressed;
+		}
+	}
+
+	private void SetKeyState(KeyCodeEnum keyCode, bool pressed)
+	{
+		_keyStates[keyCode] = pressed;
+		if (pressed)
+		{
+			KeyDown.Invoke(keyCode, IsGameFocused);
+		}
+		else
+		{
+			KeyUp.Invoke(keyCode, IsGameFocused);
+		}
+	}
+
+	private void SetLegacyKeyState(string name, bool pressed)
+	{
+		_legacyKeydowns[name] = pressed;
+		_legacyFrameKeydowns[name] = pressed;
+		if (pressed)
+		{
+			LegacyKeyDown.Invoke(name);
+		}
+		else
+		{
+			LegacyKeyUp.Invoke(name);
+		}
+	}
+
+	private string? GetCompatKeyName(InputEventKey key)
+	{
+		if (key.PhysicalKeycode != Key.None && CompatKeyCodeMapping.TryGetValue(key.PhysicalKeycode, out string? name))
+		{
+			return name;
+		}
+		return CompatKeyCodeMapping.GetValueOrDefault(key.Keycode);
+	}
+
+	private static InputEventKey? ActionToKeyEvent(InputEventAction action)
+	{
+		if (!InputMap.HasAction(action.Action)) return null;
+
+		InputEventKey? key = InputMap.ActionGetEvents(action.Action).OfType<InputEventKey>().FirstOrDefault();
+		if (key == null) return null;
+
+		return new() { PhysicalKeycode = key.PhysicalKeycode, Keycode = key.Keycode, Pressed = action.Pressed };
+	}
+
+	private static bool IsWheel(MouseButton button)
+	{
+		return button is MouseButton.WheelUp or MouseButton.WheelDown or MouseButton.WheelLeft or MouseButton.WheelRight;
+	}
+
+	private static bool IsStickAxis(KeyCodeEnum keyCode)
+	{
+		return keyCode is >= KeyCodeEnum.GamepadAxisLeftX and <= KeyCodeEnum.GamepadAxisRightY;
+	}
+
+	private static bool IsSignedAxis(KeyCodeEnum keyCode)
+	{
+		return IsStickAxis(keyCode) || keyCode is KeyCodeEnum.MouseAxisX or KeyCodeEnum.MouseAxisY;
+	}
+
+	private static bool IsGamepadKey(KeyCodeEnum keyCode)
+	{
+		return keyCode is >= KeyCodeEnum.GamepadA and <= KeyCodeEnum.GamepadTouchpad
+			or >= KeyCodeEnum.GamepadAxisLeftX and <= KeyCodeEnum.GamepadAxisTriggerRight;
 	}
 
 	public static KeyCodeEnum? InputEventToKeyCode(InputEvent @event)
 	{
-		if (@event is InputEventKey key)
+		long code = @event switch
 		{
-			if (Enum.TryParse(key.Keycode.ToString(), false, out KeyCodeEnum keyVal))
-			{
-				return keyVal;
-			}
-		}
-		else if (@event is InputEventJoypadButton joypadBtn)
+			InputEventKey key => (long)(key.PhysicalKeycode != Key.None ? key.PhysicalKeycode : key.Keycode),
+			InputEventJoypadButton joypadBtn => (long)KeyCodeEnum.GamepadA + (long)joypadBtn.ButtonIndex,
+			InputEventJoypadMotion joypadMotion => (long)KeyCodeEnum.GamepadAxisLeftX + (long)joypadMotion.Axis,
+			InputEventMouseButton mouseBtn => (long)KeyCodeEnum.MouseLeft + (long)mouseBtn.ButtonIndex - 1,
+			_ => 0
+		};
+
+		KeyCodeEnum keyCode = (KeyCodeEnum)code;
+		if (keyCode != KeyCodeEnum.None && Enum.IsDefined(keyCode))
 		{
-			if (Enum.TryParse("Gamepad" + joypadBtn.ButtonIndex, false, out KeyCodeEnum btnEnum))
-			{
-				return btnEnum;
-			}
-		}
-		else if (@event is InputEventJoypadMotion joypadMotion)
-		{
-			if (Enum.TryParse("GamepadAxis" + joypadMotion.Axis, false, out KeyCodeEnum btnEnum))
-			{
-				return btnEnum;
-			}
-		}
-		else if (@event is InputEventMouseButton mouseBtn)
-		{
-			if (Enum.TryParse("Mouse" + mouseBtn.ButtonIndex, false, out KeyCodeEnum btnEnum))
-			{
-				return btnEnum;
-			}
+			return keyCode;
 		}
 		return null;
 	}
@@ -613,46 +654,29 @@ public sealed partial class InputService : Instance
 	[ScriptMethod]
 	public InputActionVector2 GetVector2(string actionName)
 	{
-		InputAction? action = MapData.FindAction(actionName);
-		if (action is InputActionVector2 v2)
-		{
-			InitializeInputAction(action);
-			return v2;
-		}
-		else
-		{
-			throw new Exception("Input Action is not defined/is the wrong type (" + actionName + ")");
-		}
+		return GetAction<InputActionVector2>(actionName);
 	}
 
 	[ScriptMethod]
 	public InputActionButton GetButton(string actionName)
 	{
-		InputAction? action = MapData.FindAction(actionName);
-		if (action is InputActionButton ab)
-		{
-			InitializeInputAction(action);
-			return ab;
-		}
-		else
-		{
-			throw new Exception("Input Action is not defined/is the wrong type (" + actionName + ")");
-		}
+		return GetAction<InputActionButton>(actionName);
 	}
 
 	[ScriptMethod]
 	public InputActionAxis GetAxis(string actionName)
 	{
-		InputAction? action = MapData.FindAction(actionName);
-		if (action is InputActionAxis ax)
-		{
-			InitializeInputAction(action);
-			return ax;
-		}
-		else
+		return GetAction<InputActionAxis>(actionName);
+	}
+
+	private T GetAction<T>(string actionName) where T : InputAction
+	{
+		if (MapData.FindAction(actionName) is not T action)
 		{
 			throw new Exception("Input Action is not defined/is the wrong type (" + actionName + ")");
 		}
+		action.InputService = this;
+		return action;
 	}
 
 	[ScriptMethod]
@@ -673,148 +697,111 @@ public sealed partial class InputService : Instance
 		return MapData.BindVector2(name);
 	}
 
-	private void InitializeInputAction(InputAction a)
-	{
-		a.InputService = this;
-	}
-
 	private void ProcessInputs()
 	{
 		if (Root != null && Root.Network.IsServer) return;
-		if (!IsGameFocused) return;
 		foreach (InputAction a in MapData.Actions)
 		{
-			if (a is InputActionButton btn)
+			switch (a)
 			{
-				// Process button actions
-				bool pressed = false;
-				float weight = 0;
-				foreach (InputButton item in btn.Buttons)
-				{
-					if (IsKeyPressed(item.KeyCode))
-					{
-						pressed = true;
-						weight = GetKeyWeight(item.KeyCode);
-						break;
-					}
-				}
+				case InputActionButton btn:
+					ProcessButton(btn);
+					break;
 
-				btn.Weight = weight;
-				if (btn.IsPressed != pressed)
-				{
-					btn.IsPressed = pressed;
+				case InputActionAxis axis:
+					axis.Value = ComputeAxis(axis.Positive, axis.Negative);
+					break;
 
-					if (pressed)
-					{
-						btn.Pressed.Invoke();
-					}
-					else
-					{
-						btn.Released.Invoke();
-					}
-				}
-			}
-			else if (a is InputActionAxis axis)
-			{
-				// Process axis actions
-				float pos = 0;
-				float neg = 0;
-
-				// Positive
-				foreach (InputButton item in axis.Positive)
-				{
-					pos = GetKeyWeight(item.KeyCode);
-					if (pos > 0)
-					{
-						break;
-					}
-				}
-
-				// Negative
-				foreach (InputButton item in axis.Negative)
-				{
-					neg = GetKeyWeight(item.KeyCode);
-					if (neg > 0)
-					{
-						break;
-					}
-				}
-
-				axis.Value = Mathf.Clamp(pos - neg, -1f, 1f);
-			}
-			else if (a is InputActionVector2 v2)
-			{
-				// Process Vector2 actions
-				float up = 0;
-				float down = 0;
-				float left = 0;
-				float right = 0;
-
-				foreach (InputButton item in v2.Up)
-				{
-					up = GetKeyWeight(item.KeyCode);
-					if (up > 0)
-					{
-						break;
-					}
-				}
-
-				foreach (InputButton item in v2.Down)
-				{
-					down = GetKeyWeight(item.KeyCode);
-					if (down > 0)
-					{
-						break;
-					}
-				}
-
-				foreach (InputButton item in v2.Left)
-				{
-					left = GetKeyWeight(item.KeyCode);
-					if (left > 0)
-					{
-						break;
-					}
-				}
-
-				foreach (InputButton item in v2.Right)
-				{
-					right = GetKeyWeight(item.KeyCode);
-					if (right > 0)
-					{
-						break;
-					}
-				}
-
-				Vector2 finalVal = new(right - left, up - down);
-
-				if (finalVal.LengthSquared() > 1f)
-				{
-					finalVal = finalVal.Normalized();
-				}
-
-				v2.Value = finalVal;
+				case InputActionVector2 v2:
+					v2.Value = new Vector2(ComputeAxis(v2.Right, v2.Left), ComputeAxis(v2.Up, v2.Down)).LimitLength();
+					break;
 			}
 		}
+	}
+
+	private void ProcessButton(InputActionButton btn)
+	{
+		float weight = 0;
+		foreach (InputButton item in btn.Buttons)
+		{
+			weight = Mathf.Max(weight, GetBindingWeight(item.KeyCode));
+		}
+		btn.Weight = weight;
+
+		bool pressed = weight > PressThreshold;
+		if (btn.IsPressed == pressed) return;
+
+		btn.IsPressed = pressed;
+		if (pressed)
+		{
+			btn.Pressed.Invoke();
+		}
+		else
+		{
+			btn.Released.Invoke();
+		}
+	}
+
+	private float ComputeAxis(InputButtonCollection positive, InputButtonCollection negative)
+	{
+		float analog = 0;
+		float pos = ComputeAxisSide(positive, ref analog);
+		float neg = ComputeAxisSide(negative, ref analog);
+
+		return Mathf.Clamp(pos - neg + analog, -1f, 1f);
+	}
+
+	private float ComputeAxisSide(InputButtonCollection buttons, ref float analog)
+	{
+		float weight = 0;
+		foreach (InputButton item in buttons)
+		{
+			float value = GetBindingWeight(item.KeyCode);
+			if (IsSignedAxis(item.KeyCode))
+			{
+				if (Mathf.Abs(value) > Mathf.Abs(analog)) analog = value;
+			}
+			else
+			{
+				weight = Mathf.Max(weight, value);
+			}
+		}
+		return weight;
+	}
+
+	private float GetBindingWeight(KeyCodeEnum keyCode)
+	{
+		if (!IsGameFocused) return 0;
+
+		float weight = GetKeyWeight(keyCode);
+		if (!IsStickAxis(keyCode)) return weight;
+		if (Mathf.Abs(weight) < StickDeadzone) return 0;
+
+		return keyCode is KeyCodeEnum.GamepadAxisLeftY or KeyCodeEnum.GamepadAxisRightY ? -weight : weight;
+	}
+
+	[ScriptMethod]
+	public bool IsKeyDown(KeyCodeEnum keyCode)
+	{
+		return IsGameFocused && IsKeyPressed(keyCode);
+	}
+
+	[ScriptMethod]
+	public float GetAxisValue(KeyCodeEnum keyCode)
+	{
+		return IsGameFocused ? GetKeyWeight(keyCode) : 0;
 	}
 
 	public bool IsKeyPressed(KeyCodeEnum keyCode)
 	{
-		if (_keyWeight.TryGetValue(keyCode, out float weight))
-		{
-			if (weight > 0.5f)
-			{
-				return true;
-			}
-		}
-		if (_keyStates.TryGetValue(keyCode, out bool state)) return state;
-		return false;
+		if (_keyWeight.TryGetValue(keyCode, out float weight)) return weight > PressThreshold;
+		return _keyStates.GetValueOrDefault(keyCode);
 	}
 
 	public float GetKeyWeight(KeyCodeEnum keyCode)
 	{
-		if (_keyWeight.TryGetValue(keyCode, out float state)) return state;
-		return IsKeyPressed(keyCode) ? 1 : 0;
+		if (_keyWeight.TryGetValue(keyCode, out float weight)) return weight;
+		return _keyStates.GetValueOrDefault(keyCode) ? 1 : 0;
 	}
 
 	[ScriptLegacyMethod("GetMouseWorldPosition")]
