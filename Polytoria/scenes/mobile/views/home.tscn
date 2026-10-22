@@ -3,133 +3,153 @@
 [ext_resource type="Theme" uid="uid://dofh67vfwf6qe" path="res://resources/themes/mobile.tres" id="1_c7vr6"]
 [ext_resource type="Script" uid="uid://ug4m2u37khv0" path="res://scripts/mobile/ui/views/home/ViewHomePage.cs" id="2_12s5c"]
 [ext_resource type="Texture2D" uid="uid://wlrvgtw6qeuw" path="res://assets/textures/mobile/home/headerbg_color.png" id="3_syfjb"]
-[ext_resource type="PackedScene" uid="uid://cvv45fcrv7srk" path="res://scenes/mobile/components/home/friends.tscn" id="4_12s5c"]
-[ext_resource type="PackedScene" uid="uid://4jodg5v8ee3v" path="res://scenes/mobile/components/home/continue.tscn" id="5_xq0dv"]
-[ext_resource type="PackedScene" uid="uid://08fes6sp4lwp" path="res://scenes/mobile/components/home/feed.tscn" id="6_5xsir"]
+[ext_resource type="PackedScene" uid="uid://dilt4dmnlsyd6" path="res://scenes/mobile/components/shared/avatar_preview.tscn" id="4_avprv"]
+[ext_resource type="Texture2D" uid="uid://cbx31oy7e53n3" path="res://assets/textures/mobile/ui/zigzag_edge.svg" id="5_zigzg"]
+[ext_resource type="PackedScene" uid="uid://2aau6k8exq3" path="res://scenes/mobile/components/home/world_row.tscn" id="6_wrow1"]
+[ext_resource type="Texture2D" uid="uid://8uckiw40ds7s" path="res://assets/textures/mobile/ui/header_continue.png" id="7_hcont"]
+[ext_resource type="Texture2D" uid="uid://cpou757ag06d5" path="res://assets/textures/mobile/ui/header_live_now.png" id="8_hlive"]
+[ext_resource type="Texture2D" uid="uid://by1v5stcy4wia" path="res://assets/textures/mobile/ui/header_recommended.png" id="9_hrecm"]
+[ext_resource type="Shader" uid="uid://cnyumiybq1htl" path="res://resources/shaders/ui/horizontal_tile.gdshader" id="20_htile"]
 
-[sub_resource type="ViewportTexture" id="ViewportTexture_syfjb"]
-viewport_path = NodePath("PlayerModel")
+[sub_resource type="Gradient" id="Gradient_shd3a"]
+offsets = PackedFloat32Array(0, 0.7)
+colors = PackedColorArray(0, 0, 0, 0.35, 0, 0, 0, 0)
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_0s7as"]
-content_margin_left = 16.0
-content_margin_top = 16.0
-content_margin_right = 16.0
-content_margin_bottom = 16.0
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_shd3a"]
+gradient = SubResource("Gradient_shd3a")
+width = 128
+height = 8
 
-[sub_resource type="Environment" id="Environment_j26d1"]
-background_mode = 1
-background_color = Color(0.56825703, 0.72225475, 0.8017857, 1)
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_htile"]
+shader = ExtResource("20_htile")
 
-[node name="Control" type="Control" unique_id=248158860]
+[node name="Home" type="Control" unique_id=248158860 node_paths=PackedStringArray("_scroll", "_heroBackground", "_greeting", "_usernameLabel", "_avatar", "_continueRow", "_liveNowRow", "_recommendedRow")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_right = -768.0
 grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("1_c7vr6")
 script = ExtResource("2_12s5c")
+_scroll = NodePath("Scroll")
+_heroBackground = NodePath("Scroll/Content/Hero/Background")
+_greeting = NodePath("Scroll/Content/Hero/Greeting")
+_usernameLabel = NodePath("Scroll/Content/Hero/Greeting/Username")
+_avatar = NodePath("Scroll/Content/Hero/Avatar")
+_continueRow = NodePath("Scroll/Content/Sections/Continue")
+_liveNowRow = NodePath("Scroll/Content/Sections/LiveNow")
+_recommendedRow = NodePath("Scroll/Content/Sections/Recommended")
 
-[node name="ScrollContainer" type="ScrollContainer" parent="." unique_id=1290369963]
+[node name="Scroll" type="ScrollContainer" parent="." unique_id=1005588779]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+horizontal_scroll_mode = 0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="ScrollContainer" unique_id=1715327240]
+[node name="Content" type="VBoxContainer" parent="Scroll" unique_id=1037230551]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 3
+theme_override_constants/separation = 0
 
-[node name="Control" type="Panel" parent="ScrollContainer/VBoxContainer" unique_id=1178377096]
+[node name="Hero" type="Control" parent="Scroll/Content" unique_id=1462064258]
+custom_minimum_size = Vector2(0, 210)
 clip_contents = true
-custom_minimum_size = Vector2(0, 225)
 layout_mode = 2
 mouse_filter = 1
 
-[node name="TextureRect2" type="TextureRect" parent="ScrollContainer/VBoxContainer/Control" unique_id=742653045]
-modulate = Color(0.67, 0.67, 0.67, 1)
+[node name="Background" type="TextureRect" parent="Scroll/Content/Hero" unique_id=1622460940]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 texture = ExtResource("3_syfjb")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="TextureRect" type="TextureRect" parent="ScrollContainer/VBoxContainer/Control" unique_id=703399729]
+[node name="Shade" type="TextureRect" parent="Scroll/Content/Hero" unique_id=1207247599]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_shd3a")
+expand_mode = 1
+
+[node name="Greeting" type="VBoxContainer" parent="Scroll/Content/Hero" unique_id=969579228]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 24.0
+offset_right = 240.0
+offset_bottom = 88.0
+mouse_filter = 2
+theme_override_constants/separation = -6
+
+[node name="Welcome" type="Label" parent="Scroll/Content/Hero/Greeting" unique_id=1506202221]
+layout_mode = 2
+theme_type_variation = &"HeroSubLabel"
+text = "Welcome back,"
+
+[node name="Username" type="Label" parent="Scroll/Content/Hero/Greeting" unique_id=1737641029]
+layout_mode = 2
+theme_type_variation = &"HeroLabel"
+text = "Player!"
+text_overrun_behavior = 3
+
+[node name="Avatar" parent="Scroll/Content/Hero" unique_id=667046206 instance=ExtResource("4_avprv")]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -311.0
-offset_top = -176.0
-offset_right = 119.0
-offset_bottom = 15.0
+offset_left = -236.0
+offset_top = -224.0
+offset_right = 24.0
+offset_bottom = 36.0
 grow_horizontal = 0
 grow_vertical = 0
-texture = SubResource("ViewportTexture_syfjb")
-expand_mode = 1
-stretch_mode = 5
 
-[node name="Layout" type="VBoxContainer" parent="ScrollContainer/VBoxContainer/Control" unique_id=42065384]
+[node name="Edge" type="TextureRect" parent="Scroll/Content/Hero" unique_id=1685647925]
+material = SubResource("ShaderMaterial_htile")
 layout_mode = 1
-offset_left = 18.0
-offset_top = 68.0
-offset_right = 166.0
-offset_bottom = 131.0
-theme_override_constants/separation = -2
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -9.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+texture = ExtResource("5_zigzg")
+expand_mode = 1
+stretch_mode = 1
 
-[node name="Label" type="Label" parent="ScrollContainer/VBoxContainer/Control/Layout" unique_id=1399280600]
-modulate = Color(1, 1, 1, 0.6)
+[node name="Sections" type="VBoxContainer" parent="Scroll/Content" unique_id=48079386]
 layout_mode = 2
-mouse_filter = 1
-theme_override_font_sizes/font_size = 18
-text = "Hey there!"
+theme_override_constants/separation = 6
 
-[node name="Username" type="Label" parent="ScrollContainer/VBoxContainer/Control/Layout" unique_id=962702966]
+[node name="Continue" parent="Scroll/Content/Sections" unique_id=1398229310 instance=ExtResource("6_wrow1")]
 layout_mode = 2
-mouse_filter = 1
-theme_override_font_sizes/font_size = 30
-text = "Username"
+HeaderTexture = ExtResource("7_hcont")
 
-[node name="PanelContainer" type="PanelContainer" parent="ScrollContainer/VBoxContainer" unique_id=321839905]
+[node name="LiveNow" parent="Scroll/Content/Sections" unique_id=230603115 instance=ExtResource("6_wrow1")]
 layout_mode = 2
-mouse_filter = 1
-theme_override_styles/panel = SubResource("StyleBoxEmpty_0s7as")
+HeaderTexture = ExtResource("8_hlive")
 
-[node name="Layout" type="VBoxContainer" parent="ScrollContainer/VBoxContainer/PanelContainer" unique_id=611088972]
+[node name="Recommended" parent="Scroll/Content/Sections" unique_id=930935001 instance=ExtResource("6_wrow1")]
 layout_mode = 2
-theme_override_constants/separation = 16
+HeaderTexture = ExtResource("9_hrecm")
 
-[node name="Friends" parent="ScrollContainer/VBoxContainer/PanelContainer/Layout" unique_id=116194665 instance=ExtResource("4_12s5c")]
+[node name="BottomSpacer" type="Control" parent="Scroll/Content" unique_id=1383711171]
+custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
-
-[node name="Continue" parent="ScrollContainer/VBoxContainer/PanelContainer/Layout" unique_id=1954925301 instance=ExtResource("5_xq0dv")]
-layout_mode = 2
-
-[node name="Feed" parent="ScrollContainer/VBoxContainer/PanelContainer/Layout" unique_id=127152134 instance=ExtResource("6_5xsir")]
-layout_mode = 2
-
-[node name="PlayerModel" type="SubViewport" parent="." unique_id=252364737]
-own_world_3d = true
-transparent_bg = true
-size = Vector2i(800, 300)
-
-[node name="Camera3D" type="Camera3D" parent="PlayerModel" unique_id=2034531214]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.7478495, 3.24572)
-projection = 1
-size = 3.575
-
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="PlayerModel" unique_id=569306339]
-transform = Transform3D(0.9659258, 0.1830127, -0.1830127, 0, 0.7071068, 0.7071068, 0.25881907, -0.6830128, 0.6830128, 0, 0, 0)
-
-[node name="WorldEnvironment" type="WorldEnvironment" parent="PlayerModel" unique_id=1213981776]
-environment = SubResource("Environment_j26d1")
+mouse_filter = 2

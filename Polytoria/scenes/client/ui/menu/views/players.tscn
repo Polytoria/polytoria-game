@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://jl13ywi3xjp5"]
 
 [ext_resource type="Script" uid="uid://c6oujhkoklhj7" path="res://scripts/client/ui/menu/views/UIMenuPlayers.cs" id="1_5r1kw"]
+[ext_resource type="Script" uid="uid://deb73krnthej6" path="res://scripts/client/TouchScrollContainer.cs" id="2_tscrl"]
 
 [node name="Players" type="PanelContainer" unique_id=1643996787 node_paths=PackedStringArray("_playerCardContainer")]
 script = ExtResource("1_5r1kw")
@@ -8,6 +9,7 @@ _playerCardContainer = NodePath("Scroll/Grid")
 
 [node name="Scroll" type="ScrollContainer" parent="." unique_id=544880043]
 layout_mode = 2
+script = ExtResource("2_tscrl")
 
 [node name="Grid" type="GridContainer" parent="Scroll" unique_id=1271375108]
 layout_mode = 2
