@@ -94,7 +94,7 @@ expand_mode = 1
 stretch_mode = 1
 
 [node name="Navbar" type="Panel" parent="Layout" unique_id=445885224 node_paths=PackedStringArray("_buttonContainer", "_indicator")]
-custom_minimum_size = Vector2(0, 72)
+custom_minimum_size = Vector2(0, 82)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_redbr")
 script = ExtResource("5_navbr")
@@ -106,6 +106,7 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_bottom = -10.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
@@ -311,13 +312,9 @@ text = "Dev"
 horizontal_alignment = 1
 
 [node name="Indicator" type="ColorRect" parent="Layout/Navbar" unique_id=913232654]
-layout_mode = 1
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_top = -3.0
-offset_right = 100.0
-grow_vertical = 0
+layout_mode = 0
+offset_right = 87.0
+offset_bottom = 3.0
 mouse_filter = 2
 
 [node name="NewUserSplash" parent="." unique_id=1174497852 instance=ExtResource("10_py0ce")]
