@@ -327,11 +327,19 @@ public partial class Instance : NetworkedObject
 			foreach (string tag in value.Except(oldTags))
 			{
 				TagAdded.Invoke(tag);
+				if (Root != null && Root.Tags != null)
+				{
+					Root.Tags.RegisterTagAdded(this, tag);
+				}
 			}
 
 			foreach (string tag in oldTags.Except(value))
 			{
 				TagRemoved.Invoke(tag);
+				if (Root != null && Root.Tags != null)
+				{
+					Root.Tags.RegisterTagRemoved(this, tag);
+				}
 			}
 
 			OnPropertyChanged();
@@ -708,6 +716,14 @@ public partial class Instance : NetworkedObject
 	public override void EnterTree()
 	{
 		IsHidden = IsDescendantOfClass<HiddenBase>();
+
+		if (Root != null && Root.Tags != null)
+		{
+			foreach (string tag in this._tags)
+			{
+				Root.Tags.RegisterTagAdded(this, tag);
+			}
+		}
 
 #if CREATOR
 		Explorer.Singleton?.Insert(this);
