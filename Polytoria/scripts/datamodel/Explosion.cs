@@ -121,6 +121,12 @@ public partial class Explosion : Dynamic
 	{
 		if (!IsNetworkReady || IsHidden) return;
 
+		// Waits a frame since Changing a parent comes before Explosion.Touched
+		await Globals.Singleton.WaitFrame();
+
+		// Prevents tryIgnite from resuming because of freed node since it waits a frame.
+		if (IsDeleted) return;
+		
 		Sound? s = null;
 		if (_useEffects)
 		{
