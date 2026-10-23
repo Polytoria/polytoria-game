@@ -5,15 +5,25 @@
 [resource]
 resource_name = "Morning2"
 shader = ExtResource("1_ejw4i")
+
+shader_parameter/clock_time = 7.0
+
 shader_parameter/sun_disc_color = Color(1, 0.992393, 0.889706, 1)
-shader_parameter/sun_disc_multiplier = 4.0
 shader_parameter/sun_disc_exponent = 25000.0
 shader_parameter/sun_halo_color = Color(1, 0.841176, 0.602941, 1)
 shader_parameter/sun_halo_exponent = 50.0
 shader_parameter/sun_halo_contribution = 0.5
+
+shader_parameter/moon_disc_color = Color(0.82, 0.88, 1.0, 1)
+shader_parameter/moon_disc_exponent = 25000.0
+shader_parameter/moon_halo_color = Color(0.60, 0.68, 0.88, 1)
+shader_parameter/moon_halo_exponent = 50.0
+shader_parameter/moon_halo_contribution = 0.35
+
 shader_parameter/horizon_line_color = Color(0, 0, 0, 1)
 shader_parameter/horizon_line_exponent = 1.0
 shader_parameter/horizon_line_contribution = 0.0
+
 shader_parameter/sky_gradient_top = Color(0.254902, 0.403922, 0.556863, 1)
 shader_parameter/sky_gradient_bottom = Color(0.560784, 0.619608, 0.701961, 1)
 shader_parameter/sky_gradient_exponent = 4.0
