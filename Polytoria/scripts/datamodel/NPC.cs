@@ -17,11 +17,12 @@ namespace Polytoria.Datamodel;
 public partial class NPC : Physical
 {
 	private const float CoyoteTime = 0.15f;
-	private const float NavigationDistance = 2f;
+	private const float NavigationDistance = 2.25f;
 	public const float BodyRotateLerp = 10f;
 	private const float StepHeight = 1.5f;
 	private Tool? _holdingTool;
 	private Seat? _sittingIn;
+	private CharacterModel? _sitPoseModel;
 	private CharacterModel? _character;
 	private Dynamic? _moveTarget;
 
@@ -624,6 +625,15 @@ public partial class NPC : Physical
 		{
 			if (!Root.Network.IsServer && SittingIn != null)
 			{
+				if (!OverrideNetworkTransform)
+				{
+					InternalSit(SittingIn);
+				}
+				else
+				{
+					ApplySitPose();
+				}
+
 				Velocity = Vector3.Zero;
 				Position = SittingIn.Position + SeatOffset.Y * Up;
 				if (SittingIn.SitDirectionLocked)
@@ -680,10 +690,9 @@ public partial class NPC : Physical
 
 			if (_navAgent != null)
 			{
-				walkTarget = _navAgent.GetNextPathPosition();
-
 				// Adjust Nav agent position in-case of unstable vertical changes
-				_navAgentContainer?.GlobalPosition = _navAgentContainer.GlobalPosition.Slide(Vertical) + walkTarget.Value.Project(Vertical);
+				_navAgentContainer?.Position = isOnFloor ? NavigationServer3D.MapGetClosestPoint(Root.World3D.NavigationMap, GetGlobalPosition()) : GetGlobalPosition();
+				walkTarget = _navAgent.GetNextPathPosition();
 			}
 
 			if (walkTarget.HasValue)
@@ -838,8 +847,8 @@ public partial class NPC : Physical
 
 		float groundAltitude;
 		{
-			var downHit = new KinematicCollision3D();
-			bool hasGround = CharBody3D.TestMove(CharBody3D.GlobalTransform, Vector3.Down * (StepHeight + 0.05f), downHit, 0.001f, true);
+			KinematicCollision3D downHit = new();
+			bool hasGround = CharBody3D.TestMove(CharBody3D.GlobalTransform, Vertical * -(StepHeight + 0.05f), downHit, 0.001f, true);
 			if (!hasGround)
 			{
 				return false;
@@ -850,52 +859,57 @@ public partial class NPC : Physical
 
 		const float stepSearchOvershoot = 0.05f;
 
-		var spaceState = World.Current!.World3D.DirectSpaceState;
-
-		for (int i = 0; i < slideCount; i++)
+		PhysicsDirectSpaceState3D spaceState = World.Current!.World3D.DirectSpaceState;
+		PhysicsRayQueryParameters3D parameters = new()
 		{
-			KinematicCollision3D stepTest = CharBody3D.GetSlideCollision(i);
-			Vector3 n = stepTest.GetNormal();
-			Vector3 p = stepTest.GetPosition();
+			Exclude = [CharBody3D.GetRid()],
+			CollideWithAreas = false,
+			CollideWithBodies = true,
+		};
 
-			if (Mathf.Abs(n.Dot(Vertical)) >= 0.01f)
+		for (int slideIdx = 0; slideIdx < slideCount; slideIdx++)
+		{
+			KinematicCollision3D stepTest = CharBody3D.GetSlideCollision(slideIdx);
+			int collisionCount = stepTest.GetCollisionCount();
+			for (int collisionIdx = 0; collisionIdx < collisionCount; collisionIdx++)
 			{
-				continue;
+				Vector3 n = stepTest.GetNormal(collisionIdx);
+				if (Mathf.Abs(n.Dot(Vertical)) >= 0.01f)
+				{
+					continue;
+				}
+
+				Vector3 p = stepTest.GetPosition(collisionIdx);
+				if (p.Dot(Vertical) - groundAltitude >= StepHeight)
+				{
+					continue;
+				}
+
+				float stepHeight = p.Dot(Vertical) + StepHeight + 0.0001f;
+				Vector3 stepTestDir = (-n).Slide(Vertical).Normalized() * stepSearchOvershoot;
+				Vector3 origin = SetAxisOf(p, Vertical, stepHeight) + stepTestDir;
+				Vector3 direction = Vertical * -StepHeight;
+
+				parameters.From = origin;
+				parameters.To = origin + direction;
+
+				Dictionary result = spaceState.IntersectRay(parameters);
+
+				if (result.Count == 0)
+				{
+					continue;
+				}
+
+				Vector3 hitPos = result["position"].AsVector3();
+
+				Vector3 stepUpPoint = SetAxisOf(p, Vertical, hitPos.Dot(Vertical) + 0.01f) + stepTestDir;
+				Vector3 stepUpPointOffset = stepUpPoint - SetAxisOf(p, Vertical, groundAltitude);
+
+				CharBody3D.GlobalPosition += stepUpPointOffset;
+				CharBody3D.Velocity = desiredVelocity;
+
+				return true;
 			}
-
-			if (!(p.Dot(Vertical) - groundAltitude < StepHeight))
-			{
-				continue;
-			}
-
-			float stepHeight = p.Dot(Vertical) + StepHeight + 0.0001f;
-			Vector3 stepTestInvDir = (-n).Slide(Vertical).Normalized();
-			Vector3 origin = SetAxisOf(p, Vertical, stepHeight) + (stepTestInvDir * stepSearchOvershoot);
-			Vector3 direction = Vertical * -StepHeight;
-
-			Dictionary result = spaceState.IntersectRay(new PhysicsRayQueryParameters3D()
-			{
-				From = origin,
-				To = origin + direction,
-				Exclude = [CharBody3D.GetRid()],
-				CollideWithAreas = false,
-				CollideWithBodies = true,
-			});
-
-			if (result.Count == 0)
-			{
-				continue;
-			}
-
-			Vector3 hitPos = result["position"].AsVector3();
-
-			Vector3 stepUpPoint = SetAxisOf(p, Vertical, hitPos.Dot(Vertical) + 0.01f) + (stepTestInvDir * stepSearchOvershoot);
-			Vector3 stepUpPointOffset = stepUpPoint - SetAxisOf(p, Vertical, groundAltitude);
-
-			CharBody3D.GlobalPosition += stepUpPointOffset;
-			CharBody3D.Velocity = desiredVelocity;
-
-			return true;
 		}
 
 		return false;
@@ -957,18 +971,30 @@ public partial class NPC : Physical
 
 	private void InternalSit(Seat seat)
 	{
-		if (IsSitting && SittingIn != null)
+		if (IsSitting && SittingIn != null && !ReferenceEquals(SittingIn, seat))
 		{
 			SittingIn.Occupant = null;
 			SittingIn.InvokeVacated(this);
 		}
 		IsSitting = true;
 		OverrideNetworkTransform = true;
+		SetPhysicsProcess(true);
 		SittingIn = seat;
 		seat.Occupant = this;
 		seat.InvokeSat(this);
-		Character?.SetBlendValue(CharacterModel.CharacterModelBlendEnum.Sitting, 1);
+		ApplySitPose();
 		Seated.Invoke(seat);
+	}
+
+	private void ApplySitPose()
+	{
+		if (Character == null || ReferenceEquals(_sitPoseModel, Character))
+		{
+			return;
+		}
+
+		_sitPoseModel = Character;
+		Character.SetBlendValue(CharacterModel.CharacterModelBlendEnum.Sitting, 1);
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable, CallLocal = true)]
@@ -979,6 +1005,7 @@ public partial class NPC : Physical
 			// Unsit the NPC
 			IsSitting = false;
 			OverrideNetworkTransform = false;
+			_sitPoseModel = null;
 
 			if (SittingIn != null)
 			{
@@ -1133,15 +1160,17 @@ public partial class NPC : Physical
 		MoveTarget = null;
 		if (_navAgent == null)
 		{
-			_navAgentContainer = new();
+			_navAgentContainer = new()
+			{
+				TopLevel = true,
+			};
 			Quaternion q = Quaternion;
 			Quaternion = Quaternion.Identity;
 			_navAgent = new()
 			{
 				PathDesiredDistance = NavigationDistance,
 				TargetDesiredDistance = 0.5f,
-				PathHeightOffset = -(CalculateBounds().Size.Y / 2),
-				PathMaxDistance = 3f
+				PathMaxDistance = 3f,
 			};
 			Quaternion = q;
 
@@ -1161,6 +1190,7 @@ public partial class NPC : Physical
 	private void OnNavFinished()
 	{
 		_navAgentContainer?.QueueFree();
+		_navAgentContainer = null;
 		_navAgent = null;
 		NavDestinationReached = true;
 		NavFinished.Invoke();

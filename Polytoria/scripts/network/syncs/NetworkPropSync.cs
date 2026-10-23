@@ -16,7 +16,6 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using static Polytoria.Datamodel.Services.NetworkService;
 
@@ -82,7 +81,7 @@ public sealed partial class NetworkPropSync : Instance
 	{
 		try
 		{
-			return SerializeUtils.Deserialize<T>(data);
+			return SerializeUtils.Deserialize<T>(data)!;
 		}
 		catch (Exception ex)
 		{
@@ -384,7 +383,7 @@ public sealed partial class NetworkPropSync : Instance
 		NetPropReplicateData[] propData = netObj.GetNetPropReplicateData();
 		string netID = netObj.NetworkedObjectID;
 
-		RpcId(toPeerId, nameof(NetRecvPropUpdateBatch), netID, JsonSerializer.Serialize(propData, NetDataGenerationContext.Default.NetPropReplicateDataArray));
+		RpcId(toPeerId, nameof(NetRecvPropUpdateBatch), netID, SerializeUtils.Serialize(propData));
 	}
 
 	public void BroadcastPropUpdateToServer(NetworkedObject netObj, PropSyncProp prop, object? propValue, bool unreliable)
@@ -473,10 +472,21 @@ public sealed partial class NetworkPropSync : Instance
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable, TransferChannel = 1)]
-	private void NetRecvPropUpdateBatch(string nodePath, string propDataRaw)
+	private void NetRecvPropUpdateBatch(string netID, byte[] propDataRaw)
 	{
-		NetworkedObject? netObj = NetService.Root.GetNetObj(nodePath);
-		NetPropReplicateData[] propReplicates = JsonSerializer.Deserialize(propDataRaw, NetDataGenerationContext.Default.NetPropReplicateDataArray)!;
+		NetPropReplicateData[] propReplicates;
+		try
+		{
+			propReplicates = propDataRaw is { Length: > 0 }
+				? SerializeUtils.Deserialize<NetPropReplicateData[]>(propDataRaw) ?? []
+				: [];
+		}
+		catch (Exception ex)
+		{
+			PT.PrintErr("Failed to deserialize prop batch for ", netID, ": ", ex);
+			return;
+		}
+		NetworkedObject? netObj = NetService.Root.GetNetObj(netID);
 
 		if (netObj != null)
 		{
@@ -488,10 +498,10 @@ public sealed partial class NetworkPropSync : Instance
 		else
 		{
 			// Queue the batch until netObj exists
-			if (!_pendingProps.TryGetValue(nodePath, out List<NetPropReplicateData>? value))
+			if (!_pendingProps.TryGetValue(netID, out List<NetPropReplicateData>? value))
 			{
 				value = [];
-				_pendingProps[nodePath] = value;
+				_pendingProps[netID] = value;
 			}
 
 			value.AddRange(propReplicates);

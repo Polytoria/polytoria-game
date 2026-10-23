@@ -17,6 +17,7 @@ using Polytoria.Utils.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Polytoria.Providers.PlayerMovement;
 
 namespace Polytoria.Datamodel;
@@ -78,6 +79,7 @@ public sealed partial class Player : NPC
 
 #if CREATOR
 	private bool _spawnedAtCreatorPos = false;
+	private bool _spawnedAtCreatorRot = false;
 #endif
 
 	// internal peer ID
@@ -818,6 +820,7 @@ public sealed partial class Player : NPC
 	{
 		if (Root.SessionType != World.SessionTypeEnum.Client) { return; }
 		if (!IsLocal || !Root.Input.IsGameFocused) { return; }
+		if (Root.Input.IsPromptKey(@event)) { return; }
 
 		if (@event.IsActionPressed("activate"))
 		{
@@ -986,7 +989,7 @@ public sealed partial class Player : NPC
 		ChatBubbleVisible = true;
 	}
 
-	public void WarpToSpawnPoint()
+	public async Task WarpToSpawnPoint()
 	{
 		if (Root.Environment.SpawnPoints.Count > 0)
 		{
@@ -1000,15 +1003,29 @@ public sealed partial class Player : NPC
 			Quaternion = new Quaternion(Vector3.Up, Vertical);
 		}
 
-		// Spawn at custom position
+		// Spawn at custom position and rotation
 #if CREATOR
-		if (Root.Entry != null && Root.Entry.DebugSpawnPos != null)
+		if (Root.Entry != null && Root.Entry.DebugSpawnPos != null && Root.Entry.DebugSpawnRot != null)
 		{
 			if (!_spawnedAtCreatorPos)
 			{
 				_spawnedAtCreatorPos = true;
 				Position = Root.Entry.DebugSpawnPos.Value;
-				Rotation = Vector3.Zero;
+			}
+			if (!_spawnedAtCreatorRot)
+			{
+				_spawnedAtCreatorRot = true;
+				Rotation = new(
+					0,
+					Root.Entry.DebugSpawnRot.Value,
+					0
+				);
+				while (Root.Environment.CurrentCamera == null) await Task.Delay(100);
+				Root.Environment.CurrentCamera.RotationOffset = new Vector3(
+					0,
+					Root.Entry.DebugSpawnRot.Value,
+					0
+				);
 			}
 		}
 #endif

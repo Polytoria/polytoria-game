@@ -3,20 +3,36 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Polytoria.Attributes;
-using Polytoria.Datamodel.Services;
 using Polytoria.Networking;
 using System;
-using System.Collections.Generic;
 
 namespace Polytoria.Datamodel;
 
 [Instantiable]
 public partial class CharacterModel : Dynamic
 {
+	private static readonly int BlendCount = Enum.GetValues<CharacterModelBlendEnum>().Length;
+
 	private CharacterModelStateEnum _currentState = CharacterModelStateEnum.Idle;
 	private float _currentSpeed = 1;
-	private readonly Dictionary<CharacterModelBlendEnum, float> _blendValues = [];
-	private Animator? _animator = null!;
+	private readonly float[] _blendValues = new float[BlendCount];
+	private Animator? _animator = null;
+
+	/// <remarks>
+	/// this is only for replication!!! use <a cref="SetBlendValue" />
+	/// </remarks>
+	[SyncVar]
+	public float[] NetBlendValues
+	{
+		get => _blendValues;
+		set
+		{
+			for (int i = 0; i < BlendCount; i++)
+			{
+				InternalSetBlendValue(i, value[i]);
+			}
+		}
+	}
 
 	[ScriptEnum]
 	public enum CharacterModelStateEnum
@@ -67,7 +83,7 @@ public partial class CharacterModel : Dynamic
 		{
 			if (_animator != null && _animator.IsDeleted)
 			{
-				_animator = null!;
+				_animator = null;
 			}
 			return _animator;
 		}
@@ -85,34 +101,31 @@ public partial class CharacterModel : Dynamic
 		}
 	}
 
-	private bool _peerReadySubscribed = false;
-
 	public override void Init()
 	{
 		base.Init();
-		if (Root != null && Root.Network != null && NetworkService.CheckAuthority(Root.Network.LocalPeerID, NetworkAuthority))
-		{
-			_peerReadySubscribed = true;
-			Root.Network.PeerPreInit += OnPeerPreInit;
-		}
+		// if (HasAuthority)
+		// {
+		// 	Root.Network.PeerPreInit += OnPeerPreInit;
+		// }
 	}
 
 	public override void PreDelete()
 	{
-		if (_peerReadySubscribed)
-		{
-			Root.Network.PeerPreInit -= OnPeerPreInit;
-		}
+		// if (HasAuthority)
+		// {
+		// 	Root.Network.PeerPreInit -= OnPeerPreInit;
+		// }
 		base.PreDelete();
 	}
 
-	private void OnPeerPreInit(int id)
-	{
-		foreach ((CharacterModelBlendEnum blend, float val) in _blendValues)
-		{
-			RpcId(id, nameof(NetSetBlendValue), (int)blend, val);
-		}
-	}
+	// private void OnPeerPreInit(int id)
+	// {
+	// 	for (int i = 0; i < BlendCount; i++)
+	// 	{
+	// 		RpcId(id, nameof(NetSetBlendValue), i, BlendValues[i]);
+	// 	}
+	// }
 
 	[ScriptMethod]
 	public void PlayIdle()
@@ -161,23 +174,27 @@ public partial class CharacterModel : Dynamic
 
 	public void SetBlendValue(CharacterModelBlendEnum blend, float value)
 	{
-		InternalSetBlendValue(blend, value);
+		int blendId = (int)blend;
+		InternalSetBlendValue(blendId, value);
 		if (HasAuthority)
 		{
-			Rpc(nameof(NetSetBlendValue), (int)blend, value);
+			Rpc(nameof(NetSetBlendValue), blendId, value);
 		}
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
-	private void NetSetBlendValue(int blendName, float blendValue)
+	private void NetSetBlendValue(int blendId, float value)
 	{
-		InternalSetBlendValue((CharacterModelBlendEnum)blendName, blendValue);
+		if (blendId >= 0 && blendId < BlendCount)
+		{
+			InternalSetBlendValue(blendId, value);
+		}
 	}
 
-	private void InternalSetBlendValue(CharacterModelBlendEnum blendName, float blendValue)
+	private void InternalSetBlendValue(int blendId, float value)
 	{
-		_blendValues[blendName] = blendValue;
-		RecvBlendValue(blendName, blendValue);
+		_blendValues[blendId] = value;
+		RecvBlendValue((CharacterModelBlendEnum)blendId, value);
 	}
 
 	public virtual void RecvBlendValue(CharacterModelBlendEnum blendName, float blendValue) { }

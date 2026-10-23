@@ -21,6 +21,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using static Polytoria.Datamodel.Services.NetworkService;
 
 namespace Polytoria.Datamodel;
@@ -71,7 +72,10 @@ public partial class NetworkedObject : IScriptObject
 			{
 				selfpreI.RemoveNameFromParent();
 				selfpreI.RemoveLegacyNameFromParent();
-				preI.Children.Remove(selfpreI);
+				List<Instance> siblings = preI.Children;
+				int childIdx = 0;
+				while (childIdx < siblings.Count && !ReferenceEquals(siblings[childIdx], selfpreI)) childIdx++;
+				if (childIdx < siblings.Count) siblings.RemoveAt(childIdx);
 				preI.ChildRemoved.Invoke(selfpreI);
 			}
 
@@ -162,7 +166,7 @@ public partial class NetworkedObject : IScriptObject
 
 			string setto = value;
 
-			if (GetType().IsDefined(typeof(StaticAttribute), false))
+			if (GetType().IsDefinedCached(typeof(StaticAttribute), false))
 				throw new InvalidOperationException($"Cannot set Name on static type '{GetType().Name}'.");
 			if (string.IsNullOrWhiteSpace(setto))
 				setto = ClassName;
@@ -336,6 +340,7 @@ public partial class NetworkedObject : IScriptObject
 
 	private Dictionary<string, NetworkedObject>? _uniqueNames;
 	internal Dictionary<string, NetworkedObject> UniqueNames => _uniqueNames ??= [];
+	private Dictionary<string, int>? _nameCounters;
 
 	[ScriptProperty] public PTSignal TreeEntered { get; private set; } = new();
 	[ScriptProperty] public PTSignal TreeExited { get; private set; } = new();
@@ -362,7 +367,7 @@ public partial class NetworkedObject : IScriptObject
 
 	public bool TrySetName(string value)
 	{
-		if (GetType().IsDefined(typeof(StaticAttribute), false)
+		if (GetType().IsDefinedCached(typeof(StaticAttribute), false)
 			|| string.IsNullOrWhiteSpace(value))
 			return false;
 
@@ -388,13 +393,19 @@ public partial class NetworkedObject : IScriptObject
 		(string baseName, int startNumber) = GetBaseNameAndNumber(original);
 
 		int lowestAvailable = startNumber > 0 ? startNumber + 1 : 2;
-
-		while (uniqueNames.ContainsKey($"{baseName}{lowestAvailable}"))
+		ref int number = ref lowestAvailable;
+		if (startNumber <= 1)
 		{
-			lowestAvailable++;
+			number = ref CollectionsMarshal.GetValueRefOrAddDefault(NetworkParent._nameCounters ??= [], baseName, out bool exists);
+			if (!exists) number = 2;
 		}
 
-		return $"{baseName}{lowestAvailable}";
+		while (uniqueNames.ContainsKey($"{baseName}{number}"))
+		{
+			number++;
+		}
+
+		return $"{baseName}{number}";
 	}
 
 	private static (string baseName, int number) GetBaseNameAndNumber(string name)
@@ -435,6 +446,11 @@ public partial class NetworkedObject : IScriptObject
 			&& ReferenceEquals(currentOwner, this))
 		{
 			NetworkParent.UniqueNames.Remove(_name);
+			if (NetworkParent._nameCounters is { } counters)
+			{
+				(string baseName, int number) = GetBaseNameAndNumber(_name);
+				if (number >= 2 && counters.GetValueOrDefault(baseName) > number) counters[baseName] = number;
+			}
 		}
 	}
 
@@ -1461,7 +1477,7 @@ public partial class NetworkedObject : IScriptObject
 	{
 		NetworkedObject netObj = Globals.LoadNetworkedObject(className) ?? throw new Exception(className + " doesn't exist");
 
-		if (!netObj.GetType().IsDefined(typeof(InstantiableAttribute), false))
+		if (!netObj.GetType().IsDefinedCached(typeof(InstantiableAttribute), false))
 		{
 			netObj.Delete();
 			throw new Exception(className + " is not Instantiable");
@@ -1630,7 +1646,7 @@ public partial class NetworkedObject : IScriptObject
 	private string ProcessRpcTarget()
 	{
 		// If this is marked as no sync, use network path instead. as ID will not be available
-		if (GetType().IsDefined(typeof(NoSyncAttribute))) return NetworkPath;
+		if (GetType().IsDefinedCached(typeof(NoSyncAttribute), true)) return NetworkPath;
 		return string.IsNullOrEmpty(NetworkedObjectID) ? NetworkPath : "i:" + NetworkedObjectID;
 	}
 
@@ -1683,8 +1699,8 @@ public partial class NetworkedObject : IScriptObject
 
 	internal void InternalDestroy(bool forceDestroy)
 	{
-		if (GetType().IsDefined(typeof(StaticAttribute), false) && !forceDestroy) throw new InvalidOperationException("Cannot destroy a static class");
-		if (GetType().IsDefined(typeof(InternalAttribute), false) && !forceDestroy) throw new InvalidOperationException("Cannot destroy an internal class");
+		if (GetType().IsDefinedCached(typeof(StaticAttribute), false) && !forceDestroy) throw new InvalidOperationException("Cannot destroy a static class");
+		if (GetType().IsDefinedCached(typeof(InternalAttribute), false) && !forceDestroy) throw new InvalidOperationException("Cannot destroy an internal class");
 		if (this is Player && !forceDestroy) throw new InvalidOperationException("Cannot destroy a player, use Kick instead.");
 		if (IsDeleted) return;
 

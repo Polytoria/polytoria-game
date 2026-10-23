@@ -76,24 +76,18 @@ public partial class WebAssetLoader : Node
 	private static Image DecodeImage(byte[] buffer, string url)
 	{
 		Image image = new();
-		if (url.EndsWith(".png"))
+		Error error = url.EndsWith(".jpg") ? image.LoadJpgFromBuffer(buffer) : image.LoadPngFromBuffer(buffer);
+
+		if (error != Error.Ok)
 		{
-			image.LoadPngFromBuffer(buffer);
-		}
-		else if (url.EndsWith(".jpg"))
-		{
-			image.LoadJpgFromBuffer(buffer);
-		}
-		else
-		{
-			image.LoadPngFromBuffer(buffer);
+			throw new InvalidOperationException($"Couldn't decode image ({error})");
 		}
 
 		image.GenerateMipmaps();
 		return image;
 	}
 
-	public void GetResource(WebCacheItem item, Action<Resource> callback)
+	public void GetResource(WebCacheItem item, Action<Resource> callback, Action? failed = null)
 	{
 		if (_cache.TryGetValue(item, out WebCacheItem cached))
 		{
@@ -103,10 +97,10 @@ public partial class WebAssetLoader : Node
 
 		Lazy<Task<WebCacheItem>> task = _pendingRequests.GetOrAdd(item, _ => new Lazy<Task<WebCacheItem>>(() => LoadItem(item), LazyThreadSafetyMode.ExecutionAndPublication));
 
-		_ = WaitForResource(task.Value, item, callback);
+		_ = WaitForResource(task.Value, item, callback, failed);
 	}
 
-	private static async Task WaitForResource(Task<WebCacheItem> task, WebCacheItem item, Action<Resource> callback)
+	private static async Task WaitForResource(Task<WebCacheItem> task, WebCacheItem item, Action<Resource> callback, Action? failed)
 	{
 		try
 		{
@@ -116,6 +110,10 @@ public partial class WebAssetLoader : Node
 		catch (Exception exception)
 		{
 			PT.PrintErr($"Failed to load resource (Type: {item.Type}, URL: {item.URL}): {exception.Message}");
+			if (failed != null)
+			{
+				Callable.From(failed).CallDeferred();
+			}
 		}
 	}
 }

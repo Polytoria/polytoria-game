@@ -5,7 +5,7 @@
 [ext_resource type="PackedScene" uid="uid://ide5di7614d1" path="res://scenes/shared/loading_guy.tscn" id="3_qb01s"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_387td"]
-bg_color = Color(0.12941177, 0.24313726, 0.38039216, 1)
+bg_color = Color(0.8862745, 0.25882354, 0.25882354, 1)
 
 [sub_resource type="Animation" id="Animation_lfm17"]
 length = 0.001
@@ -190,7 +190,7 @@ grow_horizontal = 2
 grow_vertical = 0
 
 [node name="Label" type="Label" parent="Control/Control" unique_id=1155026864]
-modulate = Color(1, 1, 1, 0.2627451)
+modulate = Color(1, 1, 1, 0.6)
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -203,6 +203,7 @@ offset_right = 76.0
 offset_bottom = 8.0
 grow_horizontal = 2
 grow_vertical = 0
+theme_type_variation = &"LightLabel"
 text = "Loading..."
 horizontal_alignment = 1
 
