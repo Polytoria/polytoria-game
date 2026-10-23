@@ -13,6 +13,14 @@ public partial class PTMeshAnimationAsset : MeshAnimationAsset
 {
 	private uint _assetID;
 
+	[ScriptMethod]
+	public static PTMeshAnimationAsset FromID([ScriptingCaller] Script caller, uint id)
+	{
+		PTMeshAnimationAsset asset = (PTMeshAnimationAsset)NetworkedObject.NewFromScript(caller, "PTMeshAnimationAsset")!;
+		asset.AssetID = id;
+		return asset;
+	}
+
 	[Editable, ScriptProperty]
 	public uint AssetID
 	{
