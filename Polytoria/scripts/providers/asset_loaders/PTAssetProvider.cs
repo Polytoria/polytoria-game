@@ -95,8 +95,8 @@ public class PTAssetProvider : IAssetProvider
 	{
 		Node3D scene = await Task.Run(() =>
 		{
-			GltfDocument document = new();
-			GltfState state = new() { CreateAnimations = true };
+			using GltfDocument document = new();
+			using GltfState state = new() { CreateAnimations = true };
 
 			document.AppendFromBuffer(buffer, null, state);
 
