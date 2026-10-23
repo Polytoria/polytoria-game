@@ -113,6 +113,135 @@ public static class ProjectManager
 		File.WriteAllText(recentsPath, JsonSerializer.Serialize([.. existing], RecentsFileGenerationContext.Default.RecentDataArray));
 	}
 
+	public const string DefaultScriptHeader = "--[[ Default Polytoria script header, remove this header on modification ]]";
+
+	private static bool VersionLessThan(string a, string b)
+	{
+		try
+		{
+			bool isAdev = a.EndsWith("+dev");
+			bool isBdev = b.EndsWith("+dev");
+			if (isAdev) a = a.Remove(a.IndexOf('+'));
+			if (isBdev) b = b.Remove(b.IndexOf('+'));
+			string[] partsA = a.Split('.');
+			string[] partsB = b.Split('.');
+
+			int lenA = partsA.Length;
+			int lenB = partsB.Length;
+			int minlen = Math.Min(lenA, lenB);
+			for (int i = 0; i < minlen; ++i)
+			{
+				int aval = int.Parse(partsA[i]);
+				int bval = int.Parse(partsB[i]);
+				if (aval < bval) return true;
+				if (aval > bval) return false;
+			}
+			if (lenA < lenB) return true;
+			if (lenA > lenB) return false;
+			return isBdev && !isAdev;
+		}
+		catch (Exception)
+		{
+			// b is known to be a familiar format, a is not, unfamiliar format means old format
+			return true;
+		}
+	}
+
+	private static bool ScriptOccupied(string path)
+	{
+		if (!File.Exists(path)) return false;
+		Stream stream = File.OpenRead(path);
+		try
+		{
+			int len = DefaultScriptHeader.Length; // they're all ascii characters
+			byte[] buf = new byte[len];
+			stream.ReadExactly(buf, 0, len);
+			return !DefaultScriptHeader.Equals(System.Text.Encoding.Default.GetString(buf));
+		}
+		catch (EndOfStreamException)
+		{
+			return true;
+		}
+	}
+
+	private static string IDFromPath(CreatorSession session, string path)
+	{
+		if (session.FileToIndex.TryGetValue(Path.GetRelativePath(session.ProjectFolderPath, path).SanitizePath(), out string? id)) return id;
+		string newId = Guid.NewGuid().ToString();
+		return newId;
+	}
+
+	private static readonly string GodotResDir = OS.HasFeature("editor") ? ProjectSettings.GlobalizePath("res://") : OS.GetExecutablePath().GetBaseDir();
+
+	private static string? TryAddDefaultScript(CreatorSession session, string name)
+	{
+		string path = session.GlobalizePath("scripts/builtin/" + name);
+		string metaPath = PackedFormat.GetMetaPath(path);
+		if (ScriptOccupied(path)) return path;
+		string defaultScriptPath = Path.Join(GodotResDir, "defaultscripts/", name).SanitizePath();
+		File.WriteAllText(path, DefaultScriptHeader);
+		File.AppendAllText(path, File.ReadAllText(defaultScriptPath));
+		if (!File.Exists(metaPath)) PackedFormat.WriteMetaId(metaPath, IDFromPath(session, path));
+		return path;
+	}
+
+	public static Script? AddDefaultScriptInstance(World world, Instance parent, string name, string dir, string suffix)
+	{
+		if (parent.FindChild(name) is Instance i)
+		{
+			return null;
+		}
+		Script? script = null;
+		string path = dir + name + suffix;
+		switch (CreatorService.GetScriptTypeFromPath(path))
+		{
+			case ScriptTypeEnum.Server:
+				script = world.New<ServerScript>();
+				break;
+			case ScriptTypeEnum.Client:
+				script = world.New<ClientScript>();
+				break;
+			case ScriptTypeEnum.Module:
+				script = world.New<ModuleScript>();
+				break;
+		}
+		if (script != null)
+		{
+			script.Name = name;
+			script.LinkedScript = world.Assets.GetFileLinkByPath(path);
+			script.Parent = parent;
+		}
+		return script;
+	}
+
+	public static void LoadDefaultScripts(CreatorSession session, string lastversion = "2.0.0")
+	{
+		CreatorService.Interface.PendingCreateScriptAt = null;
+		if (!VersionLessThan(lastversion, "2.0.25+dev"))
+		{
+			return;
+		}
+		TryAddDefaultScript(session, "_ChatBubble.client.luau");
+		session.RescanFolder();
+	}
+
+	public static void AddDefaultInstances(CreatorSession session, World world, string lastversion = "2.0.0")
+	{
+		string dir = Path.GetRelativePath(session.ProjectFolderPath, session.GlobalizePath("scripts/builtin/"));
+		session.RescanFolder();
+		if (!VersionLessThan(lastversion, "2.0.25+dev")) return;
+		if (AddDefaultScriptInstance(world, world.ScriptService, "_ChatBubble", dir, ".client.luau") is Script s)
+		{
+			if (world.PlayerDefaults.FindChild("ChatBubble") == null)
+			{
+				VoiceBox vb = world.New<VoiceBox>();
+				vb.Name = "_ChatBubble";
+				vb.Parent = world.PlayerDefaults;
+				vb.LocalPosition = new(0, 4, 0);
+			}
+		}
+	}
+
 	public static async Task NewProject(string destFolder, CreatorProjectMetadata metadata, bool createFromTemplate = false)
 	{
 		string projectMainPlacePath = Path.GetFullPath(Path.Join(destFolder, metadata.MainWorld));
@@ -122,6 +251,7 @@ public static class ProjectManager
 		string serverPath = Path.GetFullPath(Path.Join(scriptsPath, "server"));
 		string clientPath = Path.GetFullPath(Path.Join(scriptsPath, "client"));
 		string modulePath = Path.GetFullPath(Path.Join(scriptsPath, "modules"));
+		string builtinsPath = Path.GetFullPath(Path.Join(scriptsPath, "builtin"));
 
 		CreatorService.Interface.LoadOverlay?.SetTitle("Creating new project");
 		CreatorService.Interface.LoadOverlay?.SetStatus("Creating...");
@@ -150,9 +280,18 @@ public static class ProjectManager
 		{
 			Directory.CreateDirectory(modulePath);
 		}
+		if (!Directory.Exists(builtinsPath))
+		{
+			Directory.CreateDirectory(builtinsPath);
+		}
 
 		CreatorService.Interface.LoadOverlay?.SetStatus("Opening Project...");
-		await CreatorService.Singleton.CreateNewSession(projectMetaPath);
+		(CreatorSession? session, World? opened) = await CreatorService.Singleton.CreateNewSession(projectMetaPath);
+		if (session != null)
+		{
+			LoadDefaultScripts(session);
+			AddDefaultInstances(session, opened!);
+		}
 		CreatorService.Interface.LoadOverlay?.Hide();
 	}
 

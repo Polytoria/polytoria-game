@@ -36,7 +36,7 @@ public partial class Dynamic : Instance
 	private const float LerpSpeed = 20;
 	public event Action? TransformChanged;
 	public event Action? ReliableTransformChanged;
-	protected List<Node3D> excludedBoundNodes = [];
+	protected HashSet<Node3D> excludedBoundNodes = [];
 	private bool _hasSyncedOnce = false;
 	private bool _locked;
 	private bool _isFirstUpdate = true;
