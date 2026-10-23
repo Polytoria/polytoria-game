@@ -301,7 +301,8 @@ public sealed partial class Environment : Instance
 			ignoreRids.Add(colliderRid);
 
 			Node collider = (Node)(GodotObject)result["collider"];
-			Instance? instance = ColliderToInstance(collider);
+			int shape = (int)result["shape"];
+			Instance? instance = ColliderToInstance(collider, shape);
 			if (instance is Physical p)
 			{
 				if ((p.RayPassthrough & passthroughMask) != 0) continue;
@@ -354,6 +355,7 @@ public sealed partial class Environment : Instance
 			Rid colliderRid = (Rid)result["rid"];
 			ignoreRids.Add(colliderRid);
 			Node collider = (Node)(GodotObject)result["collider"];
+			int shape = (int)result["shape"];
 
 			rayResults.Add(new()
 			{
@@ -362,7 +364,7 @@ public sealed partial class Environment : Instance
 				Position = hitPos,
 				Normal = normal,
 				Distance = (origin - hitPos).Length(),
-				Instance = ColliderToInstance(collider)
+				Instance = ColliderToInstance(collider, shape)
 			});
 		}
 
@@ -398,7 +400,8 @@ public sealed partial class Environment : Instance
 			if (result.Count == 0) break;
 
 			Node collider = (Node)(GodotObject)result["collider"];
-			Instance? instance = ColliderToInstance(collider);
+			int shape = (int)result["shape"];
+			Instance? instance = ColliderToInstance(collider, shape);
 			Rid colliderRid = (Rid)result["rid"];
 			ignoreRids.Add(colliderRid);
 
@@ -428,18 +431,16 @@ public sealed partial class Environment : Instance
 		return [.. rayResults];
 	}
 
-	private static Instance? ColliderToInstance(Node collider)
+	internal static Instance? ColliderToInstance(Node collider, int shape)
 	{
 		Instance? instance = null;
 
-		if (collider is Area3D a3d)
+		if (collider is CollisionObject3D col)
 		{
-			instance = Physical.GetPhysicalFromCollider(a3d);
-		}
-
-		if (collider is PhysicsBody3D r)
-		{
-			instance = (Instance?)GetNetObjFromProxy(r);
+			CollisionShape3D colshape = (CollisionShape3D)col.ShapeOwnerGetOwner(col.ShapeFindOwner(shape));
+			Physical? p = null;
+			Physical.ShapeToPhysical.TryGetValue(colshape, out p);
+			instance = p;
 		}
 
 		return instance;
@@ -493,12 +494,13 @@ public sealed partial class Environment : Instance
 		}
 
 		Godot.Collections.Array<Godot.Collections.Dictionary> results = spaceState.IntersectShape(query, MaxOverlaps);
-		HashSet<Instance> intersects = [];
+		List<Instance> intersects = [];
 
 		foreach (Godot.Collections.Dictionary result in results)
 		{
 			Node collider = (Node)(GodotObject)result["collider"];
-			Instance? i = ColliderToInstance(collider);
+			int shape = (int)result["shape"];
+			Instance? i = ColliderToInstance(collider, shape);
 
 			if (i != null)
 			{
