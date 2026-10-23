@@ -589,9 +589,9 @@ public sealed partial class Gizmos : Node
 
 				if (selectInstance != null && selectInstance is Dynamic targetDyn)
 				{
-					if (targetDyn.Locked && !isMultiSelect)
+					if (targetDyn.Locked)
 					{
-						Root.CreatorContext.Selections.DeselectAll();
+						if (!isMultiSelect) Root.CreatorContext.Selections.DeselectAll();
 						return;
 					}
 
