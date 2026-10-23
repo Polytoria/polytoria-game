@@ -51,8 +51,15 @@ public partial class Nametag : Node3D
 
 		Visible = useNametag;
 		_titleLabel.Text = Target.DisplayName != string.Empty ? Target.DisplayName : Target.Name;
-		_healthBar.Visible = (Target.Health < Target.MaxHealth);
-		_healthBar.Value = Target.Health;
-		_healthBar.MaxValue = Target.MaxHealth;
+		if (Target.Vitals is Vitals v)
+		{
+			_healthBar.Visible = (v.Health < v.MaxHealth);
+			_healthBar.Value = v.Health;
+			_healthBar.MaxValue = v.MaxHealth;
+		}
+		else
+		{
+			_healthBar.Visible = false;
+		}
 	}
 }

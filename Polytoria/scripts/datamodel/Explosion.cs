@@ -195,9 +195,11 @@ public partial class Explosion : Dynamic
 				}
 				else if (item is NPC npc)
 				{
-					if (npc.IsDead) continue;
-
-					npc.TakeDamage(Damage);
+					if (npc.Vitals is Vitals v)
+					{
+						if (v.IsDead) continue;
+						v.TakeDamage(Damage);
+					}
 					AddNPCExplosionForce(npc);
 				}
 			}

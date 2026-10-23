@@ -45,7 +45,7 @@ public sealed partial class InsertService : Instance
 	}
 
 	[ScriptMethod]
-	public void InitializeDefaultNPC(NPC npc)
+	public void InitializeDefaultNPC(NPC npc, bool createVitals = true)
 	{
 		int owner = npc.NetworkAuthority;
 
@@ -78,6 +78,14 @@ public sealed partial class InsertService : Instance
 		jumpSound.LocalPosition = Vector3.Zero;
 		jumpSound.LocalRotation = Vector3.Zero;
 		jumpSound.LocalSize = Vector3.One;
+
+		if (createVitals)
+		{
+			// Health
+			Vitals vitals = New<Vitals>();
+			vitals.Parent = npc;
+			npc.Vitals = vitals;
+		}
 	}
 
 	[ScriptMethod]
