@@ -67,6 +67,10 @@ public sealed partial class InputService : Instance
 	[ScriptProperty] public bool IsGamepadConnected { get; private set; } = false;
 	[ScriptProperty] public bool IsMenuOpened { get; internal set; } = false;
 
+	internal InputTypeEnum LastInputType { get; private set; } = InputTypeEnum.Keyboard;
+	internal List<InteractionPrompt> Prompts { get; } = [];
+	internal HashSet<KeyCodeEnum> PromptKeys { get; } = [];
+
 	[ScriptProperty]
 	public bool CursorLocked
 	{
@@ -254,6 +258,11 @@ public sealed partial class InputService : Instance
 			IsTouchscreen = true;
 		}
 
+		if (Globals.IsMobileBuild)
+		{
+			LastInputType = InputTypeEnum.Touch;
+		}
+
 		if (Input.GetConnectedJoypads().Count > 0)
 		{
 			OnGamepadConnected();
@@ -387,6 +396,10 @@ public sealed partial class InputService : Instance
 		}
 		RecomputeMouseAxis();
 		ProcessInputs();
+		if (Root.SessionType == World.SessionTypeEnum.Client && !Root.Network.IsServer && Root.IsLoaded)
+		{
+			InteractionPrompt.UpdatePrompts(this, delta);
+		}
 		base.Process(delta);
 	}
 
@@ -460,6 +473,11 @@ public sealed partial class InputService : Instance
 		if (IsGameFocused)
 		{
 			GodotInputEvent?.Invoke(@event);
+		}
+
+		if (GetInputType(@event) is InputTypeEnum inputType)
+		{
+			LastInputType = inputType;
 		}
 
 		if (@event is InputEventAction action)
@@ -583,6 +601,25 @@ public sealed partial class InputService : Instance
 		return new() { PhysicalKeycode = key.PhysicalKeycode, Keycode = key.Keycode, Pressed = action.Pressed };
 	}
 
+	internal bool IsPromptKey(InputEvent @event)
+	{
+		return InputEventToKeyCode(@event) is KeyCodeEnum key && PromptKeys.Contains(key);
+	}
+
+	private static InputTypeEnum? GetInputType(InputEvent @event)
+	{
+		if (@event.HasMeta("emulated") || @event.Device == InputEvent.DeviceIdEmulation) return null;
+
+		return @event switch
+		{
+			InputEventScreenTouch or InputEventScreenDrag => InputTypeEnum.Touch,
+			InputEventKey or InputEventMouseButton or InputEventMouseMotion => InputTypeEnum.Keyboard,
+			InputEventJoypadButton => InputTypeEnum.Gamepad,
+			InputEventJoypadMotion motion when Mathf.Abs(motion.AxisValue) > StickDeadzone => InputTypeEnum.Gamepad,
+			_ => null
+		};
+	}
+
 	private static bool IsWheel(MouseButton button)
 	{
 		return button is MouseButton.WheelUp or MouseButton.WheelDown or MouseButton.WheelLeft or MouseButton.WheelRight;
@@ -598,7 +635,7 @@ public sealed partial class InputService : Instance
 		return IsStickAxis(keyCode) || keyCode is KeyCodeEnum.MouseAxisX or KeyCodeEnum.MouseAxisY;
 	}
 
-	private static bool IsGamepadKey(KeyCodeEnum keyCode)
+	internal static bool IsGamepadKey(KeyCodeEnum keyCode)
 	{
 		return keyCode is >= KeyCodeEnum.GamepadA and <= KeyCodeEnum.GamepadTouchpad
 			or >= KeyCodeEnum.GamepadAxisLeftX and <= KeyCodeEnum.GamepadAxisTriggerRight;
@@ -1078,5 +1115,12 @@ public sealed partial class InputService : Instance
 			return !isDown;
 		}
 		return false;
+	}
+
+	public enum InputTypeEnum
+	{
+		Keyboard,
+		Gamepad,
+		Touch
 	}
 }

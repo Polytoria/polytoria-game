@@ -259,6 +259,18 @@ public sealed partial class Environment : Instance
 		SpawnPoints.Remove(spawnpoint);
 	}
 
+	internal bool HasLineOfSight(Vector3 from, Vector3 to, Instance[] ignoreList)
+	{
+		PhysicsRayQueryParameters3D query = new()
+		{
+			From = from,
+			To = to,
+			Exclude = PhysicalsToArray(ignoreList),
+		};
+
+		return Root.World3D.DirectSpaceState.IntersectRay(query).Count == 0;
+	}
+
 	[ScriptMethod]
 	public RayResult? Raycast(Vector3 origin, Vector3 direction, float maxDistance = 10000f, Instance[]? ignoreList = null, uint passthroughMask = 0)
 	{

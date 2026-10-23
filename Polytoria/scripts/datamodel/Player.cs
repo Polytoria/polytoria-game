@@ -802,6 +802,7 @@ public sealed partial class Player : NPC
 	{
 		if (Root.SessionType != World.SessionTypeEnum.Client) { return; }
 		if (!IsLocal || !Root.Input.IsGameFocused) { return; }
+		if (Root.Input.IsPromptKey(@event)) { return; }
 
 		if (@event.IsActionPressed("activate"))
 		{
