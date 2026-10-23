@@ -9,19 +9,19 @@ namespace Polytoria.Scripting.Luau;
 public enum LuaGC
 {
 	/// <summary>
-	///  Stops the garbage collector. 
+	///  Stops the garbage collector.
 	/// </summary>
 	Stop = 0,
 	/// <summary>
-	/// Restarts the garbage collector. 
+	/// Restarts the garbage collector.
 	/// </summary>
 	Restart = 1,
 	/// <summary>
-	/// Performs a full garbage-collection cycle. 
+	/// Performs a full garbage-collection cycle.
 	/// </summary>
 	Collect = 2,
 	/// <summary>
-	///  Returns the current amount of memory (in Kbytes) in use by Lua. 
+	///  Returns the current amount of memory (in Kbytes) in use by Lua.
 	/// </summary>
 	Count = 3,
 	/// <summary>
@@ -29,7 +29,7 @@ public enum LuaGC
 	/// </summary>
 	Countb = 4,
 	/// <summary>
-	///  Performs an incremental step of garbage collection. 
+	///  Performs an incremental step of garbage collection.
 	/// </summary>
 	IsRunning = 5,
 	/// <summary>

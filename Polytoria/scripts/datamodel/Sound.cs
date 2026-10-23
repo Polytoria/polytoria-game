@@ -9,7 +9,7 @@ using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Enums;
 using System;
-
+using ObsoleteAttribute = Polytoria.Attributes.ObsoleteAttribute;
 
 #if CREATOR
 using Polytoria.Creator.Spatial;
@@ -82,7 +82,7 @@ public sealed partial class Sound : Dynamic
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use Audio instead"), CloneIgnore]
+	[Editable, ScriptProperty, NoSync, Obsolete(use: "Audio"), CloneIgnore]
 	public int SoundID
 	{
 		get => _soundID;
