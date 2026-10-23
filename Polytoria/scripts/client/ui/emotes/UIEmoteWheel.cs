@@ -130,6 +130,7 @@ public partial class UIEmoteWheel : Control
 		if (@event.IsActionPressed("toggle_emote"))
 		{
 			if (!CoreUIRoot.Singleton.Root.Input.IsGameFocused && !EmoteWheelActive) return;
+			if (!EmoteWheelActive && CoreUIRoot.Singleton.Root.Input.IsPromptKey(@event)) return;
 			ToggleEmoteWheel();
 		}
 		base._Input(@event);

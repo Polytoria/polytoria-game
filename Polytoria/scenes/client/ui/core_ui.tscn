@@ -274,7 +274,7 @@ corner_radius_top_right = 20
 corner_radius_bottom_right = 20
 corner_radius_bottom_left = 20
 
-[node name="CoreUI" type="CanvasLayer" unique_id=520186302 node_paths=PackedStringArray("GameMenu", "MenuButton", "UserCard", "Chat", "ChatButton", "HealthBar", "Leaderboard", "Inventory", "InventoryButton", "EmoteWheel", "NotificationCenter", "CapturePreview", "PurchasePrompt", "CtrlLockCursor", "DevWindow")]
+[node name="CoreUI" type="CanvasLayer" unique_id=520186302 node_paths=PackedStringArray("GameMenu", "MenuButton", "UserCard", "Chat", "ChatButton", "HealthBar", "Leaderboard", "Inventory", "InventoryButton", "EmoteWheel", "NotificationCenter", "CapturePreview", "PurchasePrompt", "CtrlLockCursor", "DevWindow", "PromptLayer")]
 layer = 100
 script = ExtResource("1_aji3h")
 GameMenu = NodePath("Control/GameMenu")
@@ -292,6 +292,7 @@ CapturePreview = NodePath("Control/Capture")
 PurchasePrompt = NodePath("Control/PurchasePrompt")
 CtrlLockCursor = NodePath("Control/CtrlLockCursor")
 DevWindow = NodePath("Control/DebugConsole")
+PromptLayer = NodePath("Control/PromptLayer")
 CtrlLockCursorsFilepath = "res://assets/textures/client/cursor/ctrl-lock"
 metadata/_edit_horizontal_guides_ = [16.0, 64.0]
 metadata/_edit_vertical_guides_ = [1136.0]
@@ -305,6 +306,15 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme = ExtResource("1_otsis")
+
+[node name="PromptLayer" type="Control" parent="Control" unique_id=1724360918]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
 [node name="HealthBar" parent="Control" unique_id=705297481 instance=ExtResource("5_6062u")]
 layout_mode = 1

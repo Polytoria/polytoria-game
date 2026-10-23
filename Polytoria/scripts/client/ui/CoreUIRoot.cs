@@ -40,6 +40,7 @@ public partial class CoreUIRoot : CanvasLayer
 	[Export] public UIPurchasePrompt PurchasePrompt = null!;
 	[Export] public TextureRect CtrlLockCursor = null!;
 	[Export] public DevConsoleWindow DevWindow = null!;
+	[Export] public Control PromptLayer = null!;
 
 	[ExportSubgroup("Filepaths")]
 	[Export] public string CtrlLockCursorsFilepath = null!;
