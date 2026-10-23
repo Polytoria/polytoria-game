@@ -417,7 +417,7 @@ public sealed partial class Mesh : Entity
 		{
 			if (item is StandardMaterial3D sm)
 			{
-				Texture2D originalTexture = sm.GetMeta("_origin_texture").As<Texture2D>();
+				Texture2D? originalTexture = sm.HasMeta("_origin_texture") ? sm.GetMeta("_origin_texture").As<Texture2D>() : null;
 				Color origin = sm.GetMeta("_origin_clr").AsColor();
 				bool hasAlpha = sm.GetMeta("_origin_hasalpha").AsBool();
 				Color setto = _color;
