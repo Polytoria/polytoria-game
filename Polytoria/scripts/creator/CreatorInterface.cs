@@ -55,6 +55,7 @@ public partial class CreatorInterface : Control, IScriptObject
 	[ScriptProperty] public Part.PartMaterialEnum TargetPartMaterial { get; internal set; } = Part.PartMaterialEnum.SmoothPlastic;
 
 	[ScriptProperty] public bool MoveSnapEnabled { get; internal set; } = true;
+	[ScriptProperty] public bool RotateAlignEnabled { get; internal set; } = false;
 
 	[ScriptProperty]
 	public float MoveSnapping
