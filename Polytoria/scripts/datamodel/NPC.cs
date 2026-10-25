@@ -93,7 +93,7 @@ public partial class NPC : Physical
 	}
 
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Apply them to Character"), CloneIgnore]
+	[Editable, ScriptProperty, NoSync, Obsolete(use: "Character.HeadColor"), CloneIgnore]
 	public Color HeadColor
 	{
 		get => (Character is PolytorianModel polytorian) ? polytorian.HeadColor : _pendingHeadColor ?? new Color();
@@ -111,7 +111,7 @@ public partial class NPC : Physical
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Apply them to Character instead"), CloneIgnore]
+	[Editable, ScriptProperty, NoSync, Obsolete(use: "Character.TorsoColor"), CloneIgnore]
 	public Color TorsoColor
 	{
 		get => (Character is PolytorianModel polytorian) ? polytorian.TorsoColor : _pendingTorsoColor ?? new Color();
@@ -129,7 +129,7 @@ public partial class NPC : Physical
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Apply them to Character instead"), CloneIgnore]
+	[Editable, ScriptProperty, NoSync, Obsolete(use: "Character.LeftArmColor"), CloneIgnore]
 	public Color LeftArmColor
 	{
 		get => (Character is PolytorianModel polytorian) ? polytorian.LeftArmColor : _pendingLeftArmColor ?? new Color();
@@ -147,7 +147,7 @@ public partial class NPC : Physical
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Apply them to Character instead"), CloneIgnore]
+	[Editable, ScriptProperty, NoSync, Obsolete(use: "Character.RightArmColor"), CloneIgnore]
 	public Color RightArmColor
 	{
 		get => (Character is PolytorianModel polytorian) ? polytorian.RightArmColor : _pendingRightArmColor ?? new Color();
@@ -165,7 +165,7 @@ public partial class NPC : Physical
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Apply them to Character instead"), CloneIgnore]
+	[Editable, ScriptProperty, NoSync, Obsolete(use: "Character.LeftLegColor"), CloneIgnore]
 	public Color LeftLegColor
 	{
 		get => (Character is PolytorianModel polytorian) ? polytorian.LeftLegColor : _pendingLeftLegColor ?? new Color();
@@ -183,7 +183,7 @@ public partial class NPC : Physical
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Apply them to Character instead"), CloneIgnore]
+	[Editable, ScriptProperty, NoSync, Obsolete(use: "Character.RightLegColor"), CloneIgnore]
 	public Color RightLegColor
 	{
 		get => (Character is PolytorianModel polytorian) ? polytorian.RightLegColor : _pendingRightLegColor ?? new Color();
@@ -201,7 +201,7 @@ public partial class NPC : Physical
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Apply them to Character instead"), CloneIgnore]
+	[Editable, ScriptProperty, NoSync, Obsolete(use: "Character.FaceImage"), CloneIgnore]
 	public int FaceID
 	{
 		get => (Character is PolytorianModel polytorian) ? polytorian.FaceID : _pendingFaceID ?? 0;

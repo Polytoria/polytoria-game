@@ -146,7 +146,7 @@ public sealed partial class PolytorianModel : CharacterModel
 		}
 	}
 
-	[Editable, ScriptProperty, NoSync, Attributes.Obsolete("Use FaceImage instead"), CloneIgnore]
+	[Editable, ScriptProperty, NoSync, Attributes.Obsolete(use: "FaceImage"), CloneIgnore]
 	public int FaceID
 	{
 		get => (int)((_faceImage is PTImageAsset polyImg) ? polyImg.ImageID : 0);
