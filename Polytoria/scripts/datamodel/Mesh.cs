@@ -6,6 +6,7 @@ using Godot;
 using Polytoria.Attributes;
 using Polytoria.Datamodel.Resources;
 using Polytoria.Enums;
+using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Utils;
 using System;
@@ -208,6 +209,13 @@ public sealed partial class Mesh : Entity
 
 	[ScriptProperty] public PTSignal Loaded { get; private set; } = new();
 
+	[SyncVar] public string? ServerAnim { get; internal set; }
+	[SyncVar] public float ServerAnimSpeed { get; internal set; } = 1.0f;
+	[SyncVar] public double ServerAnimStart { get; internal set; }
+
+	private double ServerTime => Root?.Network != null ? (double)Root.ServerTime : 0;
+	private bool CanSyncAnim => Root?.Network != null && (Root.Network.IsServer || (HasAuthority && ExistInNetwork));
+
 	[ScriptEnum("MeshCollisionType")]
 	public enum CollisionTypeEnum
 	{
@@ -222,6 +230,15 @@ public sealed partial class Mesh : Entity
 		GDNode3D.AddChild(_meshContainer);
 
 		base.Init();
+	}
+
+	public override void Ready()
+	{
+		if (ServerAnim != null)
+		{
+			InternalPlayAnimation(ServerAnim, ServerAnimSpeed, true, ServerAnimStart);
+		}
+		base.Ready();
 	}
 
 	public override void InitOverrides()
@@ -291,6 +308,21 @@ public sealed partial class Mesh : Entity
 			_meshNode.Visible = false;
 			_animPlay = _meshNode.GetNodeOrNull<AnimationPlayer>("AnimationPlayer");
 
+			if (_animPlay != null)
+			{
+				foreach (StringName libName in _animPlay.GetAnimationLibraryList())
+				{
+					AnimationLibrary lib = _animPlay.GetAnimationLibrary(libName);
+					AnimationLibrary newLib = new();
+					foreach (StringName animKey in lib.GetAnimationList())
+					{
+						newLib.AddAnimation(animKey, (Godot.Animation)lib.GetAnimation(animKey).Duplicate());
+					}
+					_animPlay.RemoveAnimationLibrary(libName);
+					_animPlay.AddAnimationLibrary(libName, newLib);
+				}
+			}
+
 			_meshInstances.Clear();
 			_materials.Clear();
 
@@ -327,12 +359,16 @@ public sealed partial class Mesh : Entity
 
 			_meshContainer.AddChild(obj);
 
-			if (PlayAnimationOnStart && _animPlay != null)
+			if (ServerAnim != null)
+			{
+				InternalPlayAnimation(ServerAnim, ServerAnimSpeed, true, ServerAnimStart);
+			}
+			else if (PlayAnimationOnStart && _animPlay != null)
 			{
 				string[] animList = _animPlay.GetAnimationList();
 				if (animList.Length > 0)
 				{
-					PlayAnimation(animList[0]);
+					InternalPlayAnimation(animList[0], 1.0f, true, 0);
 				}
 			}
 
@@ -352,12 +388,38 @@ public sealed partial class Mesh : Entity
 	[ScriptMethod]
 	public void PlayAnimation(string animationName, float speed = 1.0f, bool loop = true)
 	{
-		if (_animPlay == null) { return; }
-		Godot.Animation targetAnim = _animPlay.GetAnimation(animationName);
-		if (targetAnim != null)
+		if (CanSyncAnim)
 		{
-			targetAnim.LoopMode = loop ? Godot.Animation.LoopModeEnum.Linear : Godot.Animation.LoopModeEnum.None;
-			_animPlay.Play(animationName, -1, speed);
+			Rpc(nameof(NetPlayAnimation), animationName, speed, loop, ServerTime);
+		}
+		else
+		{
+			InternalPlayAnimation(animationName, speed, loop, ServerTime);
+		}
+	}
+
+	[NetRpc(AuthorityMode.Authority, CallLocal = true, TransferMode = TransferMode.Reliable)]
+	private void NetPlayAnimation(string animationName, float speed, bool loop, double startTime)
+	{
+		ServerAnim = loop ? animationName : null;
+		ServerAnimSpeed = speed;
+		ServerAnimStart = startTime;
+		InternalPlayAnimation(animationName, speed, loop, startTime);
+	}
+
+	private void InternalPlayAnimation(string animationName, float speed, bool loop, double startTime)
+	{
+		if (_animPlay == null) { return; }
+		if (!_animPlay.HasAnimation(animationName)) { return; }
+		Godot.Animation targetAnim = _animPlay.GetAnimation(animationName);
+		targetAnim.LoopMode = loop ? Godot.Animation.LoopModeEnum.Linear : Godot.Animation.LoopModeEnum.None;
+		_animPlay.Play(animationName, -1, speed);
+
+		double pos = (ServerTime - startTime) * speed;
+		if (loop) pos %= targetAnim.Length;
+		if (pos >= 0 && pos < targetAnim.Length)
+		{
+			_animPlay.Seek(pos, true);
 		}
 	}
 
@@ -370,15 +432,27 @@ public sealed partial class Mesh : Entity
 	[ScriptMethod]
 	public void StopAnimation(string? animationName = null)
 	{
-		if (_animPlay == null) { return; }
-		if (animationName != null)
+		if (CanSyncAnim)
 		{
-			if (_animPlay.CurrentAnimation == animationName)
-			{
-				_animPlay.Stop(true);
-			}
+			Rpc(nameof(NetStopAnimation), animationName ?? "");
 		}
 		else
+		{
+			InternalStopAnimation(animationName);
+		}
+	}
+
+	[NetRpc(AuthorityMode.Authority, CallLocal = true, TransferMode = TransferMode.Reliable)]
+	private void NetStopAnimation(string animationName)
+	{
+		if (animationName == "" || animationName == ServerAnim) ServerAnim = null;
+		InternalStopAnimation(animationName);
+	}
+
+	private void InternalStopAnimation(string? animationName)
+	{
+		if (_animPlay == null) { return; }
+		if (string.IsNullOrEmpty(animationName) || _animPlay.CurrentAnimation == animationName)
 		{
 			_animPlay.Stop(true);
 		}
