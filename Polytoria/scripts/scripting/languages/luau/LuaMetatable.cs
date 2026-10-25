@@ -206,26 +206,6 @@ public class LuaMetatable : LuaObject
 
 		if (key == null) { return 0; }
 
-		// Call/Retrieve other script's property/functions
-		if (targetObject is Script scriptref && targetObject.GetType() == script.GetType())
-		{
-			if (scriptref.Ran && scriptref.LuauMainThread != null && scriptref.ShouldContinue)
-			{
-				LuaState targetState = scriptref.LuauMainThread;
-				targetState.GetGlobal(key);
-
-				if (targetState.IsNil(-1))
-				{
-					targetState.Pop(1);
-				}
-				else
-				{
-					targetState.XMove(state, 1);
-					return 1;
-				}
-			}
-		}
-
 		// Handle Object.New for NetworkedObjects
 		if (key == "New")
 		{
@@ -367,12 +347,18 @@ public class LuaMetatable : LuaObject
 
 			return 1;
 		}
-		else
+		else if (targetObject is Script scriptref && targetObject.GetType() == script.GetType()
+			&& scriptref.Ran && scriptref.LuauMainThread != null && scriptref.ShouldContinue)
 		{
-			//GD.PushWarning(script.LuaPath, " couldn't find " + key);
-			state.PushNil();
+			// Call/Retrieve other script's globals
+			LuaState targetState = scriptref.LuauMainThread;
+			targetState.GetGlobal(key);
+
+			targetState.XMove(state, 1);
+			return 1;
 		}
 
+		state.PushNil();
 		return 1;
 	}
 
@@ -392,20 +378,6 @@ public class LuaMetatable : LuaObject
 		string? key = state.ToString(2);
 
 		if (key == null) { return 0; }
-
-		// Set other script's globals
-		if (targetObject is Script scriptref && targetObject.GetType() == script.GetType())
-		{
-			if (scriptref.Ran && scriptref.LuauMainThread != null && scriptref.ShouldContinue)
-			{
-				LuaState targetState = scriptref.LuauMainThread;
-
-				state.PushValue(3);
-				state.XMove(targetState, 1);
-				targetState.SetGlobal(key);
-				return 0;
-			}
-		}
 
 		PropertyInfo? prop = ScriptService.GetScriptPropertyOfName(TargetType, key, script.Compatibility);
 
@@ -446,7 +418,17 @@ public class LuaMetatable : LuaObject
 		}
 		else
 		{
-			if (!script.Compatibility)
+			if (targetObject is Script scriptref && targetObject.GetType() == script.GetType()
+				&& scriptref.Ran && scriptref.LuauMainThread != null && scriptref.ShouldContinue)
+			{
+				// Set other script's globals
+				LuaState targetState = scriptref.LuauMainThread;
+
+				state.PushValue(3);
+				state.XMove(targetState, 1);
+				targetState.SetGlobal(key);
+			}
+			else if (!script.Compatibility)
 			{
 				throw new Exception("member " + key + " doesn't exist");
 			}
