@@ -701,7 +701,7 @@ public sealed partial class Player : NPC
 		if (FootFwdRaycast.IsColliding())
 		{
 			Node collider = (Node)FootFwdRaycast.GetCollider();
-			if (collider != null && GetNetObjFromProxy(collider) is Truss truss)
+			if (collider != null && Environment.ColliderToInstance(collider, FootFwdRaycast.GetColliderShape()) is Truss truss)
 			{
 				if (!IsClimbing && !ClimbDebounce && truss.Climbable)
 				{
