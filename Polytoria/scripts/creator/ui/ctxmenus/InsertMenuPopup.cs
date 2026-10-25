@@ -50,7 +50,8 @@ public partial class InsertMenuPopup : PopupPanel
 		[new() { Title = "Lighting" }] = new()
 		{
 			"PointLight",
-			"SpotLight"
+			"SpotLight",
+			"CelestialBody"
 		},
 		[new() { Title = "Scripting", RecommendOn = [typeof(ScriptService), typeof(Folder)] }] = new()
 		{
@@ -98,6 +99,11 @@ public partial class InsertMenuPopup : PopupPanel
 		[new() { Title = "Lighting Effects", RecommendOn = [typeof(Lighting)] }] = new()
 		{
 			"ColorAdjustModifier",
+			"BloomModifier",
+			"DepthOfFieldModifier",
+			"FogModifier",
+			"AdaptiveExposureModifier",
+			"SunRaysModifier"
 		},
 		[new() { Title = "UI", RecommendOn = [typeof(UIField), typeof(GUI), typeof(GUI3D), typeof(PlayerGUI)] }] = new()
 		{
@@ -127,12 +133,6 @@ public partial class InsertMenuPopup : PopupPanel
 		[new() { Title = "Stats", RecommendOn = [typeof(Stats)] }] = new()
 		{
 			"Stat",
-		},
-		[new() { Title = "Skies", RecommendOn = [typeof(Lighting)] }] = new()
-		{
-			"ImageSky",
-			"GradientSky",
-			"ProceduralSky"
 		},
 		[new() { Title = "Physics" }] = new()
 		{
