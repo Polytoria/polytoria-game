@@ -82,6 +82,7 @@ public partial class InsertMenuPopup : PopupPanel
 		},
 		[new() { Title = "Characters", RecommendOn = [typeof(CharacterModel)] }] = new()
 		{
+			"PolytorianModel",
 			"Accessory",
 			"Clothing",
 			"NPC",
