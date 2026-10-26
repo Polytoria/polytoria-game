@@ -198,6 +198,7 @@ public sealed partial class CaptureService : Instance
 			UIField clone = (UIField)overlay.Clone();
 			clone.Visible = true;
 			clone.Parent = guiOverlay;
+			guiOverlay.OverrideParentCheck = true;
 			guiOverlay.Parent = this;
 
 			// Wait one frame for all node control to init

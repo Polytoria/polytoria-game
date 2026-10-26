@@ -19,6 +19,8 @@ public partial class GUI : Instance
 	private int _zIndex = 0;
 	private bool _avoidCoreUI = false;
 
+	internal bool OverrideParentCheck = false;
+
 	[Editable, ScriptProperty]
 	public bool Visible
 	{
@@ -84,7 +86,7 @@ public partial class GUI : Instance
 
 	public void RecomputeVisible()
 	{
-		bool isValidParent = Parent is PlayerGUI or GUI3D
+		bool isValidParent = OverrideParentCheck || Parent is PlayerGUI or GUI3D
 #if CREATOR
 		or CreatorGUI
 #endif
