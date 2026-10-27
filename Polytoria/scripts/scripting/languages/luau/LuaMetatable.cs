@@ -7,6 +7,7 @@ using Polytoria.Attributes;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Data;
 using Polytoria.Datamodel.Services;
+using Polytoria.Scripting.Datatypes;
 using Polytoria.Shared;
 using System;
 using System.Collections;
@@ -22,9 +23,127 @@ namespace Polytoria.Scripting.Luau;
 
 public class LuaMetatable : LuaObject
 {
-	private static readonly Dictionary<OverloadKey, (MethodInfo? methodInfo, bool hasParams)> _overloadCache = [];
+	private const string VectorPrelude = """
+		local magnitude = vector.magnitude
+		local dot = vector.dot
+		local cross = vector.cross
+		local create = vector.create
+		local atan2 = math.atan2
+		local floor = math.floor
+		local zero = create(0, 0, 0)
+
+		local function f32(x)
+			return create(x, 0, 0).x
+		end
+
+		local epsilon = f32(1e-06)
+
+		local function normalize(v)
+			local m = magnitude(v)
+			if m == 0 then
+				return zero
+			end
+			return v / m
+		end
+
+		local function angle(a, b)
+			return f32(atan2(magnitude(cross(a, b)), dot(a, b)))
+		end
+
+		local function lerp(a, b, t)
+			return a + (b - a) * t
+		end
+
+		local function round(x)
+			local r = floor(x + 0.5)
+			if r - x == 0.5 and r % 2 ~= 0 then
+				r -= 1
+			end
+			if r == 0 and (x < 0 or 1 / x < 0) then
+				return -0.0
+			end
+			return r
+		end
+
+		local index = ...
+
+		local methods = {
+			Dot = dot,
+			Cross = cross,
+			Floor = vector.floor,
+			Ceil = vector.ceil,
+			Abs = vector.abs,
+			Sign = vector.sign,
+			Min = vector.min,
+			Max = vector.max,
+			Normalize = normalize,
+			Lerp = lerp,
+			Reflect = function(v, normal)
+				return normal * (2 * dot(v, normal)) - v
+			end,
+			Distance = function(a, b)
+				return magnitude(b - a)
+			end,
+			SqrDistance = function(a, b)
+				local d = b - a
+				return dot(d, d)
+			end,
+			Angle = angle,
+			SignedAngle = function(from, to, axis)
+				local unsigned = angle(from, to)
+				if dot(cross(from, to), axis) < 0 then
+					return -unsigned
+				end
+				return unsigned
+			end,
+			MoveTowards = function(current, target, maxDistanceDelta)
+				local delta = f32(maxDistanceDelta)
+				local vd = target - current
+				local len = magnitude(vd)
+				if len <= delta or len < epsilon then
+					return target
+				end
+				return current + vd / len * delta
+			end,
+			Project = function(v, onNormal)
+				return onNormal * f32(dot(v, onNormal) / dot(onNormal, onNormal))
+			end,
+			ProjectOnPlane = function(v, planeNormal)
+				local n = normalize(planeNormal)
+				return v - n * dot(v, n)
+			end,
+			Round = function(v)
+				return create(round(v.x), round(v.y), round(v.z))
+			end,
+			LimitLength = function(v, length)
+				length = f32(length)
+				local l = magnitude(v)
+				if l > 0 and length < l then
+					return v / l * length
+				end
+				return v
+			end,
+		}
+
+		return function(v, key)
+			if key == "Magnitude" then
+				return magnitude(v)
+			elseif key == "Normalized" then
+				return normalize(v)
+			elseif key == "SqrMagnitude" then
+				return dot(v, v)
+			end
+			return methods[key] or index(v, key)
+		end, methods
+		""";
+
 	private static readonly Dictionary<PropertyInfo, PropertyAccessData> _propertyAccessCache = [];
 	private static readonly Dictionary<MethodInfo, MethodInvocationData> _methodInvocationCache = [];
+
+	private readonly Dictionary<(string, bool), int> _staticFunctionRefs = [];
+	private MemberEntry?[] _members = [];
+	private MemberEntry?[] _legacyMembers = [];
+	private readonly Dictionary<(string, bool), MemberEntry> _namedMembers = [];
 
 	public LuaState Lua = null!;
 	[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicMethods)]
@@ -34,6 +153,7 @@ public class LuaMetatable : LuaObject
 	public bool HasCustomIndex = false;
 	public bool HasCustomNewIndex = false;
 	public bool HasToString = false;
+	public bool HasCustomNameCall = false;
 
 	private async void AsyncExec(Script script, object? targetObject, LuaState state, MethodInfo targetMethod, Func<object?, object?[], object?>? invoker, object?[] args, TaskCompletionSource<int> tcs)
 	{
@@ -164,6 +284,9 @@ public class LuaMetatable : LuaObject
 			return 1;
 		}
 
+		string? key = null;
+		int atom = -1;
+
 		if (targetObject is Instance instance)
 		{
 			LuaType t = state.Type(2);
@@ -173,7 +296,7 @@ public class LuaMetatable : LuaObject
 
 			if (t == LuaType.String)
 			{
-				string? indexK = state.ToString(2);
+				string? indexK = key = state.ToAtomString(2, out atom);
 
 				if (indexK != null)
 				{
@@ -202,7 +325,7 @@ public class LuaMetatable : LuaObject
 
 		// stack[1] = table
 		// stack[2] = key
-		string? key = state.ToString(2);
+		key ??= state.ToAtomString(2, out atom);
 
 		if (key == null) { return 0; }
 
@@ -231,9 +354,13 @@ public class LuaMetatable : LuaObject
 		{
 			if (TargetType.IsDefined(typeof(InstantiableAttribute)))
 			{
+				if (TryPushStaticFunction(state, key, script.Compatibility))
+					return 1;
+
 				int newFunc(IntPtr L)
 				{
 					LuaState state = LuaState.FromIntPtr(L);
+					Script script = LuauProvider.GetScriptInstance(state);
 					NetworkedObject? parentTo = null;
 					object? parentObj = LangProvider.LuaToObject(state, 1);
 
@@ -268,28 +395,23 @@ public class LuaMetatable : LuaObject
 					return 0;
 				}
 
-				state.PushCFunction(safeNewFunc, "New");
-
-				return 1;
+				return PushStaticFunction(state, key, script.Compatibility, safeNewFunc);
 			}
 		}
 
-		PropertyInfo? prop = ScriptService.GetScriptPropertyOfName(TargetType, key, script.Compatibility);
-		ScriptService.MethodsCacheData methodInfos = ScriptService.ResolveMethods(TargetType, key, script.Compatibility);
-		MethodInfo? method = methodInfos.Methods.FirstOrDefault();
+		MemberEntry member = GetMember(key, atom, script.Compatibility);
+		PropertyInfo? prop = member.Property;
+		ScriptService.MethodsCacheData methodInfos = member.Methods;
+		MethodInfo? method = methodInfos.Methods.Length > 0 ? methodInfos.Methods[0] : null;
 
-		if (method != null)
+		if (method != null && member.HandlesLuaState)
 		{
-			HandlesLuaStateAttribute? handleLuaState = method.GetCustomAttribute<HandlesLuaStateAttribute>();
-			if (handleLuaState != null)
-			{
-				return (int)method.Invoke(targetObject, [state])!;
-			}
+			return (int)method.Invoke(targetObject, [state])!;
 		}
 
 		if (prop != null)
 		{
-			PropertyAccessData accessData = GetPropertyAccessData(prop);
+			PropertyAccessData accessData = member.Access;
 			if (accessData.Permissions != ScriptPermissionFlags.None &&
 				!script.PermissionFlags.HasFlag(accessData.Permissions))
 			{
@@ -310,61 +432,16 @@ public class LuaMetatable : LuaObject
 		}
 		else if (method != null)
 		{
-			int methodFunc(IntPtr L)
-			{
-				LuaState state = LuaState.FromIntPtr(L);
+			bool isStatic = targetObject == null;
+			if (isStatic && TryPushStaticFunction(state, key, script.Compatibility))
+				return 1;
 
-				int top = state.GetTop();
-				if (methodInfos.Methods.Length == 0)
-				{
-					throw new InvalidOperationException("target method doesn't exist (" + key + ")");
-				}
+			LuaFunction func = NewMethodFunction(key, member, targetObject, script);
 
-				object? firstArgument = null;
-				bool skipFirstArgument = false;
-				if (top > 0)
-				{
-					firstArgument = LangProvider.LuaToObject(state, 1, methodInfos.ConvertParamsToGD, methodInfos.GetParamsAsFunction);
-					skipFirstArgument = firstArgument == targetObject;
-				}
+			if (isStatic)
+				return PushStaticFunction(state, key, script.Compatibility, func);
 
-				object?[] args = new object?[top - (skipFirstArgument ? 1 : 0)];
-				int argumentIndex = 0;
-				if (top > 0 && !skipFirstArgument)
-					args[argumentIndex++] = firstArgument;
-
-				for (int i = 2; i <= top; i++)
-				{
-					args[argumentIndex++] = LangProvider.LuaToObject(state, i, methodInfos.ConvertParamsToGD, methodInfos.GetParamsAsFunction);
-				}
-
-				return ProcessMethod(state, script, methodInfos, targetObject, key, args);
-			}
-
-			int safeMethodFunc(IntPtr L)
-			{
-				Exception? caughtException;
-
-				try
-				{
-					return methodFunc(L);
-				}
-				catch (Exception ex)
-				{
-					caughtException = ex;
-				}
-
-				if (caughtException != null)
-				{
-					LuaState state = LuaState.FromIntPtr(L);
-					return state.Error(caughtException.InnerException?.Message ?? caughtException.Message);
-				}
-
-				return 0;
-			}
-
-			state.PushCFunction(safeMethodFunc, key);
-
+			state.PushCFunction(func, key);
 			return 1;
 		}
 		else
@@ -379,6 +456,12 @@ public class LuaMetatable : LuaObject
 	public virtual int NewIndex(IntPtr L)
 	{
 		LuaState state = LuaState.FromIntPtr(L);
+
+		if (state.Type(1) == LuaType.Vector)
+		{
+			throw new InvalidOperationException("Vector3 is read-only, create a new one with Vector3.New(...)");
+		}
+
 		Script script = LuauProvider.GetScriptInstance(state);
 
 		object? targetObject = LangProvider.LuaToObject(state, 1, false);
@@ -389,7 +472,7 @@ public class LuaMetatable : LuaObject
 			return 1;
 		}
 
-		string? key = state.ToString(2);
+		string? key = state.ToAtomString(2, out int atom);
 
 		if (key == null) { return 0; }
 
@@ -402,18 +485,18 @@ public class LuaMetatable : LuaObject
 
 				state.PushValue(3);
 				state.XMove(targetState, 1);
+				targetState.SetSafeEnv(LuaState.LUA_GLOBALSINDEX, 0);
 				targetState.SetGlobal(key);
 				return 0;
 			}
 		}
 
-		PropertyInfo? prop = ScriptService.GetScriptPropertyOfName(TargetType, key, script.Compatibility);
+		MemberEntry member = GetMember(key, atom, script.Compatibility);
+		PropertyInfo? prop = member.Property;
 
-		if (prop != null && prop.CanWrite)
+		if (prop != null && member.CanWrite)
 		{
-			MethodInfo? setter = prop.GetSetMethod();
-
-			if (setter != null)
+			if (member.HasSetter)
 			{
 				// Read value
 				object? propSetTo = LangProvider.LuaToObject(state, 3, getAsFunction: true);
@@ -430,13 +513,14 @@ public class LuaMetatable : LuaObject
 				}
 				else
 				{
-					PropertyAccessData accessData = GetPropertyAccessData(prop);
+					PropertyAccessData accessData = member.Access;
 					if (accessData.Setter == null)
 					{
 						throw new Exception("member " + prop.Name + " cannot be assigned to.");
 					}
 					accessData.Setter(targetObject!, convertedValue);
 				}
+				LuauProvider.WriteBackInline(state, 1, targetObject);
 				return 0;
 			}
 			else
@@ -463,13 +547,13 @@ public class LuaMetatable : LuaObject
 		LuaState state = LuaState.FromIntPtr(L);
 		Script script = LuauProvider.GetScriptInstance(state);
 
-		string? key = state.GetNameCallAtom();
+		string? key = state.GetNameCallAtom(out int atom);
 		bool isFallback = string.IsNullOrEmpty(key);
 
 		if (isFallback)
 		{
 			// Fallback for edge cases where __namecall is invoked manually
-			key = state.ToString(2);
+			key = state.ToAtomString(2, out atom);
 		}
 
 		if (key == null) { throw new InvalidOperationException($"namecall key is null"); }
@@ -482,7 +566,8 @@ public class LuaMetatable : LuaObject
 			return 1;
 		}
 
-		ScriptService.MethodsCacheData methodInfos = ScriptService.ResolveMethods(TargetType, key, script.Compatibility);
+		MemberEntry member = GetMember(key, atom, script.Compatibility);
+		ScriptService.MethodsCacheData methodInfos = member.Methods;
 
 		if (methodInfos.Methods.Length == 0)
 		{
@@ -508,7 +593,7 @@ public class LuaMetatable : LuaObject
 			args[argumentIndex++] = LangProvider.LuaToObject(state, i, methodInfos.ConvertParamsToGD, methodInfos.GetParamsAsFunction);
 		}
 
-		return ProcessMethod(state, script, methodInfos, targetObject, key, args);
+		return ProcessMethod(state, script, methodInfos, member.Overloads, targetObject, key, args);
 	}
 
 	public int IndexWrapper(IntPtr L)
@@ -604,6 +689,8 @@ public class LuaMetatable : LuaObject
 		{
 			var attr = group.First().Attribute;
 			var methods = group.Select(x => x.Method).ToArray();
+			var stateInvoker = ScriptInterfaceInvokers.TryGetInvoker(methods[0]);
+			List<OverloadEntry> overloads = [];
 
 			HandlesLuaStateAttribute? handleLuaState = methods[0].GetCustomAttribute<HandlesLuaStateAttribute>();
 
@@ -659,7 +746,7 @@ public class LuaMetatable : LuaObject
 
 				if (handleLuaState != null)
 				{
-					return (int)methods[0].Invoke(targetObject, [state])!;
+					return (int)(stateInvoker != null ? stateInvoker(targetObject, [state]) : methods[0].Invoke(targetObject, [state]))!;
 				}
 
 				int additional = 0;
@@ -680,21 +767,24 @@ public class LuaMetatable : LuaObject
 					return 1;
 				}
 
-				List<object?> argList = [];
+				object?[] args = new object?[argsCount];
+				int argIndex = 0;
 				for (int i = 0; i < argsCount; i++)
 				{
-					var v = LangProvider.LuaToObject(state, i + 1 + additional, attr.ConvertParamsToGD);
+					int index = i + 1 + additional;
+					var v = index == 1 && !attr.ConvertParamsToGD ? targetObject : LangProvider.LuaToObject(state, index, attr.ConvertParamsToGD);
 					if (v != null || allowNilInArg)
-						argList.Add(v);
+						args[argIndex++] = v;
 				}
 
-				object?[] args = [.. argList];
+				if (argIndex != args.Length)
+					Array.Resize(ref args, argIndex);
 
-				MethodInfo m = ResolveOverload(methods, args, out bool hasParams) ?? throw new Exception("couldn't find metamethod with matching overload");
+				MethodInfo m = ResolveOverload(methods, overloads, args, out bool hasParams, out MethodInvocationData invocation) ?? throw new Exception("couldn't find metamethod with matching overload");
 
 				try
 				{
-					val = m.Invoke(targetObject, args);
+					val = invocation.Invoker is { } invoker ? invoker(targetObject, args) : m.Invoke(targetObject, args);
 
 					// Handle __iter: push an iterator function, nil, nil
 					if (attr.Metamethod is ScriptObjectMetamethod.Iter)
@@ -756,7 +846,7 @@ public class LuaMetatable : LuaObject
 						}
 
 						// Push: iterator function, nil (state), nil (initial control value)
-						Lua.PushCFunction(safeIteratorFunc, indexer + "_iter");
+						state.PushCFunction(safeIteratorFunc, indexer + "_iter");
 						state.PushNil();
 						state.PushNil();
 						return 3;
@@ -802,6 +892,44 @@ public class LuaMetatable : LuaObject
 
 			Lua.SetField(-2, indexer);
 		}
+
+		if (TargetType == typeof(PTVector3))
+		{
+			Lua.SetSafeEnv(LuaState.LUA_GLOBALSINDEX, 1);
+			Lua.Load("=Vector3", LuaState.Compile(VectorPrelude));
+			Lua.PushCFunction(IndexWrapper, "__index");
+			Lua.Call(1, 2);
+
+			foreach (MethodInfo m in TargetType.GetMethods(BindingFlags.Public | BindingFlags.Static))
+			{
+				if (m.GetCustomAttribute<ScriptMethodAttribute>() is not { } attr)
+					continue;
+
+				string name = attr.MethodName ?? m.Name;
+				Lua.GetField(-1, name);
+				bool exists = !Lua.IsNil(-1);
+				Lua.Pop(1);
+				if (exists)
+					continue;
+
+				Lua.PushCFunction(NewMethodFunction(name, GetMember(name, -1, false), null, null), name);
+				Lua.SetField(-2, name);
+			}
+
+			Lua.PushNil();
+			while (Lua.Next(-2))
+			{
+				string name = Lua.ToString(-2)!;
+				int funcRef = Lua.Ref();
+				_staticFunctionRefs[(name, false)] = funcRef;
+				_staticFunctionRefs[(name, true)] = funcRef;
+			}
+			Lua.Pop(1);
+
+			Lua.SetField(-2, "__index");
+			HasCustomIndex = true;
+			HasCustomNameCall = true;
+		}
 	}
 
 	public int ToString(IntPtr L)
@@ -831,11 +959,11 @@ public class LuaMetatable : LuaObject
 		return false;
 	}
 
-	private int ProcessMethod(LuaState state, Script script, ScriptService.MethodsCacheData methodInfos, object? targetObject, string key, object?[] args)
+	private int ProcessMethod(LuaState state, Script script, ScriptService.MethodsCacheData methodInfos, List<OverloadEntry> overloads, object? targetObject, string key, object?[] args)
 	{
 		int argsCount = args.Length;
 
-		MethodInfo? targetMethod = ResolveOverload(methodInfos.Methods, args, out bool hasParams);
+		MethodInfo? targetMethod = ResolveOverload(methodInfos.Methods, overloads, args, out bool hasParams, out MethodInvocationData invocationData);
 
 		if (targetMethod == null)
 		{
@@ -857,7 +985,6 @@ public class LuaMetatable : LuaObject
 			throw new Exception("attempt to call non static method on a static object (" + key + ")");
 		}
 
-		MethodInvocationData invocationData = GetMethodInvocationData(targetMethod);
 		if (invocationData.Permissions != ScriptPermissionFlags.None &&
 			!script.PermissionFlags.HasFlag(invocationData.Permissions))
 		{
@@ -978,21 +1105,142 @@ public class LuaMetatable : LuaObject
 		return Nullable.GetUnderlyingType(type) != null;
 	}
 
-	private static MethodInfo? ResolveOverload(MethodInfo[] methods, object?[] args, out bool hasParams)
+	private LuaFunction NewMethodFunction(string key, MemberEntry member, object? targetObject, Script? script)
+	{
+		bool isStatic = targetObject == null;
+		ScriptService.MethodsCacheData methodInfos = member.Methods;
+
+		int methodFunc(IntPtr L)
+		{
+			LuaState state = LuaState.FromIntPtr(L);
+			Script caller = isStatic ? LuauProvider.GetScriptInstance(state) : script!;
+
+			int top = state.GetTop();
+			if (methodInfos.Methods.Length == 0)
+			{
+				throw new InvalidOperationException("target method doesn't exist (" + key + ")");
+			}
+
+			object? firstArgument = null;
+			bool skipFirstArgument = false;
+			if (top > 0)
+			{
+				firstArgument = LangProvider.LuaToObject(state, 1, methodInfos.ConvertParamsToGD, methodInfos.GetParamsAsFunction);
+				skipFirstArgument = firstArgument == targetObject;
+			}
+
+			object?[] args = new object?[top - (skipFirstArgument ? 1 : 0)];
+			int argumentIndex = 0;
+			if (top > 0 && !skipFirstArgument)
+				args[argumentIndex++] = firstArgument;
+
+			for (int i = 2; i <= top; i++)
+			{
+				args[argumentIndex++] = LangProvider.LuaToObject(state, i, methodInfos.ConvertParamsToGD, methodInfos.GetParamsAsFunction);
+			}
+
+			return ProcessMethod(state, caller, methodInfos, member.Overloads, targetObject, key, args);
+		}
+
+		int safeMethodFunc(IntPtr L)
+		{
+			Exception? caughtException;
+
+			try
+			{
+				return methodFunc(L);
+			}
+			catch (Exception ex)
+			{
+				caughtException = ex;
+			}
+
+			if (caughtException != null)
+			{
+				LuaState state = LuaState.FromIntPtr(L);
+				return state.Error(caughtException.InnerException?.Message ?? caughtException.Message);
+			}
+
+			return 0;
+		}
+
+		return safeMethodFunc;
+	}
+
+	private bool TryPushStaticFunction(LuaState state, string key, bool compatibility)
+	{
+		if (!_staticFunctionRefs.TryGetValue((key, compatibility), out int funcRef))
+			return false;
+
+		state.GetRef(funcRef);
+		return true;
+	}
+
+	private int PushStaticFunction(LuaState state, string key, bool compatibility, LuaFunction func)
+	{
+		LangProvider.GlobalLuaState.PushCFunction(func, key);
+		int funcRef = LangProvider.GlobalLuaState.Ref();
+		_staticFunctionRefs[(key, compatibility)] = funcRef;
+		state.GetRef(funcRef);
+		return 1;
+	}
+
+	private MemberEntry GetMember(string key, int atom, bool compatibility)
+	{
+		ref MemberEntry?[] members = ref compatibility ? ref _legacyMembers : ref _members;
+		if ((uint)atom < (uint)members.Length && members[atom] is { } cached)
+			return cached;
+
+		if (atom < 0 && _namedMembers.TryGetValue((key, compatibility), out MemberEntry? named))
+			return named;
+
+		PropertyInfo? prop = ScriptService.GetScriptPropertyOfName(TargetType, key, compatibility);
+		ScriptService.MethodsCacheData methods = ScriptService.ResolveMethods(TargetType, key, compatibility);
+		MemberEntry member = new()
+		{
+			Property = prop,
+			Access = prop != null ? GetPropertyAccessData(prop) : default,
+			CanWrite = prop != null && prop.CanWrite,
+			HasSetter = prop?.GetSetMethod() != null,
+			Methods = methods,
+			HandlesLuaState = methods.Methods.Length > 0 && methods.Methods[0].IsDefined(typeof(HandlesLuaStateAttribute)),
+		};
+
+		if (atom >= 0)
+		{
+			if (atom >= members.Length)
+				Array.Resize(ref members, Math.Max(atom + 1, members.Length * 2));
+			members[atom] = member;
+		}
+		else if (prop != null || methods.Methods.Length > 0)
+		{
+			_namedMembers[(key, compatibility)] = member;
+		}
+
+		return member;
+	}
+
+	private static MethodInfo? ResolveOverload(MethodInfo[] methods, List<OverloadEntry> entries, object?[] args, out bool hasParams, out MethodInvocationData invocation)
 	{
 		hasParams = false;
+		invocation = default;
 		if (methods.Length == 0) return null;
 
-		OverloadKey key = new(methods[0].DeclaringType!, methods[0].Name, args);
-
-		if (_overloadCache.TryGetValue(key, out var cached))
+		foreach (OverloadEntry entry in entries)
 		{
-			hasParams = cached.hasParams;
-			return cached.methodInfo;
+			if (entry.Matches(args))
+			{
+				hasParams = entry.HasParams;
+				invocation = entry.Invocation;
+				return entry.Method;
+			}
 		}
 
 		MethodInfo? result = ResolveOverloadUncached(methods, args, out hasParams);
-		_overloadCache[key] = (result, hasParams);
+		if (result != null)
+			invocation = GetMethodInvocationData(result);
+		if (entries.Count < 16)
+			entries.Add(new(Array.ConvertAll(args, static a => a?.GetType()), result, hasParams, invocation));
 		return result;
 	}
 
@@ -1056,47 +1304,28 @@ public class LuaMetatable : LuaObject
 		return null;
 	}
 
-	private readonly struct OverloadKey : IEquatable<OverloadKey>
+	private sealed class MemberEntry
 	{
-		private readonly Type _declaringType;
-		private readonly string _methodName;
-		private readonly Type?[] _argTypes;
-		private readonly int _hashCode;
+		public PropertyInfo? Property;
+		public PropertyAccessData Access;
+		public bool CanWrite;
+		public bool HasSetter;
+		public ScriptService.MethodsCacheData Methods;
+		public bool HandlesLuaState;
+		public readonly List<OverloadEntry> Overloads = [];
+	}
 
-		public OverloadKey(Type declaringType, string methodName, object?[] args)
+	private readonly record struct OverloadEntry(Type?[] ArgTypes, MethodInfo? Method, bool HasParams, MethodInvocationData Invocation)
+	{
+		public bool Matches(object?[] args)
 		{
-			_declaringType = declaringType;
-			_methodName = methodName;
-			_argTypes = new Type?[args.Length];
-
-			HashCode h = new();
-			h.Add(declaringType);
-			h.Add(methodName);
+			if (ArgTypes.Length != args.Length) return false;
 
 			for (int i = 0; i < args.Length; i++)
-			{
-				Type? t = args[i]?.GetType();
-				_argTypes[i] = t;
-				h.Add(t);
-			}
-
-			_hashCode = h.ToHashCode();
-		}
-
-		public bool Equals(OverloadKey other)
-		{
-			if (_declaringType != other._declaringType) return false;
-			if (_methodName != other._methodName) return false;
-			if (_argTypes.Length != other._argTypes.Length) return false;
-
-			for (int i = 0; i < _argTypes.Length; i++)
-				if (_argTypes[i] != other._argTypes[i]) return false;
+				if (ArgTypes[i] != args[i]?.GetType()) return false;
 
 			return true;
 		}
-
-		public override bool Equals(object? obj) => obj is OverloadKey k && Equals(k);
-		public override int GetHashCode() => _hashCode;
 	}
 
 	private readonly record struct PropertyAccessData(

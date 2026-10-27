@@ -36,6 +36,7 @@ public partial class NetworkedObject : IScriptObject
 	private World _game = null!;
 	private bool _isReplicating = true;
 	private bool _isDeleted = false;
+	internal int LuauObjectID;
 
 	private bool _processRegistered = false;
 	private bool _physicsProcessRegistered = false;
@@ -72,7 +73,8 @@ public partial class NetworkedObject : IScriptObject
 			{
 				selfpreI.RemoveNameFromParent();
 				selfpreI.RemoveLegacyNameFromParent();
-				preI.legacyChild.Remove(selfpreI.LegacyName);
+				if (preI.legacyChild.TryGetValue(selfpreI.LegacyName, out Instance? current) && current == selfpreI)
+					preI.legacyChild.Remove(selfpreI.LegacyName);
 				List<Instance> siblings = preI.Children;
 				int childIdx = 0;
 				while (childIdx < siblings.Count && !ReferenceEquals(siblings[childIdx], selfpreI)) childIdx++;

@@ -41,6 +41,8 @@ public partial class Instance : NetworkedObject
 	private Instance? _modelRoot;
 
 	internal Dictionary<string, Instance> NameToChild = [];
+	internal HashSet<string>? DuplicateNames;
+	internal HashSet<string>? DuplicateLegacyNames;
 	internal List<Instance> Children = [];
 	internal int Index = 0;
 
@@ -131,7 +133,15 @@ public partial class Instance : NetworkedObject
 				// Rerun name enforcement in case of reparenting from temp
 				foreach (NetworkedObject item in descendants)
 				{
+					if (item is Instance preI)
+					{
+						preI.RemoveNameFromParent();
+					}
 					item.ReenforceName();
+					if (item is Instance postI)
+					{
+						postI.AddNameToParent();
+					}
 				}
 
 				// NOTE: It's kinda verbose having AutoInvokeReadyOnParent too, but AutoInvokeReady solely won't work with instance created with .New()
@@ -365,33 +375,61 @@ public partial class Instance : NetworkedObject
 
 	internal void AddLegacyNameToParent()
 	{
-		if (_legacyName != null && Parent != null)
+		if (_legacyName != null && Parent != null && !Parent.legacyChild.TryAdd(_legacyName, this))
 		{
-			Parent.legacyChild.TryAdd(_legacyName, this);
+			(Parent.DuplicateLegacyNames ??= []).Add(_legacyName);
 		}
 	}
 
 	internal void RemoveLegacyNameFromParent()
 	{
-		if (_legacyName != null && Parent != null)
+		if (_legacyName != null && Parent != null && Parent.legacyChild.TryGetValue(_legacyName, out Instance? current) && current == this)
 		{
 			Parent.legacyChild.Remove(_legacyName);
+
+			if (Parent.DuplicateLegacyNames?.Contains(_legacyName) != true)
+				return;
+
+			foreach (Instance child in Parent.Children)
+			{
+				if (child != this && child._legacyName == _legacyName)
+				{
+					Parent.legacyChild[_legacyName] = child;
+					return;
+				}
+			}
+
+			Parent.DuplicateLegacyNames.Remove(_legacyName);
 		}
 	}
 
 	internal void AddNameToParent()
 	{
-		if (Name != null && Parent != null)
+		if (Name != null && Parent != null && !Parent.NameToChild.TryAdd(Name, this))
 		{
-			Parent.NameToChild.TryAdd(Name, this);
+			(Parent.DuplicateNames ??= []).Add(Name);
 		}
 	}
 
 	internal void RemoveNameFromParent()
 	{
-		if (Parent != null && Name != null)
+		if (Parent != null && Name != null && Parent.NameToChild.TryGetValue(Name, out Instance? current) && current == this)
 		{
 			Parent.NameToChild.Remove(Name);
+
+			if (Parent.DuplicateNames?.Contains(Name) != true)
+				return;
+
+			foreach (Instance child in Parent.Children)
+			{
+				if (child != this && child.Name == Name)
+				{
+					Parent.NameToChild[Name] = child;
+					return;
+				}
+			}
+
+			Parent.DuplicateNames.Remove(Name);
 		}
 	}
 
@@ -414,18 +452,7 @@ public partial class Instance : NetworkedObject
 	[ScriptMethod]
 	public Instance? FindChild(string name)
 	{
-		if (NameToChild.TryGetValue(name, out Instance? instance)) return instance;
-
-		foreach (Instance child in Children)
-		{
-			if (child.Name == name)
-			{
-				NameToChild[name] = child;
-				return child;
-			}
-		}
-
-		return null;
+		return name != null ? NameToChild.GetValueOrDefault(name) : null;
 	}
 
 	public T? FindChild<T>(string name) where T : Instance
@@ -509,18 +536,16 @@ public partial class Instance : NetworkedObject
 	[ScriptLegacyMethod("FindChild")]
 	public Instance? LegacyFindChild(string name)
 	{
+		if (name == null) return null;
+
 		if (legacyChild.TryGetValue(name, out Instance? val))
 		{
 			return val;
 		}
 
-		foreach (Instance item in GetChildren())
+		if (NameToChild.TryGetValue(name, out Instance? child) && child.LegacyName == name)
 		{
-			if (item.LegacyName != null && item.LegacyName == name)
-			{
-				legacyChild[item.LegacyName] = item;
-				return item;
-			}
+			return child;
 		}
 
 		return null;
@@ -791,7 +816,8 @@ public partial class Instance : NetworkedObject
 	{
 		foreach (Instance n in GetChildren())
 		{
-			legacyChild.TryAdd(n.LegacyName, n);
+			if (!legacyChild.TryAdd(n.LegacyName, n))
+				(DuplicateLegacyNames ??= []).Add(n.LegacyName);
 		}
 
 		base.Ready();

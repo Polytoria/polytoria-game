@@ -5,6 +5,8 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -26,25 +28,42 @@ public partial class LuaState : IDisposable
 	public const int LUA_REGISTRYINDEX = -LUAI_MAXCSTACK - 2000;
 	public const int LUA_ENVIRONINDEX = -LUAI_MAXCSTACK - 2001;
 	public const int LUA_GLOBALSINDEX = -LUAI_MAXCSTACK - 2002;
-	private static readonly Lock _lock = new();
+	private const double ScriptTimeoutSec = 10;
+	private const long HeapLimit = 256L << 20;
+
+	private static readonly IntPtr _vectorLib = Marshal.StringToCoTaskMemUTF8("Vector3");
+	private static readonly IntPtr _vectorCtor = Marshal.StringToCoTaskMemUTF8("New");
 
 	public IntPtr State => _state;
 	public LuaState? Parent => _parent;
-	public bool IsAlive => !_disposed && State != IntPtr.Zero && (Status() == LuaStatus.OK || Status() == LuaStatus.Yield);
+	public bool IsAlive => !_disposed && State != IntPtr.Zero && Status() is LuaStatus.OK or LuaStatus.Yield;
 	public bool Loaded { get; set; } = false;
 
 	private static readonly Dictionary<LuaUserdataDestructor, GCHandle> _pinnedDestructors = [];
-	private static readonly Dictionary<IntPtr, LuaFunction> _pinnedFunctions = [];
+	private static readonly LuaUserdataDestructor _functionDtor = FunctionGarbageCollect;
+	private static readonly LuaUserdataDestructor _objectDtor = ManagedObjectGarbageCollect;
 
-	public LuaState()
+	private static LuaState? _lastFromIntPtr;
+
+	private static string[] _atoms = [];
+	private static Dictionary<string, short>.AlternateLookup<ReadOnlySpan<char>> _atomLookup;
+
+	private static readonly Lock _watchdogLock = new();
+	private static readonly LuaInterrupt _interrupt = Interrupt;
+	private static readonly IntPtr _interruptPtr = Marshal.GetFunctionPointerForDelegate(_interrupt);
+	private static System.Threading.Timer? _watchdog;
+	private static int _resumeDepth;
+	private static long _resumeStart;
+	private static IntPtr _resumeCallbacks;
+	private static long _heapSize;
+	private static long _lastCollect;
+
+	public unsafe LuaState()
 	{
 		_ownsState = true;
-		lock (_lock)
-		{
-			_state = NativeBindings.luaL_newstate();
-			if (_state == IntPtr.Zero)
-				throw new InvalidOperationException("Failed to create LuaState state");
-		}
+		_state = NativeBindings.lua_newstate((IntPtr)(delegate* unmanaged[Cdecl]<void*, void*, nuint, nuint, void*>)&Alloc, IntPtr.Zero);
+		if (_state == IntPtr.Zero)
+			throw new InvalidOperationException("Failed to create LuaState state");
 	}
 
 	public LuaState(IntPtr state)
@@ -55,26 +74,111 @@ public partial class LuaState : IDisposable
 
 	public static LuaState FromIntPtr(IntPtr state)
 	{
-		LuaState s = new(state);
-		if (!s.IsAlive)
-		{
-			throw new LuaException("This state is dead");
-		}
-		return s;
+		LuaState? last = _lastFromIntPtr;
+		if (last != null && last._state == state)
+			return last;
+
+		return _lastFromIntPtr = new(state);
 	}
 
-	public static byte[] Compile(string sourceCode)
+	public unsafe void InstallCallbacks(IEnumerable<string> atoms)
 	{
-		/*
-		IntPtr optionsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(options));
-		Marshal.StructureToPtr(options, optionsPtr, false);
-		*/
+		if (_atoms.Length == 0)
+		{
+			Dictionary<string, short> lookup = [];
+			List<string> names = [];
+			foreach (string atom in atoms)
+			{
+				if (names.Count < short.MaxValue && atom.Length <= 64 && lookup.TryAdd(atom, (short)names.Count))
+					names.Add(atom);
+			}
+			_atomLookup = lookup.GetAlternateLookup<ReadOnlySpan<char>>();
+			_atoms = [.. names];
+		}
+
+		((LuaCallbacks*)NativeBindings.lua_callbacks(_state))->useratom = (IntPtr)(delegate* unmanaged[Cdecl]<IntPtr, byte*, nuint, short>)&UserAtom;
+
+		_watchdog ??= new System.Threading.Timer(Watchdog, null, 1000, 1000);
+	}
+
+	[UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+	private static unsafe short UserAtom(IntPtr L, byte* s, nuint len)
+	{
+		if (len > 64)
+			return -1;
+
+		Span<char> chars = stackalloc char[(int)len];
+		for (int i = 0; i < chars.Length; i++)
+		{
+			if (s[i] >= 0x80)
+				return -1;
+			chars[i] = (char)s[i];
+		}
+
+		return _atomLookup.TryGetValue(chars, out short atom) ? atom : (short)-1;
+	}
+
+	[UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+	private static unsafe void* Alloc(void* ud, void* ptr, nuint osize, nuint nsize)
+	{
+		if (nsize == 0)
+		{
+			NativeMemory.Free(ptr);
+			_heapSize -= (long)osize;
+			return null;
+		}
+
+		if (_resumeDepth > 0 && nsize > osize && _heapSize + (long)(nsize - osize) > HeapLimit)
+			return null;
+
+		void* block = NativeMemory.Realloc(ptr, nsize);
+		if (block != null)
+			_heapSize += (long)nsize - (long)osize;
+		return block;
+	}
+
+	private static bool OverBudget()
+	{
+		return Stopwatch.GetTimestamp() - Volatile.Read(ref _resumeStart) >= ScriptTimeoutSec * Stopwatch.Frequency;
+	}
+
+	private static unsafe void Watchdog(object? _)
+	{
+		lock (_watchdogLock)
+		{
+			if (Volatile.Read(ref _resumeDepth) > 0 && _resumeCallbacks != IntPtr.Zero && OverBudget())
+				((LuaCallbacks*)_resumeCallbacks)->interrupt = _interruptPtr;
+		}
+	}
+
+	private static unsafe void Interrupt(IntPtr L, int gc)
+	{
+		if (gc >= 0)
+			return;
+
+		bool timedOut = _resumeDepth > 0 && OverBudget();
+		if (!timedOut || _resumeDepth == 1)
+			((LuaCallbacks*)NativeBindings.lua_callbacks(L))->interrupt = IntPtr.Zero;
+
+		if (timedOut)
+			NativeBindings.luaL_errorL(L, "script timed out after " + ScriptTimeoutSec + " seconds");
+	}
+
+	public static unsafe byte[] Compile(string sourceCode, IntPtr mutableGlobals = 0)
+	{
+		LuauCompileOptions options = new()
+		{
+			optimizationLevel = 2,
+			vectorLib = _vectorLib,
+			vectorCtor = _vectorCtor,
+			vectorType = _vectorLib,
+			mutableGlobals = mutableGlobals,
+		};
 
 		IntPtr size = new(Encoding.UTF8.GetByteCount(sourceCode));
-		IntPtr bytecodePtr = NativeBindings.luau_compile(sourceCode, size, IntPtr.Zero, out nint outSize);
+		IntPtr bytecodePtr = NativeBindings.luau_compile(sourceCode, size, (IntPtr)(&options), out nint outSize);
 		if (bytecodePtr == IntPtr.Zero)
 		{
-			//Marshal.FreeHGlobal(optionsPtr);
 			throw new Exception("Error compiling Lua source code");
 		}
 		try
@@ -94,24 +198,20 @@ public partial class LuaState : IDisposable
 
 	public LuaStatus Load(string name, byte[] compiled)
 	{
-		lock (_lock)
+		if (Loaded)
+			throw new Exception("Cannot load when already loaded! Please dispose this VM and create a new one");
+		int loadResult = NativeBindings.luau_load(_state, name, compiled, compiled.Length, 0);
+		if (loadResult != 0)
 		{
-			if (Loaded)
-				throw new Exception("Cannot load when already loaded! Please dispose this VM and create a new one");
-			int loadResult = NativeBindings.luau_load(_state, name, compiled, compiled.Length, 0);
-			if (loadResult != 0)
-			{
-				throw new LuaException("Error loading bytecode: " + ToString(-1));
-			}
-			Loaded = loadResult == 0;
-			return (LuaStatus)loadResult;
+			throw new LuaException("Error loading bytecode: " + ToString(-1));
 		}
+		Loaded = loadResult == 0;
+		return (LuaStatus)loadResult;
 	}
 
 	public void SetSafeEnv(int index, int value)
 	{
-		lock (_lock)
-			NativeBindings.lua_setsafeenv(_state, index, value);
+		NativeBindings.lua_setsafeenv(_state, index, value);
 	}
 
 	public LuaState(LuaState parent, IntPtr thread)
@@ -123,8 +223,7 @@ public partial class LuaState : IDisposable
 
 	public void OpenLibs()
 	{
-		lock (_lock)
-			NativeBindings.luaL_openlibs(_state);
+		NativeBindings.luaL_openlibs(_state);
 	}
 
 	/// <summary>
@@ -149,60 +248,49 @@ public partial class LuaState : IDisposable
 	/// <param name="n"></param>
 	public void PushInteger(long n)
 	{
-		lock (_lock)
-			NativeBindings.lua_pushinteger(_state, n);
+		NativeBindings.lua_pushinteger(_state, n);
 	}
 
 	public bool Next(int index)
 	{
-		lock (_lock)
-			return NativeBindings.lua_next(_state, index) != 0;
+		return NativeBindings.lua_next(_state, index) != 0;
 	}
 
 	public int ObjLen(int idx)
 	{
-		lock (_lock)
-			return (int)NativeBindings.lua_objlen(_state, idx);
+		return (int)NativeBindings.lua_objlen(_state, idx);
 	}
 
 	public int RawGet(int index)
 	{
-		lock (_lock)
-			return NativeBindings.lua_rawget(_state, index);
+		return NativeBindings.lua_rawget(_state, index);
 	}
 
 	public void RawGetInteger(int index, int n)
 	{
-		lock (_lock)
-			NativeBindings.lua_rawgeti(_state, index, n);
+		NativeBindings.lua_rawgeti(_state, index, n);
 	}
 
 	public void RawSetInteger(int index, long i)
 	{
-		lock (_lock)
-			NativeBindings.lua_rawseti(_state, index, i);
+		NativeBindings.lua_rawseti(_state, index, i);
 	}
 
 	public void RawSet(int index)
 	{
-		lock (_lock)
-			NativeBindings.lua_rawset(_state, index);
+		NativeBindings.lua_rawset(_state, index);
 	}
 
 	public void Insert(int index)
 	{
-		lock (_lock)
-			NativeBindings.lua_insert(_state, index);
+		NativeBindings.lua_insert(_state, index);
 	}
 
 	public int Ref()
 	{
-		lock (_lock)
-		{
-			int refID = NativeBindings.lua_ref(_state, GetTop());
-			Pop(1);
-			return refID;
-		}
+		int refID = NativeBindings.lua_ref(_state, GetTop());
+		Pop(1);
+		return refID;
 	}
 
 	public void GetRef(int reference)
@@ -212,60 +300,49 @@ public partial class LuaState : IDisposable
 
 	public void Unref(int reference)
 	{
-		lock (_lock)
-			NativeBindings.lua_unref(_state, reference);
+		NativeBindings.lua_unref(_state, reference);
 	}
 
 	public int GarbageCollector(LuaGC what, int data)
 	{
-		lock (_lock)
-			return NativeBindings.lua_gc(_state, (int)what, data);
+		return NativeBindings.lua_gc(_state, (int)what, data);
 	}
 
 	public int GetTop()
 	{
-		lock (_lock)
-			return NativeBindings.lua_gettop(_state);
+		return NativeBindings.lua_gettop(_state);
 	}
 
 	public void SetTop(int index)
 	{
-		lock (_lock)
-			NativeBindings.lua_settop(_state, index);
+		NativeBindings.lua_settop(_state, index);
 	}
 
 	public void Pop(int n)
 	{
-		lock (_lock)
-			NativeBindings.lua_settop(_state, -n - 1);
+		NativeBindings.lua_settop(_state, -n - 1);
 	}
 
 	public void PushValue(int index)
 	{
-		lock (_lock)
-			NativeBindings.lua_pushvalue(_state, index);
+		NativeBindings.lua_pushvalue(_state, index);
 	}
 
 	public void SetTable(int index)
 	{
-		lock (_lock)
-			NativeBindings.lua_settable(_state, index);
+		NativeBindings.lua_settable(_state, index);
 	}
 
 	public LuaType Type(int index)
 	{
-		lock (_lock)
-			return (LuaType)NativeBindings.lua_type(_state, index);
+		return (LuaType)NativeBindings.lua_type(_state, index);
 	}
 
 	public string TypeName(int index)
 	{
-		lock (_lock)
-		{
-			int type = NativeBindings.lua_type(_state, index);
-			IntPtr namePtr = NativeBindings.lua_typename(_state, type);
-			return Marshal.PtrToStringAnsi(namePtr) ?? "unknown";
-		}
+		int type = NativeBindings.lua_type(_state, index);
+		IntPtr namePtr = NativeBindings.lua_typename(_state, type);
+		return Marshal.PtrToStringAnsi(namePtr) ?? "unknown";
 	}
 
 	public bool IsString(int index) => Type(index) == LuaType.String;
@@ -294,11 +371,8 @@ public partial class LuaState : IDisposable
 	/// </remarks>
 	public string? ToString(int index)
 	{
-		lock (_lock)
-		{
-			IntPtr str = NativeBindings.lua_tolstring(_state, index, out nint len);
-			return str != 0 ? Marshal.PtrToStringUTF8(str, (int)len) : null;
-		}
+		IntPtr str = NativeBindings.lua_tolstring(_state, index, out nint len);
+		return str != 0 ? Marshal.PtrToStringUTF8(str, (int)len) : null;
 	}
 
 	/// <summary>
@@ -310,17 +384,13 @@ public partial class LuaState : IDisposable
 	/// </remarks>
 	public string? LauxToString(int index)
 	{
-		lock (_lock)
-		{
-			IntPtr str = NativeBindings.luaL_tolstring(_state, index, out nint len);
-			return str != 0 ? Marshal.PtrToStringUTF8(str, (int)len) : null;
-		}
+		IntPtr str = NativeBindings.luaL_tolstring(_state, index, out nint len);
+		return str != 0 ? Marshal.PtrToStringUTF8(str, (int)len) : null;
 	}
 
 	public long ToInteger(int index)
 	{
-		lock (_lock)
-			return NativeBindings.lua_tointegerx(_state, index, out int _);
+		return NativeBindings.lua_tointegerx(_state, index, out int _);
 	}
 
 	/// <summary>
@@ -330,13 +400,10 @@ public partial class LuaState : IDisposable
 	/// <returns></returns>
 	public long? ToIntegerX(int index)
 	{
-		lock (_lock)
-		{
-			long value = NativeBindings.lua_tointegerx(_state, index, out int isInteger);
-			if (isInteger != 0)
-				return value;
-			return null;
-		}
+		long value = NativeBindings.lua_tointegerx(_state, index, out int isInteger);
+		if (isInteger != 0)
+			return value;
+		return null;
 	}
 
 	/// <summary>
@@ -348,53 +415,48 @@ public partial class LuaState : IDisposable
 
 	public bool CallMetamethod(int obj, string name)
 	{
-		lock (_lock)
+		if (obj < 0)
 		{
-			if (obj < 0)
-			{
-				obj = GetTop() + obj + 1;
-			}
-
-			if (GetMetaTable(obj) == LuaType.Nil)
-			{
-				return false;
-			}
-
-			PushString(name);
-			RawGet(-2);
-
-			if (!IsFunction(-1))
-			{
-				Pop(2);
-				return false;
-			}
-
-			PushValue(obj);
-
-			try
-			{
-				Call(1, 1);
-			}
-			catch (Exception ex)
-			{
-				GD.PushError(ex.InnerException ?? ex);
-				throw;
-			}
-
-			return true;
+			obj = GetTop() + obj + 1;
 		}
+
+		if (GetMetaTable(obj) == LuaType.Nil)
+		{
+			return false;
+		}
+
+		PushString(name);
+		RawGet(-2);
+
+		if (!IsFunction(-1))
+		{
+			Pop(2);
+			return false;
+		}
+
+		PushValue(obj);
+
+		try
+		{
+			Call(1, 1);
+		}
+		catch (Exception ex)
+		{
+			GD.PushError(ex.InnerException ?? ex);
+			throw;
+		}
+
+		return true;
 	}
 
 	public double ToNumber(int index)
 	{
-		lock (_lock)
-			return NativeBindings.lua_tonumberx(_state, index, out _);
+		return NativeBindings.lua_tonumberx(_state, index, out _);
 	}
 
 	public bool ToBoolean(int index)
 	{
-		lock (_lock)
-			return NativeBindings.lua_toboolean(_state, index) != 0;
+		return NativeBindings.lua_toboolean(_state, index) != 0;
 	}
 
 	public LuaState ToThread(int index)
@@ -403,19 +465,22 @@ public partial class LuaState : IDisposable
 		if (state == _state)
 			return this;
 
-		return FromIntPtr(state);
+		LuaState s = new(state);
+		if (!s.IsAlive)
+		{
+			throw new LuaException("This state is dead");
+		}
+		return s;
 	}
 
 	public IntPtr ToUserData(int index)
 	{
-		lock (_lock)
-			return NativeBindings.lua_touserdata(_state, index);
+		return NativeBindings.lua_touserdata(_state, index);
 	}
 
 	public IntPtr ToPointer(int index)
 	{
-		lock (_lock)
-			return NativeBindings.lua_topointer(_state, index);
+		return NativeBindings.lua_topointer(_state, index);
 	}
 
 	public bool IsLightUserData(int index) => Type(index) == LuaType.LightUserData;
@@ -426,40 +491,44 @@ public partial class LuaState : IDisposable
 
 	public void PushNil()
 	{
-		lock (_lock)
-			NativeBindings.lua_pushnil(_state);
+		NativeBindings.lua_pushnil(_state);
 	}
 
 	public void PushNumber(double n)
 	{
-		lock (_lock)
-			NativeBindings.lua_pushnumber(_state, n);
+		NativeBindings.lua_pushnumber(_state, n);
 	}
 
 	public void PushString(string s)
 	{
-		lock (_lock)
-			NativeBindings.lua_pushstring(_state, s);
+		NativeBindings.lua_pushstring(_state, s);
 	}
 
 	public void PushBoolean(bool b)
 	{
-		lock (_lock)
-			NativeBindings.lua_pushboolean(_state, b ? 1 : 0);
+		NativeBindings.lua_pushboolean(_state, b ? 1 : 0);
+	}
+
+	public void PushVector(Vector3 v)
+	{
+		NativeBindings.lua_pushvector(_state, v.X, v.Y, v.Z, 0);
+	}
+
+	public unsafe Vector3 ToVector(int index)
+	{
+		float* v = (float*)NativeBindings.lua_tovector(_state, index);
+		return v == null ? Vector3.Zero : new Vector3(v[0], v[1], v[2]);
 	}
 
 	public void PushCFunction(LuaFunction func, string? name = null, int n = 0)
 	{
-		IntPtr userdataPtr = NewUserDataDTor((UIntPtr)IntPtr.Size, FunctionGarbageCollect);
+		IntPtr userdataPtr = NewUserDataDTor((UIntPtr)IntPtr.Size, _functionDtor);
 
 		GCHandle handle = GCHandle.Alloc(func);
 		IntPtr handlePtr = GCHandle.ToIntPtr(handle);
 		Marshal.WriteIntPtr(userdataPtr, handlePtr);
 
-		_pinnedFunctions[handlePtr] = func;
-
-		lock (_lock)
-			NativeBindings.lua_pushcclosurek(_state, func, name, n + 1, null);
+		NativeBindings.lua_pushcclosurek(_state, func, name, n + 1, null);
 	}
 
 	private static void FunctionGarbageCollect(IntPtr ud)
@@ -467,7 +536,6 @@ public partial class LuaState : IDisposable
 		IntPtr handlePtr = Marshal.ReadIntPtr(ud);
 		if (handlePtr == IntPtr.Zero) return;
 		GCHandle handle = GCHandle.FromIntPtr(handlePtr);
-		_pinnedFunctions.Remove(handlePtr);
 
 		if (handle.IsAllocated)
 		{
@@ -477,28 +545,24 @@ public partial class LuaState : IDisposable
 
 	public bool PushThread()
 	{
-		lock (_lock)
-			return NativeBindings.lua_pushthread(_state) == 1;
+		return NativeBindings.lua_pushthread(_state) == 1;
 	}
 
 	public byte[] ToBuffer(int index)
 	{
-		lock (_lock)
+		IntPtr ptr = NativeBindings.lua_tobuffer(_state, index, out UIntPtr length);
+
+		if (ptr == IntPtr.Zero)
 		{
-			IntPtr ptr = NativeBindings.lua_tobuffer(_state, index, out UIntPtr length);
-
-			if (ptr == IntPtr.Zero)
-			{
-				return [];
-			}
-
-			int len = (int)length;
-			byte[] managedArray = new byte[len];
-
-			Marshal.Copy(ptr, managedArray, 0, len);
-
-			return managedArray;
+			return [];
 		}
+
+		int len = (int)length;
+		byte[] managedArray = new byte[len];
+
+		Marshal.Copy(ptr, managedArray, 0, len);
+
+		return managedArray;
 	}
 
 	public void SetGlobal(string name)
@@ -508,20 +572,17 @@ public partial class LuaState : IDisposable
 
 	public void GetGlobal(string name)
 	{
-		lock (_lock)
-			NativeBindings.lua_getfield(_state, LUA_GLOBALSINDEX, name);
+		NativeBindings.lua_getfield(_state, LUA_GLOBALSINDEX, name);
 	}
 
 	public void GetTable(int index)
 	{
-		lock (_lock)
-			NativeBindings.lua_gettable(_state, index);
+		NativeBindings.lua_gettable(_state, index);
 	}
 
 	public LuaType GetMetaTable(int index)
 	{
-		lock (_lock)
-			return (LuaType)NativeBindings.lua_getmetatable(_state, index);
+		return (LuaType)NativeBindings.lua_getmetatable(_state, index);
 	}
 
 	public void Register(string name, LuaFunction func)
@@ -532,26 +593,22 @@ public partial class LuaState : IDisposable
 
 	public void NewTable()
 	{
-		lock (_lock)
-			NativeBindings.lua_createtable(_state, 0, 0);
+		NativeBindings.lua_createtable(_state, 0, 0);
 	}
 
 	public void SetField(int index, string key)
 	{
-		lock (_lock)
-			NativeBindings.lua_setfield(_state, index, key);
+		NativeBindings.lua_setfield(_state, index, key);
 	}
 
 	public void GetField(int index, string key)
 	{
-		lock (_lock)
-			NativeBindings.lua_getfield(_state, index, key);
+		NativeBindings.lua_getfield(_state, index, key);
 	}
 
 	public void PushLightUserData(IntPtr ptr)
 	{
-		lock (_lock)
-			NativeBindings.lua_pushlightuserdatatagged(_state, ptr, 0);
+		NativeBindings.lua_pushlightuserdatatagged(_state, ptr, 0);
 	}
 
 	public void PushObject<T>(T obj)
@@ -564,7 +621,7 @@ public partial class LuaState : IDisposable
 
 		GCHandle handle = GCHandle.Alloc(obj);
 		IntPtr handlePtr = GCHandle.ToIntPtr(handle);
-		IntPtr userdataPtr = NewUserDataDTor((UIntPtr)IntPtr.Size, ManagedObjectGarbageCollect);
+		IntPtr userdataPtr = NewUserDataDTor((UIntPtr)IntPtr.Size, _objectDtor);
 		Marshal.WriteIntPtr(userdataPtr, handlePtr);
 	}
 
@@ -632,144 +689,165 @@ public partial class LuaState : IDisposable
 			return;
 		}
 
-		lock (_lock)
+		IntPtr bufferPtr = NativeBindings.lua_newbuffer(_state, (UIntPtr)buffer.Length);
+
+		if (bufferPtr == IntPtr.Zero)
 		{
-			IntPtr bufferPtr = NativeBindings.lua_newbuffer(_state, (UIntPtr)buffer.Length);
-
-			if (bufferPtr == IntPtr.Zero)
-			{
-				throw new OutOfMemoryException("Lua failed to allocate the buffer.");
-			}
-
-			Marshal.Copy(buffer, 0, bufferPtr, buffer.Length);
+			throw new OutOfMemoryException("Lua failed to allocate the buffer.");
 		}
+
+		Marshal.Copy(buffer, 0, bufferPtr, buffer.Length);
 	}
 
 	public void SetMetaTable(int objIndex)
 	{
-		lock (_lock)
-			NativeBindings.lua_setmetatable(_state, objIndex);
+		NativeBindings.lua_setmetatable(_state, objIndex);
 	}
 
 	public LuaState NewThread()
 	{
-		lock (_lock)
-		{
-			if (NativeBindings.lua_checkstack(_state, 1) == 0)
-				throw new InvalidOperationException("Lua stack limit: unable to create new thread");
+		if (NativeBindings.lua_checkstack(_state, 1) == 0)
+			throw new InvalidOperationException("Lua stack limit: unable to create new thread");
 
-			IntPtr thread = NativeBindings.lua_newthread(_state);
-			return new LuaState(this, thread);
-		}
+		IntPtr thread = NativeBindings.lua_newthread(_state);
+		return new LuaState(this, thread);
 	}
 
 	public void Sandbox()
 	{
-		lock (_lock)
-			NativeBindings.luaL_sandbox(_state);
+		NativeBindings.luaL_sandbox(_state);
 	}
 
 	public void SandboxGlobals()
 	{
-		lock (_lock)
-		{
-			NewTable();
+		NewTable();
 
-			NewTable();
-			PushValue(LuaState.LUA_GLOBALSINDEX);
-			SetField(-2, "__index");
-			SetReadOnly(-1, true);
-			SetMetaTable(-2);
+		NewTable();
+		PushValue(LuaState.LUA_GLOBALSINDEX);
+		SetField(-2, "__index");
+		SetReadOnly(-1, true);
+		SetMetaTable(-2);
 
-			Replace(LuaState.LUA_GLOBALSINDEX);
-		}
+		Replace(LuaState.LUA_GLOBALSINDEX);
+		SetSafeEnv(LuaState.LUA_GLOBALSINDEX, 1);
 	}
 
-	public string? GetNameCallAtom()
+	public string? GetNameCallAtom(out int atom)
 	{
-		lock (_lock)
+		IntPtr ptr = NativeBindings.lua_namecallatom(_state, out atom);
+		if (ptr == IntPtr.Zero)
 		{
-			IntPtr ptr = NativeBindings.lua_namecallatom(_state, out int len);
-			if (ptr == IntPtr.Zero) return null;
-			if (len < 0) { return Marshal.PtrToStringAnsi(ptr); }
-			return Marshal.PtrToStringAnsi(ptr, len);
+			atom = -1;
+			return null;
 		}
+		if (atom >= 0 && atom < _atoms.Length) return _atoms[atom];
+		atom = -1;
+		return Marshal.PtrToStringUTF8(ptr);
+	}
+
+	public string? ToAtomString(int index, out int atom)
+	{
+		IntPtr ptr = NativeBindings.lua_tostringatom(_state, index, out atom);
+		if (ptr != IntPtr.Zero && atom >= 0 && atom < _atoms.Length) return _atoms[atom];
+		atom = -1;
+		return ToString(index);
 	}
 
 	public void XMove(LuaState to, int n)
 	{
-		lock (_lock)
-			NativeBindings.lua_xmove(_state, to.State, n);
+		to.CheckStack(n);
+		NativeBindings.lua_xmove(_state, to.State, n);
 	}
 
-	public LuaStatus Resume(LuaState? from = null, int narg = 0)
+	public void CheckStack(int n)
 	{
-		lock (_lock)
+		NativeBindings.lua_checkstack(_state, n);
+	}
+
+	public LuaStatus Resume(LuaState? from = null, int narg = 0, bool sameRun = false)
+	{
+		if (_resumeDepth == 0)
+		{
+			if (_heapSize > HeapLimit / 2 && Stopwatch.GetElapsedTime(_lastCollect).TotalSeconds >= 0.1)
+			{
+				_lastCollect = Stopwatch.GetTimestamp();
+				GarbageCollector(LuaGC.Collect, 0);
+			}
+			_resumeCallbacks = NativeBindings.lua_callbacks(_state);
+			if (!sameRun)
+				_resumeStart = Stopwatch.GetTimestamp();
+		}
+		_resumeDepth++;
+
+		try
+		{
 			return (LuaStatus)NativeBindings.lua_resume(_state, from?.State ?? IntPtr.Zero, narg);
+		}
+		finally
+		{
+			_resumeDepth--;
+		}
 	}
 
 	public LuaStatus Status()
 	{
-		lock (_lock)
-			return (LuaStatus)NativeBindings.lua_status(_state);
+		return (LuaStatus)NativeBindings.lua_status(_state);
 	}
 
 	public bool IsThreadReset()
 	{
-		lock (_lock)
-			return NativeBindings.lua_isthreadreset(_state) != 0;
+		return NativeBindings.lua_isthreadreset(_state) != 0;
 	}
 
 	public int Yield(int nresults)
 	{
-		lock (_lock)
-			return NativeBindings.lua_yield(_state, nresults);
+		return NativeBindings.lua_yield(_state, nresults);
 	}
 
 	public int Error(string value, params object[] v)
 	{
 		string message = v.Length > 0 ? string.Format(value, v) : value;
-		lock (_lock)
-			return NativeBindings.luaL_errorL(_state, message);
+		return NativeBindings.luaL_errorL(_state, message);
 	}
 
 	public void PushLightUserdataTagged(IntPtr p, int tag = 0)
 	{
-		lock (_lock)
-			NativeBindings.lua_pushlightuserdatatagged(_state, p, tag);
+		NativeBindings.lua_pushlightuserdatatagged(_state, p, tag);
 	}
 
 	public IntPtr NewUserDataTagged(UIntPtr size, int tag)
 	{
-		lock (_lock)
-			return NativeBindings.lua_newuserdatatagged(_state, size, tag);
+		return NativeBindings.lua_newuserdatatagged(_state, size, tag);
+	}
+
+	public int UserDataTag(int index)
+	{
+		return NativeBindings.lua_userdatatag(_state, index);
+	}
+
+	public IntPtr ToUserDataTagged(int index, int tag)
+	{
+		return NativeBindings.lua_touserdatatagged(_state, index, tag);
 	}
 
 	public IntPtr NewUserDataDTor(UIntPtr size, LuaUserdataDestructor dtor)
 	{
-		lock (_lock)
+		if (!_pinnedDestructors.ContainsKey(dtor))
 		{
-			if (!_pinnedDestructors.ContainsKey(dtor))
-			{
-				_pinnedDestructors[dtor] = GCHandle.Alloc(dtor);
-			}
-			return NativeBindings.lua_newuserdatadtor(_state, size, dtor);
+			_pinnedDestructors[dtor] = GCHandle.Alloc(dtor);
 		}
+		return NativeBindings.lua_newuserdatadtor(_state, size, dtor);
 	}
 
 	public bool NewMetaTable(string name)
 	{
-		lock (_lock)
-			return NativeBindings.luaL_newmetatable(_state, name) != 0;
+		return NativeBindings.luaL_newmetatable(_state, name) != 0;
 	}
 
 	public string? DebugTrace()
 	{
-		lock (_lock)
-		{
-			IntPtr ptr = NativeBindings.lua_debugtrace(_state);
-			return ptr != IntPtr.Zero ? Marshal.PtrToStringUTF8(ptr) : null;
-		}
+		IntPtr ptr = NativeBindings.lua_debugtrace(_state);
+		return ptr != IntPtr.Zero ? Marshal.PtrToStringUTF8(ptr) : null;
 	}
 
 	/// <summary>
@@ -779,8 +857,7 @@ public partial class LuaState : IDisposable
 	/// <param name="obj"></param>
 	public void RawSetPointer(int index, IntPtr obj)
 	{
-		lock (_lock)
-			NativeBindings.lua_rawsetp(_state, index, obj);
+		NativeBindings.lua_rawsetp(_state, index, obj);
 	}
 
 	/// <summary>
@@ -791,76 +868,69 @@ public partial class LuaState : IDisposable
 	/// <returns>Returns the type of the pushed value. </returns>
 	public LuaType RawGetPointer(int index, IntPtr obj)
 	{
-		lock (_lock)
-			return (LuaType)NativeBindings.lua_rawgetp(_state, index, obj);
+		return (LuaType)NativeBindings.lua_rawgetp(_state, index, obj);
 	}
 
 	public void SetThreadData(IntPtr data)
 	{
-		lock (_lock)
-			NativeBindings.lua_setthreaddata(_state, data);
+		NativeBindings.lua_setthreaddata(_state, data);
 	}
 
 	public IntPtr GetThreadData()
 	{
-		lock (_lock)
-			return NativeBindings.lua_getthreaddata(_state);
+		return NativeBindings.lua_getthreaddata(_state);
 	}
 
 	public void Getfenv(int idx)
 	{
-		lock (_lock)
-			NativeBindings.lua_getfenv(_state, idx);
+		NativeBindings.lua_getfenv(_state, idx);
 	}
 
 	public int Setfenv(int idx)
 	{
-		lock (_lock)
-			return NativeBindings.lua_setfenv(_state, idx);
+		return NativeBindings.lua_setfenv(_state, idx);
 	}
 
 	public void Replace(int idx)
 	{
-		lock (_lock)
-			NativeBindings.lua_replace(_state, idx);
+		NativeBindings.lua_replace(_state, idx);
 	}
 
 	public void Remove(int idx)
 	{
-		lock (_lock)
-			NativeBindings.lua_remove(_state, idx);
+		NativeBindings.lua_remove(_state, idx);
 	}
 
 	public void SetReadOnly(int idx, bool to)
 	{
-		lock (_lock)
-			NativeBindings.lua_setreadonly(_state, idx, to ? 1 : 0);
+		NativeBindings.lua_setreadonly(_state, idx, to ? 1 : 0);
 	}
 
 	public void Call(int nargs, int nresults)
 	{
-		lock (_lock)
+		if (NativeBindings.lua_pcall(_state, nargs, nresults, 0) != (int)LuaStatus.OK)
 		{
-			if (NativeBindings.lua_pcall(_state, nargs, nresults, 0) != (int)LuaStatus.OK)
-			{
-				string? error = ToString(-1);
-				Pop(1);
-				throw new LuaException($"Call error: {error}");
-			}
+			string? error = ToString(-1);
+			Pop(1);
+			throw new LuaException($"Call error: {error}");
 		}
 	}
 
 	public void Dispose()
 	{
-		lock (_lock)
+		if (!_disposed && _state != IntPtr.Zero)
 		{
-			if (!_disposed && _state != IntPtr.Zero)
+			if (_ownsState)
 			{
-				if (_ownsState)
-					NativeBindings.lua_close(_state);
-				_state = IntPtr.Zero;
-				_disposed = true;
+				lock (_watchdogLock)
+				{
+					if (_resumeCallbacks == NativeBindings.lua_callbacks(_state))
+						_resumeCallbacks = IntPtr.Zero;
+				}
+				NativeBindings.lua_close(_state);
 			}
+			_state = IntPtr.Zero;
+			_disposed = true;
 		}
 		GC.SuppressFinalize(this);
 	}
