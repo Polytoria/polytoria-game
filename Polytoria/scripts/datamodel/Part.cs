@@ -116,6 +116,10 @@ public partial class Part : Entity
 	{
 		_mesh?.Scale = NodeSize;
 		_nRemoteAt?.Scale = NodeSize;
+		if (_collider != null && _collider.GetParent() == GDNode3D)
+		{
+			_collider.Scale = NodeSize;
+		}
 	}
 
 	public void RemoveSeparateMesh()

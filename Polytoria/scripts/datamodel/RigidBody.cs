@@ -6,14 +6,15 @@ using Godot;
 using Polytoria.Attributes;
 using Polytoria.Utils;
 using System;
+using System.Collections.Generic;
 
 namespace Polytoria.Datamodel;
 
 [Instantiable]
 public partial class RigidBody : Physical
 {
+	private static readonly Dictionary<(float, float), PhysicsMaterial> _physicsMaterials = [];
 	internal RigidBody3D GDRigidBody = null!;
-	internal PhysicsMaterial PhysicsMat = null!;
 
 	private float _gravityScale;
 	private bool _lockRotation = false;
@@ -118,7 +119,7 @@ public partial class RigidBody : Physical
 			}
 
 			_friction = value;
-			PhysicsMat.Friction = value;
+			UpdatePhysicsMaterial();
 			OnPropertyChanged();
 		}
 	}
@@ -170,7 +171,7 @@ public partial class RigidBody : Physical
 
 			_bounciness = value;
 
-			PhysicsMat.Bounce = value;
+			UpdatePhysicsMaterial();
 
 			OnPropertyChanged();
 		}
@@ -198,10 +199,9 @@ public partial class RigidBody : Physical
 	public override void InitGDNode()
 	{
 		base.InitGDNode();
-		PhysicsMat = new();
 		RigidBody3D? previous = GDRigidBody;
 		GDRigidBody = (RigidBody3D)GDNode;
-		GDRigidBody.PhysicsMaterialOverride = PhysicsMat;
+		UpdatePhysicsMaterial();
 		GDRigidBody.GravityScale = 2;
 
 		if (ReferenceEquals(previous, GDRigidBody)) return;
@@ -212,6 +212,16 @@ public partial class RigidBody : Physical
 		}
 
 		GDRigidBody.SleepingStateChanged += OnSleepingStateChanged;
+	}
+
+	private void UpdatePhysicsMaterial()
+	{
+		if (!_physicsMaterials.TryGetValue((_friction, _bounciness), out PhysicsMaterial? mat))
+		{
+			mat = new() { Friction = _friction, Bounce = _bounciness };
+			_physicsMaterials[(_friction, _bounciness)] = mat;
+		}
+		GDRigidBody.PhysicsMaterialOverride = mat;
 	}
 
 	public override void Init()

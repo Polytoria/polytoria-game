@@ -72,6 +72,7 @@ public partial class NetworkedObject : IScriptObject
 			{
 				selfpreI.RemoveNameFromParent();
 				selfpreI.RemoveLegacyNameFromParent();
+				preI.legacyChild.Remove(selfpreI.LegacyName);
 				List<Instance> siblings = preI.Children;
 				int childIdx = 0;
 				while (childIdx < siblings.Count && !ReferenceEquals(siblings[childIdx], selfpreI)) childIdx++;
@@ -1400,7 +1401,7 @@ public partial class NetworkedObject : IScriptObject
 		if (entry == null) return;
 
 		// Check sequence
-		if (sequence != -1 && !CompareSequenceForProp(propName, sequence))
+		if (sequence != -1 && !CompareSequenceForProp(entry.Name, sequence))
 		{
 			return;
 		}
@@ -1429,7 +1430,7 @@ public partial class NetworkedObject : IScriptObject
 				NetworkedObject? refObj = Root.GetNetObjectFromID(nref.NetID);
 				if (refObj == null)
 				{
-					PendingProps.Add(propName);
+					PendingProps.Add(entry.Name);
 					NetPropNetworkedObjectRef newRef = nref;
 					newRef.TargetProp = entry;
 					Root.Network.PropSync.PendingRefs[newRef] = this;
@@ -1458,7 +1459,7 @@ public partial class NetworkedObject : IScriptObject
 		{
 			PT.PrintErr(ex);
 		}
-		PendingProps.Remove(prop.Name);
+		_pendingProps?.Remove(prop.Name);
 		_isReplicating = true;
 	}
 

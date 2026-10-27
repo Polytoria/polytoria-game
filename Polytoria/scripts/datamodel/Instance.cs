@@ -794,7 +794,6 @@ public partial class Instance : NetworkedObject
 			legacyChild.TryAdd(n.LegacyName, n);
 		}
 
-		ChildRemoved.Connect(OnChildRemoved);
 		base.Ready();
 	}
 
@@ -802,18 +801,12 @@ public partial class Instance : NetworkedObject
 	{
 		base.PreDelete();
 		ModelRoot?.UnregisterModelChild(this);
-		ChildRemoved.Disconnect(OnChildRemoved);
 		Children.Clear();
 #if CREATOR
 		Renamed.Disconnect(OnRenamed);
 		Explorer.Remove(this);
 		Root?.CreatorContext?.Selections.Deselect(this);
 #endif
-	}
-
-	private void OnChildRemoved(Instance obj)
-	{
-		legacyChild.Remove(obj.LegacyName);
 	}
 
 	[ScriptMethod]

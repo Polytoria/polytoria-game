@@ -24,7 +24,6 @@ public partial class Physical : Dynamic
 	private static readonly Dictionary<Node, Physical> _proxyToPhysical = [];
 	private static readonly ConditionalWeakTable<CollisionShape3D, RemoteLinkConfig> _remoteLinkConfigs = [];
 	private static readonly ConditionalWeakTable<CollisionShape3D, TrackedNodesState> _trackedNodes = [];
-	internal readonly Dictionary<int, Physical> _rootShapeIndexToPhysical = [];
 
 	private sealed class RemoteLinkConfig
 	{
@@ -848,6 +847,12 @@ public partial class Physical : Dynamic
 	private void EnsureRemoteTransform(CollisionShape3D origin)
 	{
 		if (!Node.IsInstanceValid(origin)) return;
+
+		if (this is Part && origin.GetParent() == GDNode && GetRemoteLinkConfig(origin)?.Target is Node3D target)
+		{
+			origin.Transform = target.Transform;
+			return;
+		}
 
 		if (HasValidTrackedNodes(origin, static state => state.CollisionSyncNodes))
 		{
