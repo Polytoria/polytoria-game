@@ -75,10 +75,9 @@ public partial class Part : Entity
 
 	public override void Ready()
 	{
-		AddCollisionShape(_collider);
-		UpdateCollision();
 		UpdateMeshSize();
 		UpdateShape();
+		UpdateCollision();
 
 		base.Ready();
 	}

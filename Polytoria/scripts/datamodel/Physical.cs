@@ -49,6 +49,8 @@ public partial class Physical : Dynamic
 	private bool _netEnsureTouchArea = false;
 
 	private CollisionObject3D? _registeredCollisionBody;
+	private CollisionObject3D? _appliedLayersBody;
+	private uint _appliedLayers, _appliedMask;
 
 	private int _touchedListenerCount = 0;
 	private bool _canTouch = false;
@@ -180,7 +182,16 @@ public partial class Physical : Dynamic
 			return;
 		}
 
-		collisionObject3D.CollisionLayer = GetAppliedCollisionLayers();
+		uint layers = GetAppliedCollisionLayers();
+		if (_appliedLayersBody == collisionObject3D && _appliedLayers == layers && _appliedMask == _collisionMask)
+		{
+			return;
+		}
+
+		_appliedLayersBody = collisionObject3D;
+		_appliedLayers = layers;
+		_appliedMask = _collisionMask;
+		collisionObject3D.CollisionLayer = layers;
 		collisionObject3D.CollisionMask = _collisionMask;
 	}
 

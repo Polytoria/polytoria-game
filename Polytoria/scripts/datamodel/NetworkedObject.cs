@@ -1199,10 +1199,8 @@ public partial class NetworkedObject : IScriptObject
 		string className = data.ClassName;
 		int authority = data.Authority;
 		NetPropReplicateData[] props = data.Props;
-		//PT.Print(Root.Network.LocalPeerID, " ", data.nodePath, " on the way");
 
-		NetworkedObject? existingObj = null;
-
+		NetworkedObject? existingObj;
 
 		if (this is Instance i3)
 		{
@@ -1212,7 +1210,6 @@ public partial class NetworkedObject : IScriptObject
 		{
 			existingObj = FindNonInstanceChild(objName);
 		}
-
 
 		if (existingObj != null)
 		{
@@ -1337,6 +1334,9 @@ public partial class NetworkedObject : IScriptObject
 	/// <param name="isSyncOnce"></param>
 	public void ApplyNetProps(NetPropReplicateData[] props, bool isSyncOnce)
 	{
+		PropertySequence.EnsureCapacity(props.Length);
+		(_lastSyncedValues ??= []).EnsureCapacity(props.Length);
+
 		foreach (NetPropReplicateData prop in props)
 		{
 			try
@@ -1358,7 +1358,8 @@ public partial class NetworkedObject : IScriptObject
 	{
 		Dictionary<string, PropSyncProp> entries = PropSyncRegistry.GetProps(GetType());
 
-		List<NetPropReplicateData> replicateData = [];
+		List<NetPropReplicateData> replicateData = new(entries.Count);
+		PropertySequence.EnsureCapacity(entries.Count);
 
 		foreach (PropSyncProp entry in entries.Values)
 		{
@@ -1433,7 +1434,12 @@ public partial class NetworkedObject : IScriptObject
 					PendingProps.Add(entry.Name);
 					NetPropNetworkedObjectRef newRef = nref;
 					newRef.TargetProp = entry;
-					Root.Network.PropSync.PendingRefs[newRef] = this;
+					if (!Root.Network.PropSync.PendingRefs.TryGetValue(nref.NetID, out var refs))
+					{
+						refs = [];
+						Root.Network.PropSync.PendingRefs[nref.NetID] = refs;
+					}
+					refs.Add((newRef, this));
 				}
 				else
 				{

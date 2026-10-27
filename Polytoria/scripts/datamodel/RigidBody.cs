@@ -15,11 +15,12 @@ public partial class RigidBody : Physical
 {
 	private static readonly Dictionary<(float, float), PhysicsMaterial> _physicsMaterials = [];
 	internal RigidBody3D GDRigidBody = null!;
+	private PhysicsMaterial? _appliedPhysicsMaterial;
 
-	private float _gravityScale;
+	private float _gravityScale = 1f;
 	private bool _lockRotation = false;
-	private float _mass;
-	private float _friction;
+	private float _mass = 1f;
+	private float _friction = 0.6f;
 	private float _drag;
 	private float _angularDrag;
 	private float _bounciness;
@@ -33,7 +34,10 @@ public partial class RigidBody : Physical
 		}
 		set
 		{
-			GDRigidBody.LinearVelocity = value;
+			if (!IsFrozen || GDRigidBody.LinearVelocity != value)
+			{
+				GDRigidBody.LinearVelocity = value;
+			}
 			OnPropertyChanged();
 		}
 	}
@@ -47,7 +51,11 @@ public partial class RigidBody : Physical
 		}
 		set
 		{
-			GDRigidBody.AngularVelocity = value.FlipEuler();
+			Vector3 v = value.FlipEuler();
+			if (!IsFrozen || GDRigidBody.AngularVelocity != v)
+			{
+				GDRigidBody.AngularVelocity = v;
+			}
 			OnPropertyChanged();
 		}
 	}
@@ -183,6 +191,11 @@ public partial class RigidBody : Physical
 		get => _lockRotation;
 		set
 		{
+			if (_lockRotation == value)
+			{
+				return;
+			}
+
 			_lockRotation = value;
 
 			GDRigidBody.LockRotation = value;
@@ -201,6 +214,7 @@ public partial class RigidBody : Physical
 		base.InitGDNode();
 		RigidBody3D? previous = GDRigidBody;
 		GDRigidBody = (RigidBody3D)GDNode;
+		_appliedPhysicsMaterial = null;
 		UpdatePhysicsMaterial();
 		GDRigidBody.GravityScale = 2;
 
@@ -221,6 +235,8 @@ public partial class RigidBody : Physical
 			mat = new() { Friction = _friction, Bounce = _bounciness };
 			_physicsMaterials[(_friction, _bounciness)] = mat;
 		}
+		if (ReferenceEquals(_appliedPhysicsMaterial, mat)) return;
+		_appliedPhysicsMaterial = mat;
 		GDRigidBody.PhysicsMaterialOverride = mat;
 	}
 

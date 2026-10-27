@@ -19,6 +19,7 @@ public partial class UILabel : UIView
 	private string _text = "";
 	private Color _textColor;
 	private float _fontSize;
+	private int _appliedTextSize = -1;
 	private bool _autoSize;
 	private float _maxAutoSize;
 	private bool _useRichText;
@@ -286,6 +287,8 @@ public partial class UILabel : UIView
 	private void SetTextSize(float size)
 	{
 		int setto = (int)(size * FontScaleConversion);
+		if (setto == _appliedTextSize) return;
+		_appliedTextSize = setto;
 		_label.AddThemeFontSizeOverride("font_size", setto);
 		_richLabel.AddThemeFontSizeOverride("normal_font_size", setto);
 		_richLabel.AddThemeFontSizeOverride("bold_font_size", setto);
