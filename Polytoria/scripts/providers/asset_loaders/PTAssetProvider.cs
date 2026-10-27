@@ -108,6 +108,7 @@ public class PTAssetProvider : IAssetProvider
 
 		// Set mipmap texture filter for meshes
 		SetMipmapTextureFilter(scene);
+		FixNegScaleMeshes(scene);
 
 		TaskCompletionSource<PackedScene> callback = new();
 
@@ -193,6 +194,40 @@ public class PTAssetProvider : IAssetProvider
 						material.TextureFilter = BaseMaterial3D.TextureFilterEnum.LinearWithMipmaps;
 					}
 				}
+			}
+		}
+	}
+
+	private static void FixNegScaleMeshes(Node node)
+	{
+		foreach (Node child in node.GetChildren())
+		{
+			FixNegScaleMeshes(child);
+
+			if (child is MeshInstance3D meshInstance && meshInstance.Mesh is ArrayMesh original && meshInstance.Basis.Determinant() < 0 && original.GetBlendShapeCount() == 0)
+			{
+				ArrayMesh mesh = new();
+
+				for (int s = 0; s < original.GetSurfaceCount(); s++)
+				{
+					Godot.Collections.Array arrays = original.SurfaceGetArrays(s);
+					Material material = original.SurfaceGetMaterial(s);
+
+					if (material is BaseMaterial3D baseMaterial && baseMaterial.CullMode == BaseMaterial3D.CullModeEnum.Disabled)
+					{
+						Vector3[] normals = arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
+						for (int i = 0; i < normals.Length; i++)
+						{
+							normals[i] = -normals[i];
+						}
+						arrays[(int)Mesh.ArrayType.Normal] = normals;
+					}
+
+					mesh.AddSurfaceFromArrays(original.SurfaceGetPrimitiveType(s), arrays);
+					mesh.SurfaceSetMaterial(s, material);
+				}
+
+				meshInstance.Mesh = mesh;
 			}
 		}
 	}
