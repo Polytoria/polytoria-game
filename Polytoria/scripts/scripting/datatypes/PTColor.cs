@@ -9,7 +9,7 @@ namespace Polytoria.Scripting.Datatypes;
 
 public class PTColor : IScriptGDObject
 {
-	Color color;
+	internal Color color;
 
 	[ScriptProperty] public float R { get => color.R; set => color.R = value; }
 	[ScriptProperty] public float G { get => color.G; set => color.G = value; }

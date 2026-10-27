@@ -36,6 +36,7 @@ public partial class NetworkedObject : IScriptObject
 	private World _game = null!;
 	private bool _isReplicating = true;
 	private bool _isDeleted = false;
+	internal int LuauObjectID;
 
 	private bool _processRegistered = false;
 	private bool _physicsProcessRegistered = false;

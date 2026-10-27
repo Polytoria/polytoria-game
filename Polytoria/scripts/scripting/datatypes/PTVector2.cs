@@ -10,7 +10,7 @@ namespace Polytoria.Scripting.Datatypes;
 
 public class PTVector2 : IScriptGDObject
 {
-	Vector2 vector;
+	internal Vector2 vector;
 
 	[ScriptProperty] public float X { get => vector.X; set => vector.X = value; }
 	[ScriptProperty] public float Y { get => vector.Y; set => vector.Y = value; }
