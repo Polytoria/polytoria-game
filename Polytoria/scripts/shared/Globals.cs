@@ -12,6 +12,7 @@ using Polytoria.Datamodel;
 using Polytoria.Datamodel.Resources;
 using Polytoria.Scripting.Luau;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -19,7 +20,6 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Mesh = Godot.Mesh;
-using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Metadata;
 using Polytoria.Extensions;
@@ -69,6 +69,7 @@ public sealed partial class Globals : Node
 	private static readonly Dictionary<string, Material> _skyboxesCache = [];
 
 	private static readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materialCache = [];
+	private static readonly HashSet<string> _missingResources = [];
 	private readonly PriorityQueue<ScheduledWait, (ulong Target, ulong Order)> _waitQueue = new();
 	private ulong _nextWaitOrder;
 	private bool _processingWaits;
@@ -129,7 +130,7 @@ public sealed partial class Globals : Node
 	public static event Action<double>? GodotPhysicsProcess;
 	public static event Action<int>? GodotNotification;
 
-	private readonly static ConditionalWeakTable<string, Type> _typesCache = [];
+	private readonly static ConcurrentDictionary<string, Type> _typesCache = [];
 
 	static Globals()
 	{
@@ -236,7 +237,7 @@ public sealed partial class Globals : Node
 
 		if (TypeRegistry.InstantiableTypes.TryGetValue(className, out t))
 		{
-			_typesCache.AddOrUpdate(className, t);
+			_typesCache[className] = t;
 			return t;
 		}
 
@@ -253,7 +254,7 @@ public sealed partial class Globals : Node
 			t = Type.GetType(ns + className);
 			if (t != null)
 			{
-				_typesCache.AddOrUpdate(className, t);
+				_typesCache[className] = t;
 				return t;
 			}
 		}
@@ -352,11 +353,10 @@ public sealed partial class Globals : Node
 			return mat;
 		}
 
-		mat = ResourceLoader.Load<Material>($"res://resources/materials/parts/{material}.tres", cacheMode: ResourceLoader.CacheMode.IgnoreDeep);
+		mat = ResourceLoader.Load<Material>($"res://resources/materials/parts/{material}.tres", cacheMode: ResourceLoader.CacheMode.Ignore);
 		if (!isOpaque && mat is ShaderMaterial shadMat && shadMat.Shader.ResourcePath.EndsWith("part.gdshader"))
 		{
-			Shader shader = ResourceLoader.Load<Shader>("res://resources/shaders/part/part_transparent.gdshader", cacheMode: ResourceLoader.CacheMode.IgnoreDeep);
-			shadMat.Shader = shader;
+			shadMat.Shader = ResourceLoader.Load<Shader>("res://resources/shaders/part/part_transparent.gdshader");
 		}
 		_materialCache[(material, isOpaque)] = mat;
 		return mat;
@@ -385,8 +385,14 @@ public sealed partial class Globals : Node
 			return cachedResource;
 		}
 
+		if (_missingResources.Contains(path))
+		{
+			return null;
+		}
+
 		if (!ResourceLoader.Exists(path))
 		{
+			_missingResources.Add(path);
 			return null;
 		}
 

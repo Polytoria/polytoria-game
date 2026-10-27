@@ -24,7 +24,6 @@ public partial class Physical : Dynamic
 	private static readonly Dictionary<Node, Physical> _proxyToPhysical = [];
 	private static readonly ConditionalWeakTable<CollisionShape3D, RemoteLinkConfig> _remoteLinkConfigs = [];
 	private static readonly ConditionalWeakTable<CollisionShape3D, TrackedNodesState> _trackedNodes = [];
-	internal readonly Dictionary<int, Physical> _rootShapeIndexToPhysical = [];
 
 	private sealed class RemoteLinkConfig
 	{
@@ -50,6 +49,8 @@ public partial class Physical : Dynamic
 	private bool _netEnsureTouchArea = false;
 
 	private CollisionObject3D? _registeredCollisionBody;
+	private CollisionObject3D? _appliedLayersBody;
+	private uint _appliedLayers, _appliedMask;
 
 	private int _touchedListenerCount = 0;
 	private bool _canTouch = false;
@@ -181,7 +182,16 @@ public partial class Physical : Dynamic
 			return;
 		}
 
-		collisionObject3D.CollisionLayer = GetAppliedCollisionLayers();
+		uint layers = GetAppliedCollisionLayers();
+		if (_appliedLayersBody == collisionObject3D && _appliedLayers == layers && _appliedMask == _collisionMask)
+		{
+			return;
+		}
+
+		_appliedLayersBody = collisionObject3D;
+		_appliedLayers = layers;
+		_appliedMask = _collisionMask;
+		collisionObject3D.CollisionLayer = layers;
 		collisionObject3D.CollisionMask = _collisionMask;
 	}
 
@@ -848,6 +858,12 @@ public partial class Physical : Dynamic
 	private void EnsureRemoteTransform(CollisionShape3D origin)
 	{
 		if (!Node.IsInstanceValid(origin)) return;
+
+		if (this is Part && origin.GetParent() == GDNode && GetRemoteLinkConfig(origin)?.Target is Node3D target)
+		{
+			origin.Transform = target.Transform;
+			return;
+		}
 
 		if (HasValidTrackedNodes(origin, static state => state.CollisionSyncNodes))
 		{
