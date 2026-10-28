@@ -373,7 +373,7 @@ public sealed partial class NetworkPropSync : Instance
 		}
 		string netID = netObj.NetworkedObjectID;
 		byte[] data = prop.Serialize(propValue);
-		long sequence = netObj.GetSequenceForProp(prop.Name);
+		long sequence = netObj.GetSequenceForProp(prop);
 
 		_batchBroadcasts.Add(new() { NetID = netID, PropName = prop.Name, PropValueRaw = data, IsUnreliable = unreliable, ExcludePeer = -1, Sequence = sequence });
 	}

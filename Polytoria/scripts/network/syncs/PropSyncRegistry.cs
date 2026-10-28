@@ -23,6 +23,7 @@ public sealed class PropSyncProp
 	public required Action<NetworkedObject, object?> SetValue { get; init; }
 	public required Func<object?, byte[]> Serialize { get; init; }
 	public required Func<byte[], object?> Deserialize { get; init; }
+	public int Index { get; internal set; }
 }
 
 internal static partial class PropSyncRegistry
@@ -44,6 +45,17 @@ internal static partial class PropSyncRegistry
 
 	private static Dictionary<string, PropSyncProp> Resolve(Type type)
 	{
+		Dictionary<string, PropSyncProp> baseMap = type.BaseType != null && type.BaseType != typeof(object) ? GetProps(type.BaseType) : [];
+
+		if (_declaredProps.TryGetValue(type, out PropSyncProp[]? declared))
+		{
+			int next = baseMap.Count;
+			foreach (PropSyncProp prop in declared)
+			{
+				prop.Index = baseMap.TryGetValue(prop.Name, out PropSyncProp? baseProp) ? baseProp.Index : next++;
+			}
+		}
+
 		Dictionary<string, PropSyncProp> map = [];
 
 		for (Type? t = type; t != null && t != typeof(object); t = t.BaseType)
