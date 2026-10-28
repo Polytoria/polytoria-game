@@ -287,6 +287,13 @@ public sealed partial class PolytorianModel : CharacterModel
 		_limbMat.Dispose();
 		_transparentLimbMat.Dispose();
 
+		foreach (Dynamic dyn in _attachmentEnumToDyn.Values)
+		{
+			dyn.DeletedAsChild = true;
+			dyn.DeleteNow();
+		}
+		_attachmentEnumToDyn.Clear();
+
 		base.PreDelete();
 	}
 
@@ -595,11 +602,12 @@ public sealed partial class PolytorianModel : CharacterModel
 	[ScriptMethod]
 	public override Dynamic GetAttachment(CharacterAttachmentEnum attachmentEnum)
 	{
-		if (!_attachmentEnumToDyn.TryGetValue(attachmentEnum, out Dynamic? dyn))
+		if (!_attachmentEnumToDyn.TryGetValue(attachmentEnum, out Dynamic? dyn) || dyn.IsDeleted || !Node.IsInstanceValid(dyn.GDNode))
 		{
 			Node3D a = GetNode3DAttachment(attachmentEnum);
 			dyn = New<Dynamic>();
 			dyn.OverrideGDNode(a);
+			_attachmentEnumToDyn[attachmentEnum] = dyn;
 		}
 
 		return dyn;
@@ -681,21 +689,16 @@ public sealed partial class PolytorianModel : CharacterModel
 		float lookY = Mathf.Clamp(localForward.Y, -1f, 1f);
 		float lookX = -localForward.X;
 
-		if (lookX != _lastLookBlendX)
-		{
-			_lastLookBlendX = lookX;
-		}
-
-		if (lookY != _lastLookBlendY)
-		{
-			_lastLookBlendY = lookY;
-		}
-
 		NetRecvLookBlend(lookY, lookX);
 
-		if (Time.GetTicksMsec() / 1000.0 >= _lastNetUpdateTime + NetLookBlendUpdateInterval)
+		double now = Time.GetTicksMsec() / 1000.0;
+		bool changed = !Mathf.IsEqualApprox(lookX, _lastLookBlendX, 0.005f) || !Mathf.IsEqualApprox(lookY, _lastLookBlendY, 0.005f);
+
+		if ((changed && now >= _lastNetUpdateTime + NetLookBlendUpdateInterval) || now >= _lastNetUpdateTime + 1)
 		{
-			_lastNetUpdateTime = Time.GetTicksMsec() / 1000.0;
+			_lastNetUpdateTime = now;
+			_lastLookBlendX = lookX;
+			_lastLookBlendY = lookY;
 			Rpc(nameof(NetRecvLookBlend), lookY, lookX);
 		}
 	}

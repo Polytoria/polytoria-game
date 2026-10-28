@@ -731,13 +731,13 @@ public partial class NetworkedObject : IScriptObject
 	{
 		foreach (PropertyInfo propInfo in GetScriptProperties())
 		{
-			if (propInfo.PropertyType == typeof(PTSignal))
+			if (propInfo.PropertyType.IsAssignableTo(typeof(PTSignal)))
 			{
 				// Disconnect all signals
 				object? val = propInfo.GetValue(this);
 				if (val is PTSignal signal)
 				{
-					signal.DisconnectAll();
+					signal.DisconnectAll(propInfo.PropertyType == typeof(PTSignal));
 				}
 			}
 			else if (propInfo.PropertyType.IsAssignableTo(typeof(NetworkedObject)) || propInfo.PropertyType.IsAssignableTo(typeof(RefCounted)))
