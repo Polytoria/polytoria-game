@@ -19,6 +19,8 @@ namespace Polytoria.Datamodel;
 public partial class Light : Dynamic
 {
 	const float IntensityConversion = 4f;
+	const float ShadowFadeDistance = 100f;
+	const float FadeDistance = 250f;
 	internal Light3D GDLight = null!;
 	private bool _enabled = true;
 	private Color _color = new(1, 1, 1);
@@ -157,6 +159,16 @@ public partial class Light : Dynamic
 			}
 		}
 		GDLight.ShadowEnabled = shadows;
+		UpdateFade();
+	}
+
+	protected void UpdateFade()
+	{
+		if (GDLight is DirectionalLight3D) return;
+
+		float range = GDLight is OmniLight3D omni ? omni.OmniRange : ((SpotLight3D)GDLight).SpotRange;
+		GDLight.DistanceFadeBegin = GDLight.ShadowEnabled ? ShadowFadeDistance : Mathf.Max(FadeDistance, range);
+		GDLight.DistanceFadeShadow = GDLight.DistanceFadeBegin + GDLight.DistanceFadeLength;
 	}
 
 	private void OnResourceLoaded(Resource? r)
@@ -180,7 +192,14 @@ public partial class Light : Dynamic
 		GDNode.AddChild(new SpatialIcon(ClassName), @internal: Node.InternalMode.Back);
 #endif
 		ShadowSettingsChanged += UpdateShadows;
+		UpdateFade();
 		base.Init();
+	}
+
+	public override void PreDelete()
+	{
+		ShadowSettingsChanged -= UpdateShadows;
+		base.PreDelete();
 	}
 
 	public static void NotifyShadowSettingsChanged()

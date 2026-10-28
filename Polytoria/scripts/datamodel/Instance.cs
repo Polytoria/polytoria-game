@@ -820,7 +820,6 @@ public partial class Instance : NetworkedObject
 				(DuplicateLegacyNames ??= []).Add(n.LegacyName);
 		}
 
-		ChildRemoved.Connect(OnChildRemoved);
 		base.Ready();
 	}
 
@@ -828,19 +827,12 @@ public partial class Instance : NetworkedObject
 	{
 		base.PreDelete();
 		ModelRoot?.UnregisterModelChild(this);
-		ChildRemoved.Disconnect(OnChildRemoved);
 		Children.Clear();
 #if CREATOR
 		Renamed.Disconnect(OnRenamed);
 		Explorer.Remove(this);
 		Root?.CreatorContext?.Selections.Deselect(this);
 #endif
-	}
-
-	private void OnChildRemoved(Instance obj)
-	{
-		if (legacyChild.TryGetValue(obj.LegacyName, out Instance? current) && current == obj)
-			legacyChild.Remove(obj.LegacyName);
 	}
 
 	[ScriptMethod]

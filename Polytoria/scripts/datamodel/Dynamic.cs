@@ -27,6 +27,7 @@ public partial class Dynamic : Instance
 		get => _nodeSize;
 		set
 		{
+			if (_nodeSize == value) return;
 			_nodeSize = value;
 			OnNodeSizeChanged(value);
 		}
@@ -655,6 +656,15 @@ public partial class Dynamic : Instance
 		{
 			_lerpUnreliable = false;
 			SetPhysicsProcessWAuthor(false);
+
+			if (_hasSyncedOnce && _netTransform.IsEqualApprox(_currentTransform))
+			{
+				if (isReliable)
+				{
+					ReliableTransformChanged?.Invoke();
+				}
+				return;
+			}
 
 			_currentTransform = _netTransform;
 			SetLocalTransform(_netTransform);

@@ -76,7 +76,7 @@ public sealed partial class Particles : Dynamic
 	private BlendModeEnum _blendMode;
 	private bool _shaded = true;
 
-	private Godot.Mesh _mesh = null!;
+	private static QuadMesh? _quadMesh;
 	private StandardMaterial3D _material = null!;
 
 	private bool _paused;
@@ -736,12 +736,12 @@ public sealed partial class Particles : Dynamic
 		_particle = new();
 		GDNode3D.AddChild(_particles = new() { ProcessMaterial = _particle }, false, Node.InternalMode.Front);
 		_material = new() { VertexColorUseAsAlbedo = true, VertexColorIsSrgb = true, Transparency = BaseMaterial3D.TransparencyEnum.Alpha };
-		_mesh = new QuadMesh() { Material = _material };
 
 		_material.BillboardKeepScale = true;
 		_material.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
 
-		_particles.DrawPass1 = _mesh;
+		_particles.MaterialOverride = _material;
+		_particles.DrawPass1 = _quadMesh ??= new();
 
 		// Workaround for triggering particles to play even if they're not visible
 		_particles.VisibilityAabb = new Aabb().Grow(1000000);

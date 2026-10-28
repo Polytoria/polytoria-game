@@ -596,7 +596,7 @@ public sealed partial class InteractionPrompt : Dynamic
 		}
 		else
 		{
-			Control? layer = Root.CoreUI?.CoreUI?.PromptLayer;
+			Control? layer = Root.PlayerGUI?.PromptLayer;
 			if (layer == null) return;
 
 			_ui = CreateUI();
