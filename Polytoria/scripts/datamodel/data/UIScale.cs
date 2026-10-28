@@ -27,6 +27,12 @@ public struct UIScale : IScriptObject, IData
 	}
 
 	[ScriptMethod]
+	public static UIScale New(float offset, float scale)
+	{
+		return new() { Offset = offset, Scale = scale };
+	}
+
+	[ScriptMethod]
 	public readonly float Compute(float parentSize)
 	{
 		return Mathf.Max(0, Offset + Scale * parentSize);
