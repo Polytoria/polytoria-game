@@ -294,7 +294,6 @@ public partial class NetworkTransformSync : Instance
 		if (NetService.NetInstance == null || _pendingBatchUpdate.Count == 0) return;
 
 		Dictionary<int, List<BatchTransformData>> reliableExcept = [];
-		Dictionary<int, List<BatchTransformData>> unreliableExcept = [];
 
 		List<BatchTransformData> reliableAll = [];
 		List<BatchTransformData> unreliableAll = [];
@@ -304,7 +303,8 @@ public partial class NetworkTransformSync : Instance
 			BatchTransformData batchData = new(
 				k,
 				pending.Transform.Data,
-				pending.LerpTransform
+				pending.LerpTransform,
+				pending.ExcludePeer
 			);
 
 			if (pending.Reliable)
@@ -320,14 +320,7 @@ public partial class NetworkTransformSync : Instance
 			}
 			else
 			{
-				if (pending.ExcludePeer == -1)
-				{
-					unreliableAll.Add(batchData);
-				}
-				else
-				{
-					GetOrCreateBatch(unreliableExcept, pending.ExcludePeer).Add(batchData);
-				}
+				unreliableAll.Add(batchData);
 			}
 		}
 
@@ -338,12 +331,6 @@ public partial class NetworkTransformSync : Instance
 		foreach (var (peerID, batch) in reliableExcept)
 		{
 			BroadcastGroupedBatch(batch, nameof(NetRecvBatchedTransformsReliable), TransferMode.Reliable, peerID);
-		}
-
-		// Send unreliable batches
-		foreach (var (peerID, batch) in unreliableExcept)
-		{
-			BroadcastGroupedBatch(batch, nameof(NetRecvBatchedTransformsUnreliable), TransferMode.UnreliableOrdered, peerID);
 		}
 	}
 
@@ -379,6 +366,7 @@ public partial class NetworkTransformSync : Instance
 		if (transforms == null) return;
 		foreach (var data in transforms)
 		{
+			if (data.ExcludePeer == NetService.LocalPeerID) continue;
 			if (NetService.Root.GetNetObjectFromID(data.ObjID) is Dynamic dyn)
 			{
 				dyn.UpdateTransformFromNet(TransformPayloadDto.FromArray(data.Transform), isReliable, data.Lerp);
@@ -419,12 +407,14 @@ public partial class NetworkTransformSync : Instance
 		public string ObjID = null!;
 		public byte[] Transform = null!;
 		public bool Lerp = false;
+		public int ExcludePeer = -1;
 
-		public BatchTransformData(string objID, byte[] transform, bool lerp)
+		public BatchTransformData(string objID, byte[] transform, bool lerp, int excludePeer)
 		{
 			ObjID = objID;
 			Transform = transform;
 			Lerp = lerp;
+			ExcludePeer = excludePeer;
 		}
 	}
 }

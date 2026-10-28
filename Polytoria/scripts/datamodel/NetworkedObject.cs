@@ -51,8 +51,8 @@ public partial class NetworkedObject : IScriptObject
 
 	internal bool InvokedEntry = false;
 	private HashSet<NetworkedObject>? _nonInstanceChildren;
-	private Dictionary<string, long>? _propertySequence;
-	internal Dictionary<string, long> PropertySequence => _propertySequence ??= [];
+	private long[]? _propertySequence;
+	private long[] PropertySequence => _propertySequence ??= new long[PropSyncRegistry.GetProps(GetType()).Count];
 
 	public NetworkedObject? NetworkParent
 	{
@@ -733,13 +733,13 @@ public partial class NetworkedObject : IScriptObject
 	{
 		foreach (PropertyInfo propInfo in GetScriptProperties())
 		{
-			if (propInfo.PropertyType == typeof(PTSignal))
+			if (propInfo.PropertyType.IsAssignableTo(typeof(PTSignal)))
 			{
 				// Disconnect all signals
 				object? val = propInfo.GetValue(this);
 				if (val is PTSignal signal)
 				{
-					signal.DisconnectAll();
+					signal.DisconnectAll(propInfo.PropertyType == typeof(PTSignal));
 				}
 			}
 			else if (propInfo.PropertyType.IsAssignableTo(typeof(NetworkedObject)) || propInfo.PropertyType.IsAssignableTo(typeof(RefCounted)))
@@ -1131,30 +1131,26 @@ public partial class NetworkedObject : IScriptObject
 	/// <summary>
 	/// Get sequence of property name
 	/// </summary>
-	/// <param name="propertyName"></param>
+	/// <param name="prop"></param>
 	/// <returns></returns>
-	internal long GetSequenceForProp(string propertyName)
+	internal long GetSequenceForProp(PropSyncProp prop)
 	{
-		PropertySequence.TryGetValue(propertyName, out long val);
-		val += 1;
-		PropertySequence[propertyName] = val;
-
-		return val;
+		return ++PropertySequence[prop.Index];
 	}
 
 	/// <summary>
 	/// Compare sequence with the property
 	/// </summary>
-	/// <param name="propertyName"></param>
+	/// <param name="prop"></param>
 	/// <param name="sequence"></param>
 	/// <returns></returns>
-	internal bool CompareSequenceForProp(string propertyName, long sequence)
+	internal bool CompareSequenceForProp(PropSyncProp prop, long sequence)
 	{
-		PropertySequence.TryGetValue(propertyName, out long val);
+		long[] sequences = PropertySequence;
 
-		if (sequence > val)
+		if (sequence > sequences[prop.Index])
 		{
-			PropertySequence[propertyName] = sequence;
+			sequences[prop.Index] = sequence;
 			return true;
 		}
 
@@ -1336,7 +1332,6 @@ public partial class NetworkedObject : IScriptObject
 	/// <param name="isSyncOnce"></param>
 	public void ApplyNetProps(NetPropReplicateData[] props, bool isSyncOnce)
 	{
-		PropertySequence.EnsureCapacity(props.Length);
 		(_lastSyncedValues ??= []).EnsureCapacity(props.Length);
 
 		foreach (NetPropReplicateData prop in props)
@@ -1361,7 +1356,6 @@ public partial class NetworkedObject : IScriptObject
 		Dictionary<string, PropSyncProp> entries = PropSyncRegistry.GetProps(GetType());
 
 		List<NetPropReplicateData> replicateData = new(entries.Count);
-		PropertySequence.EnsureCapacity(entries.Count);
 
 		foreach (PropSyncProp entry in entries.Values)
 		{
@@ -1383,7 +1377,7 @@ public partial class NetworkedObject : IScriptObject
 				{
 					Name = entry.Name,
 					ValueRaw = entry.Serialize(value),
-					Sequence = GetSequenceForProp(entry.Name)
+					Sequence = GetSequenceForProp(entry)
 				});
 			}
 		}
@@ -1404,7 +1398,7 @@ public partial class NetworkedObject : IScriptObject
 		if (entry == null) return;
 
 		// Check sequence
-		if (sequence != -1 && !CompareSequenceForProp(entry.Name, sequence))
+		if (sequence != -1 && !CompareSequenceForProp(entry, sequence))
 		{
 			return;
 		}
@@ -1459,7 +1453,10 @@ public partial class NetworkedObject : IScriptObject
 		_isReplicating = false;
 		try
 		{
-			(_lastSyncedValues ??= [])[prop.Name] = value;
+			if (Root.Network.IsServer || NetworkPropSync.CheckPropHasAuthority(prop, this, Root.Network.LocalPeerID))
+				(_lastSyncedValues ??= [])[prop.Name] = value;
+			else
+				_lastSyncedValues?.Remove(prop.Name);
 			prop.SetValue(this, value);
 		}
 		catch (InvalidOperationException) { }

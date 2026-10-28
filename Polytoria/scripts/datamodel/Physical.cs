@@ -1148,6 +1148,11 @@ public partial class Physical : Dynamic
 			return;
 		}
 
+		foreach (Physical stale in _touchContacts.Keys.Where(p => p.IsDeleted).ToArray())
+		{
+			_touchContacts.Remove(stale);
+		}
+
 		_touchContacts[physical] = 1;
 		Touched.Invoke(physical);
 	}

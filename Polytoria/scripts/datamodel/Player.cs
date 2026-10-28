@@ -515,6 +515,7 @@ public sealed partial class Player : NPC
 	{
 		Root.Input.GodotInputEvent -= OnInput;
 		Died.Disconnect(OnPlayerDied);
+		Root.Players.PropertyChanged.Disconnect<string>(OnPlayersPropertyChanged);
 		PlayerMovement = null!;
 		base.PreDelete();
 	}

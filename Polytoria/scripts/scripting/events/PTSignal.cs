@@ -451,7 +451,7 @@ public class PTSignal : IScriptObject
 		Connect(cb);
 	}
 
-	public void DisconnectAll()
+	public void DisconnectAll(bool freeCallbacks = true)
 	{
 		List<Script> keys = [.. _subscribedScripts.Keys];
 		foreach (var key in keys)
@@ -467,7 +467,7 @@ public class PTSignal : IScriptObject
 		}
 
 		// Free all Lua callbacks
-		if (_ptCallbacks != null)
+		if (freeCallbacks && _ptCallbacks != null)
 		{
 			foreach (var cb in _ptCallbacks)
 			{
