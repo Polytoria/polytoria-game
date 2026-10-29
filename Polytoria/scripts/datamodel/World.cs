@@ -23,6 +23,8 @@ using System.Linq;
 using Polytoria.Networking;
 using Polytoria.Shared.AssetLoaders;
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Polytoria.Datamodel;
 
@@ -462,8 +464,9 @@ public sealed partial class World : Instance
 	{
 		if (netObj.NetworkedObjectID == "")
 		{
-			_nextId++;
-			string targetId = WorldSessionID + (forceId ?? _nextId.ToString());
+			string targetId = WorldSessionID + (forceId ??
+				Encoding.Latin1.GetString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(8))
+					.Replace("\0", ""));
 			netObj.NetworkedObjectID = targetId;
 		}
 	}
