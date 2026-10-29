@@ -16,12 +16,12 @@ public class PTVector2 : IScriptGDObject
 	[ScriptProperty] public float Y { get => vector.Y; set => vector.Y = value; }
 
 
-	[ScriptProperty] public static PTVector2 Down { get; private set; } = new() { X = 0, Y = -1 };
-	[ScriptProperty] public static PTVector2 Left { get; private set; } = new() { X = -1, Y = 0 };
-	[ScriptProperty] public static PTVector2 One { get; private set; } = new() { X = 1, Y = 1 };
-	[ScriptProperty] public static PTVector2 Zero { get; private set; } = new() { X = 0, Y = 0 };
-	[ScriptProperty] public static PTVector2 Right { get; private set; } = new() { X = 1, Y = 0 };
-	[ScriptProperty] public static PTVector2 Up { get; private set; } = new() { X = 0, Y = 1 };
+	[ScriptProperty] public static PTVector2 Down => new() { X = 0, Y = -1 };
+	[ScriptProperty] public static PTVector2 Left => new() { X = -1, Y = 0 };
+	[ScriptProperty] public static PTVector2 One => new() { X = 1, Y = 1 };
+	[ScriptProperty] public static PTVector2 Zero => new() { X = 0, Y = 0 };
+	[ScriptProperty] public static PTVector2 Right => new() { X = 1, Y = 0 };
+	[ScriptProperty] public static PTVector2 Up => new() { X = 0, Y = 1 };
 
 	[ScriptProperty] public float Magnitude => vector.Length();
 	[ScriptProperty] public PTVector2 Normalized => FromGDClass(vector.Normalized());
