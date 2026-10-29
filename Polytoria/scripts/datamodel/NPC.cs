@@ -50,7 +50,7 @@ public partial class NPC : Physical
 	private Vector3 _fixedNametagOffset = new(0, 3, 0);
 	private float _nametagVisibleRadius = 40;
 	private bool _useNametag = true;
-	private Nametag _nametag = null!;
+	protected Nametag? Nametag;
 
 	// Pending properties to apply to character
 	private Color? _pendingHeadColor;
@@ -243,6 +243,7 @@ public partial class NPC : Physical
 			{
 				TriggerNPCDead();
 			}
+			Nametag?.UpdateNameTag();
 			OnPropertyChanged();
 			if (_health != oldHealth)
 			{
@@ -258,6 +259,7 @@ public partial class NPC : Physical
 		set
 		{
 			_maxHealth = value;
+			Nametag?.UpdateNameTag();
 			OnPropertyChanged();
 		}
 	}
@@ -291,7 +293,7 @@ public partial class NPC : Physical
 		set
 		{
 			_useNametag = value;
-			_nametag?.UpdateNameTag();
+			Nametag?.UpdateNameTag();
 			OnPropertyChanged();
 		}
 	}
@@ -316,6 +318,7 @@ public partial class NPC : Physical
 		set
 		{
 			_nametagVisibleRadius = value;
+			Nametag?.UpdateNameTag();
 			OnPropertyChanged();
 		}
 	}
@@ -327,6 +330,7 @@ public partial class NPC : Physical
 		set
 		{
 			_displayName = value;
+			Nametag?.UpdateNameTag();
 			OnPropertyChanged();
 		}
 	}
@@ -473,12 +477,13 @@ public partial class NPC : Physical
 		OverridePhysicsProcess = true;
 
 		// Create nametag
-		_nametag = new()
+		if (!Globals.IsHeadless)
 		{
-			Target = this
-		};
-		GDNode3D.AddChild(_nametag);
-		excludedBoundNodes.Add(_nametag);
+			Nametag = Globals.CreateInstanceFromScene<Nametag>("res://scenes/client/spatial/nametag.tscn");
+			Nametag.Target = this;
+			GDNode3D.AddChild(Nametag);
+			excludedBoundNodes.Add(Nametag);
+		}
 
 		FootFwdRaycast = new();
 		GDNode3D.AddChild(FootFwdRaycast, false, Node.InternalMode.Front);
@@ -595,8 +600,8 @@ public partial class NPC : Physical
 
 	private void RecalculateNametagOffset()
 	{
-		if (!_nametag.IsInsideTree()) { return; }
-		_nametag.Position = NametagOffset + _fixedNametagOffset;
+		if (Nametag == null || !Nametag.IsInsideTree()) { return; }
+		Nametag.Position = NametagOffset + _fixedNametagOffset;
 	}
 
 	private static Vector3 SetAxisOf(Vector3 v, Vector3 axis, float value)

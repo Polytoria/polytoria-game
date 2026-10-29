@@ -120,6 +120,10 @@ public sealed partial class Globals : Node
 	/// </summary>
 	public static bool IsMobileBuild { get; private set; } = false;
 	/// <summary>
+	/// Check if headless <3
+	/// </summary>
+	public static bool IsHeadless { get; private set; } = false;
+	/// <summary>
 	/// Check if Godot is available, this can be false in unit testing environments
 	/// </summary>
 	public static bool GDAvailable { get; private set; } = false;
@@ -149,6 +153,7 @@ public sealed partial class Globals : Node
 		IsServerBuild = OS.HasFeature("server");
 		IsInGDEditor = OS.HasFeature("editor");
 		IsMobileBuild = OS.HasFeature("mobile");
+		IsHeadless = DisplayServer.GetName() == "headless";
 
 		GDAvailable = true;
 

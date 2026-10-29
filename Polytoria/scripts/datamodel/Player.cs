@@ -863,6 +863,7 @@ public sealed partial class Player : NPC
 	internal void OnNetReady()
 	{
 		IsLocal = true;
+		Nametag?.UpdateNameTag();
 		SendPing();
 
 		CamAttach = Globals.LoadInstance<Dynamic>(Root);

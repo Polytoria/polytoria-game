@@ -45,7 +45,7 @@ public partial class DatamodelBridge : Node3D
 
 		Root = root;
 		root.Bridge = this;
-		_renderingEnabled = DisplayServer.GetName() != "headless";
+		_renderingEnabled = !Globals.IsHeadless;
 		SetProcess(_renderingEnabled);
 
 		if (!_renderingEnabled)
