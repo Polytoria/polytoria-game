@@ -273,6 +273,15 @@ public partial class UILabel : UIView
 		}
 	}
 
+	[ScriptMethod]
+	public Vector2 GetTextBounds(string? text = null)
+	{
+		text ??= _text;
+		Font font = _label.GetThemeFont("font");
+		int fontSize = (int)(_fontSize * FontScaleConversion);
+		return font.GetStringSize(text, Godot.HorizontalAlignment.Left, -1, fontSize);
+	}
+
 	private void UpdateText()
 	{
 		if (_autoSize)
