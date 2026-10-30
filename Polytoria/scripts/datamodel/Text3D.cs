@@ -30,7 +30,6 @@ public sealed partial class Text3D : Dynamic
 	private float _fontSize = 16;
 	private bool _useRichText = false;
 	private bool _shaded = false;
-	private bool _visible = false;
 	private bool _fixedSize = false;
 	private bool _alwaysOnTop = false;
 
@@ -280,19 +279,6 @@ public sealed partial class Text3D : Dynamic
 		}
 	}
 
-	[Editable, ScriptProperty]
-	public bool Visible
-	{
-		get => _visible;
-		set
-		{
-			_visible = value;
-
-			ApplyVisibleState();
-			OnPropertyChanged();
-		}
-	}
-
 	private void OnFontLoaded(Resource resource)
 	{
 		SetFontTo((Font)resource);
@@ -307,6 +293,12 @@ public sealed partial class Text3D : Dynamic
 			_richLabel.AddThemeFontOverride("mono_font", f);
 		}
 		RecomputeSize();
+	}
+
+	protected override void OnVisibleChanged(bool v)
+	{
+		base.OnVisibleChanged(v);
+		ApplyVisibleState();
 	}
 
 	private void ApplyVisibleState()

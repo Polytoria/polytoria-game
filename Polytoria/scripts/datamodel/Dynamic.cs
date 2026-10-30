@@ -42,6 +42,7 @@ public partial class Dynamic : Instance
 	private bool _locked;
 	private bool _isFirstUpdate = true;
 	private bool _isDirty = false;
+	private bool _visible = true;
 
 	private Transform3D _oldPartTransformApplied;
 	private Transform3D _oldGlobalTransformApplied;
@@ -205,6 +206,23 @@ public partial class Dynamic : Instance
 			{
 				UpdateNetTransformReliable();
 			}
+			OnPropertyChanged();
+		}
+	}
+
+	protected virtual void OnVisibleChanged(bool v)
+	{
+		GDNode3D.Visible = v;
+	}
+
+	[Editable, ScriptProperty]
+	public bool Visible
+	{
+		get => _visible;
+		set
+		{
+			_visible = value;
+			OnVisibleChanged(value);
 			OnPropertyChanged();
 		}
 	}
@@ -884,7 +902,7 @@ public partial class Dynamic : Instance
 		// Player cannot be hidden
 		if (this is Player) return;
 
-		GDNode3D.Visible = !to;
+		Visible = !to;
 
 #if CREATOR
 		if (_boundArea3D != null)

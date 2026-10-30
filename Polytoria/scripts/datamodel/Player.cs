@@ -960,15 +960,13 @@ public sealed partial class Player : NPC
 
 	private void OnFirstPersonEntered()
 	{
-		if (Character == null) return;
-		Character.GDNode3D.Visible = false;
+		Character?.Visible = false;
 		_bubbleChat.Visible = false;
 	}
 
 	private void OnFirstPersonExited()
 	{
-		if (Character == null) return;
-		Character.GDNode3D.Visible = true;
+		Character?.Visible = true;
 		_bubbleChat.Visible = true;
 	}
 
