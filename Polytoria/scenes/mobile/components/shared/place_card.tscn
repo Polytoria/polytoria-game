@@ -13,6 +13,7 @@ corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_rndcr"]
+resource_local_to_scene = true
 shader = ExtResource("4_rndcr")
 shader_parameter/radius = 10.0
 

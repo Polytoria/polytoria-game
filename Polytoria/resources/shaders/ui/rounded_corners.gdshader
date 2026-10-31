@@ -1,6 +1,6 @@
 shader_type canvas_item;
 
-instance uniform vec2 size = vec2(114.0, 114.0);
+uniform vec2 size = vec2(114.0, 114.0);
 uniform float radius = 10.0;
 
 varying vec2 local_position;

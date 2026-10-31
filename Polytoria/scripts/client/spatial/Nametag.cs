@@ -17,8 +17,13 @@ public partial class Nametag : Node3D
 
 	public NPC Target = null!;
 
+	private ShaderMaterial? _healthBarMat;
+	private float _healthBarValue = -1;
+
 	public override void _EnterTree()
 	{
+		_healthBarMat ??= (ShaderMaterial)_healthBar.GetActiveMaterial(0).Duplicate();
+		_healthBar.MaterialOverride = _healthBarMat;
 		Target.Renamed.Connect(UpdateNameTag);
 		UpdateNameTag();
 		base._EnterTree();
@@ -36,7 +41,12 @@ public partial class Nametag : Node3D
 		_titleLabel.Text = _outlineLabel.Text = Target.DisplayName != string.Empty ? Target.DisplayName : Target.Name;
 		_titleLabel.VisibilityRangeEnd = _outlineLabel.VisibilityRangeEnd = _healthBar.VisibilityRangeEnd = Target.NametagVisibleRadius;
 		_healthBar.Visible = Target.Health < Target.MaxHealth;
-		_healthBar.SetInstanceShaderParameter(_valueParam, Target.MaxHealth > 0 ? Target.Health / Target.MaxHealth : 1);
+		float health = Target.MaxHealth > 0 ? Target.Health / Target.MaxHealth : 1;
+		if (_healthBar.Visible && health != _healthBarValue)
+		{
+			_healthBarValue = health;
+			_healthBarMat!.SetShaderParameter(_valueParam, health);
+		}
 		_titleLabel.Offset = _outlineLabel.Offset = new(0, _healthBar.Visible ? 50 : 16);
 	}
 }

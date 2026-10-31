@@ -47,7 +47,7 @@ public partial class PlaceCard : Button
 
 	public override void _Ready()
 	{
-		_iconRect.Resized += () => _iconRect.SetInstanceShaderParameter("size", _iconRect.Size);
+		_iconRect.Resized += () => ((ShaderMaterial)_iconRect.Material).SetShaderParameter("size", _iconRect.Size);
 		_iconAsset.ResourceLoaded += OnIconLoaded;
 
 		_gameTitleLabel.Text = PlaceData.Name;

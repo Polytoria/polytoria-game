@@ -12,13 +12,10 @@ namespace Polytoria.Datamodel;
 [Instantiable]
 public partial class Part : Entity
 {
-	private MeshInstance3D? _mesh;
 	private CollisionShape3D _collider = null!;
-	private Material _meshMaterial = null!;
 	private ShapeEnum _shape;
 	private PartMaterialEnum _material;
 	private Color _color = new(1, 1, 1);
-	private bool _isSeparateMesh = false;
 	private bool _castShadows;
 
 	private Node3D _nRemoteAt = null!; // Remote collider proxy
@@ -26,22 +23,10 @@ public partial class Part : Entity
 	internal Shape3D ColliderShape => _collider.Shape;
 	public event Action? ShapeChanged;
 
-	public bool IsMeshSeparated => _isSeparateMesh;
 	public int BridgeID = -1;
 
 	public override void EnterTree()
 	{
-		Instance? current = Parent;
-		while (current != null)
-		{
-			if (current is UIViewport)
-			{
-				OverrideNoMultiMesh = true;
-				CreateSeparateMesh();
-			}
-			current = current.Parent;
-		}
-
 		Root?.Bridge?.MarkDirty(this);
 
 		base.EnterTree();
@@ -82,28 +67,6 @@ public partial class Part : Entity
 		base.Ready();
 	}
 
-	public void CreateSeparateMesh()
-	{
-		if (_isSeparateMesh)
-		{
-			return;
-		}
-		_isSeparateMesh = true;
-		if (Root != null && Root.Bridge != null)
-		{
-			Root.Bridge.SeparatedPartCount++;
-		}
-		GDNode3D.AddChild(_mesh = new(), false);
-		UpdateMeshSize();
-		UpdateShape();
-
-		_meshMaterial = Globals.LoadMaterial(_material, Color.A);
-		_mesh.MaterialOverride = _meshMaterial;
-
-		UpdateColor();
-		UpdateShadow();
-	}
-
 	internal override void OnNodeSizeChanged(Vector3 newSize)
 	{
 		UpdateMeshSize();
@@ -113,27 +76,11 @@ public partial class Part : Entity
 
 	private void UpdateMeshSize()
 	{
-		_mesh?.Scale = NodeSize;
 		_nRemoteAt?.Scale = NodeSize;
 		if (_collider != null && _collider.GetParent() == GDNode3D)
 		{
 			_collider.Scale = NodeSize;
 		}
-	}
-
-	public void RemoveSeparateMesh()
-	{
-		if (!_isSeparateMesh)
-		{
-			return;
-		}
-		_isSeparateMesh = false;
-		if (Root != null && Root.Bridge != null)
-		{
-			Root.Bridge.SeparatedPartCount--;
-		}
-		_mesh?.Free();
-		_mesh = null;
 	}
 
 	[Editable, ScriptProperty, DefaultValue(ShapeEnum.Brick)]
@@ -168,7 +115,6 @@ public partial class Part : Entity
 
 			_material = value;
 
-			UpdateMaterial();
 			OnPropertyChanged();
 		}
 	}
@@ -187,7 +133,7 @@ public partial class Part : Entity
 			_color = value;
 			//GD.PushWarning("Set color: ", _color);
 
-			UpdateColor();
+			UpdateCamLayer();
 			OnPropertyChanged();
 		}
 	}
@@ -205,62 +151,18 @@ public partial class Part : Entity
 
 			_castShadows = value;
 
-			UpdateShadow();
 			OnPropertyChanged();
 		}
 	}
 
-	// Override this to be excluded from MutliMesh
-	internal bool OverrideNoMultiMesh = false;
+	internal bool IsHeld = false;
 
 	internal void UpdateShape()
 	{
 		if (_collider == null) return;
-		(Godot.Mesh mesh, Shape3D shape) = Globals.LoadShape(_shape.ToString());
-		if (_isSeparateMesh)
-		{
-			_mesh?.Mesh = mesh;
-		}
+		(_, Shape3D shape) = Globals.LoadShape(_shape.ToString());
 		_collider.Shape = shape;
 		PostCollisionShapeUpdate(_collider);
-	}
-
-	internal void UpdateMaterial()
-	{
-		if (!_isSeparateMesh || _mesh == null)
-		{
-			return;
-		}
-
-		_meshMaterial = Globals.LoadMaterial(_material, Color.A);
-		_mesh.MaterialOverride = _meshMaterial;
-
-		UpdateColor();
-	}
-
-	internal void UpdateColor()
-	{
-		if (_isSeparateMesh && _mesh != null)
-		{
-			Material targetMat = Globals.LoadMaterial(_material, Color.A);
-			if (!ReferenceEquals(_meshMaterial, targetMat))
-			{
-				_meshMaterial = targetMat;
-				_mesh.MaterialOverride = _meshMaterial;
-			}
-
-			_mesh.SetInstanceShaderParameter("color", _color);
-		}
-
-		UpdateCamLayer();
-	}
-
-	internal void UpdateShadow()
-	{
-		if (_isSeparateMesh)
-		{
-			_mesh?.CastShadow = _castShadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
-		}
 	}
 
 	private Aabb PointsToBound(Vector3[] points, Basis transform)
