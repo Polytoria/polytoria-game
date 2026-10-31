@@ -706,7 +706,7 @@ public partial class NPC : Physical
 				CharacterVelocity = (dir * WalkSpeed).Slide(Vertical) + CharacterVelocity.Project(Vertical);
 				// Apply rotation by move direction
 				Vector3 a = new Quaternion(Up, Vertical) * Forward;
-				float angle = Mathf.Asin(a.Cross(dir).Dot(Vertical));
+				float angle = Mathf.Asin(Mathf.Clamp(a.Cross(dir).Dot(Vertical), -1, 1));
 				if (a.Dot(dir) < 0) angle = Mathf.Pi - angle;
 				if (angle > Mathf.Pi) angle -= Mathf.Tau;
 				Quaternion = new Quaternion(Vertical, angle * MathUtils.ExpDecay((float)delta, BodyRotateLerp)) * Quaternion;
