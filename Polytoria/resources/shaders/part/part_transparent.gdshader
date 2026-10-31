@@ -1,8 +1,6 @@
 shader_type spatial;
 render_mode blend_mix, depth_prepass_alpha, cull_back, diffuse_burley, specular_schlick_ggx;
 
-instance uniform vec4 color : source_color = vec4(1.0);
-
 uniform sampler2D albedo : source_color;
 uniform bool use_albedo_texture = true;
 
@@ -58,16 +56,16 @@ void fragment() {
 	vec3 n = normalize(v_local_normal);
 	vec3 part_space = v_local_pos * v_object_scale;
 	vec2 uv = calculate_uv(part_space, n) / studs_per_tile;
-	vec4 albedo_color = color;
+	vec4 albedo_color = COLOR;
 	
 	if (use_albedo_texture) {
 		albedo_color *= texture(albedo, uv);
 	}
 
-	ALBEDO = albedo_color.rgb * COLOR.rgb;
+	ALBEDO = albedo_color.rgb;
 	ROUGHNESS = roughness_value;
 	SPECULAR = specular_value;
-	ALPHA = albedo_color.a * COLOR.a;
+	ALPHA = albedo_color.a;
 
 	if (emissive_strength > 0.0) {
 		EMISSION = ALBEDO * emissive_strength;

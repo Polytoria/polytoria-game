@@ -1,7 +1,7 @@
 shader_type spatial;
 render_mode unshaded, blend_premul_alpha, depth_test_disabled;
 
-instance uniform float value = 1.0;
+uniform float value = 1.0;
 
 uniform vec2 size = vec2(300.0, 30.0);
 uniform float radius = 8.0;
