@@ -1,8 +1,6 @@
 shader_type spatial;
 render_mode cull_back, diffuse_burley, specular_schlick_ggx;
 
-instance uniform vec4 color : source_color = vec4(1.0);
-
 uniform sampler2D albedo : source_color;
 uniform bool use_albedo_texture = true;
 
@@ -66,7 +64,7 @@ void fragment() {
 	vec3 n = normalize(v_local_normal);
 	vec3 part_space = v_local_pos * v_object_scale;
 	vec2 uv = calculate_uv(part_space, n) / studs_per_tile;
-	vec4 albedo_color = color;
+	vec4 albedo_color = COLOR;
 	
 	float roughness_tex = 1.0;
 	float metallic_tex = 1.0;
@@ -85,7 +83,7 @@ void fragment() {
 		NORMAL_MAP = texture(normal_tex, uv).rgb;
 	}
 
-	ALBEDO = albedo_color.rgb * COLOR.rgb;
+	ALBEDO = albedo_color.rgb;
 	SPECULAR = metallic_specular;
 	ROUGHNESS = roughness_tex * roughness;
 	METALLIC = metallic_tex * metallic;

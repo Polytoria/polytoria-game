@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://2aau6k8exq3"]
+
+[ext_resource type="Script" uid="uid://c6fmujdfapm5d" path="res://scripts/mobile/ui/components/home/WorldRow.cs" id="1_wrow1"]
+
+[node name="WorldRow" type="VBoxContainer" unique_id=1336741382 node_paths=PackedStringArray("_header", "_scroll", "_cardContainer")]
+offset_right = 402.0
+offset_bottom = 239.0
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+script = ExtResource("1_wrow1")
+_header = NodePath("Header")
+_scroll = NodePath("Scroll")
+_cardContainer = NodePath("Scroll/Margin/Cards")
+
+[node name="Header" type="TextureRect" parent="." unique_id=552045014]
+custom_minimum_size = Vector2(0, 55)
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+stretch_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="." unique_id=563703216]
+custom_minimum_size = Vector2(0, 184)
+layout_mode = 2
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+
+[node name="Margin" type="MarginContainer" parent="Scroll" unique_id=1866807093]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
+
+[node name="Cards" type="HBoxContainer" parent="Scroll/Margin" unique_id=2024178883]
+layout_mode = 2
+theme_override_constants/separation = 10

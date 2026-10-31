@@ -17,7 +17,7 @@ namespace Polytoria.Datamodel;
 public partial class NPC : Physical
 {
 	private const float CoyoteTime = 0.15f;
-	private const float NavigationDistance = 2f;
+	private const float NavigationDistance = 2.25f;
 	public const float BodyRotateLerp = 10f;
 	private const float StepHeight = 1.5f;
 	private Tool? _holdingTool;
@@ -50,7 +50,7 @@ public partial class NPC : Physical
 	private Vector3 _fixedNametagOffset = new(0, 3, 0);
 	private float _nametagVisibleRadius = 40;
 	private bool _useNametag = true;
-	private Nametag _nametag = null!;
+	protected Nametag? Nametag;
 
 	// Pending properties to apply to character
 	private Color? _pendingHeadColor;
@@ -279,7 +279,7 @@ public partial class NPC : Physical
 		set
 		{
 			_useNametag = value;
-			_nametag?.UpdateNameTag();
+			Nametag?.UpdateNameTag();
 			OnPropertyChanged();
 		}
 	}
@@ -304,6 +304,7 @@ public partial class NPC : Physical
 		set
 		{
 			_nametagVisibleRadius = value;
+			Nametag?.UpdateNameTag();
 			OnPropertyChanged();
 		}
 	}
@@ -315,6 +316,7 @@ public partial class NPC : Physical
 		set
 		{
 			_displayName = value;
+			Nametag?.UpdateNameTag();
 			OnPropertyChanged();
 		}
 	}
@@ -378,6 +380,18 @@ public partial class NPC : Physical
 		internal set => _character = value;
 	}
 
+	private void OnHealthChanged(float from, float to)
+	{
+		HealthChanged.Invoke(from, to);
+		Nametag?.UpdateNameTag();
+	}
+
+	private void OnMaxHealthChanged(float from, float to)
+	{
+		MaxHealthChanged.Invoke(from, to);
+		Nametag?.UpdateNameTag();
+	}
+
 	[Editable, ScriptProperty, SyncVar]
 	public Vitals? Vitals
 	{
@@ -394,15 +408,31 @@ public partial class NPC : Physical
 			Vitals? old = Vitals;
 			if (old != value)
 			{
+				float oldHealth = float.NaN;
+				float oldMaxHealth = float.NaN;
+				float newHealth = float.NaN;
+				float newMaxHealth = float.NaN;
 				if (old != null)
 				{
+					oldHealth = old.Health;
+					oldMaxHealth = old.MaxHealth;
 					old.Died.Disconnect(OnDied);
+					old.HealthChanged.Disconnect(OnHealthChanged);
+					old.MaxHealthChanged.Disconnect(OnMaxHealthChanged);
+
 				}
 				_vitals = value;
 				if (_vitals != null)
 				{
+					newHealth = _vitals.Health;
+					newMaxHealth = _vitals.MaxHealth;
 					_vitals.Died.Connect(OnDied);
+					_vitals.HealthChanged.Connect(OnHealthChanged);
+					_vitals.MaxHealthChanged.Connect(OnMaxHealthChanged);
 				}
+
+				if (oldMaxHealth != newMaxHealth) MaxHealthChanged.Invoke();
+				if (oldHealth != newHealth) HealthChanged.Invoke();
 			}
 		}
 	}
@@ -448,11 +478,14 @@ public partial class NPC : Physical
 
 	public Vector3 CharacterVelocity = Vector3.Zero;
 
-	[ScriptProperty, Obsolete("Use Vitals.Died instead")]
-	public PTSignal? Died => Vitals?.Died;
+	[ScriptProperty]
+	public PTSignal Died { get; private set; } = new();
 
-	[ScriptProperty, Obsolete("Use Vitals.HealthChanged instead")]
-	public PTSignal<float, float>? HealthChanged => Vitals?.HealthChanged;
+	[ScriptProperty]
+	public PTSignal<float, float> HealthChanged { get; private set; } = new();
+
+	[ScriptProperty]
+	public PTSignal<float, float> MaxHealthChanged { get; private set; } = new();
 
 	[ScriptProperty]
 	public PTSignal Jumped { get; private set; } = new();
@@ -490,12 +523,13 @@ public partial class NPC : Physical
 		OverridePhysicsProcess = true;
 
 		// Create nametag
-		_nametag = new()
+		if (!Globals.IsHeadless)
 		{
-			Target = this
-		};
-		GDNode3D.AddChild(_nametag);
-		excludedBoundNodes.Add(_nametag);
+			Nametag = Globals.CreateInstanceFromScene<Nametag>("res://scenes/client/spatial/nametag.tscn");
+			Nametag.Target = this;
+			GDNode3D.AddChild(Nametag);
+			excludedBoundNodes.Add(Nametag);
+		}
 
 		FootFwdRaycast = new();
 		GDNode3D.AddChild(FootFwdRaycast, false, Node.InternalMode.Front);
@@ -612,8 +646,8 @@ public partial class NPC : Physical
 
 	private void RecalculateNametagOffset()
 	{
-		if (!_nametag.IsInsideTree()) { return; }
-		_nametag.Position = NametagOffset + _fixedNametagOffset;
+		if (Nametag == null || !Nametag.IsInsideTree()) { return; }
+		Nametag.Position = NametagOffset + _fixedNametagOffset;
 	}
 
 	private static Vector3 SetAxisOf(Vector3 v, Vector3 axis, float value)
@@ -707,10 +741,9 @@ public partial class NPC : Physical
 
 			if (_navAgent != null)
 			{
-				walkTarget = _navAgent.GetNextPathPosition();
-
 				// Adjust Nav agent position in-case of unstable vertical changes
-				_navAgentContainer?.GlobalPosition = _navAgentContainer.GlobalPosition.Slide(Vertical) + walkTarget.Value.Project(Vertical);
+				_navAgentContainer?.Position = isOnFloor ? NavigationServer3D.MapGetClosestPoint(Root.World3D.NavigationMap, GetGlobalPosition()) : GetGlobalPosition();
+				walkTarget = _navAgent.GetNextPathPosition();
 			}
 
 			if (walkTarget.HasValue)
@@ -871,8 +904,8 @@ public partial class NPC : Physical
 
 		float groundAltitude;
 		{
-			var downHit = new KinematicCollision3D();
-			bool hasGround = CharBody3D.TestMove(CharBody3D.GlobalTransform, Vector3.Down * (StepHeight + 0.05f), downHit, 0.001f, true);
+			KinematicCollision3D downHit = new();
+			bool hasGround = CharBody3D.TestMove(CharBody3D.GlobalTransform, Vertical * -(StepHeight + 0.05f), downHit, 0.001f, true);
 			if (!hasGround)
 			{
 				return false;
@@ -883,52 +916,57 @@ public partial class NPC : Physical
 
 		const float stepSearchOvershoot = 0.05f;
 
-		var spaceState = World.Current!.World3D.DirectSpaceState;
-
-		for (int i = 0; i < slideCount; i++)
+		PhysicsDirectSpaceState3D spaceState = World.Current!.World3D.DirectSpaceState;
+		PhysicsRayQueryParameters3D parameters = new()
 		{
-			KinematicCollision3D stepTest = CharBody3D.GetSlideCollision(i);
-			Vector3 n = stepTest.GetNormal();
-			Vector3 p = stepTest.GetPosition();
+			Exclude = [CharBody3D.GetRid()],
+			CollideWithAreas = false,
+			CollideWithBodies = true,
+		};
 
-			if (Mathf.Abs(n.Dot(Vertical)) >= 0.01f)
+		for (int slideIdx = 0; slideIdx < slideCount; slideIdx++)
+		{
+			KinematicCollision3D stepTest = CharBody3D.GetSlideCollision(slideIdx);
+			int collisionCount = stepTest.GetCollisionCount();
+			for (int collisionIdx = 0; collisionIdx < collisionCount; collisionIdx++)
 			{
-				continue;
+				Vector3 n = stepTest.GetNormal(collisionIdx);
+				if (Mathf.Abs(n.Dot(Vertical)) >= 0.01f)
+				{
+					continue;
+				}
+
+				Vector3 p = stepTest.GetPosition(collisionIdx);
+				if (p.Dot(Vertical) - groundAltitude >= StepHeight)
+				{
+					continue;
+				}
+
+				float stepHeight = p.Dot(Vertical) + StepHeight + 0.0001f;
+				Vector3 stepTestDir = (-n).Slide(Vertical).Normalized() * stepSearchOvershoot;
+				Vector3 origin = SetAxisOf(p, Vertical, stepHeight) + stepTestDir;
+				Vector3 direction = Vertical * -StepHeight;
+
+				parameters.From = origin;
+				parameters.To = origin + direction;
+
+				Dictionary result = spaceState.IntersectRay(parameters);
+
+				if (result.Count == 0)
+				{
+					continue;
+				}
+
+				Vector3 hitPos = result["position"].AsVector3();
+
+				Vector3 stepUpPoint = SetAxisOf(p, Vertical, hitPos.Dot(Vertical) + 0.01f) + stepTestDir;
+				Vector3 stepUpPointOffset = stepUpPoint - SetAxisOf(p, Vertical, groundAltitude);
+
+				CharBody3D.GlobalPosition += stepUpPointOffset;
+				CharBody3D.Velocity = desiredVelocity;
+
+				return true;
 			}
-
-			if (!(p.Dot(Vertical) - groundAltitude < StepHeight))
-			{
-				continue;
-			}
-
-			float stepHeight = p.Dot(Vertical) + StepHeight + 0.0001f;
-			Vector3 stepTestInvDir = (-n).Slide(Vertical).Normalized();
-			Vector3 origin = SetAxisOf(p, Vertical, stepHeight) + (stepTestInvDir * stepSearchOvershoot);
-			Vector3 direction = Vertical * -StepHeight;
-
-			Dictionary result = spaceState.IntersectRay(new PhysicsRayQueryParameters3D()
-			{
-				From = origin,
-				To = origin + direction,
-				Exclude = [CharBody3D.GetRid()],
-				CollideWithAreas = false,
-				CollideWithBodies = true,
-			});
-
-			if (result.Count == 0)
-			{
-				continue;
-			}
-
-			Vector3 hitPos = result["position"].AsVector3();
-
-			Vector3 stepUpPoint = SetAxisOf(p, Vertical, hitPos.Dot(Vertical) + 0.01f) + (stepTestInvDir * stepSearchOvershoot);
-			Vector3 stepUpPointOffset = stepUpPoint - SetAxisOf(p, Vertical, groundAltitude);
-
-			CharBody3D.GlobalPosition += stepUpPointOffset;
-			CharBody3D.Velocity = desiredVelocity;
-
-			return true;
 		}
 
 		return false;
@@ -1179,15 +1217,17 @@ public partial class NPC : Physical
 		MoveTarget = null;
 		if (_navAgent == null)
 		{
-			_navAgentContainer = new();
+			_navAgentContainer = new()
+			{
+				TopLevel = true,
+			};
 			Quaternion q = Quaternion;
 			Quaternion = Quaternion.Identity;
 			_navAgent = new()
 			{
 				PathDesiredDistance = NavigationDistance,
 				TargetDesiredDistance = 0.5f,
-				PathHeightOffset = -(CalculateBounds().Size.Y / 2),
-				PathMaxDistance = 3f
+				PathMaxDistance = 3f,
 			};
 			Quaternion = q;
 
@@ -1207,6 +1247,7 @@ public partial class NPC : Physical
 	private void OnNavFinished()
 	{
 		_navAgentContainer?.QueueFree();
+		_navAgentContainer = null;
 		_navAgent = null;
 		NavDestinationReached = true;
 		NavFinished.Invoke();

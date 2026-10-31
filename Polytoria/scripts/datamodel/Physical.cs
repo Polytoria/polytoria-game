@@ -49,6 +49,8 @@ public partial class Physical : Dynamic
 	private bool _netEnsureTouchArea = false;
 
 	private CollisionObject3D? _registeredCollisionBody;
+	private CollisionObject3D? _appliedLayersBody;
+	private uint _appliedLayers, _appliedMask;
 
 	private int _touchedListenerCount = 0;
 	private bool _canTouch = false;
@@ -180,7 +182,16 @@ public partial class Physical : Dynamic
 			return;
 		}
 
-		collisionObject3D.CollisionLayer = GetAppliedCollisionLayers();
+		uint layers = GetAppliedCollisionLayers();
+		if (_appliedLayersBody == collisionObject3D && _appliedLayers == layers && _appliedMask == _collisionMask)
+		{
+			return;
+		}
+
+		_appliedLayersBody = collisionObject3D;
+		_appliedLayers = layers;
+		_appliedMask = _collisionMask;
+		collisionObject3D.CollisionLayer = layers;
 		collisionObject3D.CollisionMask = _collisionMask;
 	}
 
@@ -848,6 +859,12 @@ public partial class Physical : Dynamic
 	{
 		if (!Node.IsInstanceValid(origin)) return;
 
+		if (this is Part && origin.GetParent() == GDNode && GetRemoteLinkConfig(origin)?.Target is Node3D target)
+		{
+			origin.Transform = target.Transform;
+			return;
+		}
+
 		if (HasValidTrackedNodes(origin, static state => state.CollisionSyncNodes))
 		{
 			return;
@@ -1129,6 +1146,11 @@ public partial class Physical : Dynamic
 		{
 			_touchContacts[physical] = count + 1;
 			return;
+		}
+
+		foreach (Physical stale in _touchContacts.Keys.Where(p => p.IsDeleted).ToArray())
+		{
+			_touchContacts.Remove(stale);
 		}
 
 		_touchContacts[physical] = 1;

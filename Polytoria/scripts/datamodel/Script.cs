@@ -9,7 +9,11 @@ using Polytoria.Datamodel.Services;
 using Polytoria.Scripting;
 using System;
 using System.Collections.Generic;
+#if CREATOR
+using Polytoria.Creator.UI;
+#endif
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Polytoria.Datamodel;
 
@@ -33,6 +37,10 @@ public partial class Script : Instance
 	internal readonly HashSet<IntPtr> LuauFunctionPointers = [];
 	internal readonly HashSet<int> LuauFunctionReferences = [];
 	internal readonly HashSet<int> LuauThreadReferences = [];
+	internal readonly Stack<(Scripting.Luau.LuaState Thread, int Ref)> LuauIdleThreads = [];
+	internal readonly HashSet<IntPtr> LuauRentedThreads = [];
+	internal Task? LuauUpdateTask;
+	internal Task? LuauFixedUpdateTask;
 
 	private string? _source;
 	private FileLinkAsset? _linkedFile;
@@ -79,6 +87,9 @@ public partial class Script : Instance
 			{
 				Stop();
 			}
+#if CREATOR
+			Explorer.RefreshTreeItem(this);
+#endif
 		}
 	}
 

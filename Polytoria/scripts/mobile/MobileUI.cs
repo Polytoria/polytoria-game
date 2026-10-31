@@ -25,11 +25,17 @@ public partial class MobileUI : Control
 		Singleton = this;
 	}
 
+	private const float ViewSlideOffset = 18f;
+	private const int MenuMaxFps = 60;
+	private static readonly MobileViewEnum[] PreloadedViews = [MobileViewEnum.Worlds, MobileViewEnum.PlaceInfo, MobileViewEnum.Profile, MobileViewEnum.Dev];
+
 	public event Action<MobileViewEnum>? ViewPathSwitched;
 
 	private Control _mainView = null!;
 	public MobileViewBase? CurrentViewNode;
 	public MobileViewEnum CurrentView;
+	private MobileViewEnum _previousView = MobileViewEnum.Home;
+	private Tween? _viewTween;
 
 	[Export] public StartupSplash? StartSplash { get; private set; }
 	[Export] public NewUserSplash NewUserSplash = null!;
@@ -56,12 +62,18 @@ public partial class MobileUI : Control
 			GetTree().Root.ContentScaleFactor = Globals.MobileScale;
 		}
 
+		DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Enabled);
+		OS.LowProcessorUsageMode = true;
+		Engine.MaxFps = MenuMaxFps;
+
 		SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
 
 		if (StartSplash != null)
 		{
 			StartSplash!.Visible = true;
 		}
+
+		WorldsCache.Clear();
 
 		PolyMobileAuthAPI.UserAuthenticated += OnUserAuthenticated;
 		PolyMobileAuthAPI.AskForAuthentication += OnAskForAuthentication;
@@ -86,10 +98,20 @@ public partial class MobileUI : Control
 
 		if (Globals.IsInGDEditor)
 		{
-			DisplayServer.WindowSetSize((Vector2I)new Vector2(412, 700));
+			DisplayServer.WindowSetSize(new Vector2I(402, 874));
 		}
 
 		SwitchTo(MobileViewEnum.Home);
+		PreloadViews();
+	}
+
+	public override void _ExitTree()
+	{
+		PolyMobileAuthAPI.UserAuthenticated -= OnUserAuthenticated;
+		PolyMobileAuthAPI.AskForAuthentication -= OnAskForAuthentication;
+
+		OS.LowProcessorUsageMode = false;
+		base._ExitTree();
 	}
 
 	private void OnUserAuthenticated(APIMeResponse me)
@@ -162,9 +184,22 @@ public partial class MobileUI : Control
 		LoadingScreen.HideScreen();
 	}
 
+	public override void _Notification(int what)
+	{
+		if (what == NotificationWMGoBackRequest && CurrentView == MobileViewEnum.PlaceInfo)
+		{
+			GoBack();
+		}
+	}
+
+	public void GoBack()
+	{
+		SwitchTo(_previousView);
+	}
+
 	public void SwitchTo(MobileViewEnum viewEnum, object? args = null)
 	{
-		if (viewEnum == CurrentView)
+		if (viewEnum == CurrentView && args == null)
 		{
 			return;
 		}
@@ -179,31 +214,60 @@ public partial class MobileUI : Control
 		if (!_viewCache.TryGetValue(viewEnum, out MobileViewBase? page))
 		{
 			PT.Print("Loading ", viewEnum);
-			string pathToLoad = viewEnum switch
-			{
-				MobileViewEnum.Home => "res://scenes/mobile/views/home.tscn",
-				MobileViewEnum.Worlds => "res://scenes/mobile/views/worlds.tscn",
-				MobileViewEnum.PlaceInfo => "res://scenes/mobile/views/place_info.tscn",
-				MobileViewEnum.Avatar => "res://scenes/mobile/views/avatar.tscn",
-				MobileViewEnum.Dev => "res://scenes/mobile/views/test.tscn",
-				MobileViewEnum.Profile => "res://scenes/mobile/views/profile.tscn",
-				_ => throw new ArgumentOutOfRangeException(nameof(viewEnum),
-					 $"No scene defined for {viewEnum}")
-			};
+			string pathToLoad = GetViewScenePath(viewEnum);
 
-			PT.Print("Loading ", viewEnum);
-
-			PackedScene packed = ResourceLoader.Load<PackedScene>(pathToLoad, cacheMode: ResourceLoader.CacheMode.IgnoreDeep);
+			PackedScene packed = ResourceLoader.Load<PackedScene>(pathToLoad);
 			page = packed.Instantiate<MobileViewBase>();
 			_viewCache[viewEnum] = page;
 			_mainView.AddChild(page);
 			page.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
 		}
 
+		if (CurrentView != MobileViewEnum.PlaceInfo && CurrentView != MobileViewEnum.None)
+		{
+			_previousView = CurrentView;
+		}
+
+		CurrentView = viewEnum;
 		CurrentViewNode = page;
 		page.ShowView(args);
 		page.Visible = true;
+		PlayViewEnter(page);
 		ViewPathSwitched?.Invoke(viewEnum);
+	}
+
+	private static string GetViewScenePath(MobileViewEnum viewEnum)
+	{
+		return viewEnum switch
+		{
+			MobileViewEnum.Home => "res://scenes/mobile/views/home.tscn",
+			MobileViewEnum.Worlds => "res://scenes/mobile/views/worlds.tscn",
+			MobileViewEnum.PlaceInfo => "res://scenes/mobile/views/place_info.tscn",
+			MobileViewEnum.Avatar => "res://scenes/mobile/views/avatar.tscn",
+			MobileViewEnum.Dev => "res://scenes/mobile/views/test.tscn",
+			MobileViewEnum.Profile => "res://scenes/mobile/views/profile.tscn",
+			_ => throw new ArgumentOutOfRangeException(nameof(viewEnum),
+				 $"No scene defined for {viewEnum}")
+		};
+	}
+
+	private static void PreloadViews()
+	{
+		foreach (MobileViewEnum view in PreloadedViews)
+		{
+			ResourceLoader.LoadThreadedRequest(GetViewScenePath(view), useSubThreads: true);
+		}
+	}
+
+	private void PlayViewEnter(Control page)
+	{
+		_viewTween?.Kill();
+		page.Modulate = new(1, 1, 1, 0);
+		page.Position = new(0, ViewSlideOffset);
+
+		_viewTween = CreateTween().SetParallel().SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
+		_viewTween.TweenProperty(page, "modulate:a", 1f, 0.2f);
+		_viewTween.TweenProperty(page, "position:y", 0f, 0.3f);
 	}
 }
 

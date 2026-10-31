@@ -130,6 +130,7 @@ public partial class UIEmoteWheel : Control
 		if (@event.IsActionPressed("toggle_emote"))
 		{
 			if (!CoreUIRoot.Singleton.Root.Input.IsGameFocused && !EmoteWheelActive) return;
+			if (!EmoteWheelActive && CoreUIRoot.Singleton.Root.Input.IsPromptKey(@event)) return;
 			ToggleEmoteWheel();
 		}
 		base._Input(@event);
@@ -154,15 +155,17 @@ public partial class UIEmoteWheel : Control
 
 	private int GetSelectedEmoteIndex()
 	{
+		int count = Player.EmoteWheelList.Length;
+
 		float angle = GetCursorAngle();
 
-		// Rotate by 45deg
-		angle -= Mathf.Pi / 4f;
+		// Rotate towards the first divider (bottom rightmost corner)
+		// Half of an interior angle of a regular polygon with `count` sides
+		angle -= (count - 2) * (Mathf.Pi / 2f) / count;
 
 		if (angle < 0)
 			angle += Mathf.Tau;
 
-		int count = Player.EmoteWheelList.Length;
 		float step = Mathf.Tau / count;
 
 		int index = Mathf.FloorToInt(angle / step);

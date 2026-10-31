@@ -4,62 +4,61 @@
 
 using Godot;
 using Polytoria.Datamodel;
-using Polytoria.Shared;
 
 namespace Polytoria.Client;
 
 public partial class Nametag : Node3D
 {
-	private Label _titleLabel = null!;
-	private ProgressBar _healthBar = null!;
-	private Node3D _nametag = null!;
+	private static readonly StringName _valueParam = "value";
+
+	[Export] private Label3D _titleLabel = null!;
+	[Export] private Label3D _outlineLabel = null!;
+	[Export] private MeshInstance3D _healthBar = null!;
 
 	public NPC Target = null!;
 
-	public override void _Ready()
+	private ShaderMaterial? _healthBarMat;
+	private float _healthBarValue = -1;
+
+	public override void _EnterTree()
 	{
-		_nametag = Globals.CreateInstanceFromScene<Node3D>("res://scenes/client/spatial/nametag.tscn");
-		AddChild(_nametag);
-		_titleLabel = _nametag.GetNode<Label>("SubViewport/Control/Title");
-		_healthBar = _nametag.GetNode<ProgressBar>("SubViewport/Control/Healthbar");
+		_healthBarMat ??= (ShaderMaterial)_healthBar.GetActiveMaterial(0).Duplicate();
+		_healthBar.MaterialOverride = _healthBarMat;
+		Target.Renamed.Connect(UpdateNameTag);
+		UpdateNameTag();
+		base._EnterTree();
 	}
 
-	public override void _Process(double delta)
+	public override void _ExitTree()
 	{
-		base._Process(delta);
-
-		UpdateNameTag();
+		Target.Renamed.Disconnect(UpdateNameTag);
+		base._ExitTree();
 	}
 
 	public void UpdateNameTag()
 	{
-		bool useNametag = Target.UseNametag;
-
-		Camera? cam = Target.Root.Environment.CurrentCamera;
-
-		// Check distance from camera if is with-in radius
-		if (cam != null && useNametag)
-		{
-			useNametag = (cam.Position - GlobalPosition).Length() < Target.NametagVisibleRadius;
-		}
-
-		// Hide if self is Target
-		if (Target == Target.Root.Players?.LocalPlayer)
-		{
-			useNametag = false;
-		}
-
-		Visible = useNametag;
-		_titleLabel.Text = Target.DisplayName != string.Empty ? Target.DisplayName : Target.Name;
+		Visible = Target.UseNametag && Target.NametagVisibleRadius > 0 && !(Target is Player plr && plr.IsLocal);
+		_titleLabel.Text = _outlineLabel.Text = Target.DisplayName != string.Empty ? Target.DisplayName : Target.Name;
+		_titleLabel.VisibilityRangeEnd = _outlineLabel.VisibilityRangeEnd = _healthBar.VisibilityRangeEnd = Target.NametagVisibleRadius;
+		bool showHealthBar = false;
 		if (Target.Vitals is Vitals v)
 		{
-			_healthBar.Visible = (v.Health < v.MaxHealth);
-			_healthBar.Value = v.Health;
-			_healthBar.MaxValue = v.MaxHealth;
+			showHealthBar = v.Health < v.MaxHealth;
+			_healthBar.Visible = showHealthBar;
+			if (showHealthBar)
+			{
+				float health = v.MaxHealth > 0 ? v.Health / v.MaxHealth : 1;
+				if (health != _healthBarValue)
+				{
+					_healthBarValue = health;
+					_healthBarMat!.SetShaderParameter(_valueParam, health);
+				}
+			}
 		}
 		else
 		{
 			_healthBar.Visible = false;
 		}
+		_titleLabel.Offset = _outlineLabel.Offset = new(0,showHealthBar ? 50 : 16);
 	}
 }

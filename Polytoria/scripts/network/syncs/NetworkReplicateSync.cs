@@ -212,7 +212,7 @@ public sealed partial class NetworkReplicateSync : Instance
 		{
 			NetworkedObject netObj = netObjs[i];
 			// If no sync, continue
-			if (netObj.GetType().IsDefined(typeof(NoSyncAttribute), false)) continue;
+			if (netObj.GetType().IsDefinedCached(typeof(NoSyncAttribute), false)) continue;
 
 			if (!netObj.ShouldReplicate) continue;
 

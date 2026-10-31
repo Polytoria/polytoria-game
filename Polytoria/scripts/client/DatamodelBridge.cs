@@ -19,7 +19,7 @@ public partial class DatamodelBridge : Node3D
 	private const int SplitGroupSize = 512;
 
 	private World Root = null!;
-	public long SeparatedPartCount = 0;
+	public long SeparatedPartCount => _handlers.Count - _handles.Count;
 
 	private readonly Dictionary<Part, PartHandle> _handles = new(ReferenceEqualityComparer.Instance);
 	private readonly Dictionary<ChunkKey, ChunkBatch> _batches = [];
@@ -28,6 +28,7 @@ public partial class DatamodelBridge : Node3D
 	private readonly List<Part> _dirtyParts = [];
 	private readonly HashSet<Part> _recheck = new(ReferenceEqualityComparer.Instance);
 	private readonly Dictionary<Part, System.Action<object>> _handlers = new(ReferenceEqualityComparer.Instance);
+	private readonly HashSet<ChunkBatch> _attachedBatches = [];
 	private Rid _scenario;
 
 	private readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materials = [];
@@ -41,11 +42,12 @@ public partial class DatamodelBridge : Node3D
 		{
 			Root.InstanceEnteredTree -= OnInstanceAdded;
 			Root.InstanceExitingTree -= OnInstanceRemoving;
+			RenderingServer.FramePreDraw -= OnFramePreDraw;
 		}
 
 		Root = root;
 		root.Bridge = this;
-		_renderingEnabled = DisplayServer.GetName() != "headless";
+		_renderingEnabled = !Globals.IsHeadless;
 		SetProcess(_renderingEnabled);
 
 		if (!_renderingEnabled)
@@ -58,6 +60,7 @@ public partial class DatamodelBridge : Node3D
 		root.InstanceEnteredTree += OnInstanceAdded;
 		root.InstanceExitingTree += OnInstanceRemoving;
 		root.Loaded.Once(OnGameReady);
+		RenderingServer.FramePreDraw += OnFramePreDraw;
 
 		if (manualRebuild)
 		{
@@ -80,6 +83,7 @@ public partial class DatamodelBridge : Node3D
 				Root.InstanceEnteredTree -= OnInstanceAdded;
 				Root.InstanceExitingTree -= OnInstanceRemoving;
 				Root.Loaded.Disconnect(OnGameReady);
+				RenderingServer.FramePreDraw -= OnFramePreDraw;
 
 				// Cleanup parts
 				foreach (Part item in new List<Part>(_handlers.Keys))
@@ -153,7 +157,7 @@ public partial class DatamodelBridge : Node3D
 				if (_handles.TryGetValue(part, out PartHandle? moved))
 				{
 					Transform3D transform = part.GetGlobalTransform();
-					ChunkKey movedKey = GetKeyForPart(part, transform.Origin);
+					ChunkKey movedKey = GetKeyForPart(part, transform.Origin, moved.Key.Scenario, moved.Key.IsAttached);
 					if (!movedKey.Equals(moved.Key))
 					{
 						RemoveFromBatch(part);
@@ -188,16 +192,32 @@ public partial class DatamodelBridge : Node3D
 					handle.Batch.MultiMesh.SetInstanceColor(handle.Index, part.Color.SrgbToLinear());
 				}
 			}
-			else
+			else if (inBatch)
 			{
-				if (inBatch)
+				RemoveFromBatch(part);
+			}
+		}
+	}
+
+	private void OnFramePreDraw()
+	{
+		foreach (ChunkBatch batch in _attachedBatches)
+		{
+			for (int i = 0; i < batch.Count; i++)
+			{
+				Part part = batch.Parts[i];
+				if (!IsInstanceValid(part.GDNode3D) || !part.GDNode3D.IsVisibleInTree())
 				{
-					RemoveFromBatch(part);
+					batch.MultiMesh.SetInstanceTransform(i, Transform3D.Identity.Scaled(Vector3.Zero));
+					continue;
 				}
 
-				if (!part.IsMeshSeparated && !part.IsDeleted)
+				Transform3D transform = part.GetGlobalTransform();
+				batch.MultiMesh.SetInstanceTransform(i, transform);
+
+				if (GetChunkCoord(transform.Origin, CoarseChunkSize) != batch.Key.Coord)
 				{
-					part.CreateSeparateMesh();
+					_dirty.Add(part);
 				}
 			}
 		}
@@ -205,22 +225,26 @@ public partial class DatamodelBridge : Node3D
 
 	private ChunkKey GetKeyForPart(Part part)
 	{
-		return GetKeyForPart(part, part.Position);
+		Rid scenario = part.GDNode3D.GetWorld3D()?.Scenario ?? _scenario;
+		return GetKeyForPart(part, part.Position, scenario, IsPartAttached(part));
 	}
 
-	private ChunkKey GetKeyForPart(Part part, Vector3 position)
+	private ChunkKey GetKeyForPart(Part part, Vector3 position, Rid scenario, bool isAttached)
 	{
-		bool isDynamic = !part.Anchored;
+		bool isDynamic = !part.Anchored || isAttached;
 		bool split = !isDynamic && _groupCounts.GetValueOrDefault((part.Material, part.Shape)) >= SplitGroupSize;
-		float size = split ? ChunkBaseSize : CoarseChunkSize;
+		Vector3I coord = GetChunkCoord(position, split ? ChunkBaseSize : CoarseChunkSize);
 
+		return new ChunkKey(coord, part.Material, part.Shape, part.Color.A < 1f, part.CastShadows, isDynamic, isAttached, scenario);
+	}
+
+	private static Vector3I GetChunkCoord(Vector3 position, float size)
+	{
 		Vector3 pos = position + new Vector3(size * 0.5f, size * 0.5f, size * 0.5f);
-		Vector3I coord = new(
+		return new(
 			Mathf.FloorToInt(pos.X / size),
 			Mathf.FloorToInt(pos.Y / size),
 			Mathf.FloorToInt(pos.Z / size));
-
-		return new ChunkKey(coord, part.Material, part.Shape, part.Color.A < 1f, part.CastShadows, isDynamic);
 	}
 
 	private void OnInstanceAdded(Instance instance)
@@ -242,6 +266,15 @@ public partial class DatamodelBridge : Node3D
 	private void OnGameReady()
 	{
 		isGameReady = true;
+
+		foreach (Part part in _handlers.Keys)
+		{
+			if (!_handles.ContainsKey(part) && !part.IsHidden)
+			{
+				_dirty.Add(part);
+				_recheck.Add(part);
+			}
+		}
 	}
 
 	private void AddToBatch(Part part, ChunkKey key)
@@ -260,7 +293,7 @@ public partial class DatamodelBridge : Node3D
 			};
 
 			Rid rid = RenderingServer.InstanceCreate();
-			RenderingServer.InstanceSetScenario(rid, _scenario);
+			RenderingServer.InstanceSetScenario(rid, key.Scenario);
 			RenderingServer.InstanceSetBase(rid, mm.GetRid());
 			RenderingServer.InstanceSetTransform(rid, Transform3D.Identity);
 			RenderingServer.InstanceGeometrySetCastShadowsSetting(rid, key.CastShadows ? RenderingServer.ShadowCastingSetting.On : RenderingServer.ShadowCastingSetting.Off);
@@ -278,9 +311,11 @@ public partial class DatamodelBridge : Node3D
 			};
 
 			_batches.Add(key, batch);
+			if (key.IsAttached)
+			{
+				_attachedBatches.Add(batch);
+			}
 		}
-
-		part.RemoveSeparateMesh();
 
 		int index = batch.Count;
 		ResizeBatch(batch, index + 1);
@@ -351,7 +386,9 @@ public partial class DatamodelBridge : Node3D
 		if (batch.Count == 0)
 		{
 			RenderingServer.FreeRid(batch.Rid);
+			batch.MultiMesh.Dispose();
 			_batches.Remove(handle.Key);
+			_attachedBatches.Remove(batch);
 		}
 
 		_handles.Remove(part);
@@ -387,7 +424,6 @@ public partial class DatamodelBridge : Node3D
 		if (!IsPartEligible(part))
 		{
 			ConnectHandler(part);
-			part.CreateSeparateMesh();
 			return;
 		}
 
@@ -459,22 +495,16 @@ public partial class DatamodelBridge : Node3D
 		if (!_renderingEnabled) return;
 
 		DisconnectHandler(part);
-
-		if (!part.IsDeleted)
-		{
-			part.CreateSeparateMesh();
-		}
-
 		RemoveFromBatch(part);
 	}
+
+	private static bool IsPartAttached(Part part) => part.IsHeld || part.IsDescendantOfClass<Camera>();
 
 	public static bool IsPartEligible(Part part)
 	{
 		if (part.IsHidden || part.IsInTemporary) return false;
-		if (part.OverrideNoMultiMesh) return false;
 		if (!IsInstanceValid(part.GDNode3D) || !part.GDNode3D.IsInsideTree()) return false;
 		if (part.IsDeleted) return false;
-		if (part.IsDescendantOfClass<Camera>()) return false;
 		return true;
 	}
 
@@ -491,7 +521,9 @@ public partial class DatamodelBridge : Node3D
 		Part.ShapeEnum Shape,
 		bool IsTransparent,
 		bool CastShadows,
-		bool IsDynamic);
+		bool IsDynamic,
+		bool IsAttached,
+		Rid Scenario);
 
 	private class ChunkBatch
 	{

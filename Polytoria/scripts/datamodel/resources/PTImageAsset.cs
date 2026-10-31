@@ -14,6 +14,14 @@ public partial class PTImageAsset : ImageAsset
 	private uint _imageID;
 	private ImageTypeEnum _imageType;
 
+	[ScriptMethod]
+	public static PTImageAsset FromID([ScriptingCaller] Script caller, uint id)
+	{
+		PTImageAsset asset = (PTImageAsset)NetworkedObject.NewFromScript(caller, "PTImageAsset")!;
+		asset.ImageID = id;
+		return asset;
+	}
+
 	[Editable, ScriptProperty]
 	public uint ImageID
 	{

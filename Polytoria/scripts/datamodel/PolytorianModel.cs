@@ -59,11 +59,17 @@ public sealed partial class PolytorianModel : CharacterModel
 	private ImageAsset? _faceImage;
 	private MeshAsset? _bodyMesh;
 	private readonly ShaderMaterial _headMat = new() { Shader = _limbShader };
-	private readonly ShaderMaterial _limbMat = new() { Shader = _limbShader };
-	private readonly ShaderMaterial _transparentLimbMat = new() { Shader = _transparentLimbShader };
+	private readonly ShaderMaterial _torsoMat = new() { Shader = _limbShader };
+	private readonly ShaderMaterial _leftArmMat = new() { Shader = _limbShader };
+	private readonly ShaderMaterial _rightArmMat = new() { Shader = _limbShader };
+	private readonly ShaderMaterial _leftLegMat = new() { Shader = _limbShader };
+	private readonly ShaderMaterial _rightLegMat = new() { Shader = _limbShader };
+	private ShaderMaterial[] LimbMats => [_torsoMat, _leftArmMat, _rightArmMat, _leftLegMat, _rightLegMat];
 	private PhysicalBoneSimulator3D _ragdollBoneSim = null!;
 	private PhysicalBoneSimulator3D? _lastPhysicalBoneSim = null!;
 	private readonly Dictionary<string, float> _blendTargets = [];
+	private static readonly Dictionary<string, StringName> _blendParamNames = [];
+	private static StringName? _timeScaleParamName;
 	private int _toBeLoadedCount = 0;
 	private bool _faceLoaded = false;
 	private float _lastLookBlendX = 0;
@@ -80,11 +86,10 @@ public sealed partial class PolytorianModel : CharacterModel
 	[Editable, ScriptProperty, Export, SyncVar]
 	public Color HeadColor
 	{
-		get => MeshGetAlbedo(HeadMeshInstance);
+		get => MatGetAlbedo(_headMat);
 		set
 		{
-			_headMat.Shader = (value.A == 1) ? _limbShader : _transparentLimbShader;
-			HeadMeshInstance.SetInstanceShaderParameter(_albedoParam, value);
+			MatSetAlbedo(_headMat, value);
 			OnPropertyChanged();
 		}
 	}
@@ -92,10 +97,10 @@ public sealed partial class PolytorianModel : CharacterModel
 	[Editable, ScriptProperty, SyncVar]
 	public Color TorsoColor
 	{
-		get => MeshGetAlbedo(TorsoMeshInstance);
+		get => MatGetAlbedo(_torsoMat);
 		set
 		{
-			MeshSetAlbedo(TorsoMeshInstance, value);
+			MatSetAlbedo(_torsoMat, value);
 			OnPropertyChanged();
 		}
 	}
@@ -103,10 +108,10 @@ public sealed partial class PolytorianModel : CharacterModel
 	[Editable, ScriptProperty, SyncVar]
 	public Color LeftArmColor
 	{
-		get => MeshGetAlbedo(LeftArmMeshInstance);
+		get => MatGetAlbedo(_leftArmMat);
 		set
 		{
-			MeshSetAlbedo(LeftArmMeshInstance, value);
+			MatSetAlbedo(_leftArmMat, value);
 			OnPropertyChanged();
 		}
 	}
@@ -114,10 +119,10 @@ public sealed partial class PolytorianModel : CharacterModel
 	[Editable, ScriptProperty, SyncVar]
 	public Color RightArmColor
 	{
-		get => MeshGetAlbedo(RightArmMeshInstance);
+		get => MatGetAlbedo(_rightArmMat);
 		set
 		{
-			MeshSetAlbedo(RightArmMeshInstance, value);
+			MatSetAlbedo(_rightArmMat, value);
 			OnPropertyChanged();
 		}
 	}
@@ -125,10 +130,10 @@ public sealed partial class PolytorianModel : CharacterModel
 	[Editable, ScriptProperty, SyncVar]
 	public Color LeftLegColor
 	{
-		get => MeshGetAlbedo(LeftLegMeshInstance);
+		get => MatGetAlbedo(_leftLegMat);
 		set
 		{
-			MeshSetAlbedo(LeftLegMeshInstance, value);
+			MatSetAlbedo(_leftLegMat, value);
 			OnPropertyChanged();
 		}
 	}
@@ -136,10 +141,10 @@ public sealed partial class PolytorianModel : CharacterModel
 	[Editable, ScriptProperty, SyncVar]
 	public Color RightLegColor
 	{
-		get => MeshGetAlbedo(RightLegMeshInstance);
+		get => MatGetAlbedo(_rightLegMat);
 		set
 		{
-			MeshSetAlbedo(RightLegMeshInstance, value);
+			MatSetAlbedo(_rightLegMat, value);
 			OnPropertyChanged();
 		}
 	}
@@ -262,11 +267,11 @@ public sealed partial class PolytorianModel : CharacterModel
 		Pivot.Scale = NodeSize;
 
 		HeadMeshInstance.MaterialOverride = _headMat;
-		TorsoMeshInstance.MaterialOverride = _limbMat;
-		LeftArmMeshInstance.MaterialOverride = _limbMat;
-		RightArmMeshInstance.MaterialOverride = _limbMat;
-		LeftLegMeshInstance.MaterialOverride = _limbMat;
-		RightLegMeshInstance.MaterialOverride = _limbMat;
+		TorsoMeshInstance.MaterialOverride = _torsoMat;
+		LeftArmMeshInstance.MaterialOverride = _leftArmMat;
+		RightArmMeshInstance.MaterialOverride = _rightArmMat;
+		LeftLegMeshInstance.MaterialOverride = _leftLegMat;
+		RightLegMeshInstance.MaterialOverride = _rightLegMat;
 
 		AnimTree = GDNode.GetNode<AnimationTree>("AnimationTree");
 		AnimTree.Active = true;
@@ -282,8 +287,17 @@ public sealed partial class PolytorianModel : CharacterModel
 
 		// Free materials
 		_headMat.Dispose();
-		_limbMat.Dispose();
-		_transparentLimbMat.Dispose();
+		foreach (ShaderMaterial mat in LimbMats)
+		{
+			mat.Dispose();
+		}
+
+		foreach (Dynamic dyn in _attachmentEnumToDyn.Values)
+		{
+			dyn.DeletedAsChild = true;
+			dyn.DeleteNow();
+		}
+		_attachmentEnumToDyn.Clear();
 
 		base.PreDelete();
 	}
@@ -401,7 +415,15 @@ public sealed partial class PolytorianModel : CharacterModel
 		{
 			string propName = kvp.Key;
 			float target = kvp.Value;
-			float current = (float)AnimTree.Get(propName);
+
+			if (!_blendParamNames.TryGetValue(propName, out StringName? paramName))
+			{
+				paramName = propName;
+				_blendParamNames[propName] = paramName;
+			}
+
+			float rawCurrent = (float)AnimTree.Get(paramName);
+			float current = rawCurrent;
 
 			if (!float.IsFinite(current)) current = 0f;
 
@@ -418,8 +440,8 @@ public sealed partial class PolytorianModel : CharacterModel
 			{
 				newValue = Mathf.MoveToward(current, target, (float)delta * targetBlendSpeed);
 			}
-
-			AnimTree.Set(propName, newValue);
+			if (newValue == rawCurrent) continue;
+			AnimTree.Set(paramName, newValue);
 		}
 	}
 
@@ -452,8 +474,10 @@ public sealed partial class PolytorianModel : CharacterModel
 			}
 			composite = ImageTexture.CreateFromImage(result);
 		}
-		_limbMat.SetShaderParameter(_albedoTexParam, composite);
-		_transparentLimbMat.SetShaderParameter(_albedoTexParam, composite);
+		foreach (ShaderMaterial mat in LimbMats)
+		{
+			mat.SetShaderParameter(_albedoTexParam, composite);
+		}
 	}
 
 	private void OnFaceLoaded(Resource tex)
@@ -585,11 +609,12 @@ public sealed partial class PolytorianModel : CharacterModel
 	[ScriptMethod]
 	public override Dynamic GetAttachment(CharacterAttachmentEnum attachmentEnum)
 	{
-		if (!_attachmentEnumToDyn.TryGetValue(attachmentEnum, out Dynamic? dyn))
+		if (!_attachmentEnumToDyn.TryGetValue(attachmentEnum, out Dynamic? dyn) || dyn.IsDeleted || !Node.IsInstanceValid(dyn.GDNode))
 		{
 			Node3D a = GetNode3DAttachment(attachmentEnum);
 			dyn = New<Dynamic>();
 			dyn.OverrideGDNode(a);
+			_attachmentEnumToDyn[attachmentEnum] = dyn;
 		}
 
 		return dyn;
@@ -653,7 +678,8 @@ public sealed partial class PolytorianModel : CharacterModel
 		if (!float.IsFinite(speedValue)) return;
 
 		if (AnimTree == null) return;
-		AnimTree.Set("parameters/TimeScale/scale", speedValue);
+		_timeScaleParamName ??= "parameters/TimeScale/scale";
+		AnimTree.Set(_timeScaleParamName, speedValue);
 	}
 
 	public override void ApplyCameraModifier(Camera camera)
@@ -670,21 +696,16 @@ public sealed partial class PolytorianModel : CharacterModel
 		float lookY = Mathf.Clamp(localForward.Y, -1f, 1f);
 		float lookX = -localForward.X;
 
-		if (lookX != _lastLookBlendX)
-		{
-			_lastLookBlendX = lookX;
-		}
-
-		if (lookY != _lastLookBlendY)
-		{
-			_lastLookBlendY = lookY;
-		}
-
 		NetRecvLookBlend(lookY, lookX);
 
-		if (Time.GetTicksMsec() / 1000.0 >= _lastNetUpdateTime + NetLookBlendUpdateInterval)
+		double now = Time.GetTicksMsec() / 1000.0;
+		bool changed = !Mathf.IsEqualApprox(lookX, _lastLookBlendX, 0.005f) || !Mathf.IsEqualApprox(lookY, _lastLookBlendY, 0.005f);
+
+		if ((changed && now >= _lastNetUpdateTime + NetLookBlendUpdateInterval) || now >= _lastNetUpdateTime + 1)
 		{
-			_lastNetUpdateTime = Time.GetTicksMsec() / 1000.0;
+			_lastNetUpdateTime = now;
+			_lastLookBlendX = lookX;
+			_lastLookBlendY = lookY;
 			Rpc(nameof(NetRecvLookBlend), lookY, lookX);
 		}
 	}
@@ -725,13 +746,13 @@ public sealed partial class PolytorianModel : CharacterModel
 		}
 	}
 
-	private void MeshSetAlbedo(GeometryInstance3D mesh, Color albedo)
+	private static void MatSetAlbedo(ShaderMaterial mat, Color albedo)
 	{
-		mesh.MaterialOverride = (albedo.A == 1) ? _limbMat : _transparentLimbMat;
-		mesh.SetInstanceShaderParameter(_albedoParam, albedo);
+		mat.Shader = (albedo.A == 1) ? _limbShader : _transparentLimbShader;
+		mat.SetShaderParameter(_albedoParam, albedo);
 	}
 
-	private static Color MeshGetAlbedo(GeometryInstance3D mesh) => (Color)mesh.GetInstanceShaderParameter(_albedoParam);
+	private static Color MatGetAlbedo(ShaderMaterial mat) => (Color)mat.GetShaderParameter(_albedoParam);
 
 	internal async Task<AvatarLoadResponse> InternalLoadAppearance(int userID, bool loadTool = false, bool loadToolNpc = false)
 	{
@@ -794,7 +815,10 @@ public sealed partial class PolytorianModel : CharacterModel
 					else if (Parent is Player plr && loadTool)
 					{
 						hasTool = true;
-						Root.Insert.CreateTool(asset.ID, asset.Name).Parent = plr.Inventory;
+						if (plr.Inventory.FindChild(asset.Name) == null)
+						{
+							Root.Insert.CreateTool(asset.ID, asset.Name).Parent = plr.Inventory;
+						}
 					}
 					else if (Parent is NPC npc && loadToolNpc)
 					{
