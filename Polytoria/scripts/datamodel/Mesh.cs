@@ -11,6 +11,7 @@ using Polytoria.Scripting;
 using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Polytoria.Datamodel;
 
@@ -33,8 +34,12 @@ public sealed partial class Mesh : Entity
 	private bool _castShadows;
 	private AnimationPlayer? _animPlay;
 	private readonly List<MeshInstance3D> _meshInstances = [];
-	private readonly List<Material> _materials = [];
+	private readonly List<SurfaceMaterial> _materials = [];
 	private Resource? _prevResource;
+
+	private static readonly ConditionalWeakTable<Godot.Mesh, Shape3D> _convexShapesCache = [];
+	private static readonly ConditionalWeakTable<Godot.Mesh, Shape3D> _concaveShapesCache = [];
+	private static readonly ConditionalWeakTable<StandardMaterial3D, (StringName Name, Variant Value)[]> _materialPropsCache = [];
 
 	[Editable, ScriptProperty]
 	public MeshAsset? Asset
@@ -42,10 +47,14 @@ public sealed partial class Mesh : Entity
 		get => _asset;
 		set
 		{
-			if (_asset != null && _asset != value)
+			if (_asset != null)
 			{
 				_asset.ResourceLoaded -= OnResourceLoaded;
-				_asset.UnlinkFrom(this);
+				_asset.PropertyChanged.Disconnect(UpdateColor);
+				if (_asset != value)
+				{
+					_asset.UnlinkFrom(this);
+				}
 			}
 			_asset = value;
 			if (_meshNode != null && Node.IsInstanceValid(_meshNode))
@@ -54,6 +63,7 @@ public sealed partial class Mesh : Entity
 			}
 			ClearCollisionShapes();
 			_meshNode = null;
+			_materials.Clear();
 			_prevResource = null;
 			if (_asset != null)
 			{
@@ -127,7 +137,7 @@ public sealed partial class Mesh : Entity
 		set
 		{
 			_textureFilter = value;
-			UpdateTextureFilter();
+			UpdateMaterials();
 			OnPropertyChanged();
 		}
 	}
@@ -249,6 +259,7 @@ public sealed partial class Mesh : Entity
 
 	public override void PreDelete()
 	{
+		_asset?.PropertyChanged.Disconnect(UpdateColor);
 		_materials.Clear();
 		_meshInstances.Clear();
 		base.PreDelete();
@@ -273,19 +284,6 @@ public sealed partial class Mesh : Entity
 			TextureFilterEnum.LinearNoMipmaps => BaseMaterial3D.TextureFilterEnum.Linear,
 			_ => BaseMaterial3D.TextureFilterEnum.Linear,
 		};
-	}
-
-	private void UpdateTextureFilter()
-	{
-		BaseMaterial3D.TextureFilterEnum godotFilter = ToGodotTextureFilter(_textureFilter);
-
-		foreach (Material material in _materials)
-		{
-			if (material is BaseMaterial3D baseMaterial)
-			{
-				baseMaterial.TextureFilter = godotFilter;
-			}
-		}
 	}
 
 	private void OnResourceLoaded(Resource resource)
@@ -333,21 +331,13 @@ public sealed partial class Mesh : Entity
 				{
 					_meshInstances.Add(m3d);
 
-					// Create duplicate so UsePartColor doesn't override each other
-					m3d.Mesh = (Godot.Mesh)m3d.Mesh.Duplicate();
-
-					int surfaceCount = m3d.Mesh.GetSurfaceCount();
+					Godot.Mesh mesh = m3d.Mesh;
+					int surfaceCount = mesh.GetSurfaceCount();
 					for (int i = 0; i < surfaceCount; i++)
 					{
-						// Duplicate material, same as above
-						Material mat = (Material)m3d.Mesh.SurfaceGetMaterial(i).Duplicate();
-						m3d.Mesh.SurfaceSetMaterial(i, mat);
-						_materials.Add(mat);
-						if (mat is StandardMaterial3D sm3d)
+						if (mesh.SurfaceGetMaterial(i) is StandardMaterial3D mat)
 						{
-							mat.SetMeta("_origin_clr", sm3d.AlbedoColor);
-							mat.SetMeta("_origin_hasalpha", sm3d.Transparency != BaseMaterial3D.TransparencyEnum.Disabled);
-							mat.SetMeta("_origin_texture", sm3d.AlbedoTexture);
+							_materials.Add(new(m3d, i, mat));
 						}
 					}
 				}
@@ -355,7 +345,6 @@ public sealed partial class Mesh : Entity
 
 			UpdateColor();
 			UpdateShadows();
-			UpdateTextureFilter();
 
 			_meshContainer.AddChild(obj);
 
@@ -487,35 +476,60 @@ public sealed partial class Mesh : Entity
 
 	private void UpdateColor()
 	{
-		foreach (Material item in _materials)
+		UpdateMaterials();
+		UpdateCamLayer();
+	}
+
+	private void UpdateMaterials()
+	{
+		Texture2D? assetTexture = Asset is PTMeshAsset ptma && ptma.Texture?.Resource is Texture2D t2d ? t2d : null;
+		BaseMaterial3D.TextureFilterEnum godotFilter = ToGodotTextureFilter(_textureFilter);
+
+		foreach (SurfaceMaterial item in _materials)
 		{
-			if (item is StandardMaterial3D sm)
+			MaterialState original = item.OriginalState;
+			Color color = UsePartColor ? _color : original.Color;
+
+			BaseMaterial3D.TransparencyEnum transparency = original.Transparency;
+			if (transparency == BaseMaterial3D.TransparencyEnum.Disabled)
+				transparency = color.A < 1 ? BaseMaterial3D.TransparencyEnum.Alpha : BaseMaterial3D.TransparencyEnum.Disabled;
+
+			item.Apply(new(color, assetTexture ?? original.Texture, transparency, godotFilter));
+		}
+	}
+
+	private static StandardMaterial3D DuplicateMaterial(StandardMaterial3D source)
+	{
+		StandardMaterial3D copy = new();
+		foreach ((StringName name, Variant value) in _materialPropsCache.GetValue(source, GetNonDefaultProps))
+		{
+			copy.Set(name, value);
+		}
+		return copy;
+	}
+
+	private static (StringName Name, Variant Value)[] GetNonDefaultProps(StandardMaterial3D source)
+	{
+		using StandardMaterial3D defaults = new();
+		List<(StringName Name, Variant Value)> properties = [];
+
+		foreach (Godot.Collections.Dictionary property in source.GetPropertyList())
+		{
+			if ((property["usage"].As<PropertyUsageFlags>() & PropertyUsageFlags.Storage) == 0)
 			{
-				Texture2D? originalTexture = sm.HasMeta("_origin_texture") ? sm.GetMeta("_origin_texture").As<Texture2D>() : null;
-				Color origin = sm.GetMeta("_origin_clr").AsColor();
-				bool hasAlpha = sm.GetMeta("_origin_hasalpha").AsBool();
-				Color setto = _color;
+				continue;
+			}
 
-				if (Asset is PTMeshAsset ptma && ptma.Texture?.Resource is Texture2D t2d)
-				{
-					sm.AlbedoTexture = t2d;
-				}
-				else
-				{
-					sm.AlbedoTexture = originalTexture;
-				}
-
-				if (!UsePartColor)
-				{
-					setto = origin;
-				}
-				sm.AlbedoColor = setto;
-				if (!hasAlpha)
-					sm.Transparency = setto.A < 1 ? BaseMaterial3D.TransparencyEnum.Alpha : BaseMaterial3D.TransparencyEnum.Disabled;
+			StringName name = property["name"].AsStringName();
+			Variant value = source.Get(name);
+			Variant defaultValue = defaults.Get(name);
+			if (value.VariantType != defaultValue.VariantType || !Equals(value.Obj, defaultValue.Obj))
+			{
+				properties.Add((name, value));
 			}
 		}
 
-		UpdateCamLayer();
+		return [.. properties];
 	}
 
 	private void UpdateShadows()
@@ -560,66 +574,65 @@ public sealed partial class Mesh : Entity
 		if (CollisionType == CollisionTypeEnum.Bounds)
 		{
 			// Create box collision from AABB
-			foreach (Node node in GetDescendantsInternal(_meshNode))
+			foreach (MeshInstance3D meshInstance in _meshInstances)
 			{
-				if (node is MeshInstance3D meshInstance)
+				Aabb bounds = meshInstance.GetAabb();
+				BoxShape3D boxShape = new()
 				{
-					Aabb bounds = meshInstance.GetAabb();
-					BoxShape3D boxShape = new()
-					{
-						Size = bounds.Size
-					};
-					CollisionShape3D collisionShape = new()
-					{
-						Shape = boxShape,
-					};
-					GDNode3D.AddChild(collisionShape);
+					Size = bounds.Size
+				};
+				CollisionShape3D collisionShape = new()
+				{
+					Shape = boxShape,
+				};
+				GDNode3D.AddChild(collisionShape);
 
-					SetRemoteLinkTarget(collisionShape, meshInstance);
-					SetRemoteLinkOffset(collisionShape, meshInstance.GetAabb().GetCenter());
-					AddCollisionShape(collisionShape);
-				}
+				SetRemoteLinkTarget(collisionShape, meshInstance);
+				SetRemoteLinkOffset(collisionShape, bounds.GetCenter());
+				AddCollisionShape(collisionShape);
 			}
 		}
 		else if (CollisionType == CollisionTypeEnum.Convex || CollisionType == CollisionTypeEnum.Exact)
 		{
-			foreach (Node node in GetDescendantsInternal(_meshNode))
+			foreach (MeshInstance3D meshInstance in _meshInstances)
 			{
-				if (node is MeshInstance3D meshInstance)
+				CollisionShape3D collisionShape = new()
 				{
-					Godot.Mesh mesh = meshInstance.Mesh;
-					Vector3[] facesArray = mesh.GetFaces();
-					Shape3D shape;
+					Shape = LoadCollisionShape(meshInstance.Mesh, CollisionType),
+					DebugColor = Color.FromString("#F2821B", new Color())
+				};
 
-					if (CollisionType == CollisionTypeEnum.Convex)
-					{
-						ConvexPolygonShape3D convex = new()
-						{
-							Points = facesArray
-						};
-						shape = convex;
-					}
-					else
-					{
-						ConcavePolygonShape3D concave = new();
-						concave.SetFaces(facesArray);
-						shape = concave;
-					}
-
-					CollisionShape3D collisionShape = new()
-					{
-						Shape = shape,
-						DebugColor = Color.FromString("#F2821B", new Color())
-					};
-
-					GDNode3D.AddChild(collisionShape);
-					SetRemoteLinkTarget(collisionShape, meshInstance);
-					AddCollisionShape(collisionShape);
-				}
+				GDNode3D.AddChild(collisionShape);
+				SetRemoteLinkTarget(collisionShape, meshInstance);
+				AddCollisionShape(collisionShape);
 			}
 		}
 
 		UpdateCollision();
+	}
+
+	private static Shape3D LoadCollisionShape(Godot.Mesh mesh, CollisionTypeEnum collisionType)
+	{
+		ConditionalWeakTable<Godot.Mesh, Shape3D> cache = collisionType == CollisionTypeEnum.Convex ? _convexShapesCache : _concaveShapesCache;
+		if (cache.TryGetValue(mesh, out Shape3D? shape))
+		{
+			return shape;
+		}
+
+		Vector3[] facesArray = mesh.GetFaces();
+		if (collisionType == CollisionTypeEnum.Convex)
+		{
+			shape = new ConvexPolygonShape3D() { Points = facesArray };
+		}
+		else
+		{
+			ConcavePolygonShape3D concave = new();
+			concave.SetFaces(facesArray);
+			shape = concave;
+		}
+
+		cache.AddOrUpdate(mesh, shape);
+		return shape;
 	}
 
 	public override Aabb GetSelfBound()
@@ -687,6 +700,53 @@ public sealed partial class Mesh : Entity
 		public override readonly int GetHashCode()
 		{
 			return HashCode.Combine(Name, Length);
+		}
+	}
+
+	private readonly record struct MaterialState(Color Color, Texture2D? Texture, BaseMaterial3D.TransparencyEnum Transparency, BaseMaterial3D.TextureFilterEnum TextureFilter);
+
+	private sealed class SurfaceMaterial
+	{
+		private readonly MeshInstance3D _meshInstance;
+		private readonly int _surface;
+		private readonly StandardMaterial3D _material;
+		private MaterialState _state;
+		private bool _isOverridden;
+
+		public SurfaceMaterial(MeshInstance3D meshInstance, int surface, StandardMaterial3D source)
+		{
+			_meshInstance = meshInstance;
+			_surface = surface;
+			_material = DuplicateMaterial(source);
+			OriginalState = new(source.AlbedoColor, source.AlbedoTexture, source.Transparency, source.TextureFilter);
+			_state = OriginalState;
+		}
+
+		public MaterialState OriginalState { get; }
+
+		public void Apply(MaterialState state)
+		{
+			if (state == OriginalState)
+			{
+				if (_isOverridden)
+				{
+					_meshInstance.SetSurfaceOverrideMaterial(_surface, null);
+					_isOverridden = false;
+				}
+				return;
+			}
+
+			if (state.Texture != _state.Texture) _material.AlbedoTexture = state.Texture;
+			if (state.Color != _state.Color) _material.AlbedoColor = state.Color;
+			if (state.Transparency != _state.Transparency) _material.Transparency = state.Transparency;
+			if (state.TextureFilter != _state.TextureFilter) _material.TextureFilter = state.TextureFilter;
+			_state = state;
+
+			if (!_isOverridden)
+			{
+				_meshInstance.SetSurfaceOverrideMaterial(_surface, _material);
+				_isOverridden = true;
+			}
 		}
 	}
 }
