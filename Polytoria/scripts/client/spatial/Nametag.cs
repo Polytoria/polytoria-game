@@ -59,6 +59,6 @@ public partial class Nametag : Node3D
 		{
 			_healthBar.Visible = false;
 		}
-		_titleLabel.Offset = _outlineLabel.Offset = new(0,showHealthBar ? 50 : 16);
+		_titleLabel.Offset = _outlineLabel.Offset = new(0, showHealthBar ? 50 : 16);
 	}
 }
