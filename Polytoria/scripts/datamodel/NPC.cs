@@ -230,13 +230,19 @@ public partial class NPC : Physical
 		}
 	}
 
+	private void CompatibilityCreateVitals()
+	{
+		Vitals ??= New<Vitals>(this);
+	}
+
 	[ScriptProperty, Obsolete("Use Vitals.Health instead")]
 	public float? Health
 	{
 		get => Vitals?.Health;
 		set
 		{
-			if (value != null) Vitals?.Health = value.Value;
+			CompatibilityCreateVitals();
+			if (value != null) Vitals.Health = value.Value;
 		}
 	}
 
@@ -246,7 +252,8 @@ public partial class NPC : Physical
 		get => Vitals?.MaxHealth;
 		set
 		{
-			if (value != null) Vitals?.MaxHealth = value.Value;
+			CompatibilityCreateVitals();
+			if (value != null) Vitals.MaxHealth = value.Value;
 		}
 	}
 
