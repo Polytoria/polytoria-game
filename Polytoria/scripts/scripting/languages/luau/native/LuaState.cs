@@ -28,7 +28,7 @@ public partial class LuaState : IDisposable
 	public const int LUA_REGISTRYINDEX = -LUAI_MAXCSTACK - 2000;
 	public const int LUA_ENVIRONINDEX = -LUAI_MAXCSTACK - 2001;
 	public const int LUA_GLOBALSINDEX = -LUAI_MAXCSTACK - 2002;
-	private const double ScriptTimeoutSec = 10;
+	private const double ScriptTimeoutSec = 20;
 	private const long HeapLimit = 256L << 20;
 
 	private static readonly IntPtr _vectorLib = Marshal.StringToCoTaskMemUTF8("Vector3");
