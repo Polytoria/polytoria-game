@@ -26,7 +26,6 @@ public partial class NPC : Physical
 	private CharacterModel? _sitPoseModel;
 	private CharacterModel? _character;
 	private Dynamic? _moveTarget;
-	private PlayerMovementModeEnum _movementMode = PlayerMovementModeEnum.Default;
 
 	public CharacterBody3D CharBody3D = null!;
 	public const float ForwardRaycastRange = 1;
@@ -39,6 +38,7 @@ public partial class NPC : Physical
 	private float _maxHealth = 100;
 	private float _jumpPower = 36;
 	private float _walkSpeed = 16;
+	private PlayerMovementModeEnum _movementMode = PlayerMovementModeEnum.Default;
 	private string _displayName = "";
 	protected RayCast3D FootFwdRaycast = null!;
 	private Sound? _jumpSound;
@@ -289,6 +289,27 @@ public partial class NPC : Physical
 	}
 
 	[Editable, ScriptProperty]
+	public PlayerMovementModeEnum MovementMode
+	{
+		get => _movementMode;
+		set
+		{
+			_movementMode = value;
+
+			if (this is Player plr)
+			{
+				plr.PlayerMovement = _movementMode switch
+				{
+					PlayerMovementModeEnum.Default => new DefaultMovement() { Root = Root, Target = plr },
+					_ => null,
+				};
+			}
+
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
 	public bool UseNametag
 	{
 		get => _useNametag;
@@ -420,27 +441,6 @@ public partial class NPC : Physical
 			return _moveTarget;
 		}
 		set => _moveTarget = value;
-	}
-
-	[Editable, ScriptProperty]
-	public PlayerMovementModeEnum MovementMode
-	{
-		get => _movementMode;
-		set
-		{
-			_movementMode = value;
-
-			if (this is Player plr)
-			{
-				plr.PlayerMovement = _movementMode switch
-				{
-					PlayerMovementModeEnum.Default => new DefaultMovement() { Root = Root, Target = plr },
-					_ => null,
-				};
-			}
-
-			OnPropertyChanged();
-		}
 	}
 
 	[ScriptProperty, ScriptLegacyProperty("Grounded")]
