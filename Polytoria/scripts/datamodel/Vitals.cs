@@ -17,8 +17,13 @@ public partial class Vitals : Instance
 	private float _health = 100;
 	private bool _isdead = false;
 
+	[ScriptProperty]
 	public PTSignal<float, float> HealthChanged { get; private set; } = new();
 
+	[ScriptProperty]
+	public PTSignal<float, float> MaxHealthChanged { get; private set; } = new();
+
+	[ScriptProperty]
 	public PTSignal Died { get; private set; } = new();
 
 	[Editable, ScriptProperty]
@@ -48,9 +53,14 @@ public partial class Vitals : Instance
 		get => _maxHealth;
 		set
 		{
+			float oldMaxHealth = _maxHealth;
 			_maxHealth = value;
 			if (Health > value) Health = value;
 			OnPropertyChanged();
+			if (_maxHealth != oldMaxHealth)
+			{
+				HealthChanged.Invoke(_maxHealth, oldMaxHealth);
+			}
 		}
 	}
 
