@@ -501,7 +501,6 @@ public sealed partial class Player : NPC
 			inventory.NetworkParent = this;
 		}
 
-		Died.Connect(OnPlayerDied);
 		Root.Players.PropertyChanged.Connect(OnPlayersPropertyChanged);
 
 		_bubbleChat = Globals.CreateInstanceFromScene<BubbleChat>(BubbleChatScene);
@@ -848,6 +847,12 @@ public sealed partial class Player : NPC
 		}
 	}
 
+	protected override void OnDied()
+	{
+		base.OnDied();
+		OnPlayerDied();
+	}
+
 	private async void OnPlayerDied()
 	{
 		UnequipTool();
@@ -1082,7 +1087,6 @@ public sealed partial class Player : NPC
 		CopyInventory();
 
 		// Apply playerdefaults
-		MaxHealth = Root.PlayerDefaults.MaxHealth;
 		WalkSpeed = Root.PlayerDefaults.WalkSpeed;
 		SprintSpeed = Root.PlayerDefaults.SprintSpeed;
 		UseStamina = Root.PlayerDefaults.UseStamina;
@@ -1107,7 +1111,24 @@ public sealed partial class Player : NPC
 		ResetAppearance();
 		WarpToSpawnPoint();
 
-		Health = MaxHealth;
+		bool hasVitals = Vitals != null;
+		bool willHaveVitals = Root.PlayerDefaults.UseHealth;
+		if (hasVitals && !willHaveVitals)
+		{
+			Vitals!.Destroy();
+			Vitals = null;
+		}
+		if (willHaveVitals && !hasVitals)
+		{
+			Vitals = Root.New<Vitals>();
+			Vitals.Parent = this;
+		}
+
+		if (willHaveVitals)
+		{
+			Vitals!.MaxHealth = Root.PlayerDefaults.MaxHealth;
+			Vitals!.Reset();
+		}
 		Anchored = false;
 
 		Rpc(nameof(NetRespawned));
@@ -1149,7 +1170,14 @@ public sealed partial class Player : NPC
 
 		OverrideCanCollide = false;
 		UpdateCollision();
-		IsDead = false;
+		if (Vitals is Vitals v)
+		{
+			v.Reset();
+		}
+		else
+		{
+			_isDead = false;
+		}
 	}
 
 	[ScriptMethod]

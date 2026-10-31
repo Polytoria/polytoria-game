@@ -40,13 +40,25 @@ public partial class Nametag : Node3D
 		Visible = Target.UseNametag && Target.NametagVisibleRadius > 0 && !(Target is Player plr && plr.IsLocal);
 		_titleLabel.Text = _outlineLabel.Text = Target.DisplayName != string.Empty ? Target.DisplayName : Target.Name;
 		_titleLabel.VisibilityRangeEnd = _outlineLabel.VisibilityRangeEnd = _healthBar.VisibilityRangeEnd = Target.NametagVisibleRadius;
-		_healthBar.Visible = Target.Health < Target.MaxHealth;
-		float health = Target.MaxHealth > 0 ? Target.Health / Target.MaxHealth : 1;
-		if (_healthBar.Visible && health != _healthBarValue)
+		bool showHealthBar = false;
+		if (Target.Vitals is Vitals v)
 		{
-			_healthBarValue = health;
-			_healthBarMat!.SetShaderParameter(_valueParam, health);
+			showHealthBar = v.Health < v.MaxHealth;
+			_healthBar.Visible = showHealthBar;
+			if (showHealthBar)
+			{
+				float health = v.MaxHealth > 0 ? v.Health / v.MaxHealth : 1;
+				if (health != _healthBarValue)
+				{
+					_healthBarValue = health;
+					_healthBarMat!.SetShaderParameter(_valueParam, health);
+				}
+			}
 		}
-		_titleLabel.Offset = _outlineLabel.Offset = new(0, _healthBar.Visible ? 50 : 16);
+		else
+		{
+			_healthBar.Visible = false;
+		}
+		_titleLabel.Offset = _outlineLabel.Offset = new(0, showHealthBar ? 50 : 16);
 	}
 }
