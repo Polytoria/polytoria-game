@@ -69,46 +69,54 @@ public partial class PTHttpClient
 			// Workaround since callable dont support async
 			async void a()
 			{
-				byte[] body = msg.Content != null ? await msg.Content.ReadAsByteArrayAsync() : [];
-
 				HttpRequest req = new()
 				{
 					DownloadChunkSize = DefaultDownloadChunkSize,
 					MaxRedirects = 0
 				};
 
-				Globals.Singleton.AddChild(req);
-
-				req.RequestCompleted += (result, responseCode, responseHeaders, responseBody) =>
+				try
 				{
-					HttpResponseMessage response = new((HttpStatusCode)responseCode)
+					byte[] body = msg.Content != null ? await msg.Content.ReadAsByteArrayAsync() : [];
+
+					Globals.Singleton.AddChild(req);
+
+					req.RequestCompleted += (result, responseCode, responseHeaders, responseBody) =>
 					{
-						Content = new ByteArrayContent(responseBody)
+						HttpResponseMessage response = new((HttpStatusCode)responseCode)
+						{
+							Content = new ByteArrayContent(responseBody)
+						};
+
+						foreach (string header in responseHeaders)
+						{
+							string[] parts = header.Split(':', 2);
+							if (parts.Length == 2)
+							{
+								response.Headers.TryAddWithoutValidation(parts[0].Trim(), parts[1].Trim());
+							}
+						}
+
+						req.QueueFree();
+						tcs.SetResult(response);
 					};
 
-					foreach (string header in responseHeaders)
+					Error error = req.RequestRaw(
+						msg.RequestUri?.ToString() ?? throw new InvalidOperationException("URL is null"),
+						[.. headers],
+						Enum.Parse<Godot.HttpClient.Method>(msg.Method.Method.ToLower().Capitalize()),
+						new ReadOnlySpan<byte>(body)
+					);
+
+					if (error != Error.Ok)
 					{
-						string[] parts = header.Split(':', 2);
-						if (parts.Length == 2)
-						{
-							response.Headers.TryAddWithoutValidation(parts[0].Trim(), parts[1].Trim());
-						}
+						throw new HttpRequestException($"HttpRequest failed with error: {error}");
 					}
-
-					req.QueueFree();
-					tcs.SetResult(response);
-				};
-
-				Error error = req.RequestRaw(
-					msg.RequestUri?.ToString() ?? throw new InvalidOperationException("URL is null"),
-					[.. headers],
-					Enum.Parse<Godot.HttpClient.Method>(msg.Method.Method.ToLower().Capitalize()),
-					new ReadOnlySpan<byte>(body)
-				);
-
-				if (error != Error.Ok)
+				}
+				catch (Exception ex)
 				{
-					throw new HttpRequestException($"HttpRequest failed with error: {error}");
+					req.QueueFree();
+					tcs.TrySetException(ex);
 				}
 			}
 
