@@ -235,7 +235,7 @@ public partial class NPC : Physical
 		Vitals ??= New<Vitals>(this);
 	}
 
-	[ScriptProperty, Obsolete("Use Vitals.Health instead")]
+	[Editable, ScriptProperty, Obsolete("Use Vitals.Health instead")]
 	public float? Health
 	{
 		get => Vitals?.Health;
@@ -246,7 +246,7 @@ public partial class NPC : Physical
 		}
 	}
 
-	[ScriptProperty, Obsolete("Use Vitals.MaxHealth instead")]
+	[Editable, ScriptProperty, Obsolete("Use Vitals.MaxHealth instead")]
 	public float? MaxHealth
 	{
 		get => Vitals?.MaxHealth;
