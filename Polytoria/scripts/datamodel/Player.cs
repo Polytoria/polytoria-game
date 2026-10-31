@@ -54,7 +54,6 @@ public sealed partial class Player : NPC
 	private bool _useBubbleChat = true;
 	private bool _autoLoadAppearance = true;
 	private bool _allowAnimationWhileMoving = false;
-	private PlayerMovementModeEnum _movementMode = PlayerMovementModeEnum.Default;
 	private PlayerRotationModeEnum _rotationMode = PlayerRotationModeEnum.Automatic;
 	private Team? _team;
 	private Color _chatColorBeforeTeam;
@@ -289,24 +288,6 @@ public sealed partial class Player : NPC
 				else
 					ChatColor = _chatColorBeforeTeam;
 			}
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
-	public PlayerMovementModeEnum MovementMode
-	{
-		get => _movementMode;
-		set
-		{
-			_movementMode = value;
-
-			PlayerMovement = _movementMode switch
-			{
-				PlayerMovementModeEnum.Default => new DefaultMovement() { Root = Root, Target = this },
-				_ => null,
-			};
-
 			OnPropertyChanged();
 		}
 	}
@@ -1192,13 +1173,6 @@ public sealed partial class Player : NPC
 		{
 			Kick("You have been kicked by game administrator.");
 		}
-	}
-
-	[ScriptEnum]
-	public enum PlayerMovementModeEnum
-	{
-		Default,
-		Scripted
 	}
 
 	[ScriptEnum]

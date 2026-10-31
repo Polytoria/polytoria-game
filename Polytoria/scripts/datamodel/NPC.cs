@@ -10,6 +10,7 @@ using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
 using Polytoria.Utils;
+using Polytoria.Providers.PlayerMovement;
 
 namespace Polytoria.Datamodel;
 
@@ -25,6 +26,7 @@ public partial class NPC : Physical
 	private CharacterModel? _sitPoseModel;
 	private CharacterModel? _character;
 	private Dynamic? _moveTarget;
+	private PlayerMovementModeEnum _movementMode = PlayerMovementModeEnum.Default;
 
 	public CharacterBody3D CharBody3D = null!;
 	public const float ForwardRaycastRange = 1;
@@ -420,6 +422,27 @@ public partial class NPC : Physical
 		set => _moveTarget = value;
 	}
 
+	[Editable, ScriptProperty]
+	public PlayerMovementModeEnum MovementMode
+	{
+		get => _movementMode;
+		set
+		{
+			_movementMode = value;
+
+			if (this is Player plr)
+			{
+				plr.PlayerMovement = _movementMode switch
+				{
+					PlayerMovementModeEnum.Default => new DefaultMovement() { Root = Root, Target = plr },
+					_ => null,
+				};
+			}
+
+			OnPropertyChanged();
+		}
+	}
+
 	[ScriptProperty, ScriptLegacyProperty("Grounded")]
 	public bool IsOnGround => CharBody3D.IsOnFloor();
 
@@ -654,17 +677,8 @@ public partial class NPC : Physical
 			return;
 		}
 
-		if (this is Player plr)
-		{
-			if (!plr.IsLocal)
-			{
-				return;
-			}
-			if (plr.MovementMode == Player.PlayerMovementModeEnum.Scripted)
-			{
-				return;
-			}
-		}
+		if (MovementMode == PlayerMovementModeEnum.Scripted) return;
+		if (this is Player plr && !plr.IsLocal) return;
 
 		if (Root.Network.LocalPeerID != NetworkAuthority && ExistInNetwork) return;
 
@@ -1228,5 +1242,12 @@ public partial class NPC : Physical
 	public void Heal(float amount)
 	{
 		Health += amount;
+	}
+
+	[ScriptEnum]
+	public enum PlayerMovementModeEnum
+	{
+		Default,
+		Scripted
 	}
 }
