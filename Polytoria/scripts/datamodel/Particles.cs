@@ -791,6 +791,7 @@ public sealed partial class Particles : Dynamic
 
 	private void UpdateVisibilityAabb()
 	{
+		if (RenderingServer.GetCurrentRenderingMethod() == "gl_compatibility") return;
 		Aabb captured = _particles.CaptureAabb();
 		if (captured.Size != Vector3.Zero)
 			// Double the size
