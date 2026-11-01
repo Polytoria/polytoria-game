@@ -80,6 +80,14 @@ public partial class NetworkedObject : IScriptObject
 				while (childIdx < siblings.Count && !ReferenceEquals(siblings[childIdx], selfpreI)) childIdx++;
 				if (childIdx < siblings.Count) siblings.RemoveAt(childIdx);
 				preI.ChildRemoved.Invoke(selfpreI);
+				if (Highlight.ActiveHighlights.Count > 0)
+				{
+					Highlight.NotifyHierarchyChanged();
+					if (!Globals.IsHeadless && Globals.UseNodes)
+					{
+						Callable.From(Highlight.NotifyHierarchyChanged).CallDeferred();
+					}
+				}
 			}
 
 			UnregisterName();
@@ -121,6 +129,14 @@ public partial class NetworkedObject : IScriptObject
 				postI.Children.Add(selfpostI);
 				selfpostI.Index = postI.Children.Count - 1;
 				postI.ChildAdded.Invoke(selfpostI);
+				if (Highlight.ActiveHighlights.Count > 0)
+				{
+					Highlight.NotifyHierarchyChanged();
+					if (!Globals.IsHeadless && Globals.UseNodes)
+					{
+						Callable.From(Highlight.NotifyHierarchyChanged).CallDeferred();
+					}
+				}
 			}
 		}
 	}

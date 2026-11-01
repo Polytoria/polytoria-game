@@ -492,7 +492,9 @@ public sealed partial class Mesh : Entity
 
 			BaseMaterial3D.TransparencyEnum transparency = original.Transparency;
 			if (transparency == BaseMaterial3D.TransparencyEnum.Disabled)
-				transparency = color.A < 1 ? BaseMaterial3D.TransparencyEnum.Alpha : BaseMaterial3D.TransparencyEnum.Disabled;
+				transparency = color.A < 1 ? BaseMaterial3D.TransparencyEnum.AlphaDepthPrePass : BaseMaterial3D.TransparencyEnum.Disabled;
+			else if (transparency == BaseMaterial3D.TransparencyEnum.Alpha)
+				transparency = BaseMaterial3D.TransparencyEnum.AlphaDepthPrePass;
 
 			item.Apply(new(color, assetTexture ?? original.Texture, transparency, godotFilter));
 		}
