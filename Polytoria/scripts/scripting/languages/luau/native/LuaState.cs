@@ -200,7 +200,7 @@ public partial class LuaState : IDisposable
 	{
 		if (Loaded)
 			throw new Exception("Cannot load when already loaded! Please dispose this VM and create a new one");
-		int loadResult = NativeBindings.luau_load(_state, name, compiled, compiled.Length, 0);
+		int loadResult = NativeBindings.luau_load(_state, "=" + name, compiled, compiled.Length, 0);
 		if (loadResult != 0)
 		{
 			throw new LuaException("Error loading bytecode: " + ToString(-1));
@@ -227,7 +227,7 @@ public partial class LuaState : IDisposable
 	}
 
 	/// <summary>
-	/// Converts the acceptable index idx into an equivalent absolute index (that is, one that does not depend on the stack top). 
+	/// Converts the acceptable index idx into an equivalent absolute index (that is, one that does not depend on the stack top).
 	/// </summary>
 	/// <param name="index"></param>
 	/// <returns></returns>
@@ -243,7 +243,7 @@ public partial class LuaState : IDisposable
 	public static int UpValIndex(int index) => LUA_GLOBALSINDEX - index;
 
 	/// <summary>
-	/// Pushes an integer with value n onto the stack. 
+	/// Pushes an integer with value n onto the stack.
 	/// </summary>
 	/// <param name="n"></param>
 	public void PushInteger(long n)
@@ -394,7 +394,7 @@ public partial class LuaState : IDisposable
 	}
 
 	/// <summary>
-	/// Converts the LuaState value at the given index to the signed integral type lua_Integer. The LuaState value must be an integer, or a number or string convertible to an integer (see §3.4.3); otherwise, lua_tointegerx returns 0. 
+	/// Converts the LuaState value at the given index to the signed integral type lua_Integer. The LuaState value must be an integer, or a number or string convertible to an integer (see §3.4.3); otherwise, lua_tointegerx returns 0.
 	/// </summary>
 	/// <param name="index"></param>
 	/// <returns></returns>
@@ -851,7 +851,7 @@ public partial class LuaState : IDisposable
 	}
 
 	/// <summary>
-	/// Does the equivalent of t[p] = v, where t is the table at the given index, p is encoded as a light userdata, and v is the value at the top of the stack. 
+	/// Does the equivalent of t[p] = v, where t is the table at the given index, p is encoded as a light userdata, and v is the value at the top of the stack.
 	/// </summary>
 	/// <param name="index"></param>
 	/// <param name="obj"></param>
@@ -861,7 +861,7 @@ public partial class LuaState : IDisposable
 	}
 
 	/// <summary>
-	/// Pushes onto the stack the value t[k], where t is the table at the given index and k is the pointer p represented as a light userdata. The access is raw; that is, it does not invoke the __index metamethod. 
+	/// Pushes onto the stack the value t[k], where t is the table at the given index and k is the pointer p represented as a light userdata. The access is raw; that is, it does not invoke the __index metamethod.
 	/// </summary>
 	/// <param name="index"></param>
 	/// <param name="obj"></param>
