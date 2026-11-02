@@ -81,6 +81,9 @@ public sealed partial class Camera : Dynamic
 		get => _mode;
 		set
 		{
+			if (IsFirstPerson && value != CameraModeEnum.Follow)
+				ExitFirstPerson();
+
 			_mode = value;
 			OnPropertyChanged();
 		}
