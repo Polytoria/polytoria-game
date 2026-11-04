@@ -548,6 +548,10 @@ public partial class NPC : Physical
 	{
 		if (n is Tool)
 		{
+			if (n == _holdingTool)
+			{
+				HoldingTool = null;
+			}
 			InternalDetachTool();
 		}
 	}
@@ -636,7 +640,7 @@ public partial class NPC : Physical
 	{
 		base.PhysicsProcess(delta);
 
-		if (Root == null) return;
+		if (Root == null || IsDeleted) return;
 		if (Anchored || IsHidden) return;
 		if (!Root.IsLoaded) return;
 
@@ -1096,7 +1100,7 @@ public partial class NPC : Physical
 			_toolRemoteTransform.QueueFree();
 		}
 
-		_toolRemoteTransform = new()
+		RemoteTransform3D rt = _toolRemoteTransform = new()
 		{
 			UpdatePosition = true,
 			UpdateRotation = true,
@@ -1106,16 +1110,17 @@ public partial class NPC : Physical
 		if (Character != null)
 		{
 			Dynamic attachment = Character.GetAttachment(CharacterModel.CharacterAttachmentEnum.HandRight);
-			attachment.GDNode.AddChild(_toolRemoteTransform, @internal: Node.InternalMode.Back);
+			attachment.GDNode.AddChild(rt, @internal: Node.InternalMode.Back);
 		}
 
 		// stick and stones
 		// this is needed because GetPath doesn't update when it entered tree
 		await Globals.Singleton.WaitFrame();
-		_toolRemoteTransform.Position = new Vector3(0, 0, 0);
-		_toolRemoteTransform.RotationDegrees = new Vector3(0, -90, -90);
-		_toolRemoteTransform.UpdateScale = false;
-		_toolRemoteTransform.RemotePath = _toolRemoteTransform.GetPathTo(tool.GDNode);
+		if (!Node.IsInstanceValid(rt) || tool.IsDeleted) return;
+		rt.Position = new Vector3(0, 0, 0);
+		rt.RotationDegrees = new Vector3(0, -90, -90);
+		rt.UpdateScale = false;
+		rt.RemotePath = rt.GetPathTo(tool.GDNode);
 	}
 
 	internal void InternalDetachTool()

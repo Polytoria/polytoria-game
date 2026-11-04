@@ -627,6 +627,7 @@ public sealed partial class PolytorianModel : CharacterModel
 		_lastPhysicalBoneSim.Active = false;
 		_lastPhysicalBoneSim.QueueFree();
 		_lastPhysicalBoneSim = null;
+		VelocityPhysicalBone = null;
 
 		Ragdolling = false;
 		RagdollStopped.Invoke();
@@ -841,7 +842,7 @@ public sealed partial class PolytorianModel : CharacterModel
 					else if (Parent is Player plr && loadTool)
 					{
 						hasTool = true;
-						if (plr.Inventory.FindChild(asset.Name) == null)
+						if (plr.Inventory.FindChild(asset.Name) == null && plr.HoldingTool?.Name != asset.Name)
 						{
 							Root.Insert.CreateTool(asset.ID, asset.Name).Parent = plr.Inventory;
 						}

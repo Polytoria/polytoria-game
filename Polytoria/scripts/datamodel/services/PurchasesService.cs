@@ -175,6 +175,7 @@ public sealed partial class PurchasesService : Instance
 				else
 				{
 					// Purchase declined
+					_pendingPurchases.Remove(refID);
 					request.TaskSource.SetResult(false);
 				}
 			}

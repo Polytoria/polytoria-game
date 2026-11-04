@@ -70,6 +70,8 @@ public sealed partial class Mesh : Entity
 			_animNotifier = null;
 			ClearCollisionShapes();
 			_meshNode = null;
+			_animPlay = null;
+			_meshInstances.Clear();
 			_materials.Clear();
 			_prevResource = null;
 			if (_asset != null)
