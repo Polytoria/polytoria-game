@@ -209,6 +209,7 @@ public sealed partial class Globals : Node
 	{
 		if (_isExiting) return;
 		GodotProcess?.Invoke(delta);
+		Dynamic.FlushTransformUpdates();
 		base._Process(delta);
 	}
 

@@ -252,7 +252,7 @@ public partial class RigidBody : Physical
 		if (IsAsleep && Root != null && Root.Network != null
 			&& NetTransformAuthority == Root.Network.LocalPeerID)
 		{
-			UpdateNetTransformReliable();
+			QueueTransformUpdate(true);
 
 			if (!Root.Network.IsServer)
 			{
