@@ -10,6 +10,7 @@ using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
 using Polytoria.Utils;
+using Polytoria.Providers.PlayerMovement;
 
 namespace Polytoria.Datamodel;
 
@@ -37,6 +38,7 @@ public partial class NPC : Physical
 	private float _maxHealth = 100;
 	private float _jumpPower = 36;
 	private float _walkSpeed = 16;
+	private PlayerMovementModeEnum _movementMode = PlayerMovementModeEnum.Default;
 	private string _displayName = "";
 	protected RayCast3D FootFwdRaycast = null!;
 	private Sound? _jumpSound;
@@ -282,6 +284,27 @@ public partial class NPC : Physical
 		set
 		{
 			_walkSpeed = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public PlayerMovementModeEnum MovementMode
+	{
+		get => _movementMode;
+		set
+		{
+			_movementMode = value;
+
+			if (this is Player plr)
+			{
+				plr.PlayerMovement = _movementMode switch
+				{
+					PlayerMovementModeEnum.Default => new DefaultMovement() { Root = Root, Target = plr },
+					_ => null,
+				};
+			}
+
 			OnPropertyChanged();
 		}
 	}
@@ -654,17 +677,8 @@ public partial class NPC : Physical
 			return;
 		}
 
-		if (this is Player plr)
-		{
-			if (!plr.IsLocal)
-			{
-				return;
-			}
-			if (plr.MovementMode == Player.PlayerMovementModeEnum.Scripted)
-			{
-				return;
-			}
-		}
+		if (MovementMode == PlayerMovementModeEnum.Scripted) return;
+		if (this is Player plr && !plr.IsLocal) return;
 
 		if (Root.Network.LocalPeerID != NetworkAuthority && ExistInNetwork) return;
 
@@ -1228,5 +1242,12 @@ public partial class NPC : Physical
 	public void Heal(float amount)
 	{
 		Health += amount;
+	}
+
+	[ScriptEnum]
+	public enum PlayerMovementModeEnum
+	{
+		Default,
+		Scripted
 	}
 }
