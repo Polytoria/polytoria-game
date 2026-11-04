@@ -82,6 +82,10 @@ public sealed partial class Camera : Dynamic
 		get => _mode;
 		set
 		{
+			// Matching EnterFirstPerson is ran in CameraProcess
+			if (IsFirstPerson && value != CameraModeEnum.Follow)
+				ExitFirstPerson();
+
 			_mode = value;
 			OnPropertyChanged();
 		}
