@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using System;
+using System.Collections.Generic;
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Client.Settings;
@@ -32,6 +33,11 @@ public partial class Light : Dynamic
 	private Texture2D? _prevImg;
 
 	private static Action? ShadowSettingsChanged;
+	private static readonly HashSet<Light> _shadowCasters = [];
+	private static readonly List<Light> _shadowRanking = [];
+	internal static bool ShadowBudgetDirty;
+	private bool _hasShadowBudget = true;
+	private float _shadowScore;
 
 	internal override void OnNodeSizeChanged(Vector3 newSize)
 	{
@@ -143,21 +149,34 @@ public partial class Light : Dynamic
 
 	internal void UpdateShadows()
 	{
-		bool shadows = Shadows;
+		ShadowQuality quality = GetShadowQuality();
+		bool shadows = Shadows && quality != ShadowQuality.Off;
 
-		ISettingsContext? settings =
-#if CREATOR
-			(ISettingsContext?)CreatorSettingsService.Instance ??
-#endif
-			ClientSettingsService.Instance;
-		if (settings != null)
+		if (GDLight is DirectionalLight3D sun)
 		{
-			ShadowQuality shadowQuality = settings.Get<ShadowQuality>(SharedSettingKeys.Graphics.ShadowQuality);
-			if (shadowQuality == ShadowQuality.Off)
-			{
-				shadows = false;
-			}
+#if !GODOT_MOBILE
+			sun.DirectionalShadowMode = quality is ShadowQuality.Low or ShadowQuality.Medium
+				? DirectionalLight3D.ShadowMode.Parallel2Splits
+				: DirectionalLight3D.ShadowMode.Parallel4Splits;
+#endif
 		}
+		else
+		{
+			if (shadows)
+			{
+				if (_shadowCasters.Add(this) && Root?.SessionType == World.SessionTypeEnum.Client)
+				{
+					_hasShadowBudget = false;
+					ShadowBudgetDirty = true;
+				}
+			}
+			else
+			{
+				_shadowCasters.Remove(this);
+			}
+			shadows &= _hasShadowBudget;
+		}
+
 		GDLight.ShadowEnabled = shadows;
 		UpdateFade();
 	}
@@ -166,9 +185,93 @@ public partial class Light : Dynamic
 	{
 		if (GDLight is DirectionalLight3D) return;
 
-		float range = GDLight is OmniLight3D omni ? omni.OmniRange : ((SpotLight3D)GDLight).SpotRange;
-		GDLight.DistanceFadeBegin = GDLight.ShadowEnabled ? ShadowFadeDistance : Mathf.Max(FadeDistance, range);
-		GDLight.DistanceFadeShadow = GDLight.DistanceFadeBegin + GDLight.DistanceFadeLength;
+		GDLight.DistanceFadeBegin = Mathf.Max(FadeDistance, GetRange());
+		float shadowFade = GetShadowQuality() switch
+		{
+			ShadowQuality.Low => 25f,
+			ShadowQuality.Medium => 40f,
+			ShadowQuality.High => 70f,
+			_ => ShadowFadeDistance,
+		};
+		GDLight.DistanceFadeShadow = Mathf.Min(shadowFade, GDLight.DistanceFadeBegin);
+	}
+
+	internal static bool UpdateShadowBudget(Vector3 cameraPosition)
+	{
+		ShadowBudgetDirty = false;
+		if (_shadowCasters.Count == 0) return false;
+
+		int budget = GetShadowQuality() switch
+		{
+			ShadowQuality.Low => 4,
+			ShadowQuality.Medium => 8,
+			ShadowQuality.High or ShadowQuality.Ultra => 16,
+			_ => 0,
+		};
+
+		_shadowRanking.Clear();
+		foreach (Light light in _shadowCasters)
+		{
+			if (!light.GDLight.IsVisibleInTree())
+			{
+				if (light._hasShadowBudget) light.SetShadowBudget(false);
+				continue;
+			}
+
+			float range = light.GetRange();
+			light._shadowScore = light.GDLight.GlobalPosition.DistanceTo(cameraPosition) - range;
+			if (light._hasShadowBudget)
+			{
+				light._shadowScore -= Mathf.Max(8f, range * 0.25f);
+			}
+			_shadowRanking.Add(light);
+		}
+		_shadowRanking.Sort((a, b) => a._shadowScore.CompareTo(b._shadowScore));
+
+		int enabledCount = 0;
+		bool pending = false;
+		for (int i = 0; i < _shadowRanking.Count; i++)
+		{
+			Light light = _shadowRanking[i];
+			if (i >= budget)
+			{
+				if (light._hasShadowBudget) light.SetShadowBudget(false);
+			}
+			else if (!light._hasShadowBudget)
+			{
+				if (enabledCount < 2)
+				{
+					light.SetShadowBudget(true);
+					enabledCount++;
+				}
+				else
+				{
+					pending = true;
+				}
+			}
+		}
+		return pending;
+	}
+
+	private void SetShadowBudget(bool hasBudget)
+	{
+		_hasShadowBudget = hasBudget;
+		GDLight.ShadowEnabled = hasBudget && Shadows && GetShadowQuality() != ShadowQuality.Off;
+	}
+
+	private float GetRange()
+	{
+		return GDLight is OmniLight3D omni ? omni.OmniRange : ((SpotLight3D)GDLight).SpotRange;
+	}
+
+	private static ShadowQuality GetShadowQuality()
+	{
+		ISettingsContext? settings =
+#if CREATOR
+			(ISettingsContext?)CreatorSettingsService.Instance ??
+#endif
+			ClientSettingsService.Instance;
+		return settings?.Get<ShadowQuality>(SharedSettingKeys.Graphics.ShadowQuality) ?? ShadowQuality.Medium;
 	}
 
 	private void OnResourceLoaded(Resource? r)
@@ -199,6 +302,7 @@ public partial class Light : Dynamic
 	public override void PreDelete()
 	{
 		ShadowSettingsChanged -= UpdateShadows;
+		_shadowCasters.Remove(this);
 		base.PreDelete();
 	}
 

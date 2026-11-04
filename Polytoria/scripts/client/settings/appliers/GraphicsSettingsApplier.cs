@@ -30,6 +30,7 @@ public sealed partial class GraphicsSettingsApplier : Node
 	{
 		ApplyRenderScale();
 		ApplyMsaa();
+		ApplyScreenSpaceAA();
 		ApplyShadowQuality();
 		ApplyShadowDistance();
 	}
@@ -69,6 +70,9 @@ public sealed partial class GraphicsSettingsApplier : Node
 				case SharedSettingKeys.Graphics.Msaa:
 					ApplyMsaa();
 					break;
+				case SharedSettingKeys.Graphics.ScreenSpaceAA:
+					ApplyScreenSpaceAA();
+					break;
 				case SharedSettingKeys.Graphics.ShadowQuality:
 					ApplyShadowQuality();
 					break;
@@ -82,6 +86,7 @@ public sealed partial class GraphicsSettingsApplier : Node
 	private void ApplyPostProcessing()
 	{
 		ApplyNormalMaps();
+		ApplyEffectsQuality();
 
 		World? world = World.Current;
 		if (world?.Lighting == null)
@@ -94,11 +99,7 @@ public sealed partial class GraphicsSettingsApplier : Node
 
 	private void ApplyNormalMaps()
 	{
-		bool enabled = Settings!.Get<bool>(SharedSettingKeys.PostProcessing.NormalMaps);
-		if (Globals.IsMobileBuild)
-		{
-			enabled = false;
-		}
+		bool enabled = Settings!.Get<bool>(SharedSettingKeys.PostProcessing.NormalMaps) && SharedSettingsRegistry.IsSupported(SharedSettingKeys.PostProcessing.NormalMaps);
 		Globals.SetNormalMapsEnabled(enabled);
 	}
 
@@ -106,6 +107,54 @@ public sealed partial class GraphicsSettingsApplier : Node
 	{
 		float renderScale = Settings!.Get<float>(SharedSettingKeys.Graphics.RenderScale);
 		GetRenderViewport().Scaling3DScale = renderScale;
+	}
+
+	private void ApplyScreenSpaceAA()
+	{
+		if (!SharedSettingsRegistry.IsSupported(SharedSettingKeys.Graphics.ScreenSpaceAA)) return;
+
+		ScreenSpaceAAOption aa = Settings!.Get<ScreenSpaceAAOption>(SharedSettingKeys.Graphics.ScreenSpaceAA);
+		GetRenderViewport().ScreenSpaceAA = aa switch
+		{
+			ScreenSpaceAAOption.Fxaa => Viewport.ScreenSpaceAAEnum.Fxaa,
+			ScreenSpaceAAOption.Smaa => Viewport.ScreenSpaceAAEnum.Smaa,
+			_ => Viewport.ScreenSpaceAAEnum.Disabled
+		};
+	}
+
+	private void ApplyEffectsQuality()
+	{
+		if (!SharedSettingsRegistry.IsSupported(SharedSettingKeys.PostProcessing.EffectsQuality)) return;
+
+		EffectsQualityOption quality = Settings!.Get<EffectsQualityOption>(SharedSettingKeys.PostProcessing.EffectsQuality);
+
+		RenderingServer.EnvironmentSetSsaoQuality(
+			quality switch
+			{
+				EffectsQualityOption.Low => RenderingServer.EnvironmentSsaoQuality.Low,
+				EffectsQualityOption.High => RenderingServer.EnvironmentSsaoQuality.High,
+				_ => RenderingServer.EnvironmentSsaoQuality.Medium
+			},
+			ProjectSettings.GetSetting("rendering/environment/ssao/half_size").AsBool(),
+			ProjectSettings.GetSetting("rendering/environment/ssao/adaptive_target").AsSingle(),
+			ProjectSettings.GetSetting("rendering/environment/ssao/blur_passes").AsInt32(),
+			ProjectSettings.GetSetting("rendering/environment/ssao/fadeout_from").AsSingle(),
+			ProjectSettings.GetSetting("rendering/environment/ssao/fadeout_to").AsSingle());
+
+		if (!SharedSettingsRegistry.IsSupported(SharedSettingKeys.PostProcessing.Ssil)) return;
+
+		RenderingServer.EnvironmentSetSsilQuality(
+			quality switch
+			{
+				EffectsQualityOption.Low => RenderingServer.EnvironmentSsilQuality.Low,
+				EffectsQualityOption.High => RenderingServer.EnvironmentSsilQuality.High,
+				_ => RenderingServer.EnvironmentSsilQuality.Medium
+			},
+			ProjectSettings.GetSetting("rendering/environment/ssil/half_size").AsBool(),
+			ProjectSettings.GetSetting("rendering/environment/ssil/adaptive_target").AsSingle(),
+			ProjectSettings.GetSetting("rendering/environment/ssil/blur_passes").AsInt32(),
+			ProjectSettings.GetSetting("rendering/environment/ssil/fadeout_from").AsSingle(),
+			ProjectSettings.GetSetting("rendering/environment/ssil/fadeout_to").AsSingle());
 	}
 
 	private void ApplyMsaa()
@@ -156,11 +205,13 @@ public sealed partial class GraphicsSettingsApplier : Node
 			_ => 2048
 		};
 
-		RenderingServer.DirectionalSoftShadowFilterSetQuality(gdQuality);
-		RenderingServer.PositionalSoftShadowFilterSetQuality(gdQuality);
+		RenderingServer.ShadowQuality positionalQuality = quality == ShadowQuality.Ultra ? RenderingServer.ShadowQuality.SoftMedium : gdQuality;
 
-		RenderingServer.DirectionalShadowAtlasSetSize(directionalShadowSize, false);
-		RenderingServer.ViewportSetPositionalShadowAtlasSize(GetRenderViewport().GetViewportRid(), positionalShadowSize, false);
+		RenderingServer.DirectionalSoftShadowFilterSetQuality(gdQuality);
+		RenderingServer.PositionalSoftShadowFilterSetQuality(positionalQuality);
+
+		RenderingServer.DirectionalShadowAtlasSetSize(directionalShadowSize, true);
+		RenderingServer.ViewportSetPositionalShadowAtlasSize(GetRenderViewport().GetViewportRid(), positionalShadowSize, true);
 
 		Light.NotifyShadowSettingsChanged();
 	}

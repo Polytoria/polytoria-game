@@ -24,6 +24,11 @@ public sealed partial class SettingsSectionPage : VBoxContainer
 				continue;
 			}
 
+			if (!def.IsSupported)
+			{
+				continue;
+			}
+
 			SettingRow row = new()
 			{
 				Definition = def,
