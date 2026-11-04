@@ -74,6 +74,7 @@ public sealed partial class Globals : Node
 	private ulong _nextWaitOrder;
 	private bool _processingWaits;
 	private static bool _isExiting = false;
+	private static int _backgroundTasks;
 
 	public static bool IsExiting => _isExiting;
 
@@ -123,6 +124,7 @@ public sealed partial class Globals : Node
 	/// Check if headless <3
 	/// </summary>
 	public static bool IsHeadless { get; private set; } = false;
+	public static string RenderingMethod { get; private set; } = "";
 	/// <summary>
 	/// Check if Godot is available, this can be false in unit testing environments
 	/// </summary>
@@ -154,6 +156,7 @@ public sealed partial class Globals : Node
 		IsInGDEditor = OS.HasFeature("editor");
 		IsMobileBuild = OS.HasFeature("mobile");
 		IsHeadless = DisplayServer.GetName() == "headless";
+		RenderingMethod = RenderingServer.GetCurrentRenderingMethod();
 
 		GDAvailable = true;
 
@@ -576,6 +579,23 @@ public sealed partial class Globals : Node
 		await ToSignal(GetTree(), SceneTree.SignalName.PhysicsFrame);
 	}
 
+	public static Task<T> RunInBackground<T>(Func<T> work)
+	{
+		return Task.Run(() =>
+		{
+			Interlocked.Increment(ref _backgroundTasks);
+			try
+			{
+				if (_isExiting) throw new OperationCanceledException();
+				return work();
+			}
+			finally
+			{
+				Interlocked.Decrement(ref _backgroundTasks);
+			}
+		});
+	}
+
 	public async void Quit(bool force = false, int code = 0)
 	{
 #if CREATOR
@@ -605,6 +625,11 @@ public sealed partial class Globals : Node
 			CurrentAppEntryNode?.QueueFree();
 			Callable.From(() =>
 			{
+				long deadline = System.Environment.TickCount64 + 3000;
+				while (Volatile.Read(ref _backgroundTasks) > 0 && System.Environment.TickCount64 < deadline)
+				{
+					Thread.Sleep(1);
+				}
 				GetTree().Quit(code);
 			}).CallDeferred();
 		}).CallDeferred();

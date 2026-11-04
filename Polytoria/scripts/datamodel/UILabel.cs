@@ -40,6 +40,7 @@ public partial class UILabel : UIView
 		get => _text;
 		set
 		{
+			if (_text == value) return;
 			_text = value;
 			_richLabel.Text = _text;
 			_label.Text = _text;

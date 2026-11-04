@@ -62,7 +62,7 @@ public partial class WebAssetLoader : Node
 		{
 			case WebResourceType.Image:
 				{
-					Image image = await Task.Run(() => DecodeImage(buffer, item.URL));
+					Image image = await Globals.RunInBackground(() => DecodeImage(buffer, item.URL));
 					item.Resource = ImageTexture.CreateFromImage(image);
 
 					_cache.TryAdd(item, item);
@@ -106,6 +106,9 @@ public partial class WebAssetLoader : Node
 		{
 			WebCacheItem result = await task;
 			Callable.From(() => callback(result.Resource)).CallDeferred();
+		}
+		catch (OperationCanceledException) when (Globals.IsExiting)
+		{
 		}
 		catch (Exception exception)
 		{

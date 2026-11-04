@@ -49,6 +49,9 @@ public sealed partial class PolytorianModel : CharacterModel
 
 	internal Skeleton3D Skeleton = null!;
 	internal AnimationTree AnimTree = null!;
+	private VisibleOnScreenNotifier3D? _screenNotifier;
+	private bool _isOnScreen;
+	private double _skippedAnimTime;
 
 	private static readonly Shader _limbShader = GD.Load<Shader>("res://resources/shaders/character/limb.gdshader");
 	private static readonly Shader _transparentLimbShader = GD.Load<Shader>("res://resources/shaders/character/limb_transparent.gdshader");
@@ -276,6 +279,15 @@ public sealed partial class PolytorianModel : CharacterModel
 		AnimTree = GDNode.GetNode<AnimationTree>("AnimationTree");
 		AnimTree.Active = true;
 
+		if (!Globals.IsHeadless && Root?.SessionType != World.SessionTypeEnum.Renderer)
+		{
+			AnimTree.CallbackModeProcess = AnimationMixer.AnimationCallbackModeProcess.Manual;
+			_screenNotifier = new() { Aabb = new Aabb(new Vector3(-3, -3.5f, -3), new Vector3(6, 9, 6)) };
+			_screenNotifier.ScreenEntered += () => _isOnScreen = true;
+			_screenNotifier.ScreenExited += () => _isOnScreen = false;
+			GDNode.AddChild(_screenNotifier, @internal: Node.InternalMode.Back);
+		}
+
 		base.Init();
 		SetProcess(true);
 	}
@@ -411,6 +423,15 @@ public sealed partial class PolytorianModel : CharacterModel
 			UpdateClothMaterials();
 		}
 
+		if (_screenNotifier != null && (IsHidden || !_isOnScreen))
+		{
+			_skippedAnimTime += delta;
+			return;
+		}
+
+		delta += Mathf.Min(_skippedAnimTime, 5.0);
+		_skippedAnimTime = 0;
+
 		foreach (KeyValuePair<string, float> kvp in _blendTargets)
 		{
 			string propName = kvp.Key;
@@ -442,6 +463,11 @@ public sealed partial class PolytorianModel : CharacterModel
 			}
 			if (newValue == rawCurrent) continue;
 			AnimTree.Set(paramName, newValue);
+		}
+
+		if (_screenNotifier != null && AnimTree.Active)
+		{
+			AnimTree.Advance(delta);
 		}
 	}
 

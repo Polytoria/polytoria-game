@@ -8,6 +8,7 @@ using Polytoria.Datamodel.Resources;
 using Polytoria.Enums;
 using Polytoria.Networking;
 using Polytoria.Scripting;
+using Polytoria.Shared;
 using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
@@ -33,7 +34,11 @@ public sealed partial class Mesh : Entity
 	private Color _color = new(1, 1, 1);
 	private bool _castShadows;
 	private AnimationPlayer? _animPlay;
+	private bool _animPaused;
+	private double _animPausedAt;
 	private readonly List<MeshInstance3D> _meshInstances = [];
+	private readonly Dictionary<MeshInstance3D, Node3D> _collisionAnchors = [];
+	private VisibleOnScreenNotifier3D? _animNotifier;
 	private readonly List<SurfaceMaterial> _materials = [];
 	private Resource? _prevResource;
 
@@ -61,6 +66,8 @@ public sealed partial class Mesh : Entity
 			{
 				_meshNode.QueueFree();
 			}
+			_collisionAnchors.Clear();
+			_animNotifier = null;
 			ClearCollisionShapes();
 			_meshNode = null;
 			_materials.Clear();
@@ -196,6 +203,7 @@ public sealed partial class Mesh : Entity
 		{
 			if (_animPlay != null)
 			{
+				CatchUpAnimation();
 				return _animPlay.CurrentAnimation;
 			}
 			return null;
@@ -209,6 +217,7 @@ public sealed partial class Mesh : Entity
 		{
 			if (_animPlay != null)
 			{
+				CatchUpAnimation();
 				return _animPlay.IsPlaying();
 			}
 			return false;
@@ -224,6 +233,7 @@ public sealed partial class Mesh : Entity
 	[SyncVar] public double ServerAnimStart { get; internal set; }
 
 	private double ServerTime => Root?.Network != null ? (double)Root.ServerTime : 0;
+	private double AnimationTime => Root?.Network != null ? ServerTime : Time.GetTicksMsec() / 1000.0;
 	private bool CanSyncAnim => Root?.Network != null && (Root.Network.IsServer || (HasAuthority && ExistInNetwork));
 
 	[ScriptEnum("MeshCollisionType")]
@@ -262,6 +272,8 @@ public sealed partial class Mesh : Entity
 		_asset?.PropertyChanged.Disconnect(UpdateColor);
 		_materials.Clear();
 		_meshInstances.Clear();
+		_collisionAnchors.Clear();
+		_animNotifier = null;
 		base.PreDelete();
 	}
 
@@ -295,6 +307,9 @@ public sealed partial class Mesh : Entity
 		{
 			if (!Node.IsInstanceValid(GDNode)) return;
 			_animPlay = null;
+			_animPaused = false;
+			_collisionAnchors.Clear();
+			_animNotifier = null;
 			if (_meshNode != null && Node.IsInstanceValid(_meshNode))
 			{
 				_meshNode?.QueueFree();
@@ -347,6 +362,8 @@ public sealed partial class Mesh : Entity
 			UpdateShadows();
 
 			_meshContainer.AddChild(obj);
+			CreateCollisionAnchors(obj);
+			SetupAnimationCulling(obj);
 
 			if (ServerAnim != null)
 			{
@@ -409,6 +426,91 @@ public sealed partial class Mesh : Entity
 		if (pos >= 0 && pos < targetAnim.Length)
 		{
 			_animPlay.Seek(pos, true);
+		}
+		_animPausedAt = AnimationTime;
+		UpdateAnimationBounds();
+	}
+
+	private void SetupAnimationCulling(Node3D meshNode)
+	{
+		if (_animPlay == null || _meshInstances.Count == 0 || Globals.IsHeadless || Root?.SessionType == World.SessionTypeEnum.Renderer) return;
+
+		_animNotifier = new();
+		_animNotifier.ScreenEntered += ResumeAnimation;
+		_animNotifier.ScreenExited += PauseAnimation;
+		meshNode.AddChild(_animNotifier, @internal: Node.InternalMode.Back);
+		UpdateAnimationBounds();
+
+		PauseAnimation();
+	}
+
+	private void UpdateAnimationBounds()
+	{
+		if (_animPlay == null || _animNotifier == null || !GodotObject.IsInstanceValid(_animNotifier)) return;
+
+		Transform3D toLocal = _animNotifier.GetParentNode3D().GlobalTransform.AffineInverse();
+		bool playing = _animPlay.IsPlaying();
+		double length = playing ? _animPlay.CurrentAnimationLength : 0;
+		double pos = playing ? _animPlay.CurrentAnimationPosition : 0;
+		Aabb bounds = new();
+
+		for (int i = 0; i < 8; i++)
+		{
+			if (playing) _animPlay.Seek(length * i / 8, true);
+			foreach (MeshInstance3D m3d in _meshInstances)
+			{
+				Aabb meshBounds = toLocal * m3d.GlobalTransform * m3d.GetAabb();
+				bounds = bounds.Size == Vector3.Zero ? meshBounds : bounds.Merge(meshBounds);
+			}
+			if (!playing) break;
+		}
+
+		if (playing) _animPlay.Seek(pos, true);
+		_animNotifier.Aabb = bounds.Grow(bounds.Size.Length() * 0.1f);
+	}
+
+	private void CreateCollisionAnchors(Node3D meshNode)
+	{
+		if (_animPlay == null) return;
+		foreach (MeshInstance3D m3d in _meshInstances)
+		{
+			Transform3D transform = Transform3D.Identity;
+			for (Node? node = m3d; node != null && node != meshNode; node = node.GetParent())
+			{
+				if (node is Node3D node3D) transform = node3D.Transform * transform;
+			}
+
+			Node3D anchor = new() { Transform = transform };
+			meshNode.AddChild(anchor, @internal: Node.InternalMode.Back);
+			_collisionAnchors[m3d] = anchor;
+		}
+	}
+
+	private void PauseAnimation()
+	{
+		if (_animPlay == null || _animPaused) return;
+		_animPaused = true;
+		_animPausedAt = AnimationTime;
+		_animPlay.ProcessMode = Node.ProcessModeEnum.Disabled;
+	}
+
+	private void ResumeAnimation()
+	{
+		if (_animPlay == null || !_animPaused) return;
+		CatchUpAnimation();
+		_animPaused = false;
+		_animPlay.ProcessMode = Node.ProcessModeEnum.Inherit;
+	}
+
+	private void CatchUpAnimation()
+	{
+		if (!_animPaused || _animPlay == null) return;
+		double now = AnimationTime;
+		double elapsed = now - _animPausedAt;
+		_animPausedAt = now;
+		if (elapsed > 0 && _animPlay.IsPlaying())
+		{
+			_animPlay.Advance(elapsed);
 		}
 	}
 
@@ -587,7 +689,7 @@ public sealed partial class Mesh : Entity
 				};
 				GDNode3D.AddChild(collisionShape);
 
-				SetRemoteLinkTarget(collisionShape, meshInstance);
+				SetRemoteLinkTarget(collisionShape, _collisionAnchors.GetValueOrDefault(meshInstance) ?? meshInstance);
 				SetRemoteLinkOffset(collisionShape, bounds.GetCenter());
 				AddCollisionShape(collisionShape);
 			}
@@ -603,7 +705,7 @@ public sealed partial class Mesh : Entity
 				};
 
 				GDNode3D.AddChild(collisionShape);
-				SetRemoteLinkTarget(collisionShape, meshInstance);
+				SetRemoteLinkTarget(collisionShape, _collisionAnchors.GetValueOrDefault(meshInstance) ?? meshInstance);
 				AddCollisionShape(collisionShape);
 			}
 		}

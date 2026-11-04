@@ -63,22 +63,11 @@ public sealed partial class Lighting : Instance
 
 	public void ApplyGraphicsSettings(ISettingsContext settings)
 	{
-		bool mobile = Globals.IsMobileBuild;
-
-		bool glow = settings.Get<bool>(SharedSettingKeys.PostProcessing.Glow);
-		bool ssao = settings.Get<bool>(SharedSettingKeys.PostProcessing.Ssao);
-		bool ssr = settings.Get<bool>(SharedSettingKeys.PostProcessing.Ssr);
-		bool ssil = settings.Get<bool>(SharedSettingKeys.PostProcessing.Ssil);
-		bool sdfgi = settings.Get<bool>(SharedSettingKeys.PostProcessing.Sdfgi);
-
-		if (mobile)
-		{
-			glow = false;
-			ssao = false;
-			ssr = false;
-			ssil = false;
-			sdfgi = false;
-		}
+		bool glow = settings.Get<bool>(SharedSettingKeys.PostProcessing.Glow) && SharedSettingsRegistry.IsSupported(SharedSettingKeys.PostProcessing.Glow);
+		bool ssao = settings.Get<bool>(SharedSettingKeys.PostProcessing.Ssao) && SharedSettingsRegistry.IsSupported(SharedSettingKeys.PostProcessing.Ssao);
+		bool ssr = settings.Get<bool>(SharedSettingKeys.PostProcessing.Ssr) && SharedSettingsRegistry.IsSupported(SharedSettingKeys.PostProcessing.Ssr);
+		bool ssil = settings.Get<bool>(SharedSettingKeys.PostProcessing.Ssil) && SharedSettingsRegistry.IsSupported(SharedSettingKeys.PostProcessing.Ssil);
+		bool sdfgi = settings.Get<bool>(SharedSettingKeys.PostProcessing.Sdfgi) && SharedSettingsRegistry.IsSupported(SharedSettingKeys.PostProcessing.Sdfgi);
 
 		environment.GlowEnabled = glow;
 		environment.SsaoEnabled = ssao;
@@ -89,6 +78,8 @@ public sealed partial class Lighting : Instance
 		environment.SdfgiCascades = settings.Get<int>(SharedSettingKeys.PostProcessing.SdfgiCascades);
 		environment.SdfgiMinCellSize = settings.Get<float>(SharedSettingKeys.PostProcessing.SdfgiCellSize);
 		environment.SsilRadius = settings.Get<float>(SharedSettingKeys.PostProcessing.SsilRadius);
+		environment.SsrMaxSteps = settings.Get<EffectsQualityOption>(SharedSettingKeys.PostProcessing.EffectsQuality) == EffectsQualityOption.Low ? 32 : 64;
+		environment.EmitChanged();
 	}
 
 	public void ApplySky(Sky sky)
@@ -97,6 +88,7 @@ public sealed partial class Lighting : Instance
 		CustomSkyApplied = true;
 		_sky.SkyMaterial = sky.SkyMaterial;
 		_currentSky = sky;
+		environment.EmitChanged();
 	}
 
 	public void RemoveSky(Sky sky)
@@ -113,6 +105,7 @@ public sealed partial class Lighting : Instance
 			return;
 		}
 		_sky.SkyMaterial = Globals.LoadSkybox(_skybox.ToString());
+		environment.EmitChanged();
 	}
 
 	[Editable, ScriptProperty]
