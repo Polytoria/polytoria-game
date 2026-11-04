@@ -774,6 +774,8 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 					errContent = errContent + "\nstacktrace:\n" + traceback;
 				}
 
+				script.SignalError(e.Message, thread);
+
 				GetLogger(thread).LogError(script, errContent);
 			}
 		}
@@ -1480,6 +1482,11 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 				index++;
 			}
 		}
+		else if (value is LuaState thread)
+		{
+			thread.PushThread();
+			thread.XMove(state, 1);
+		}
 		else // Fallback for unsupported types
 		{
 			GD.PushError("PushValueToLua Unsupported type: ", value.GetType());
@@ -1799,6 +1806,10 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 		else if (type == LuaType.Buffer)
 		{
 			return state.ToBuffer(index);
+		}
+		else if (type == LuaType.Thread)
+		{
+			return state.ToThread(index);
 		}
 		return null;
 	}
