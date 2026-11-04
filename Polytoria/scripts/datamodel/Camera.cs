@@ -453,6 +453,15 @@ public sealed partial class Camera : Dynamic
 		_inputHelper.GodotUnhandledInputEvent -= OnInput;
 		_inputHelper.GodotInputEvent -= OnInputEarly;
 		_inputHelper.QueueFree();
+		if (Root.Input != null)
+		{
+			Root.Input.GameFocused.Disconnect(OnGameFocused);
+			Root.Input.GameUnfocused.Disconnect(OnGameUnfocused);
+		}
+		if (Node.IsInstanceValid(_turnX))
+		{
+			_turnX.QueueFree();
+		}
 		base.PreDelete();
 	}
 

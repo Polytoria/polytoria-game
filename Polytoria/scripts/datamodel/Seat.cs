@@ -71,7 +71,13 @@ public partial class Seat : Part
 		if (Root.Network.IsServer)
 		{
 			Touched.Connect(OnSeatTouched);
+			Destroying.Connect(OnSeatDestroying);
 		}
+	}
+
+	private void OnSeatDestroying()
+	{
+		Occupant?.Unsit(false);
 	}
 
 	internal void InvokeSat(NPC npc)

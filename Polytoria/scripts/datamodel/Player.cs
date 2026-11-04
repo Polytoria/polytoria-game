@@ -837,6 +837,7 @@ public sealed partial class Player : NPC
 
 		// Respawn on client
 		await Globals.Singleton.WaitAsync(RespawnTime);
+		if (IsDeleted) return;
 		Respawn();
 	}
 
@@ -1111,13 +1112,12 @@ public sealed partial class Player : NPC
 		{
 			foreach (Instance item in Root.PlayerDefaults.Inventory.GetChildren())
 			{
+				if (Inventory.FindChild(item.Name) != null || HoldingTool?.Name == item.Name) continue;
+
 				NetworkedObject a = item.Clone();
 				if (a is Instance i)
 				{
-					if (Backpack.FindChild(i.Name) == null)
-					{
-						i.Parent = Inventory;
-					}
+					i.Parent = Inventory;
 				}
 			}
 		}

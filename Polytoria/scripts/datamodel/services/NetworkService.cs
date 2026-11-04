@@ -522,6 +522,14 @@ public sealed partial class NetworkService : Instance
 
 			_players.InvokePlayerRemoved(plr);
 			plr.ForceDelete();
+
+			foreach (NetworkedObject obj in Root.NetworkObjects.Values)
+			{
+				if (obj is Physical p && p.NetTransformAuthority == peerID)
+				{
+					p.SetNetworkAuthority(null);
+				}
+			}
 		}
 	}
 
