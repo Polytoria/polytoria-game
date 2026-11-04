@@ -418,9 +418,9 @@ public class LuaMetatable : LuaObject
 				throw new UnauthorizedAccessException("script does not have permission to access the specified property (" + key + ")");
 			}
 
-			if (accessData.ObsoleteMessage != null)
+			if (accessData.ObsoletionInfo.HasValue)
 			{
-				PT.PrintWarn($"{prop.Name} is obsolete. {accessData.ObsoleteMessage}");
+				PT.PrintWarn(accessData.ObsoletionInfo.Value.GetWarning(prop.Name));
 			}
 
 			object? value = script.Compatibility
@@ -991,9 +991,9 @@ public class LuaMetatable : LuaObject
 			throw new UnauthorizedAccessException("script does not have permission to call the specified method (" + targetMethod.Name + ")");
 		}
 
-		if (invocationData.ObsoleteMessage != null)
+		if (invocationData.ObsoletionInfo.HasValue)
 		{
-			PT.PrintWarn($"{targetMethod.Name} is obsolete. {invocationData.ObsoleteMessage}");
+			PT.PrintWarn(invocationData.ObsoletionInfo.Value.GetWarning(targetMethod.Name));
 		}
 
 		// Prepare args array formatted for params
@@ -1070,7 +1070,7 @@ public class LuaMetatable : LuaObject
 		Attributes.ObsoleteAttribute? obsoleteAttribute = property.GetCustomAttribute<Attributes.ObsoleteAttribute>();
 		PropertyAccessData result = new(
 			scriptAttribute?.Permissions ?? ScriptPermissionFlags.None,
-			obsoleteAttribute?.Message,
+			obsoleteAttribute?.Info,
 			ScriptInterfaceInvokers.TryGetGetter(property),
 			ScriptInterfaceInvokers.TryGetSetter(property));
 		_propertyAccessCache[property] = result;
@@ -1089,7 +1089,7 @@ public class LuaMetatable : LuaObject
 			parameters,
 			Array.FindIndex(parameters, p => p.IsDefined(typeof(ScriptingCallerAttribute))),
 			scriptAttribute?.Permissions ?? ScriptPermissionFlags.None,
-			obsoleteAttribute?.Message,
+			obsoleteAttribute?.Info,
 			ScriptService.IsAsyncMethod(method),
 			ScriptInterfaceInvokers.TryGetInvoker(method));
 		_methodInvocationCache[method] = result;
@@ -1330,7 +1330,7 @@ public class LuaMetatable : LuaObject
 
 	private readonly record struct PropertyAccessData(
 		ScriptPermissionFlags Permissions,
-		string? ObsoleteMessage,
+		ObsoletionInfo? ObsoletionInfo,
 		Func<object, object?>? Getter,
 		Action<object, object?>? Setter);
 
@@ -1338,7 +1338,7 @@ public class LuaMetatable : LuaObject
 		ParameterInfo[] Parameters,
 		int CallerParamIndex,
 		ScriptPermissionFlags Permissions,
-		string? ObsoleteMessage,
+		ObsoletionInfo? ObsoletionInfo,
 		bool IsAsync,
 		Func<object?, object?[], object?>? Invoker);
 }

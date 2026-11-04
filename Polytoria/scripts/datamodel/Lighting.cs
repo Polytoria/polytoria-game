@@ -200,7 +200,7 @@ public sealed partial class Lighting : Instance
 		}
 	}
 
-	[Editable, ScriptProperty, Obsolete("Replaced with SunLight.Brightness")]
+	[Editable, ScriptProperty, Obsolete(use: "SunLight.Brightness")]
 	public float SunBrightness
 	{
 		get => Sun.Brightness;
@@ -211,7 +211,7 @@ public sealed partial class Lighting : Instance
 		}
 	}
 
-	[Editable, ScriptProperty, Obsolete("Replaced with SunLight.Color")]
+	[Editable, ScriptProperty, Obsolete(use: "SunLight.Color")]
 	public Color SunColor
 	{
 		get => Sun.Color;
@@ -222,7 +222,7 @@ public sealed partial class Lighting : Instance
 		}
 	}
 
-	[Editable, ScriptProperty, Obsolete("Replaced with SunLight.Shadows")]
+	[Editable, ScriptProperty, Obsolete(use: "SunLight.Shadows")]
 	public bool Shadows
 	{
 		get => Sun.Shadows;
