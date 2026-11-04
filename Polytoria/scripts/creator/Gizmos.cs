@@ -684,7 +684,7 @@ public sealed partial class Gizmos : Node
 			item.GDNode3D.Rotation += new Vector3(0, rotateAngle, 0);
 
 			if (_selectionBoxes.TryGetValue(item, out var box)) box.InvalidateBoundCache();
-			item.UpdateCurrentTransformCache();
+			item.QueueTransformUpdate();
 		}
 	}
 
@@ -716,7 +716,7 @@ public sealed partial class Gizmos : Node
 			item.GDNode3D.Rotate(tiltAxis, tiltAngle);
 
 			if (_selectionBoxes.TryGetValue(item, out var box)) box.InvalidateBoundCache();
-			item.UpdateCurrentTransformCache();
+			item.QueueTransformUpdate();
 		}
 	}
 
@@ -850,7 +850,7 @@ public sealed partial class Gizmos : Node
 			foreach (Dynamic item in DragSelected)
 			{
 				item.SetGlobalPosition(item.GetGlobalPosition() + delta);
-				item.UpdateCurrentTransformCache();
+				item.QueueTransformUpdate();
 			}
 		}
 	}

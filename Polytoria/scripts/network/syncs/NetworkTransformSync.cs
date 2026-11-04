@@ -367,10 +367,7 @@ public partial class NetworkTransformSync : Instance
 		foreach (var data in transforms)
 		{
 			if (data.ExcludePeer == NetService.LocalPeerID) continue;
-			if (NetService.Root.GetNetObjectFromID(data.ObjID) is Dynamic dyn)
-			{
-				dyn.UpdateTransformFromNet(TransformPayloadDto.FromArray(data.Transform), isReliable, data.Lerp);
-			}
+			RecvUpdateTransformHandler(data.ObjID, TransformPayloadDto.FromArray(data.Transform), RemoteSenderId, isReliable, data.Lerp);
 		}
 	}
 

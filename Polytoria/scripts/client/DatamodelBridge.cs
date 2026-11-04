@@ -159,6 +159,7 @@ public partial class DatamodelBridge : Node3D
 
 	public override void _Process(double delta)
 	{
+		Dynamic.FlushTransformUpdates();
 		if (!_renderingEnabled) return;
 
 		_shadowBudgetTimer -= delta;

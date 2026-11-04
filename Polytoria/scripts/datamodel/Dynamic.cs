@@ -9,6 +9,7 @@ using Polytoria.Creator.UI;
 using Polytoria.Creator.Spatial;
 using Polytoria.Datamodel.Interfaces;
 #endif
+using Polytoria.Shared;
 using Polytoria.Utils;
 using Polytoria.Utils.DTOs;
 using System;
@@ -43,6 +44,9 @@ public partial class Dynamic : Instance
 	private bool _isFirstUpdate = true;
 	private bool _isDirty = false;
 
+	private static readonly HashSet<Dynamic> _pendingTransforms = [];
+	private bool _pendingSyncToNet;
+
 	private Transform3D _oldPartTransformApplied;
 	private Transform3D _oldGlobalTransformApplied;
 	private Transform3D _oldLocalTransformApplied;
@@ -71,11 +75,7 @@ public partial class Dynamic : Instance
 		set
 		{
 			SetGlobalPosition(value);
-			if (AutoUpdateNetTransform)
-			{
-				UpdateNetTransformReliable();
-			}
-			OnPropertyChanged();
+			QueueTransformUpdate(AutoUpdateNetTransform);
 		}
 	}
 
@@ -93,14 +93,8 @@ public partial class Dynamic : Instance
 		{
 			Vector3 sanitizedValue = value.SanitizeNaN();
 			GDNode3D.GlobalRotationDegrees = sanitizedValue;
-			ForceUpdateTransform();
 			_oldGlobalTransformApplied = GetGlobalTransform();
-
-			if (AutoUpdateNetTransform)
-			{
-				UpdateNetTransformReliable();
-			}
-			OnPropertyChanged();
+			QueueTransformUpdate(AutoUpdateNetTransform);
 		}
 	}
 
@@ -133,11 +127,7 @@ public partial class Dynamic : Instance
 		set
 		{
 			SetLocalPosition(value);
-			if (AutoUpdateNetTransform)
-			{
-				UpdateNetTransformReliable();
-			}
-			OnPropertyChanged();
+			QueueTransformUpdate(AutoUpdateNetTransform);
 		}
 	}
 
@@ -151,11 +141,7 @@ public partial class Dynamic : Instance
 		set
 		{
 			GDNode3D.RotationDegrees = value.SanitizeNaN();
-			if (AutoUpdateNetTransform)
-			{
-				UpdateNetTransformReliable();
-			}
-			OnPropertyChanged();
+			QueueTransformUpdate(AutoUpdateNetTransform);
 		}
 	}
 
@@ -184,11 +170,7 @@ public partial class Dynamic : Instance
 			Quaternion q = value;
 			if (!q.IsFinite()) return;
 			GDNode3D.GlobalBasis = new(q);
-			if (AutoUpdateNetTransform)
-			{
-				UpdateNetTransformReliable();
-			}
-			OnPropertyChanged();
+			QueueTransformUpdate(AutoUpdateNetTransform);
 		}
 	}
 
@@ -201,11 +183,7 @@ public partial class Dynamic : Instance
 			Quaternion q = value;
 			if (!q.IsFinite()) return;
 			GDNode3D.Basis = new(q);
-			if (AutoUpdateNetTransform)
-			{
-				UpdateNetTransformReliable();
-			}
-			OnPropertyChanged();
+			QueueTransformUpdate(AutoUpdateNetTransform);
 		}
 	}
 
@@ -258,6 +236,7 @@ public partial class Dynamic : Instance
 
 	public override void PreDelete()
 	{
+		_pendingTransforms.Remove(this);
 		excludedBoundNodes.Clear();
 #if CREATOR
 		if (_boundArea3D != null)
@@ -300,9 +279,11 @@ public partial class Dynamic : Instance
 
 	public override void Ready()
 	{
+		_currentTransform = GetLocalTransform();
+		_hasSyncedOnce = true;
 		if (Root != null && Root.Network != null && Root.Network.IsServer)
 		{
-			UpdateNetTransformReliable();
+			QueueTransformUpdate(true);
 		}
 		base.Ready();
 	}
@@ -452,17 +433,14 @@ public partial class Dynamic : Instance
 
 		GDNode3D.LookAt(lookTarget, up);
 
-		UpdateNetTransformReliable();
+		QueueTransformUpdate(true);
 	}
 
 	[ScriptMethod]
 	public void Translate(Vector3 translation)
 	{
-		SetGlobalTransform(GetGlobalTransform().Translated(translation));
-		if (AutoUpdateNetTransform)
-		{
-			UpdateNetTransformReliable();
-		}
+		SetGlobalTransformRaw(GetGlobalTransform().Translated(translation));
+		QueueTransformUpdate(AutoUpdateNetTransform);
 	}
 
 	[ScriptMethod]
@@ -479,12 +457,8 @@ public partial class Dynamic : Instance
 
 		transform.Origin += point;
 
-		SetGlobalTransform(transform);
-
-		if (AutoUpdateNetTransform)
-		{
-			UpdateNetTransformReliable();
-		}
+		SetGlobalTransformRaw(transform);
+		QueueTransformUpdate(AutoUpdateNetTransform);
 	}
 
 	[ScriptMethod]
@@ -496,10 +470,7 @@ public partial class Dynamic : Instance
 		GDNode3D.RotateObjectLocal(Vector3.Up, radians.Y);
 		GDNode3D.RotateObjectLocal(Vector3.Back, radians.Z);
 
-		if (AutoUpdateNetTransform)
-		{
-			UpdateNetTransformReliable();
-		}
+		QueueTransformUpdate(AutoUpdateNetTransform);
 	}
 
 	// NOTE: Update operations needs transform to be force updated as godot does not update them instantly
@@ -525,22 +496,50 @@ public partial class Dynamic : Instance
 		SendNetTransformUnreliable(current);
 	}
 
-	protected void UpdateNetTransformReliable()
+	internal void QueueTransformUpdate(bool syncToNet = false)
 	{
-		if (Root == null || Root.Network == null) return;
-
 		ForceUpdateTransform();
+		_pendingSyncToNet |= syncToNet;
+		_pendingTransforms.Add(this);
+	}
+
+	internal static void FlushTransformUpdates()
+	{
+		if (_pendingTransforms.Count == 0) return;
+
+		Dynamic[] pending = [.. _pendingTransforms];
+		_pendingTransforms.Clear();
+
+		foreach (Dynamic dyn in pending)
+		{
+			try
+			{
+				dyn.CommitTransformUpdate();
+			}
+			catch (Exception ex)
+			{
+				PT.PrintErr(ex);
+			}
+		}
+	}
+
+	private void CommitTransformUpdate()
+	{
+		bool syncToNet = _pendingSyncToNet;
+		_pendingSyncToNet = false;
+
+		if (IsDeleted || !Node.IsInstanceValid(GDNode3D) || !GDNode3D.IsInsideTree()) return;
+
 		Transform3D current = GetLocalTransform();
 
 		// Only send if changed
-		if (_lastSentTransform != null && _lastSentTransform.Value.IsEqualApprox(current))
-			return;
-
-		_lastSentTransform = current;
+		if (syncToNet && Root?.Network != null && _lastSentTransform?.IsEqualApprox(current) != true)
+		{
+			_lastSentTransform = current;
+			if (Root.IsLoaded) SendNetTransformReliable(current);
+		}
 
 		UpdateCurrentTransformCache(current);
-		if (!Root.IsLoaded) return;
-		SendNetTransformReliable(current);
 	}
 
 	protected void SendNetTransformUnreliable(bool lerp = true)
@@ -593,23 +592,13 @@ public partial class Dynamic : Instance
 		// Cannot broadcast as reliable in client, values are ignored in client
 	}
 
-	/// <summary>
-	/// Must be called after manual transform update
-	/// </summary>
-	internal void UpdateCurrentTransformCache()
-	{
-		if (!GDNode3D.IsInsideTree()) return;
-		ForceUpdateTransform();
-		UpdateCurrentTransformCache(GetLocalTransform());
-	}
-
 	private void UpdateCurrentTransformCache(Transform3D newt)
 	{
 		if (newt != _currentTransform)
 		{
 			if (_hasSyncedOnce)
 			{
-				InvokeTransformChanged(_currentTransform);
+				InvokeTransformChanged(_currentTransform, newt);
 			}
 			else
 			{
@@ -638,8 +627,8 @@ public partial class Dynamic : Instance
 	internal void UpdateTransformFromNet(TransformPayloadDto transform, bool isReliable, bool lerpTransform)
 	{
 		if (OverrideNetworkTransform) return;
-		Transform3D previous = _currentTransform;
-		Vector3 scale = GetLocalTransform().Basis.Scale;
+		Transform3D local = GetLocalTransform();
+		Vector3 scale = local.Basis.Scale;
 		_netTransform = new Transform3D(
 			new Basis(transform.Rotation).ScaledLocal(scale),
 			transform.Position
@@ -657,7 +646,7 @@ public partial class Dynamic : Instance
 			_lerpUnreliable = false;
 			SetPhysicsProcessWAuthor(false);
 
-			if (_hasSyncedOnce && _netTransform.IsEqualApprox(_currentTransform))
+			if (_hasSyncedOnce && _netTransform.IsEqualApprox(local))
 			{
 				if (isReliable)
 				{
@@ -666,7 +655,6 @@ public partial class Dynamic : Instance
 				return;
 			}
 
-			_currentTransform = _netTransform;
 			SetLocalTransform(_netTransform);
 		}
 		else if (lerpTransform && !Root.Network.IsServer)
@@ -679,8 +667,6 @@ public partial class Dynamic : Instance
 		{
 			ReliableTransformChanged?.Invoke();
 		}
-
-		InvokeTransformChanged(previous);
 	}
 
 #if CREATOR
@@ -764,10 +750,10 @@ public partial class Dynamic : Instance
 	}
 #endif
 
-	internal void InvokeTransformChanged(Transform3D? previous = null)
+	internal void InvokeTransformChanged(Transform3D? previous = null, Transform3D? newTransform = null)
 	{
 #if CREATOR
-		if (Root.CreatorContext != null && Root.CreatorContext.Gizmos != null)
+		if (Root.SessionType == World.SessionTypeEnum.Creator && Root.CreatorContext != null && Root.CreatorContext.Gizmos != null)
 		{
 			if (!Root.CreatorContext.Gizmos.HoveringGizmos && !Root.CreatorContext.Gizmos.IsDraggingDynamic)
 			{
@@ -781,13 +767,14 @@ public partial class Dynamic : Instance
 		bool rotated = true;
 		bool resized = true;
 
-		Transform3D current = GetLocalTransform();
+		Transform3D current = newTransform ?? GetLocalTransform();
 
 		if (previous != null && _hasNotifiedOnce)
 		{
+			bool sameBasis = _lastNotifiedTransform.Basis == current.Basis;
 			moved = _lastNotifiedTransform.Origin.DistanceTo(current.Origin) > 0.001f;
-			rotated = _lastNotifiedTransform.Basis.GetRotationQuaternion().AngleTo(current.Basis.GetRotationQuaternion()) > 0.001f;
-			resized = (_lastNotifiedTransform.Basis.Scale - current.Basis.Scale).Length() > 0.001f;
+			rotated = !sameBasis && _lastNotifiedTransform.Basis.GetRotationQuaternion().AngleTo(current.Basis.GetRotationQuaternion()) > 0.001f;
+			resized = !sameBasis && (_lastNotifiedTransform.Basis.Scale - current.Basis.Scale).Length() > 0.001f;
 		}
 
 		// Notify transform change without sync to clients
@@ -816,18 +803,21 @@ public partial class Dynamic : Instance
 		}
 
 		TransformChanged?.Invoke();
-		foreach (Instance item in GetChildren())
+		if (Children.Count > 0)
 		{
-			if (item is Dynamic dyn)
+			foreach (Instance item in GetChildren())
 			{
-				dyn.InvokeTransformChanged();
+				if (item is Dynamic dyn)
+				{
+					dyn.InvokeTransformChanged();
+				}
 			}
 		}
 
 		// Destroy entity/rigidbodies under part destroy height
-		if (Root != null && Root.Environment != null && this is Physical physical)
+		if (this is Physical { Anchored: false } && Root != null && Root.Environment != null)
 		{
-			if (Position.Y <= Root.Environment.PartDestroyHeight && !physical.Anchored)
+			if (Position.Y <= Root.Environment.PartDestroyHeight)
 			{
 				// If not client, ignore PartDestroyHeight rule
 				if (Root.SessionType != World.SessionTypeEnum.Client) return;
@@ -905,7 +895,6 @@ public partial class Dynamic : Instance
 	internal void SetGlobalPosition(Vector3 to)
 	{
 		GDNode3D.GlobalPosition = to;
-		ForceUpdateTransform();
 	}
 
 	internal Vector3 GetLocalPosition()
@@ -916,7 +905,7 @@ public partial class Dynamic : Instance
 	internal void SetLocalPosition(Vector3 to)
 	{
 		var t = GetLocalTransform();
-		SetLocalTransform(new Transform3D(t.Basis, to * GetParentScale()));
+		SetLocalTransformRaw(new Transform3D(t.Basis, to * GetParentScale()));
 	}
 
 	internal Transform3D GetGlobalTransform()
@@ -981,13 +970,13 @@ public partial class Dynamic : Instance
 	internal void SetGlobalTransform(Transform3D to)
 	{
 		SetGlobalTransformRaw(to);
-		UpdateCurrentTransformCache();
+		QueueTransformUpdate();
 	}
 
 	internal void SetLocalTransform(Transform3D to)
 	{
 		SetLocalTransformRaw(to);
-		UpdateCurrentTransformCache();
+		QueueTransformUpdate();
 	}
 
 	internal void ForceUpdateTransform()
@@ -1009,7 +998,7 @@ public partial class Dynamic : Instance
 			target.GDNode3D.Transform = GDNode3D.Transform;
 		}
 
-		target.UpdateCurrentTransformCache();
+		target.QueueTransformUpdate();
 	}
 
 	protected bool HasChangedForNetworkSync(Transform3D a, Transform3D b)
