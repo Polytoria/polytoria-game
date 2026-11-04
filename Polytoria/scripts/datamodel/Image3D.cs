@@ -281,11 +281,11 @@ public sealed partial class Image3D : Dynamic
 			_material.AlbedoTexture = tex;
 
 			// Set transparency depending on the AlphaMode returned from .DetectAlpha()
-			if (!tex.HasMeta("alpha_mode"))
+			if (!tex.HasMeta("alpha_mode") && tex.GetImage() is Godot.Image img)
 			{
-				tex.SetMeta("alpha_mode", (int)tex.GetImage().DetectAlpha());
+				tex.SetMeta("alpha_mode", (int)img.DetectAlpha());
 			}
-			_transparencyType = (Godot.Image.AlphaMode)tex.GetMeta("alpha_mode").AsInt32() switch
+			_transparencyType = (Godot.Image.AlphaMode)tex.GetMeta("alpha_mode", 0).AsInt32() switch
 			{
 				Godot.Image.AlphaMode.Blend => BaseMaterial3D.TransparencyEnum.Alpha,
 				Godot.Image.AlphaMode.Bit => BaseMaterial3D.TransparencyEnum.Alpha,
