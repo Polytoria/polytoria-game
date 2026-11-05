@@ -18,6 +18,7 @@ public sealed partial class Players : Instance
 {
 	private bool _playerCollisionEnabled = true;
 	private bool _useServerAuthority = true;
+	private bool _autoNetworkOwnership = true;
 
 	[ScriptProperty]
 	public Player LocalPlayer { get; private set; } = null!;
@@ -40,6 +41,17 @@ public sealed partial class Players : Instance
 		set
 		{
 			_useServerAuthority = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool AutoNetworkOwnership
+	{
+		get => _autoNetworkOwnership;
+		set
+		{
+			_autoNetworkOwnership = value;
 			OnPropertyChanged();
 		}
 	}
@@ -159,6 +171,7 @@ public sealed partial class Players : Instance
 		{
 			PeerIDToPlayer.Remove(plr.PeerID);
 			_idToPlayer.Remove(plr.UserID);
+			Root.RemoveNetTimeline(plr.PeerID);
 			PlayerRemoved.Invoke(plr);
 		}
 	}

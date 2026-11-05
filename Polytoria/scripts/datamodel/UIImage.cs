@@ -203,9 +203,11 @@ public partial class UIImage : UIField
 	{
 		if (!uint.TryParse(_imageID, out uint result))
 		{
-			SetToDefaultImage();
+			Image = null;
 			return;
 		}
+		if (Image is PTImageAsset { IsDeleted: false } current && current.ImageType == _imageType && current.ImageID == result) return;
+
 		PTImageAsset polyImg = New<PTImageAsset>();
 		Image = polyImg;
 		polyImg.ImageType = _imageType;

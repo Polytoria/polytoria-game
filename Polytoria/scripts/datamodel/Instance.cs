@@ -126,7 +126,8 @@ public partial class Instance : NetworkedObject
 					// this is kinda hacky
 					Callable.From(() =>
 					{
-						Root.Network.ReplicateSync.BroadcastChunk([this, .. descendants]);
+						if (IsDeleted) return;
+						Root.Network.ReplicateSync.BroadcastChunk([this, .. Array.FindAll(descendants, d => !d.IsDeleted)]);
 					}).CallDeferred();
 				}
 

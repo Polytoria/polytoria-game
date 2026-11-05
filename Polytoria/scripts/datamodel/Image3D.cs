@@ -265,6 +265,8 @@ public sealed partial class Image3D : Dynamic
 			return;
 		}
 
+		if (Image is PTImageAsset { IsDeleted: false } current && current.ImageType == _imageType && current.ImageID == result) return;
+
 		PTImageAsset polyImg = New<PTImageAsset>();
 		Image = polyImg;
 		polyImg.ImageType = _imageType;

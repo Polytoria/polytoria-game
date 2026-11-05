@@ -375,7 +375,7 @@ public sealed partial class NetworkPropSync : Instance
 		byte[] data = prop.Serialize(propValue);
 		long sequence = netObj.GetSequenceForProp(prop);
 
-		_batchBroadcasts.Add(new() { NetID = netID, PropName = prop.Name, PropValueRaw = data, IsUnreliable = unreliable, ExcludePeer = -1, Sequence = sequence });
+		_batchBroadcasts.Add(new() { NetID = netID, PropIndex = (ushort)prop.Index, PropValueRaw = data, IsUnreliable = unreliable, ExcludePeer = -1, Sequence = sequence });
 	}
 
 	public void NetSendAllPropUpdate(NetworkedObject netObj, int toPeerId)
@@ -406,40 +406,40 @@ public sealed partial class NetworkPropSync : Instance
 
 		if (unreliable)
 		{
-			RpcId(1, nameof(NetRecvPropUpdateToServerUnreliable), netID, prop.Name, data);
+			RpcId(1, nameof(NetRecvPropUpdateToServerUnreliable), netID, (ushort)prop.Index, data);
 		}
 		else
 		{
-			RpcId(1, nameof(NetRecvPropUpdateToServer), netID, prop.Name, data);
+			RpcId(1, nameof(NetRecvPropUpdateToServer), netID, (ushort)prop.Index, data);
 		}
 	}
 
 	[NetRpc(AuthorityMode.Any, TransferMode = TransferMode.Reliable)]
-	private void NetRecvPropUpdateToServer(string netID, string propName, byte[] propValueRaw)
+	private void NetRecvPropUpdateToServer(string netID, ushort propIndex, byte[] propValueRaw)
 	{
-		RecvPropUpdateToServer(RemoteSenderId, netID, propName, propValueRaw, false);
+		RecvPropUpdateToServer(RemoteSenderId, netID, propIndex, propValueRaw, false);
 	}
 
 	[NetRpc(AuthorityMode.Any, TransferMode = TransferMode.Unreliable)]
-	private void NetRecvPropUpdateToServerUnreliable(string netID, string propName, byte[] propValueRaw)
+	private void NetRecvPropUpdateToServerUnreliable(string netID, ushort propIndex, byte[] propValueRaw)
 	{
-		RecvPropUpdateToServer(RemoteSenderId, netID, propName, propValueRaw, true);
+		RecvPropUpdateToServer(RemoteSenderId, netID, propIndex, propValueRaw, true);
 	}
 
-	private void RecvPropUpdateToServer(int peerID, string netID, string propName, byte[] propValueRaw, bool isUnreliable)
+	private void RecvPropUpdateToServer(int peerID, string netID, ushort propIndex, byte[] propValueRaw, bool isUnreliable)
 	{
 		NetworkedObject? netObj = NetService.Root.GetNetObjectFromID(netID);
 
 		if (netObj != null)
 		{
-			PropSyncProp? entry = PropSyncRegistry.GetProp(netObj.GetType(), propName);
+			PropSyncProp? entry = PropSyncRegistry.GetProp(netObj.GetType(), propIndex);
 
 			if (entry == null) return;
 
 			if (CheckPropHasAuthority(entry, netObj, peerID))
 			{
-				netObj.RecvPropUpdate(propName, propValueRaw, -1);
-				_batchBroadcasts.Add(new() { NetID = netObj.NetworkedObjectID, PropName = propName, PropValueRaw = propValueRaw, IsUnreliable = isUnreliable, ExcludePeer = peerID, Sequence = -1 });
+				netObj.RecvPropUpdate(propIndex, propValueRaw, -1);
+				_batchBroadcasts.Add(new() { NetID = netObj.NetworkedObjectID, PropIndex = propIndex, PropValueRaw = propValueRaw, IsUnreliable = isUnreliable, ExcludePeer = peerID, Sequence = -1 });
 			}
 		}
 	}
@@ -492,7 +492,7 @@ public sealed partial class NetworkPropSync : Instance
 		{
 			foreach (NetPropReplicateData r in propReplicates)
 			{
-				netObj.RecvPropUpdate(r.Name, r.ValueRaw, r.Sequence);
+				netObj.RecvPropUpdate(r.Index, r.ValueRaw, r.Sequence);
 			}
 		}
 		else
@@ -516,7 +516,7 @@ public sealed partial class NetworkPropSync : Instance
 		{
 			foreach (NetPropReplicateData r in queued)
 			{
-				netObj.RecvPropUpdate(r.Name, r.ValueRaw, r.Sequence);
+				netObj.RecvPropUpdate(r.Index, r.ValueRaw, r.Sequence);
 			}
 
 			_pendingProps.Remove(netID);
@@ -588,7 +588,7 @@ public sealed partial class NetworkPropSync : Instance
 				NetID = g.Key,
 				Props = [.. g.Select(b => new BatchPropEntry
 				{
-					PropName = b.PropName,
+					PropIndex = b.PropIndex,
 					PropValueRaw = b.PropValueRaw,
 					Sequence = b.Sequence
 				})]
@@ -627,7 +627,7 @@ public sealed partial class NetworkPropSync : Instance
 
 				pending.AddRange(obj.Props.Select(p => new NetPropReplicateData
 				{
-					Name = p.PropName,
+					Index = p.PropIndex,
 					ValueRaw = p.PropValueRaw,
 					Sequence = p.Sequence
 				}));
@@ -636,7 +636,7 @@ public sealed partial class NetworkPropSync : Instance
 
 			foreach (var prop in obj.Props)
 			{
-				netObj.RecvPropUpdate(prop.PropName, prop.PropValueRaw, prop.Sequence);
+				netObj.RecvPropUpdate(prop.PropIndex, prop.PropValueRaw, prop.Sequence);
 			}
 		}
 	}
@@ -651,7 +651,7 @@ public sealed partial class NetworkPropSync : Instance
 	[MemoryPackable]
 	private partial struct BatchPropEntry
 	{
-		public string PropName;
+		public ushort PropIndex;
 		public byte[] PropValueRaw;
 		public long Sequence;
 	}
@@ -659,7 +659,7 @@ public sealed partial class NetworkPropSync : Instance
 	private struct BatchBroadcastData
 	{
 		public string NetID;
-		public string PropName;
+		public ushort PropIndex;
 		public byte[] PropValueRaw;
 		public bool IsUnreliable;
 		public int ExcludePeer;
