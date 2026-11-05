@@ -2,6 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+using Godot;
+using System;
+using System.Collections.Generic;
 using Polytoria.Attributes;
 using Polytoria.Client.UI;
 using Polytoria.Scripting;
@@ -26,13 +29,25 @@ public sealed partial class CoreUIService : Instance
 	private bool _useEmoteWheel = true;
 	private bool _canRespawn = true;
 	private CtrlLockCursorEnum _ctrlLockCursor = CtrlLockCursorEnum.Chevron;
+	private readonly List<Control> _leftWidgets = new();
+	private readonly List<Control> _leftWatched = new();
+	private Control? _userCardPivot;
+	private Control? _playerlistRoot;
+
+	private const float PlayerlistCloseOffsetX = 240f; // Matches playerlist's "close" animation
 
 	public CoreUIRoot CoreUI = null!;
 
 	public PTSignal CtrlLockCursorChanged { get; private set; } = new();
 
 	[ScriptProperty]
-	public static float TopInset => 80;
+	public PTSignal TopbarBoundsChanged { get; private set; } = new();
+
+	[ScriptProperty]
+	public Vector2 TopbarBounds { get; private set; } = Vector2.Zero;
+
+	[ScriptProperty, ScriptLegacyProperty("TopInset")]
+	public static float TopbarInset => 80;
 
 	[Editable, ScriptProperty]
 	public CtrlLockCursorEnum CtrlLockCursor
@@ -124,6 +139,68 @@ public sealed partial class CoreUIService : Instance
 		base.Init();
 	}
 
+	private void OnLayoutChanged() => Callable.From(RecomputeTopbarBounds).CallDeferred();
+
+	private static bool IsWidget(Control control)
+	{
+		if (control is Button or TextureRect or PanelContainer or Label) return true;
+		foreach (Node child in control.GetChildren())
+		{
+			if (child is Control) return false;
+		}
+		return true;
+	}
+
+	private void CollectLeftWidgets(Control container)
+	{
+		_leftWatched.Add(container);
+		container.VisibilityChanged += OnLayoutChanged;
+		container.ItemRectChanged += OnLayoutChanged;
+		container.ChildEnteredTree += _ =>
+		{
+			RefreshLeftButtons();
+			OnLayoutChanged();
+		};
+		container.ChildExitingTree += _ =>
+		{
+			RefreshLeftButtons();
+			OnLayoutChanged();
+		};
+
+		foreach (Node child in container.GetChildren())
+		{
+			if (child is not Control control) continue;
+
+			if (IsWidget(control))
+			{
+				_leftWidgets.Add(control);
+				_leftWatched.Add(control);
+				control.VisibilityChanged += OnLayoutChanged;
+				control.ItemRectChanged += OnLayoutChanged;
+			}
+			else
+			{
+				CollectLeftWidgets(control);
+			}
+		}
+	}
+
+	private void RefreshLeftButtons()
+	{
+		foreach (Control control in _leftWatched)
+		{
+			control.VisibilityChanged -= OnLayoutChanged;
+			control.ItemRectChanged -= OnLayoutChanged;
+		}
+		_leftWidgets.Clear();
+		_leftWatched.Clear();
+
+		Control? hbox = CoreUI.MenuButton.GetParent() as Control;
+		if (hbox == null) return;
+
+		CollectLeftWidgets(hbox);
+	}
+
 	private void RefreshCoreUIsVisibility()
 	{
 		if (CoreUI != null)
@@ -142,13 +219,63 @@ public sealed partial class CoreUIService : Instance
 			}
 			CoreUI.MenuButton.Visible = UseMenuButton;
 			CoreUI.EmoteWheel.UseEmoteWheel = UseEmoteWheel;
+			Callable.From(RecomputeTopbarBounds).CallDeferred();
 		}
+	}
+
+	private void RecomputeTopbarBounds()
+	{
+		if (CoreUI == null) return;
+
+		float leftEnd = CoreUI.MenuButton.GlobalPosition.X;
+		foreach (Control control in _leftWidgets)
+		{
+			if (control.IsVisibleInTree())
+			{
+				leftEnd = Math.Max(leftEnd, control.GlobalPosition.X + control.Size.X);
+			}
+		}
+
+		float rightStart;
+		if (_useLeaderboard && _userCardPivot != null)
+		{
+			float trueScreenEdge = _playerlistRoot != null ? _playerlistRoot.GlobalPosition.X + _playerlistRoot.Size.X + 16f : GDNode.GetViewport().GetVisibleRect().Size.X;
+			float baseX = CoreUI.UserCard.GlobalPosition.X - _userCardPivot.Position.X;
+			float progress = Mathf.Clamp(_userCardPivot.Position.X / PlayerlistCloseOffsetX, 0f, 1f);
+			rightStart = Mathf.Lerp(baseX, trueScreenEdge, progress);
+		}
+		else
+		{
+			rightStart = GDNode.GetViewport().GetVisibleRect().Size.X;
+		}
+
+		Vector2 newBounds = new(leftEnd, rightStart);
+		if (newBounds == TopbarBounds) return;
+
+		TopbarBounds = newBounds;
+		TopbarBoundsChanged.Invoke();
+		OnPropertyChanged(nameof(TopbarBounds));
 	}
 
 	public override void Ready()
 	{
 		RefreshCoreUIsVisibility();
 		base.Ready();
+	}
+
+	public override void PreDelete()
+	{
+		if (CoreUI != null)
+		{
+			CoreUI.GetViewport().SizeChanged -= OnLayoutChanged;
+			_userCardPivot?.ItemRectChanged -= OnLayoutChanged;
+			foreach (Control control in _leftWatched)
+			{
+				control.VisibilityChanged -= OnLayoutChanged;
+				control.ItemRectChanged -= OnLayoutChanged;
+			}
+		}
+		base.PreDelete();
 	}
 
 	private void OnGameLoaded()
@@ -160,6 +287,35 @@ public sealed partial class CoreUIService : Instance
 		coreUI.Service = this;
 		CoreUI = coreUI;
 		GDNode.AddChild(coreUI, true, Godot.Node.InternalMode.Front);
+
+		// Recompute whenever the viewport is resized
+		coreUI.GetViewport().SizeChanged += OnLayoutChanged;
+
+		// Track left side buttons
+		RefreshLeftButtons();
+		Control? hboxNode = CoreUI.MenuButton.GetParent() as Control;
+		if (hboxNode != null)
+		{
+			hboxNode.ChildEnteredTree += _ =>
+			{
+				RefreshLeftButtons();
+				OnLayoutChanged();
+			};
+			hboxNode.ChildExitingTree += _ =>
+			{
+				RefreshLeftButtons();
+				OnLayoutChanged();
+			};
+		}
+
+		// Track UserCard's position as it animates
+		_userCardPivot = CoreUI.UserCard.GetParentOrNull<Control>();
+		if (_userCardPivot != null)
+		{
+			_userCardPivot.ItemRectChanged += OnLayoutChanged;
+			_playerlistRoot = _userCardPivot.GetParentOrNull<Control>()?.GetParentOrNull<Control>();
+		}
+
 		RefreshCoreUIsVisibility();
 	}
 
