@@ -210,8 +210,8 @@ public sealed partial class GraphicsSettingsApplier : Node
 		RenderingServer.DirectionalSoftShadowFilterSetQuality(gdQuality);
 		RenderingServer.PositionalSoftShadowFilterSetQuality(positionalQuality);
 
-		RenderingServer.DirectionalShadowAtlasSetSize(directionalShadowSize, true);
-		RenderingServer.ViewportSetPositionalShadowAtlasSize(GetRenderViewport().GetViewportRid(), positionalShadowSize, true);
+		RenderingServer.DirectionalShadowAtlasSetSize(directionalShadowSize, false);
+		RenderingServer.ViewportSetPositionalShadowAtlasSize(GetRenderViewport().GetViewportRid(), positionalShadowSize, false);
 
 		Light.NotifyShadowSettingsChanged();
 	}
