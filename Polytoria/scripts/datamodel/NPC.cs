@@ -24,6 +24,7 @@ public partial class NPC : Physical
 	private Tool? _holdingTool;
 	private Seat? _sittingIn;
 	private CharacterModel? _sitPoseModel;
+	private Node? _seatCollisionNode;
 	private CharacterModel? _character;
 	private Dynamic? _moveTarget;
 
@@ -650,34 +651,49 @@ public partial class NPC : Physical
 		// Kill player if fall off the map
 		if (Position.Y < Root.Environment.PartDestroyHeight)
 		{
-			Kill();
+			if (this is Player)
+			{
+				Kill();
+			}
+			else if ((Root.Network.IsServer || !ExistInNetwork) && IsNetworkReady)
+			{
+				Delete();
+				return;
+			}
 		}
 
 		if (IsSitting)
 		{
-			if (!Root.Network.IsServer && SittingIn != null)
-			{
-				if (!OverrideNetworkTransform)
-				{
-					InternalSit(SittingIn);
-				}
-				else
-				{
-					ApplySitPose();
-				}
+			if (SittingIn == null) return;
 
-				Velocity = Vector3.Zero;
-				Position = SittingIn.Position + SeatOffset.Y * Up;
+			SetSeatCollisionException((SittingIn.PhysicalRoot ?? SittingIn).GDNode);
+
+			if (Root.Network.IsServer)
+			{
+				SetGlobalPosition(SittingIn.Position + SeatOffset.Y * Up);
 				if (SittingIn.SitDirectionLocked)
 				{
-					Quaternion = SittingIn.Quaternion;
+					GDNode3D.GlobalBasis = new(SittingIn.Quaternion);
 				}
 				else
 				{
-					Quaternion = new Quaternion(Up, SittingIn.Up) * Quaternion;
+					GDNode3D.GlobalBasis = new(new Quaternion(Up, SittingIn.Up) * Quaternion);
 				}
-				Character?.PlayIdle();
+				return;
 			}
+
+			if (!OverrideNetworkTransform)
+			{
+				InternalSit(SittingIn);
+			}
+			else
+			{
+				ApplySitPose();
+			}
+
+			Velocity = Vector3.Zero;
+			FollowSeat();
+			Character?.PlayIdle();
 			return;
 		}
 
@@ -827,7 +843,10 @@ public partial class NPC : Physical
 		Anchored = true;
 		OverrideCanCollide = true;
 		OverrideCanCollideTo = false;
-		Unsit(false);
+		if (Root.Network == null || Root.Network.IsServer || NetworkAuthority == Root.Network.LocalPeerID)
+		{
+			Unsit(false);
+		}
 		UpdateCollision();
 
 		Character?.Animator?.StopAnimation();
@@ -1003,10 +1022,43 @@ public partial class NPC : Physical
 		OverrideNetworkTransform = true;
 		SetPhysicsProcess(true);
 		SittingIn = seat;
+		SetSeatCollisionException((seat.PhysicalRoot ?? seat).GDNode);
 		seat.Occupant = this;
 		seat.InvokeSat(this);
 		ApplySitPose();
 		Seated.Invoke(seat);
+	}
+
+	internal void FollowSeat()
+	{
+		if (!IsSitting || SittingIn == null) return;
+
+		Position = SittingIn.Position + SeatOffset.Y * Up;
+		if (SittingIn.SitDirectionLocked)
+		{
+			Quaternion = SittingIn.Quaternion;
+		}
+		else
+		{
+			Quaternion = new Quaternion(Up, SittingIn.Up) * Quaternion;
+		}
+	}
+
+	private void SetSeatCollisionException(Node? node)
+	{
+		if (ReferenceEquals(_seatCollisionNode, node)) return;
+
+		if (_seatCollisionNode != null && Node.IsInstanceValid(_seatCollisionNode))
+		{
+			CharBody3D.RemoveCollisionExceptionWith(_seatCollisionNode);
+		}
+
+		_seatCollisionNode = node;
+
+		if (node != null)
+		{
+			CharBody3D.AddCollisionExceptionWith(node);
+		}
 	}
 
 	private void ApplySitPose()
@@ -1029,6 +1081,7 @@ public partial class NPC : Physical
 			IsSitting = false;
 			OverrideNetworkTransform = false;
 			_sitPoseModel = null;
+			SetSeatCollisionException(null);
 
 			if (SittingIn != null)
 			{

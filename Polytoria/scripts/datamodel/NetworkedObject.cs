@@ -35,6 +35,7 @@ public partial class NetworkedObject : IScriptObject
 	private int _sequence = 0;
 	private World _game = null!;
 	private bool _isReplicating = true;
+	internal bool IsApplyingNetProp => !_isReplicating;
 	private bool _isDeleted = false;
 	internal int LuauObjectID;
 
@@ -1182,7 +1183,6 @@ public partial class NetworkedObject : IScriptObject
 			ClassName = ClassName,
 			Authority = NetworkAuthority,
 			Props = GetNetPropReplicateData(),
-			NodePath = NetworkPath,
 			ParentNodePath = NetworkParent?.NetworkPath ?? "",
 			ParentNodeID = NetworkParent?.NetworkedObjectID ?? "",
 			NetworkID = NetworkedObjectID,
@@ -1338,7 +1338,7 @@ public partial class NetworkedObject : IScriptObject
 		{
 			try
 			{
-				RecvPropUpdate(prop.Name, prop.ValueRaw, prop.Sequence);
+				RecvPropUpdate(prop.Index, prop.ValueRaw, prop.Sequence);
 			}
 			catch (Exception ex)
 			{
@@ -1375,7 +1375,7 @@ public partial class NetworkedObject : IScriptObject
 			{
 				replicateData.Add(new NetPropReplicateData
 				{
-					Name = entry.Name,
+					Index = (ushort)entry.Index,
 					ValueRaw = entry.Serialize(value),
 					Sequence = GetSequenceForProp(entry)
 				});
@@ -1391,9 +1391,9 @@ public partial class NetworkedObject : IScriptObject
 		{ NetID = NetworkedObjectID };
 	}
 
-	internal void RecvPropUpdate(string propName, byte[] propValueRaw, long sequence)
+	internal void RecvPropUpdate(int propIndex, byte[] propValueRaw, long sequence)
 	{
-		PropSyncProp? entry = PropSyncRegistry.GetProp(GetType(), propName);
+		PropSyncProp? entry = PropSyncRegistry.GetProp(GetType(), propIndex);
 
 		if (entry == null) return;
 
@@ -1410,7 +1410,7 @@ public partial class NetworkedObject : IScriptObject
 		}
 		catch (Exception ex)
 		{
-			PT.PrintErr("Failed to deserialize prop ", propName, " on ", GetType().Name, ": ", ex);
+			PT.PrintErr("Failed to deserialize prop ", entry.Name, " on ", GetType().Name, ": ", ex);
 			return;
 		}
 
@@ -1779,6 +1779,16 @@ public partial class NetworkedObject : IScriptObject
 		InitGDNode();
 	}
 
+	private void RunProcess(double delta)
+	{
+		if (!IsDeleted) Process(delta);
+	}
+
+	private void RunPhysicsProcess(double delta)
+	{
+		if (!IsDeleted) PhysicsProcess(delta);
+	}
+
 	public void SetProcess(bool enabled)
 	{
 		if (IsDeleted) return;
@@ -1786,13 +1796,13 @@ public partial class NetworkedObject : IScriptObject
 		if (enabled)
 		{
 			if (_processRegistered) return;
-			Globals.GodotProcess += Process;
+			Globals.GodotProcess += RunProcess;
 			_processRegistered = true;
 		}
 		else
 		{
 			if (!_processRegistered) return;
-			Globals.GodotProcess -= Process;
+			Globals.GodotProcess -= RunProcess;
 			_processRegistered = false;
 		}
 	}
@@ -1804,13 +1814,13 @@ public partial class NetworkedObject : IScriptObject
 		if (enabled)
 		{
 			if (_physicsProcessRegistered) return;
-			Globals.GodotPhysicsProcess += PhysicsProcess;
+			Globals.GodotPhysicsProcess += RunPhysicsProcess;
 			_physicsProcessRegistered = true;
 		}
 		else
 		{
 			if (!_physicsProcessRegistered) return;
-			Globals.GodotPhysicsProcess -= PhysicsProcess;
+			Globals.GodotPhysicsProcess -= RunPhysicsProcess;
 			_physicsProcessRegistered = false;
 		}
 	}

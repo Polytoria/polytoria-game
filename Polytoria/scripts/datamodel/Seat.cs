@@ -73,6 +73,21 @@ public partial class Seat : Part
 			Touched.Connect(OnSeatTouched);
 			Destroying.Connect(OnSeatDestroying);
 		}
+		else
+		{
+			TransformChanged += OnSeatMoved;
+		}
+	}
+
+	public override void PreDelete()
+	{
+		TransformChanged -= OnSeatMoved;
+		base.PreDelete();
+	}
+
+	private void OnSeatMoved()
+	{
+		Occupant?.FollowSeat();
 	}
 
 	private void OnSeatDestroying()

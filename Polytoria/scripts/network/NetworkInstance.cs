@@ -19,12 +19,15 @@ public class NetworkInstance
 {
 	private const float SilenceTimeoutSeconds = 5.0f;
 	private const int DataChannelAuthTimeoutMs = 10000;
-	private const ENetConnection.CompressionMode CompressionMode = ENetConnection.CompressionMode.Fastlz;
+	private const ENetConnection.CompressionMode CompressionMode = ENetConnection.CompressionMode.RangeCoder;
 	private const int BandwidthInLimit = 0;
-	private const int BandwidthOutLimit = 30 * 1024;
+	internal const int BandwidthOutLimit = 48 * 1024;
 	private const int BandwidthPerPlayer = 200 * 1024; // 200 KB/s per player
 	private long _lastMessageTicks = DateTime.UtcNow.Ticks;
 	private readonly Dictionary<int, string> _dataServerTokens = [];
+
+	private const int PacketThrottleInterval = 5000;
+	private const int PacketThrottleAcceleration = 2;
 
 	private const int DefaultCapacity = 67;
 	private const int DefaultPort = 21441;
@@ -38,6 +41,9 @@ public class NetworkInstance
 	private readonly ConcurrentQueue<PendingNetworkAction> _actionQueue = new();
 	internal readonly ConcurrentDictionary<int, ENetPacketPeer> IdToPeer = [];
 	internal readonly ConcurrentDictionary<ENetPacketPeer, int> PeerToId = [];
+	internal readonly ConcurrentDictionary<int, double> PeerRoundTrips = [];
+	private const int RoundTripIntervalMs = 100;
+	private long _lastRoundTripUpdate;
 
 	private readonly ConcurrentQueue<DeferredNetworkEvent> _mainThreadEventQueue = new();
 	private int _mainThreadDrainScheduled = 0;
@@ -55,6 +61,7 @@ public class NetworkInstance
 	public event MessageReceivedHandler? MessageReceived;
 
 	public bool IsSilence { get; private set; } = false;
+	internal int ProcessedMessages { get; private set; }
 	public bool IsServer { get; private set; } = false;
 	private volatile bool _shutdownd = false;
 
@@ -63,7 +70,7 @@ public class NetworkInstance
 		_peer = new();
 	}
 
-	public void CreateServer(int port = DefaultPort, int maxChannels = 3)
+	public void CreateServer(int port = DefaultPort, int maxChannels = 4)
 	{
 		Error e = _peer.CreateHostBound("*", port, DefaultCapacity, maxChannels);
 		_peer.Compress(CompressionMode);
@@ -78,7 +85,7 @@ public class NetworkInstance
 		PostPeerCreate();
 	}
 
-	public async Task CreateClient(string address, int port, int maxChannels = 3)
+	public async Task CreateClient(string address, int port, int maxChannels = 4)
 	{
 		Error e = _peer.CreateHost(DefaultCapacity, maxChannels);
 		_peer.BandwidthLimit(BandwidthInLimit, BandwidthOutLimit);
@@ -208,6 +215,7 @@ public class NetworkInstance
 			try
 			{
 				ProcessNetwork();
+				UpdateRoundTrips();
 				ProcessActionQueue();
 				CheckSilence();
 			}
@@ -264,6 +272,7 @@ public class NetworkInstance
 
 				IdToPeer[peerID] = fromPeer;
 				PeerToId[fromPeer] = peerID;
+				fromPeer.ThrottleConfigure(PacketThrottleInterval, PacketThrottleAcceleration, 0);
 
 				if (IsServer)
 				{
@@ -396,9 +405,23 @@ public class NetworkInstance
 		}
 	}
 
+	private void UpdateRoundTrips()
+	{
+		long now = System.Environment.TickCount64;
+		if (now - _lastRoundTripUpdate < RoundTripIntervalMs) return;
+		_lastRoundTripUpdate = now;
+		foreach ((int id, ENetPacketPeer peer) in IdToPeer)
+		{
+			double roundTrip = peer.GetStatistic(ENetPacketPeer.PeerStatistic.RoundTripTime);
+			double variance = peer.GetStatistic(ENetPacketPeer.PeerStatistic.RoundTripTimeVariance);
+			PeerRoundTrips[id] = (roundTrip + 4 * variance) / 1000;
+		}
+	}
+
 	private void HandlePeerDisconnected(int peerID, ENetPacketPeer peer)
 	{
 		IdToPeer.TryRemove(peerID, out _);
+		PeerRoundTrips.TryRemove(peerID, out _);
 		PeerToId.TryRemove(peer, out _);
 		if (IsServer)
 		{
@@ -430,8 +453,11 @@ public class NetworkInstance
 				return;
 			}
 
-			while (_mainThreadEventQueue.TryDequeue(out DeferredNetworkEvent e))
+			int pending = _mainThreadEventQueue.Count;
+			for (int i = 0; i < pending; i++)
 			{
+				if (!_mainThreadEventQueue.TryDequeue(out DeferredNetworkEvent e)) break;
+
 				switch (e)
 				{
 					case { Kind: DeferredNetworkEventKind.PeerConnected }:
@@ -453,6 +479,7 @@ public class NetworkInstance
 						ClientError?.Invoke(e.Error);
 						break;
 					case { Kind: DeferredNetworkEventKind.MessageReceived }:
+						ProcessedMessages++;
 						MessageReceived?.Invoke(e.PeerID, e.Data!, e.TransferMode);
 						break;
 				}
@@ -464,7 +491,14 @@ public class NetworkInstance
 
 			if (!_shutdownd && !_mainThreadEventQueue.IsEmpty && Interlocked.CompareExchange(ref _mainThreadDrainScheduled, 1, 0) == 0)
 			{
-				Callable.From(DrainEvents).CallDeferred();
+				if (Engine.GetMainLoop() is SceneTree tree)
+				{
+					tree.Connect(SceneTree.SignalName.ProcessFrame, Callable.From(DrainEvents), (uint)GodotObject.ConnectFlags.OneShot);
+				}
+				else
+				{
+					Callable.From(DrainEvents).CallDeferred();
+				}
 			}
 		}
 	}

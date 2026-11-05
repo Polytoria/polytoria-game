@@ -20,6 +20,7 @@ namespace Polytoria.Networking.Synchronizers;
 public sealed partial class NetworkReplicateSync : Instance
 {
 	private const int PlaceReplicationChunkSize = 300;
+	private const double RemovedKeepTime = 30;
 	internal NetworkService NetService = null!;
 
 	// Queue for pending replicate data (waiting for node to spawn)
@@ -28,8 +29,11 @@ public sealed partial class NetworkReplicateSync : Instance
 	public int InstanceLoadedCount = 1;
 	public int InstanceToBeLoadedCount = 0;
 	public event Action<int, int>? InstanceLoadedProgress;
-	private readonly HashSet<string> _removedRef = [];
+	private readonly Dictionary<string, (ulong Seq, double Time)> _removedIDs = [];
+	private ulong _recvSeq;
+	private double _removedSweep;
 	private readonly HashSet<NetReplicateData> _worldReplicateSet = [];
+	private readonly Dictionary<NetworkedObject, bool> _pendingSends = [];
 
 	private static readonly bool _useNetworkLog = false;
 
@@ -57,6 +61,9 @@ public sealed partial class NetworkReplicateSync : Instance
 	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Reliable)]
 	private async void NetRecvChunk(byte[] rawBytes, bool isPlaceReplicate)
 	{
+		_recvSeq++;
+		ulong seq = _recvSeq;
+
 		// Wait frame for all deletion to finish
 		await Globals.Singleton.WaitFrame();
 		await Globals.Singleton.WaitFrame();
@@ -79,11 +86,11 @@ public sealed partial class NetworkReplicateSync : Instance
 		{
 			foreach (NetReplicateData data in chunk)
 			{
-				if (_useNetworkLog) { PT.Print($"[Net] [{NetService.LocalPeerID}] on the way {data.NodePath}"); }
+				if (_useNetworkLog) { PT.Print($"[Net] [{NetService.LocalPeerID}] on the way {data.Name}"); }
 
 				if (data.ParentNodeID == null)
 				{
-					if (_useNetworkLog) { PT.Print($"[Net] [{NetService.LocalPeerID}] {data.NodePath} no parent"); }
+					if (_useNetworkLog) { PT.Print($"[Net] [{NetService.LocalPeerID}] {data.Name} no parent"); }
 					CountInstanceLoaded(null);
 					continue;
 				}
@@ -95,38 +102,23 @@ public sealed partial class NetworkReplicateSync : Instance
 				// Fallback to path;
 				parentNode ??= NetService.Root.GetNetObj(parentPath);
 
-				if (!NetService.IsPlaceReplicationDone)
+				if (IsRemovedAfter(data.NetworkID, seq) || IsRemovedAfter(parentID, seq))
 				{
-					// Check for deleted parents
-					bool removed = false;
-					foreach (string removedParentPath in _removedRef.ToArray())
-					{
-						if (removedParentPath != "" && parentPath.StartsWith(removedParentPath))
-						{
-							if (_useNetworkLog) { PT.Print($"[Net] [{NetService.LocalPeerID}] {data.NodePath} Removed ref {removedParentPath}"); }
-							_removedRef.Remove(removedParentPath);
-							removed = true;
-							break;
-						}
-					}
-
-					if (removed)
-					{
-						if (_useNetworkLog) { PT.Print($"[Net] [{NetService.LocalPeerID}] {data.NodePath} removed"); }
-						CountInstanceLoaded(null);
-						continue;
-					}
+					if (_useNetworkLog) { PT.Print($"[Net] [{NetService.LocalPeerID}] {data.Name} removed"); }
+					if (!IsRemovedAfter(data.NetworkID, seq)) _removedIDs[data.NetworkID] = _removedIDs[parentID];
+					if (isPlaceReplicate && _worldReplicateSet.Remove(data)) CountInstanceLoaded(null);
+					continue;
 				}
 
 				if (parentNode != null)
 				{
-					if (_useNetworkLog) { PT.Print($"[Net] [{NetService.LocalPeerID}] Chunk Replicate {data.NodePath}"); }
+					if (_useNetworkLog) { PT.Print($"[Net] [{NetService.LocalPeerID}] Chunk Replicate {data.Name}"); }
 					parentNode?.RecvReplicate(data);
 				}
 				else
 				{
 					List<NetReplicateData> value = GetPendingReplicates(parentID);
-					if (_useNetworkLog) { PT.Print($"[Net] [{NetService.LocalPeerID}] Pending {data.NodePath}"); }
+					if (_useNetworkLog) { PT.Print($"[Net] [{NetService.LocalPeerID}] Pending {data.Name}"); }
 					value.Add(data);
 				}
 			}
@@ -153,7 +145,7 @@ public sealed partial class NetworkReplicateSync : Instance
 		{
 			foreach (var item in _worldReplicateSet)
 			{
-				PT.Print(item.NodePath, " netID: ", item.NetworkID);
+				PT.Print(item.Name, " netID: ", item.NetworkID);
 			}
 		}
 
@@ -283,21 +275,46 @@ public sealed partial class NetworkReplicateSync : Instance
 
 		if (_useNetworkLog) { PT.Print($"[Net] Send Replicate {netObj.Name}"); }
 
-		if (netObj is Dynamic dyn)
+		if (_pendingSends.Count == 0)
 		{
-			NetService.TransformSync.SendUpdateTransform(dyn, true);
+			Callable.From(FlushNetReplicates).CallDeferred();
 		}
 
-		NetReplicateData netdata = netObj.GetNetReplicateData();
-		netdata.Name = netObj.Name;
-		netdata.IsSyncOnce = isSyncOnce;
-		byte[] data = SerializeUtils.Serialize(netdata);
+		_pendingSends[netObj] = isSyncOnce || _pendingSends.GetValueOrDefault(netObj);
+	}
 
-		Rpc(nameof(NetRecvReplicate), data);
+	private void FlushNetReplicates()
+	{
+		if (_pendingSends.Count == 0) return;
+
+		List<NetReplicateData> data = new(_pendingSends.Count);
+
+		foreach ((NetworkedObject netObj, bool isSyncOnce) in _pendingSends)
+		{
+			if (netObj.IsDeleted || !netObj.ShouldReplicate) continue;
+
+			NetReplicateData netdata = netObj.GetNetReplicateData();
+			netdata.IsSyncOnce = isSyncOnce;
+
+			if (netObj is Dynamic dyn)
+			{
+				netdata.Transform = NetService.TransformSync.GetReplicateTransform(dyn);
+			}
+
+			data.Add(netdata);
+		}
+
+		_pendingSends.Clear();
+
+		if (data.Count == 0) return;
+
+		Rpc(nameof(NetRecvReplicate), ZstdCompressionUtils.Compress(SerializeUtils.Serialize<NetReplicateData[]>([.. data])));
 	}
 
 	public void SendNetReplicateRemove(NetworkedObject netobj, long peerID = -1)
 	{
+		FlushNetReplicates();
+
 		if (peerID != -1)
 		{
 			RpcId((int)peerID, nameof(NetRecvReplicateRemove), netobj.NetworkedObjectID);
@@ -309,18 +326,80 @@ public sealed partial class NetworkReplicateSync : Instance
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
-	private async void NetRecvReplicate(byte[] data)
+	private async void NetRecvReplicate(byte[] rawBytes)
 	{
 		// Ignore if from server itself
 		if (NetService.IsServer) return;
+		_recvSeq++;
+		ulong seq = _recvSeq;
+
+		NetReplicateData[] netObjsData = SerializeUtils.Deserialize<NetReplicateData[]>(ZstdCompressionUtils.Decompress(rawBytes))!;
+
+		foreach (NetReplicateData data in netObjsData)
+		{
+			if (data.Transform != null)
+			{
+				NetService.TransformSync.RecvReplicateTransform(data.NetworkID, data.Transform, RemoteSenderId);
+			}
+		}
 
 		await Globals.Singleton.WaitFrame();
 
-		NetReplicateData replicateData = SerializeUtils.Deserialize<NetReplicateData>(data)!;
+		foreach (NetReplicateData data in netObjsData)
+		{
+			if (IsRemovedAfter(data.NetworkID, seq) || IsRemovedAfter(data.ParentNodeID, seq))
+			{
+				NetService.TransformSync.DropPendingTransform(data.NetworkID);
+				continue;
+			}
+			try
+			{
+				RecvNetReplicate(data);
+			}
+			catch (Exception ex)
+			{
+				PT.PrintErr($"[Net] Failed to replicate {data.Name}: {ex}");
+			}
+		}
+	}
+
+	private bool IsRemovedAfter(string? netID, ulong seq)
+	{
+		return netID != null && _removedIDs.TryGetValue(netID, out var removed) && removed.Seq > seq;
+	}
+
+	private void MarkRemoved(string netID, ulong seq)
+	{
+		double now = World.LocalClock;
+		if (now - _removedSweep > 1)
+		{
+			_removedSweep = now;
+			foreach (var (id, removed) in _removedIDs.ToArray())
+			{
+				if (now - removed.Time > RemovedKeepTime) _removedIDs.Remove(id);
+			}
+		}
+		_removedIDs[netID] = (seq, now);
+		NetService.TransformSync.DropPendingTransform(netID);
+		if (_pendingReplicates.Remove(netID, out List<NetReplicateData>? children))
+		{
+			foreach (NetReplicateData child in children)
+			{
+				MarkRemoved(child.NetworkID, seq);
+			}
+		}
+		foreach (List<NetReplicateData> list in _pendingReplicates.Values)
+		{
+			list.RemoveAll(d => d.NetworkID == netID);
+		}
+	}
+
+	private void RecvNetReplicate(NetReplicateData replicateData)
+	{
 		string parentID = replicateData.ParentNodeID;
 		string parentNodePath = replicateData.ParentNodePath;
 
-		if (_useNetworkLog) { PT.Print($"[Net] Recv Replicate {replicateData.NodePath}"); }
+		if (_useNetworkLog) { PT.Print($"[Net] Recv Replicate {replicateData.Name}"); }
 
 		NetworkedObject? parent = NetService.Root.GetObjectFromID(parentID);
 
@@ -339,7 +418,7 @@ public sealed partial class NetworkReplicateSync : Instance
 				{
 					if (parent != existingChild)
 					{
-						if (_useNetworkLog) { PT.Print($"[Net] [@] Reparent {replicateData.NodePath}"); }
+						if (_useNetworkLog) { PT.Print($"[Net] [@] Reparent {replicateData.Name}"); }
 
 						existingChild.NetworkParent = parent;
 					}
@@ -347,7 +426,7 @@ public sealed partial class NetworkReplicateSync : Instance
 			}
 			else
 			{
-				if (_useNetworkLog) { PT.Print($"[Net] [+] Add {replicateData.NodePath}"); }
+				if (_useNetworkLog) { PT.Print($"[Net] [+] Add {replicateData.Name}"); }
 				parent.RecvReplicate(replicateData);
 			}
 		}
@@ -355,22 +434,21 @@ public sealed partial class NetworkReplicateSync : Instance
 		{
 			// Parent not ready yet → queue
 			List<NetReplicateData> value = GetPendingReplicates(parentID);
-			if (_useNetworkLog) { PT.Print($"[Net] [?] Pending {replicateData.NodePath}"); }
+			if (_useNetworkLog) { PT.Print($"[Net] [?] Pending {replicateData.Name}"); }
 			value.Add(replicateData);
 		}
 	}
 
 	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Reliable)]
-	private void NetRecvReplicateRemove(string nodePath)
+	private async void NetRecvReplicateRemove(string nodePath)
 	{
 		if (NetService.IsServer) return;
-		NetworkedObject? targetObj = NetService.Root.GetNetObjectFromID(nodePath);
+		_recvSeq++;
+		MarkRemoved(nodePath, _recvSeq);
 
-		// Add removed reference if replicating
-		if (!NetService.IsPlaceReplicationDone)
-		{
-			_removedRef.Add(nodePath);
-		}
+		await Globals.Singleton.WaitFrame();
+
+		NetworkedObject? targetObj = NetService.Root.GetNetObjectFromID(nodePath);
 
 		// If target still exists, remove
 		if (targetObj != null)
@@ -404,8 +482,9 @@ public sealed partial class NetworkReplicateSync : Instance
 	public override void PreDelete()
 	{
 		SetProcess(false);
+		_pendingSends.Clear();
 		_pendingReplicates.Clear();
-		_removedRef.Clear();
+		_removedIDs.Clear();
 		_worldReplicateSet.Clear();
 		InstanceLoadedProgress = null;
 		base.PreDelete();

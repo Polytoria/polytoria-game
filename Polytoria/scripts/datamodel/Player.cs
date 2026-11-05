@@ -405,7 +405,6 @@ public sealed partial class Player : NPC
 		{
 			bool oldVal = _isReady;
 			_isReady = value;
-			GD.PushWarning($"{Name} update is ready {oldVal} -> {_isReady}");
 			UpdatePlrReady();
 			if (value != oldVal && value)
 			{
@@ -571,7 +570,6 @@ public sealed partial class Player : NPC
 		}
 		if (!IsLocal)
 		{
-			UpdateTransformTick(delta);
 			if (Root.Network.IsServer && !IsSitting)
 			{
 				CharBody3D.Velocity = LastVelocity;
@@ -1148,12 +1146,6 @@ public sealed partial class Player : NPC
 				LoadAppearance(UserID);
 			}
 		}
-	}
-
-	internal override bool TransformNetworkCheck(TransformPayloadDto newTransform)
-	{
-		// TODO: Make sanity checks here
-		return true;
 	}
 
 	internal void AdminKick()

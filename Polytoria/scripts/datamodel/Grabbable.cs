@@ -22,6 +22,7 @@ public partial class Grabbable : Instance
 	private float _maxGrabbableRange;
 	private bool _useDragForce;
 	private Player? _dragger;
+	private bool _parentOwnershipAuto = true;
 	private GrabbablePermissionModeEnum _permissionMode = GrabbablePermissionModeEnum.Everyone;
 
 	[Editable, ScriptProperty, DefaultValue(10)]
@@ -191,9 +192,10 @@ public partial class Grabbable : Instance
 
 	private void GiveDragTo(Player plr)
 	{
-		if (_parent == null) return;
+		if (_parent == null || _dragger != null) return;
 		_dragger = plr;
 		_dragger.SetGrabbing(_parent);
+		_parentOwnershipAuto = _parent.NetworkOwnershipAuto;
 		_parent.SetNetworkAuthority(plr);
 		Grabbed.Invoke(plr);
 		RpcId(plr.PeerID, nameof(NetGrabDrag));
@@ -234,7 +236,11 @@ public partial class Grabbable : Instance
 			InternalReleaseDrag();
 
 			// Return authority to server
-			_parent?.SetNetworkAuthority(null);
+			if (_parent != null)
+			{
+				_parent.SetNetworkAuthority(null);
+				_parent.NetworkOwnershipAuto = _parentOwnershipAuto;
+			}
 
 			Rpc(nameof(NetReleaseDrag));
 		}
@@ -260,7 +266,15 @@ public partial class Grabbable : Instance
 		if (_dragger == null) return;
 
 		// Set to null when deleted
-		if (_dragger.IsDeleted) { _dragger = null; return; }
+		if (_dragger.IsDeleted)
+		{
+			_dragger = null;
+			if (Root.Network.IsServer && _parent != null)
+			{
+				_parent.NetworkOwnershipAuto = _parentOwnershipAuto;
+			}
+			return;
+		}
 
 		// Process drag physics if enabled
 		if (UseDragForce)
