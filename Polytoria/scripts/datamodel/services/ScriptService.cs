@@ -149,6 +149,7 @@ public sealed partial class ScriptService : Instance
 			{ "CoreUI", root.CoreUI },
 			{ "Stats", root.Stats },
 			{ "Teams", root.Teams },
+			{ "Tags", root.Tags },
 			{ "Datastore", root.Datastore },
 			{ "Http", root.Http },
 			{ "Insert", root.Insert },
