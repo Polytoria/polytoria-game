@@ -27,6 +27,29 @@ public sealed partial class Highlight : Instance
 
 	private static readonly HashSet<Highlight> _allHighlights = [];
 	public static IReadOnlyCollection<Highlight> ActiveHighlights => _allHighlights;
+	private static bool _hierarchyRefreshScheduled;
+
+	internal static void ScheduleHierarchyRefresh()
+	{
+		if (_allHighlights.Count == 0 || Globals.IsHeadless || !Globals.UseNodes)
+		{
+			return;
+		}
+
+		if (_hierarchyRefreshScheduled)
+		{
+			return;
+		}
+
+		_hierarchyRefreshScheduled = true;
+		Callable.From(BatchedRefresh).CallDeferred();
+	}
+
+	private static void BatchedRefresh()
+	{
+		_hierarchyRefreshScheduled = false;
+		NotifyHierarchyChanged();
+	}
 
 	public static Highlight? GetHighlightFor(Instance? instance)
 	{
@@ -59,6 +82,13 @@ public sealed partial class Highlight : Instance
 
 	internal static void NotifyHierarchyChanged()
 	{
+		_hierarchyRefreshScheduled = false;
+
+		if (_allHighlights.Count == 0 || Globals.IsHeadless || !Globals.UseNodes)
+		{
+			return;
+		}
+
 		List<Highlight> highlights = [.. _allHighlights];
 		highlights.Sort((a, b) =>
 		{
@@ -182,7 +212,7 @@ public sealed partial class Highlight : Instance
 			if (_enabled == value) return;
 			_enabled = value;
 			UpdateMaterials();
-			NotifyHierarchyChanged();
+			ScheduleHierarchyRefresh();
 			OnPropertyChanged();
 		}
 	}
@@ -199,11 +229,7 @@ public sealed partial class Highlight : Instance
 		}
 
 		SetProcess(true);
-		NotifyHierarchyChanged();
-		if (!Globals.IsHeadless && Globals.UseNodes)
-		{
-			Callable.From(NotifyHierarchyChanged).CallDeferred();
-		}
+		ScheduleHierarchyRefresh();
 	}
 
 	public override void ExitTree()
@@ -218,7 +244,7 @@ public sealed partial class Highlight : Instance
 		}
 
 		ClearTargetBindings();
-		NotifyHierarchyChanged();
+		ScheduleHierarchyRefresh();
 		base.ExitTree();
 	}
 
@@ -234,11 +260,7 @@ public sealed partial class Highlight : Instance
 			_allHighlights.Remove(this);
 			ClearTargetBindings();
 		}
-		NotifyHierarchyChanged();
-		if (!Globals.IsHeadless && Globals.UseNodes)
-		{
-			Callable.From(NotifyHierarchyChanged).CallDeferred();
-		}
+		ScheduleHierarchyRefresh();
 	}
 
 	public override void PreDelete()
@@ -254,7 +276,7 @@ public sealed partial class Highlight : Instance
 
 		ClearTargetBindings();
 		DisposeMaterials();
-		NotifyHierarchyChanged();
+		ScheduleHierarchyRefresh();
 		base.PreDelete();
 	}
 
@@ -312,7 +334,7 @@ public sealed partial class Highlight : Instance
 	{
 		base.HiddenChanged(to);
 		UpdateMaterials();
-		NotifyHierarchyChanged();
+		ScheduleHierarchyRefresh();
 	}
 
 	private void RefreshTarget()
@@ -692,11 +714,11 @@ public sealed partial class Highlight : Instance
 	{
 		if (instance is Highlight)
 		{
-			NotifyHierarchyChanged();
+			ScheduleHierarchyRefresh();
 		}
 		else if (_currentTarget != null && !_currentTarget.IsDeleted && (instance.IsDescendantOf(_currentTarget) || instance == _currentTarget))
 		{
-			RefreshTargets();
+			ScheduleHierarchyRefresh();
 		}
 	}
 
@@ -704,7 +726,7 @@ public sealed partial class Highlight : Instance
 	{
 		if (instance is Highlight)
 		{
-			NotifyHierarchyChanged();
+			ScheduleHierarchyRefresh();
 		}
 		else if (instance == _currentTarget)
 		{
@@ -713,6 +735,7 @@ public sealed partial class Highlight : Instance
 		else if (_currentTarget != null && !_currentTarget.IsDeleted && instance.IsDescendantOf(_currentTarget))
 		{
 			RemoveTargetInstance(instance);
+			ScheduleHierarchyRefresh();
 		}
 	}
 

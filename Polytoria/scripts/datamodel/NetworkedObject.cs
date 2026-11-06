@@ -80,13 +80,9 @@ public partial class NetworkedObject : IScriptObject
 				while (childIdx < siblings.Count && !ReferenceEquals(siblings[childIdx], selfpreI)) childIdx++;
 				if (childIdx < siblings.Count) siblings.RemoveAt(childIdx);
 				preI.ChildRemoved.Invoke(selfpreI);
-				if (Highlight.ActiveHighlights.Count > 0)
+				if (Highlight.ActiveHighlights.Count > 0 && (selfpreI is Dynamic || selfpreI is Highlight || selfpreI is IGroup))
 				{
-					Highlight.NotifyHierarchyChanged();
-					if (!Globals.IsHeadless && Globals.UseNodes)
-					{
-						Callable.From(Highlight.NotifyHierarchyChanged).CallDeferred();
-					}
+					Highlight.ScheduleHierarchyRefresh();
 				}
 			}
 
@@ -129,13 +125,9 @@ public partial class NetworkedObject : IScriptObject
 				postI.Children.Add(selfpostI);
 				selfpostI.Index = postI.Children.Count - 1;
 				postI.ChildAdded.Invoke(selfpostI);
-				if (Highlight.ActiveHighlights.Count > 0)
+				if (Highlight.ActiveHighlights.Count > 0 && (selfpostI is Dynamic || selfpostI is Highlight || selfpostI is IGroup))
 				{
-					Highlight.NotifyHierarchyChanged();
-					if (!Globals.IsHeadless && Globals.UseNodes)
-					{
-						Callable.From(Highlight.NotifyHierarchyChanged).CallDeferred();
-					}
+					Highlight.ScheduleHierarchyRefresh();
 				}
 			}
 		}
