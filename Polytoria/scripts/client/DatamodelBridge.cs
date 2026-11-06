@@ -119,10 +119,7 @@ public partial class DatamodelBridge : Node3D
 			sm.VertexColorIsSrgb = true;
 			sm.Uv1WorldTriplanar = true;
 
-			if (isTransparent)
-			{
-				sm.Transparency = isTransparent ? BaseMaterial3D.TransparencyEnum.AlphaDepthPrePass : BaseMaterial3D.TransparencyEnum.Disabled;
-			}
+			sm.Transparency = isTransparent ? BaseMaterial3D.TransparencyEnum.Alpha : BaseMaterial3D.TransparencyEnum.Disabled;
 
 			sm.RoughnessTexture = null;
 
