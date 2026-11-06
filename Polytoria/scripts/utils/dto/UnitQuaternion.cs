@@ -13,26 +13,21 @@ namespace Polytoria.Utils.DTOs;
 [MemoryPackable]
 public partial class UnitQuaternionDto
 {
-	[JsonInclude] public uint Rotation { get; set; }
+	[JsonInclude] public ulong Rotation { get; set; }
 
 	// Constant used for compression.
 	static readonly float _oneSqrtTwo = (float)(1.0f / Math.Sqrt(2.0f));
 
 	[MemoryPackConstructor, JsonConstructor]
 	public UnitQuaternionDto() { }
+	public UnitQuaternionDto(Quaternion v) { Rotation = ToCompressed(v); }
 
-	public static string ToString(Quaternion src)
-	{
-		uint compressed = ToCompressed(src);
-		return $"{compressed}";
-	}
+	public Quaternion ToQuaternion() => FromCompressed(Rotation);
 
-	public static Quaternion FromString(string src)
-	{
-		return FromCompressed(Convert.ToUInt32(src));
-	}
+	public static string ToString(Quaternion src) => $"{ToCompressed(src)}";
+	public static Quaternion FromString(string src) => FromCompressed(Convert.ToUInt32(src));
 
-	public static uint ToCompressed(Quaternion src)
+	public static ulong ToCompressed(Quaternion src)
 	{
 		int largestComponent = 0;
 		for (int i = 1; i < 4; i++)
@@ -40,35 +35,36 @@ public partial class UnitQuaternionDto
 			if (Math.Abs(src[i]) > Math.Abs(src[largestComponent])) { largestComponent = i; }
 		}
 
-		uint negate = (uint)(src[largestComponent] < 0 ? 1 : 0);
-		uint result = (uint)largestComponent;
+		// NOTE: A quaternion is equal to it's inverse.
+		ulong negate = (ulong)(src[largestComponent] < 0 ? 1 : 0);
+		ulong result = ((ulong)largestComponent) << 2;
 		for (int i = 0; i < 4; i++)
 		{
 			if (i != largestComponent)
 			{
-				uint negbit = (uint)(src[i] < 0 ? 0x1 : 0x0) ^ negate;
-				// 511 == ((1 << 9) - 1)
-				uint magnitude = (uint)(511 * Math.Abs(src[i]) / _oneSqrtTwo + 0.5f);
-				result = (result << 10) | (negbit << 9) | magnitude;
+				ulong negbit = (ulong)(src[i] < 0 ? 0x1 : 0x0) ^ negate;
+				// 524287 == ((1 << 19) - 1)
+				ulong magnitude = (ulong)(524287 * Math.Abs(src[i]) / _oneSqrtTwo + 0.5f);
+				result = (result << 20) | (negbit << 19) | magnitude;
 			}
 		}
 		return result;
 	}
 
-	public static Quaternion FromCompressed(uint src)
+	public static Quaternion FromCompressed(ulong src)
 	{
 		Quaternion result = new Quaternion();
-		int largestComponent = (int)(src >> 30);
+		int largestComponent = (int)(src >> 62);
 		double sumSquares = 0;
 		for (int i = 3; i >= 0; i--)
 		{
 			if (i != largestComponent)
 			{
-				uint magnitude = src & 511;
-				uint negbit = (src >> 9) & 1;
-				src = src >> 10;
-				result[i] = _oneSqrtTwo * (float)magnitude / 511;
-				if (negbit == (uint)1) { result[i] = -result[i]; }
+				ulong magnitude = src & 524287;
+				ulong negbit = (src >> 19) & 1;
+				src >>= 20;
+				result[i] = _oneSqrtTwo * (float)magnitude / 524287;
+				if (negbit == 0x1) result[i] = -result[i];
 				sumSquares += result[i] * result[i];
 			}
 		}
@@ -100,7 +96,7 @@ public class UnitQuaternionJsonConverter : JsonConverter<Quaternion>
 
 	public override void Write(Utf8JsonWriter writer, Quaternion value, JsonSerializerOptions options)
 	{
-		uint compressed = UnitQuaternionDto.ToCompressed(value);
+		ulong compressed = UnitQuaternionDto.ToCompressed(value);
 		writer.WriteStartArray();
 		writer.WriteNumberValue(compressed);
 		writer.WriteEndArray();
