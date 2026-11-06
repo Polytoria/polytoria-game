@@ -17,6 +17,7 @@ public partial class UIHealthbar : Control
 	public CoreUIRoot CoreUI = null!;
 
 	private bool _staminaBarAppeared = false;
+	private (float, float, bool, float, float, bool) _lastState; // health, max health, use health, stamina, max stamiina, use stamina
 
 	private Color _healthFullColor;
 	private Color _healthOutColor;
@@ -37,6 +38,11 @@ public partial class UIHealthbar : Control
 				_heart.Visible = _healthBar.Visible = true;
 				float health = v.Health;
 				float maxHealth = v.MaxHealth;
+
+				var state = (health, maxHealth, true, localplayer.Stamina, localplayer.MaxStamina, localplayer.UseStamina);
+				if (state == _lastState) return;
+				_lastState = state;
+
 				Color healthClr = _healthOutColor.Lerp(_healthFullColor, Mathf.Clamp(health / maxHealth, 0, 1));
 
 				_heart.Modulate = healthClr;
@@ -50,6 +56,10 @@ public partial class UIHealthbar : Control
 			else
 			{
 				_heart.Visible = _healthBar.Visible = false;
+
+				var state = (0, 0, false, localplayer.Stamina, localplayer.MaxStamina, localplayer.UseStamina);
+				if (state == _lastState) return;
+				_lastState = state;
 			}
 
 			_staminaBar.Visible = localplayer.UseStamina;

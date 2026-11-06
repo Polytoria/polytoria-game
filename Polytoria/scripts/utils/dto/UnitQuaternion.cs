@@ -72,7 +72,7 @@ public partial class UnitQuaternionDto
 				sumSquares += result[i] * result[i];
 			}
 		}
-		result[largestComponent] = (float)Math.Sqrt(1 - sumSquares);
+		result[largestComponent] = (float)Math.Sqrt(Math.Max(0, 1 - sumSquares));
 		return result.Normalized();
 	}
 }

@@ -22,7 +22,7 @@ public sealed partial class Particles : Dynamic
 	private GpuParticles3D _particles = null!;
 	private ParticleProcessMaterial _particle = null!;
 
-	private double _aabbUpdateTimer = 0;
+	private double _aabbUpdateTimer = Random.Shared.NextDouble() * AabbUpdateIntervalSec;
 
 	private ImageAsset? _asset;
 	private TextureFilterEnum _textureFilter;
@@ -792,6 +792,7 @@ public sealed partial class Particles : Dynamic
 	private void UpdateVisibilityAabb()
 	{
 		if (RenderingServer.GetCurrentRenderingMethod() == "gl_compatibility") return;
+		if (IsHidden || !_particles.Emitting || !_particles.IsVisibleInTree()) return;
 		Aabb captured = _particles.CaptureAabb();
 		if (captured.Size != Vector3.Zero)
 			// Double the size

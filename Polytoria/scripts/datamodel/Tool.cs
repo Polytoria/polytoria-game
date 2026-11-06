@@ -41,11 +41,13 @@ public sealed partial class Tool : RigidBody
 		get => _iconImage;
 		set
 		{
-			_iconImage = value;
-			if (_iconImage != null && _iconImage != value)
+			if (_iconImage != null)
 			{
 				_iconImage.ResourceLoaded -= OnToolImageLoaded;
-				_iconImage.UnlinkFrom(this);
+				if (_iconImage != value)
+				{
+					_iconImage.UnlinkFrom(this);
+				}
 			}
 			OnToolImageLoaded(null);
 			_iconImage = value;

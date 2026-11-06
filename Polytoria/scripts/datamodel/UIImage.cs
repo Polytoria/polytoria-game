@@ -102,6 +102,7 @@ public partial class UIImage : UIField
 		get => _textureScale;
 		set
 		{
+			if (_textureScale == value) return;
 			_textureScale = value;
 			ApplyTexture();
 			OnPropertyChanged();
@@ -114,6 +115,7 @@ public partial class UIImage : UIField
 		get => _textureOffset;
 		set
 		{
+			if (_textureOffset == value) return;
 			_textureOffset = value;
 			ApplyTexture();
 			OnPropertyChanged();
@@ -126,6 +128,7 @@ public partial class UIImage : UIField
 		get => _color;
 		set
 		{
+			if (_color == value) return;
 			_color = value;
 			ApplyTexture();
 			OnPropertyChanged();
@@ -200,9 +203,11 @@ public partial class UIImage : UIField
 	{
 		if (!uint.TryParse(_imageID, out uint result))
 		{
-			SetToDefaultImage();
+			Image = null;
 			return;
 		}
+		if (Image is PTImageAsset { IsDeleted: false } current && current.ImageType == _imageType && current.ImageID == result) return;
+
 		PTImageAsset polyImg = New<PTImageAsset>();
 		Image = polyImg;
 		polyImg.ImageType = _imageType;
@@ -265,6 +270,7 @@ public partial class UIImage : UIField
 
 	private void OnResourceLoaded(Resource tex)
 	{
+		if (IsDeleted || !GodotObject.IsInstanceValid(GDTextureRect)) return;
 		_loadedTexture = (Texture2D)tex;
 		ApplyTexture();
 		Loading = false;

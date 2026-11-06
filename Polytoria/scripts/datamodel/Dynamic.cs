@@ -9,6 +9,8 @@ using Polytoria.Creator.UI;
 using Polytoria.Creator.Spatial;
 using Polytoria.Datamodel.Interfaces;
 #endif
+using Polytoria.Client.Networking;
+using Polytoria.Shared;
 using Polytoria.Utils;
 using Polytoria.Utils.DTOs;
 using System;
@@ -34,7 +36,11 @@ public partial class Dynamic : Instance
 	}
 
 	private const float MinScale = 0.001f;
-	private const float LerpSpeed = 20;
+	private const float NetVelocitySlack = 50f;
+	private const double NetRestDelay = NetworkTransformSync.TickInterval * 2;
+	private const float NetStillSpeed = 0.1f;
+	private const float NetStillStep = 0.1f;
+	private const double NetWriteAckTimeout = 5;
 	public event Action? TransformChanged;
 	public event Action? ReliableTransformChanged;
 	protected List<Node3D> excludedBoundNodes = [];
@@ -43,14 +49,19 @@ public partial class Dynamic : Instance
 	private bool _isFirstUpdate = true;
 	private bool _isDirty = false;
 
+	private static readonly HashSet<Dynamic> _pendingTransforms = [];
+	private bool _pendingSyncToNet;
+	private bool _netTeleport;
+	private double _lastScriptMove = double.MinValue;
+
 	private Transform3D _oldPartTransformApplied;
 	private Transform3D _oldGlobalTransformApplied;
 	private Transform3D _oldLocalTransformApplied;
 
 	private int _netTransformAuthority = 1;
 
-	protected virtual float PositionSyncThreshold => 0.5f;
-	protected virtual float RotationSyncThreshold => 5f;
+	protected virtual float PositionSyncThreshold => 0.05f;
+	protected virtual float RotationSyncThreshold => 1f;
 
 #if CREATOR
 	private Area3D _boundArea3D = null!;
@@ -66,16 +77,13 @@ public partial class Dynamic : Instance
 	{
 		get
 		{
-			return GetGlobalPosition();
+			return GetSimulatedTransform().Origin;
 		}
 		set
 		{
+			SyncPhysicsTransform();
 			SetGlobalPosition(value);
-			if (AutoUpdateNetTransform)
-			{
-				UpdateNetTransformReliable();
-			}
-			OnPropertyChanged();
+			QueueTransformUpdate(AutoUpdateNetTransform, true);
 		}
 	}
 
@@ -84,23 +92,17 @@ public partial class Dynamic : Instance
 	{
 		get
 		{
-			Basis globalBasis = GetGlobalTransform().Basis;
-			Quaternion q = globalBasis.GetRotationQuaternion();
+			Quaternion q = GetSimulatedTransform().Basis.GetRotationQuaternion();
 
 			return MathUtils.Vector3RadToDeg(q.GetEuler());
 		}
 		set
 		{
 			Vector3 sanitizedValue = value.SanitizeNaN();
+			SyncPhysicsTransform();
 			GDNode3D.GlobalRotationDegrees = sanitizedValue;
-			ForceUpdateTransform();
 			_oldGlobalTransformApplied = GetGlobalTransform();
-
-			if (AutoUpdateNetTransform)
-			{
-				UpdateNetTransformReliable();
-			}
-			OnPropertyChanged();
+			QueueTransformUpdate(AutoUpdateNetTransform, true);
 		}
 	}
 
@@ -132,12 +134,9 @@ public partial class Dynamic : Instance
 		}
 		set
 		{
+			SyncPhysicsTransform();
 			SetLocalPosition(value);
-			if (AutoUpdateNetTransform)
-			{
-				UpdateNetTransformReliable();
-			}
-			OnPropertyChanged();
+			QueueTransformUpdate(AutoUpdateNetTransform, true);
 		}
 	}
 
@@ -150,12 +149,9 @@ public partial class Dynamic : Instance
 		}
 		set
 		{
+			SyncPhysicsTransform();
 			GDNode3D.RotationDegrees = value.SanitizeNaN();
-			if (AutoUpdateNetTransform)
-			{
-				UpdateNetTransformReliable();
-			}
-			OnPropertyChanged();
+			QueueTransformUpdate(AutoUpdateNetTransform, true);
 		}
 	}
 
@@ -178,17 +174,14 @@ public partial class Dynamic : Instance
 	[ScriptProperty, CloneIgnore, NoSync]
 	public Quaternion Quaternion
 	{
-		get => GetGlobalTransform().Basis.GetRotationQuaternion();
+		get => GetSimulatedTransform().Basis.GetRotationQuaternion();
 		set
 		{
 			Quaternion q = value;
 			if (!q.IsFinite()) return;
+			SyncPhysicsTransform();
 			GDNode3D.GlobalBasis = new(q);
-			if (AutoUpdateNetTransform)
-			{
-				UpdateNetTransformReliable();
-			}
-			OnPropertyChanged();
+			QueueTransformUpdate(AutoUpdateNetTransform, true);
 		}
 	}
 
@@ -200,12 +193,9 @@ public partial class Dynamic : Instance
 		{
 			Quaternion q = value;
 			if (!q.IsFinite()) return;
+			SyncPhysicsTransform();
 			GDNode3D.Basis = new(q);
-			if (AutoUpdateNetTransform)
-			{
-				UpdateNetTransformReliable();
-			}
-			OnPropertyChanged();
+			QueueTransformUpdate(AutoUpdateNetTransform, true);
 		}
 	}
 
@@ -235,8 +225,49 @@ public partial class Dynamic : Instance
 		get => _netTransformAuthority;
 		set
 		{
-			_netTransformAuthority = value;
+			if (_netTransformAuthority != value)
+			{
+				ChangeNetTransformAuthority(value);
+			}
 			OnPropertyChanged();
+		}
+	}
+
+	private void ChangeNetTransformAuthority(int value)
+	{
+		int previous = _netTransformAuthority;
+		var network = Root?.Network;
+		bool isLocal = network != null && value == network.LocalPeerID;
+		bool wasLocal = network != null && previous == network.LocalPeerID;
+		bool wasGaining = IsNetGaining;
+
+		if (netMotion != null)
+		{
+			netMotion.StopGain();
+			if (!isLocal)
+			{
+				netMotion.GainMotion = null;
+			}
+		}
+
+		bool lost = wasLocal && !wasGaining && network != null && !network.IsServer && Root!.IsLoaded;
+		Transform3D lostTransform = lost ? GetLocalTransform() : default;
+		var lostVelocity = lost ? GetNetBodyVelocity() : default;
+
+		_netTransformAuthority = value;
+		PreviousNetTransformAuthority = previous;
+		NetTransformAuthorityChangedAt = World.LocalClock;
+		NetTransformAuthorityChangedNetTime = Root?.NetTime ?? 0;
+		_writeAckUntil = double.MinValue;
+		OnNetTransformAuthorityChanged();
+
+		if (!wasGaining && !IsNetGaining && (network == null || wasLocal || isLocal))
+		{
+			netMotion?.Reset();
+		}
+		if (lost)
+		{
+			SeedNetSamples(lostTransform, lostVelocity.Linear, lostVelocity.Angular);
 		}
 	}
 
@@ -258,6 +289,7 @@ public partial class Dynamic : Instance
 
 	public override void PreDelete()
 	{
+		_pendingTransforms.Remove(this);
 		excludedBoundNodes.Clear();
 #if CREATOR
 		if (_boundArea3D != null)
@@ -300,17 +332,20 @@ public partial class Dynamic : Instance
 
 	public override void Ready()
 	{
+		_currentTransform = GetLocalTransform();
+		_hasSyncedOnce = true;
 		if (Root != null && Root.Network != null && Root.Network.IsServer)
 		{
-			UpdateNetTransformReliable();
+			_lastSentTransform = _currentTransform;
 		}
 		base.Ready();
 	}
 
 	private Transform3D? _lastSentTransform;
-	private Transform3D _netTransform;
+	private Transform3D? _lastTickTransform;
+	private double _lastReliableMoveTime = double.MinValue;
+	protected NetMotion? netMotion;
 	private Transform3D _currentTransform;
-	private bool _lerpUnreliable = false;
 
 	private Transform3D _lastNotifiedTransform;
 	private bool _hasNotifiedOnce;
@@ -333,7 +368,7 @@ public partial class Dynamic : Instance
 			if (value && !_overrideNetworkTransform)
 			{
 				_isDirty = false;
-				_lerpUnreliable = false;
+				netMotion?.Reset();
 			}
 			_overrideNetworkTransform = value;
 		}
@@ -345,9 +380,112 @@ public partial class Dynamic : Instance
 	/// <param name="newSize"></param>
 	internal virtual void OnNodeSizeChanged(Vector3 newSize) { }
 
-	public void UpdateTransformTick(double delta)
+	internal int PreviousNetTransformAuthority { get; private set; } = 1;
+	internal double NetTransformAuthorityChangedAt { get; private set; } = double.MinValue;
+	internal double NetTransformAuthorityChangedNetTime { get; private set; }
+	internal double LastServerWrite { get; private set; } = double.MinValue;
+	internal byte ServerWriteSeq { get; private set; }
+	internal byte AckedServerWrite { get; set; }
+	private double _writeAckUntil = double.MinValue;
+	internal bool HasPendingNetWrite => _pendingSyncToNet;
+
+	internal virtual void OnNetTransformAuthorityChanged() { }
+
+	internal bool IsAwaitingWriteAck(byte acked)
 	{
-		if (!_lerpUnreliable) { return; }
+		if (World.LocalClock >= _writeAckUntil) return false;
+		if (acked != ServerWriteSeq) return true;
+		_writeAckUntil = double.MinValue;
+		return false;
+	}
+
+	protected virtual void SyncPhysicsTransform() { }
+
+	protected virtual Transform3D GetSimulatedTransform() => GetGlobalTransform();
+
+	protected virtual (Vector3 Linear, Vector3 Angular) GetNetBodyVelocity() => default;
+
+	private void SeedNetSamples(Transform3D local, Vector3 linear, Vector3 angular)
+	{
+		Basis parent = GetNetParentBasis();
+
+		Motion.Seed(local, parent.Inverse() * linear, parent.Orthonormalized().Inverse() * angular, Root.PhysicsNetTime);
+		StartInterpolating();
+	}
+
+	protected void StartInterpolating()
+	{
+		_isDirty = true;
+		SetPhysicsProcessWAuthor(true);
+		Root.AddInterpolating(this);
+	}
+
+	internal (Vector3 Velocity, Vector3 AngularVelocity, double Time) GetNetMotion()
+	{
+		if (NetTransformAuthority == Root.Network.LocalPeerID || netMotion == null || netMotion.IsBridging || netMotion.Samples.Count == 0)
+		{
+			Vector3 velocity = this is Physical physical ? physical.Velocity : Vector3.Zero;
+			return (velocity, GetNetBodyVelocity().Angular, Root.NetTime);
+		}
+
+		return netMotion.GetMotion();
+	}
+
+	internal NetMotion Motion => netMotion ??= new(this);
+
+	internal virtual void FinishNetGain() { }
+
+	internal bool IsNetGaining => netMotion != null && netMotion.IsGaining;
+
+	internal float GetNetSpeed()
+	{
+		if (Root?.Network != null && NetTransformAuthority == Root.Network.LocalPeerID)
+		{
+			return this is Physical physical ? physical.Velocity.Length() : 0;
+		}
+		return netMotion?.Speed ?? 0;
+	}
+
+	internal double LastNetSampleTime => netMotion?.LastSampleTime ?? double.MinValue;
+
+	internal Vector3 LimitNetVelocity(Vector3 position, double time, Vector3 velocity)
+	{
+		if (!float.IsFinite(velocity.X) || !float.IsFinite(velocity.Y) || !float.IsFinite(velocity.Z)) return Vector3.Zero;
+
+		float limit = NetVelocitySlack;
+		if (netMotion != null && netMotion.Samples.Count > 0 && time > netMotion.Samples[netMotion.Samples.Count - 1].Time)
+		{
+			var last = netMotion.Samples[netMotion.Samples.Count - 1];
+			limit += 2 * Mathf.Max(last.Velocity.Length(), last.Position.DistanceTo(position) / (float)(time - last.Time));
+		}
+		else if (this is Physical physical)
+		{
+			limit += 2 * physical.Velocity.Length();
+		}
+		return velocity.LimitLength(limit);
+	}
+
+	protected Vector3? GetNetSendVelocity(bool rest)
+	{
+		if (rest) return Vector3.Zero;
+		if (this is not RigidBody body || body.IsFrozen) return null;
+
+		return GetNetParentBasis().Inverse() * GetNetBodyVelocity().Linear;
+	}
+
+	internal void ApplyLatestNetSample()
+	{
+		if (netMotion == null || netMotion.Samples.Count == 0) return;
+
+		var latest = netMotion.GetLatest();
+		_currentTransform = new Transform3D(new Basis(latest.Rotation).ScaledLocal(GetLocalTransform().Basis.Scale), latest.Position);
+		_oldLocalTransformApplied = default;
+		SetLocalTransform(_currentTransform);
+	}
+
+	internal bool UpdateTransformTick(double delta)
+	{
+		if (!_isDirty) { return false; }
 
 		Transform3D old = _currentTransform;
 
@@ -361,60 +499,81 @@ public partial class Dynamic : Instance
 		{
 			SetPhysicsProcessWAuthor(false);
 		}
+		return _isDirty;
+	}
+
+	private void AddNetSample(TransformPayloadDto transform, double time, int period, bool rest, Vector3 velocity,
+		bool snap = false, Vector3 spin = default)
+	{
+		if (!Motion.AddSample(transform, time, period, rest, velocity, snap, spin)) return;
+
+		StartInterpolating();
+	}
+
+	internal bool TryGetNetVelocity(out Vector3 linear, out Vector3 angular)
+	{
+		if (netMotion == null || !netMotion.TryGetVelocity(out linear, out angular))
+		{
+			linear = Vector3.Zero;
+			angular = Vector3.Zero;
+			return false;
+		}
+
+		Basis parent = GetNetParentBasis();
+		linear = parent * linear;
+		angular = parent.Orthonormalized() * angular;
+		return true;
+	}
+
+	protected bool IsNetRestSent(Transform3D current) => netMotion?.RestTransform is Transform3D sent && sent.IsEqualApprox(current);
+
+	internal Basis GetNetParentBasis()
+	{
+		return GDNode3D.GetParentNode3D() is Node3D node && node.IsInsideTree() ? node.GlobalBasis : Basis.Identity;
 	}
 
 	private void UpdateTransform(double delta)
 	{
-		if (!_isDirty) return;
-		// If has transform authority, no need to update yourself
-		if (NetTransformAuthority == Root.Network.LocalPeerID) return;
-
-		float positionDistance = _currentTransform.Origin.DistanceTo(_netTransform.Origin);
-
-		// Check if this is the first update or if distance is too large
-		if (_isFirstUpdate || positionDistance > 8f)
+		if (IsNetGaining && (netMotion!.Samples.Count == 0 || netMotion.GainElapsed >= netMotion.GainTime + NetworkTransformSync.TickInterval))
 		{
-			// Snap directly to target
-			_currentTransform = _netTransform;
-			_isFirstUpdate = false;
+			FinishNetGain();
+		}
+
+		// If has transform authority, no need to update yourself
+		if ((NetTransformAuthority == Root.Network.LocalPeerID && !IsNetGaining) || netMotion == null || netMotion.Samples.Count == 0)
+		{
 			_isDirty = false;
-			SetLocalTransform(_currentTransform);
+			return;
+		}
+
+		double renderTime = netMotion.UpdateRenderTime(delta);
+		if (!netMotion.Interpolate(renderTime, delta, _isFirstUpdate, out Vector3 position, out Quaternion rotation, out bool settled)) return;
+		if (settled) _isDirty = false;
+
+		_isFirstUpdate = false;
+		_currentTransform = new Transform3D(new Basis(rotation).ScaledLocal(GetLocalTransform().Basis.Scale), position);
+
+		if (this is Part)
+		{
+			Transform3D setto = new(new Basis(rotation), position);
+			// Only update when changed
+			if (!_oldPartTransformApplied.IsEqualApprox(setto))
+			{
+				_oldPartTransformApplied = setto;
+
+				// Update raw without scale, scale is already handled via reliable update
+				GDNode3D.Transform = setto;
+			}
 		}
 		else
 		{
-			Vector3 newPosition = _currentTransform.Origin.Lerp(_netTransform.Origin, MathUtils.ExpDecay((float)delta, LerpSpeed));
-			Vector3 newScale = _netTransform.Basis.Scale;
-			Quaternion targetRotation = _netTransform.Basis.Orthonormalized().GetRotationQuaternion();
-			Quaternion currentRotation = (this is Part)
-				? GDNode3D.Transform.Basis.Orthonormalized().GetRotationQuaternion()
-				: _currentTransform.Basis.Orthonormalized().GetRotationQuaternion();
+			// Update all on non parts, scale data might be carried over
+			SetLocalTransformRaw(_currentTransform);
+		}
 
-			Quaternion smoothRot = currentRotation.Slerp(targetRotation, MathUtils.ExpDecay((float)delta, LerpSpeed));
-
-			_currentTransform = new Transform3D(new Basis(smoothRot).Scaled(newScale), newPosition);
-			if (positionDistance < 0.01f && currentRotation.AngleTo(targetRotation) < 0.01f)
-			{
-				_isDirty = false;
-				_currentTransform = _netTransform;
-			}
-
-			if (this is Part)
-			{
-				Transform3D setto = new(new Basis(smoothRot), newPosition);
-				// Only update when changed
-				if (!_oldPartTransformApplied.IsEqualApprox(setto))
-				{
-					_oldPartTransformApplied = setto;
-
-					// Update raw without scale, scale is already handled via reliable update
-					GDNode3D.Transform = setto;
-				}
-			}
-			else
-			{
-				// Update all on non parts, scale data might be carried over
-				SetLocalTransformRaw(_currentTransform);
-			}
+		if (IsNetGaining && netMotion.GainElapsed >= netMotion.GainTime)
+		{
+			FinishNetGain();
 		}
 	}
 
@@ -441,6 +600,7 @@ public partial class Dynamic : Instance
 			throw new InvalidOperationException("LookAt Target is invalid");
 		}
 
+		SyncPhysicsTransform();
 		Vector3 lookTarget = pos;
 
 		// Godot's LookAt points at -Z, Polytoria uses +Z as forward
@@ -452,22 +612,21 @@ public partial class Dynamic : Instance
 
 		GDNode3D.LookAt(lookTarget, up);
 
-		UpdateNetTransformReliable();
+		QueueTransformUpdate(true, true);
 	}
 
 	[ScriptMethod]
 	public void Translate(Vector3 translation)
 	{
-		SetGlobalTransform(GetGlobalTransform().Translated(translation));
-		if (AutoUpdateNetTransform)
-		{
-			UpdateNetTransformReliable();
-		}
+		SyncPhysicsTransform();
+		SetGlobalTransformRaw(GetGlobalTransform().Translated(translation));
+		QueueTransformUpdate(AutoUpdateNetTransform, true);
 	}
 
 	[ScriptMethod]
 	public void RotateAround(Vector3 point, Vector3 axis, float angle)
 	{
+		SyncPhysicsTransform();
 		Transform3D transform = GetGlobalTransform();
 
 		transform.Origin -= point;
@@ -479,27 +638,21 @@ public partial class Dynamic : Instance
 
 		transform.Origin += point;
 
-		SetGlobalTransform(transform);
-
-		if (AutoUpdateNetTransform)
-		{
-			UpdateNetTransformReliable();
-		}
+		SetGlobalTransformRaw(transform);
+		QueueTransformUpdate(AutoUpdateNetTransform, true);
 	}
 
 	[ScriptMethod]
 	public void Rotate(Vector3 eulerAngles)
 	{
 		Vector3 radians = eulerAngles * Mathf.DegToRad(1.0f);
+		SyncPhysicsTransform();
 
 		GDNode3D.RotateObjectLocal(Vector3.Right, radians.X);
 		GDNode3D.RotateObjectLocal(Vector3.Up, radians.Y);
 		GDNode3D.RotateObjectLocal(Vector3.Back, radians.Z);
 
-		if (AutoUpdateNetTransform)
-		{
-			UpdateNetTransformReliable();
-		}
+		QueueTransformUpdate(AutoUpdateNetTransform, true);
 	}
 
 	// NOTE: Update operations needs transform to be force updated as godot does not update them instantly
@@ -509,98 +662,179 @@ public partial class Dynamic : Instance
 
 		GDNode3D.ForceUpdateTransform();
 		Transform3D current = GetLocalTransform();
+		bool teleport = _netTeleport;
+		_netTeleport = false;
+		bool stepped = _lastTickTransform is Transform3D lastTick && HasChangedForNetworkSync(lastTick, current, NetStillStep);
+		_lastTickTransform = current;
 
 		if (_lastSentTransform is Transform3D lastSent)
 		{
 			if (!HasChangedForNetworkSync(lastSent, current))
 			{
+				if (netMotion != null && netMotion.IsMoving && Root.IsLoaded && !stepped &&
+					!(GetNetBodyVelocity().Linear.Length() > NetStillSpeed))
+				{
+					if (World.PhysicsClock - netMotion.LastMoveTime >= NetRestDelay)
+					{
+						netMotion.IsMoving = false;
+						netMotion.RestTransform = current;
+						SendNetTransformUnreliable(current, true, true);
+					}
+					else if (!netMotion.IsStopSent)
+					{
+						netMotion.IsStopSent = true;
+						SendNetTransformUnreliable(current, velocity: Vector3.Zero);
+					}
+				}
 				return;
 			}
 		}
 
 		_lastSentTransform = current;
+		NetMotion net = Motion;
+		net.IsMoving = true;
+		net.IsStopSent = false;
+		net.LastMoveTime = World.PhysicsClock;
+		net.RestTransform = null;
 
 		UpdateCurrentTransformCache(current);
-		if (!Root.IsLoaded) return;
-		SendNetTransformUnreliable(current);
+		if (!Root.IsLoaded || IsDeleted) return;
+		SendNetTransformUnreliable(current, !teleport);
 	}
 
-	protected void UpdateNetTransformReliable()
+	internal void QueueTransformUpdate(bool syncToNet = false, bool scripted = false)
 	{
-		if (Root == null || Root.Network == null) return;
-
 		ForceUpdateTransform();
-		Transform3D current = GetLocalTransform();
+		if (scripted) MarkScriptMove();
+		_pendingSyncToNet |= syncToNet;
+		_pendingTransforms.Add(this);
+	}
 
-		// Only send if changed
-		if (_lastSentTransform != null && _lastSentTransform.Value.IsEqualApprox(current))
-			return;
+	private void MarkScriptMove()
+	{
+		double now = World.LocalClock;
+		if (this is RigidBody { IsFrozen: false } && Root?.Network != null &&
+			NetTransformAuthority == Root.Network.LocalPeerID && now - _lastScriptMove >= NetMotion.MaxGap)
+		{
+			_netTeleport = true;
+		}
+		_lastScriptMove = now;
+	}
+
+	internal static void FlushTransformUpdates()
+	{
+		if (_pendingTransforms.Count == 0) return;
+
+		Dynamic[] pending = [.. _pendingTransforms];
+		_pendingTransforms.Clear();
+
+		foreach (Dynamic dyn in pending)
+		{
+			try
+			{
+				dyn.CommitTransformUpdate();
+			}
+			catch (Exception ex)
+			{
+				PT.PrintErr(ex);
+			}
+		}
+	}
+
+	private void CommitTransformUpdate()
+	{
+		bool syncToNet = _pendingSyncToNet;
+		_pendingSyncToNet = false;
+
+		if (IsDeleted || !Node.IsInstanceValid(GDNode3D) || !GDNode3D.IsInsideTree()) return;
+
+		Transform3D current = GetLocalTransform();
+		UpdateCurrentTransformCache(current);
+		if (!syncToNet || Root?.Network == null || IsDeleted || _lastSentTransform?.IsEqualApprox(current) == true) return;
 
 		_lastSentTransform = current;
 
-		UpdateCurrentTransformCache(current);
+		double now = World.LocalClock;
+		bool moving = now - _lastReliableMoveTime < NetMotion.MaxGap;
+		_lastReliableMoveTime = now;
+		bool owned = NetTransformAuthority == Root.Network.LocalPeerID;
+		if (!moving && !owned && Root.Network.IsServer)
+		{
+			LastServerWrite = Root.NetTimeNow;
+			ServerWriteSeq = (byte)(ServerWriteSeq % 255 + 1);
+			_writeAckUntil = now + NetWriteAckTimeout;
+		}
+
 		if (!Root.IsLoaded) return;
-		SendNetTransformReliable(current);
+		if (moving && Root.Network.IsServer && owned)
+		{
+			SendNetTransformUnreliable(current);
+			Root.Network.TransformSync.AddScriptedMover(this);
+			return;
+		}
+		SendNetTransformReliable(current, moving && owned);
 	}
 
-	protected void SendNetTransformUnreliable(bool lerp = true)
+	internal bool SendScriptedRest()
+	{
+		if (IsDeleted) return true;
+		if (World.LocalClock - _lastReliableMoveTime < NetRestDelay) return false;
+		if (Root.IsLoaded) SendNetTransformReliable(GetLocalTransform(), true, true);
+		return true;
+	}
+
+	protected void SendNetTransformUnreliable(bool lerp = true, bool rest = false)
 	{
 		if (Root == null || Root?.Network == null) { return; }
 
 		ForceUpdateTransform();
 		Transform3D current = GetLocalTransform();
 		UpdateCurrentTransformCache(current);
-		SendNetTransformUnreliable(current, lerp);
+		if (IsDeleted) return;
+		SendNetTransformUnreliable(current, lerp, rest);
 	}
 
-	private void SendNetTransformUnreliable(Transform3D current, bool lerp = true)
+	private void SendNetTransformUnreliable(Transform3D current, bool lerp = true, bool rest = false, Vector3? velocity = null)
 	{
 		TransformPayloadDto payload = TransformPayloadDto.FromGDTransform(current);
+		velocity ??= GetNetSendVelocity(rest);
 
 		if (!Root.Network.IsServer)
 		{
 			// Send transform to server
-			Root.Network.TransformSync.SendTransformToServer(this, payload, lerp);
+			Root.Network.TransformSync.SendTransformToServer(this, payload, lerp, rest, velocity);
 		}
 		else
 		{
 			// Server broadcasts to all clients
-			Root.Network.TransformSync.BroadcastTransformFromServer(this, payload, lerp, reliable: false);
+			Root.Network.TransformSync.BroadcastTransformFromServer(this, payload, lerp, reliable: rest, rest: rest, velocity: velocity);
 		}
 	}
 
-	protected void SendNetTransformReliable(bool lerp = false)
+	protected void SendNetTransformReliable(bool lerp = false, bool rest = false)
 	{
 		if (Root == null || Root?.Network == null) return;
-		_lerpUnreliable = false;
+		_isDirty = false;
 
 		ForceUpdateTransform();
 		Transform3D current = GetLocalTransform();
 		UpdateCurrentTransformCache(current);
-		SendNetTransformReliable(current, lerp);
+		if (IsDeleted) return;
+		SendNetTransformReliable(current, lerp, rest);
 	}
 
-	private void SendNetTransformReliable(Transform3D current, bool lerp = false)
+	private void SendNetTransformReliable(Transform3D current, bool lerp = false, bool rest = false)
 	{
 		ReliableTransformChanged?.Invoke();
 
 		if (Root.Network.IsServer)
 		{
 			TransformPayloadDto payload = TransformPayloadDto.FromGDTransform(current);
-			Root.Network.TransformSync.BroadcastTransformFromServer(this, payload, lerp, reliable: true);
+			Root.Network.TransformSync.BroadcastTransformFromServer(this, payload, lerp,
+				reliable: true, rest: rest, velocity: GetNetSendVelocity(rest));
 		}
 
 		// Cannot broadcast as reliable in client, values are ignored in client
-	}
-
-	/// <summary>
-	/// Must be called after manual transform update
-	/// </summary>
-	internal void UpdateCurrentTransformCache()
-	{
-		if (!GDNode3D.IsInsideTree()) return;
-		ForceUpdateTransform();
-		UpdateCurrentTransformCache(GetLocalTransform());
 	}
 
 	private void UpdateCurrentTransformCache(Transform3D newt)
@@ -609,7 +843,7 @@ public partial class Dynamic : Instance
 		{
 			if (_hasSyncedOnce)
 			{
-				InvokeTransformChanged(_currentTransform);
+				InvokeTransformChanged(_currentTransform, newt);
 			}
 			else
 			{
@@ -635,52 +869,79 @@ public partial class Dynamic : Instance
 		return true;
 	}
 
-	internal void UpdateTransformFromNet(TransformPayloadDto transform, bool isReliable, bool lerpTransform)
+	internal void UpdateTransformFromNet(TransformPayloadDto transform, bool isReliable, bool lerpTransform,
+		double time = 0, int period = 1, bool rest = false, Vector3 velocity = default, Vector3 spin = default)
 	{
 		if (OverrideNetworkTransform) return;
-		Transform3D previous = _currentTransform;
-		Vector3 scale = GetLocalTransform().Basis.Scale;
-		_netTransform = new Transform3D(
+		if (!lerpTransform && time > 0 && !Root.Network.IsServer && time < LastNetSampleTime &&
+			(netMotion == null || !netMotion.IsProvisional))
+		{
+			return;
+		}
+		if (IsNetGaining && !(lerpTransform && time > 0))
+		{
+			FinishNetGain();
+		}
+		if (time > 0 && !Root.Network.IsServer &&
+			(lerpTransform || (netMotion != null && netMotion.IsAhead(time) && NetTransformAuthority != Root.Network.LocalPeerID)))
+		{
+			AddNetSample(transform, time, period, rest, velocity, !lerpTransform, spin);
+			if (isReliable)
+			{
+				ReliableTransformChanged?.Invoke();
+			}
+			return;
+		}
+
+		if (lerpTransform && time > 0)
+		{
+			Motion.KeepSample(transform, time, rest, velocity);
+		}
+		else if (time > 0 && !Root.Network.IsServer)
+		{
+			Motion.SetSample(transform, time, velocity);
+		}
+		else
+		{
+			netMotion?.Reset();
+		}
+		Transform3D local = GetLocalTransform();
+		Vector3 scale = local.Basis.Scale;
+		Transform3D netTransform = new(
 			new Basis(transform.Rotation).ScaledLocal(scale),
 			transform.Position
 		);
-		_isDirty = true;
+
+		if (Root.Network.IsServer)
+		{
+			_lastSentTransform = netTransform;
+		}
 
 		// TODO: SetPhysicsProcess affects Physical.cs's tick, but could also affect other behaviour.
 		// Maybe we need to make something dedicated to physical tick?
+		_isDirty = false;
+		SetPhysicsProcessWAuthor(false);
 
-		// temporary set to disable lerping on non player
-		// object seems to glitch weirdly when lerping
-		// TODO: come back and fix this
-		if (Root.Network.IsServer || !lerpTransform)
+		if (_hasSyncedOnce && netTransform.IsEqualApprox(local))
 		{
-			_lerpUnreliable = false;
-			SetPhysicsProcessWAuthor(false);
-
-			if (_hasSyncedOnce && _netTransform.IsEqualApprox(_currentTransform))
+			if (isReliable)
 			{
-				if (isReliable)
-				{
-					ReliableTransformChanged?.Invoke();
-				}
-				return;
+				ReliableTransformChanged?.Invoke();
 			}
-
-			_currentTransform = _netTransform;
-			SetLocalTransform(_netTransform);
+			return;
 		}
-		else if (lerpTransform && !Root.Network.IsServer)
+
+		_oldLocalTransformApplied = default;
+		SetLocalTransform(netTransform);
+		if (NetTransformAuthority == Root.Network.LocalPeerID && this is RigidBody body)
 		{
-			_lerpUnreliable = true;
-			SetPhysicsProcessWAuthor(true);
+			body.WakeNetBody();
 		}
 
 		if (isReliable)
 		{
 			ReliableTransformChanged?.Invoke();
 		}
-
-		InvokeTransformChanged(previous);
 	}
 
 #if CREATOR
@@ -764,10 +1025,10 @@ public partial class Dynamic : Instance
 	}
 #endif
 
-	internal void InvokeTransformChanged(Transform3D? previous = null)
+	internal void InvokeTransformChanged(Transform3D? previous = null, Transform3D? newTransform = null)
 	{
 #if CREATOR
-		if (Root.CreatorContext != null && Root.CreatorContext.Gizmos != null)
+		if (Root.SessionType == World.SessionTypeEnum.Creator && Root.CreatorContext != null && Root.CreatorContext.Gizmos != null)
 		{
 			if (!Root.CreatorContext.Gizmos.HoveringGizmos && !Root.CreatorContext.Gizmos.IsDraggingDynamic)
 			{
@@ -781,13 +1042,14 @@ public partial class Dynamic : Instance
 		bool rotated = true;
 		bool resized = true;
 
-		Transform3D current = GetLocalTransform();
+		Transform3D current = newTransform ?? GetLocalTransform();
 
 		if (previous != null && _hasNotifiedOnce)
 		{
+			bool sameBasis = _lastNotifiedTransform.Basis == current.Basis;
 			moved = _lastNotifiedTransform.Origin.DistanceTo(current.Origin) > 0.001f;
-			rotated = _lastNotifiedTransform.Basis.GetRotationQuaternion().AngleTo(current.Basis.GetRotationQuaternion()) > 0.001f;
-			resized = (_lastNotifiedTransform.Basis.Scale - current.Basis.Scale).Length() > 0.001f;
+			rotated = !sameBasis && _lastNotifiedTransform.Basis.GetRotationQuaternion().AngleTo(current.Basis.GetRotationQuaternion()) > 0.001f;
+			resized = !sameBasis && (_lastNotifiedTransform.Basis.Scale - current.Basis.Scale).Length() > 0.001f;
 		}
 
 		// Notify transform change without sync to clients
@@ -816,18 +1078,21 @@ public partial class Dynamic : Instance
 		}
 
 		TransformChanged?.Invoke();
-		foreach (Instance item in GetChildren())
+		if (Children.Count > 0)
 		{
-			if (item is Dynamic dyn)
+			foreach (Instance item in GetChildren())
 			{
-				dyn.InvokeTransformChanged();
+				if (item is Dynamic dyn)
+				{
+					dyn.InvokeTransformChanged();
+				}
 			}
 		}
 
 		// Destroy entity/rigidbodies under part destroy height
-		if (Root != null && Root.Environment != null && this is Physical physical)
+		if (this is Physical { Anchored: false } && Root != null && Root.Environment != null)
 		{
-			if (Position.Y <= Root.Environment.PartDestroyHeight && !physical.Anchored)
+			if (Position.Y <= Root.Environment.PartDestroyHeight)
 			{
 				// If not client, ignore PartDestroyHeight rule
 				if (Root.SessionType != World.SessionTypeEnum.Client) return;
@@ -905,7 +1170,6 @@ public partial class Dynamic : Instance
 	internal void SetGlobalPosition(Vector3 to)
 	{
 		GDNode3D.GlobalPosition = to;
-		ForceUpdateTransform();
 	}
 
 	internal Vector3 GetLocalPosition()
@@ -916,7 +1180,7 @@ public partial class Dynamic : Instance
 	internal void SetLocalPosition(Vector3 to)
 	{
 		var t = GetLocalTransform();
-		SetLocalTransform(new Transform3D(t.Basis, to * GetParentScale()));
+		SetLocalTransformRaw(new Transform3D(t.Basis, to * GetParentScale()));
 	}
 
 	internal Transform3D GetGlobalTransform()
@@ -981,13 +1245,13 @@ public partial class Dynamic : Instance
 	internal void SetGlobalTransform(Transform3D to)
 	{
 		SetGlobalTransformRaw(to);
-		UpdateCurrentTransformCache();
+		QueueTransformUpdate();
 	}
 
 	internal void SetLocalTransform(Transform3D to)
 	{
 		SetLocalTransformRaw(to);
-		UpdateCurrentTransformCache();
+		QueueTransformUpdate();
 	}
 
 	internal void ForceUpdateTransform()
@@ -1009,13 +1273,13 @@ public partial class Dynamic : Instance
 			target.GDNode3D.Transform = GDNode3D.Transform;
 		}
 
-		target.UpdateCurrentTransformCache();
+		target.QueueTransformUpdate();
 	}
 
-	protected bool HasChangedForNetworkSync(Transform3D a, Transform3D b)
+	protected bool HasChangedForNetworkSync(Transform3D a, Transform3D b, float scale = 1)
 	{
 		float dst = a.Origin.DistanceTo(b.Origin);
-		if (dst > PositionSyncThreshold)
+		if (dst > PositionSyncThreshold * scale)
 		{
 			return true;
 		}
@@ -1024,7 +1288,7 @@ public partial class Dynamic : Instance
 		Quaternion bRot = b.Basis.GetRotationQuaternion().Normalized();
 
 		float deg = Mathf.RadToDeg(aRot.AngleTo(bRot));
-		if (deg > RotationSyncThreshold)
+		if (deg > RotationSyncThreshold * scale)
 		{
 			return true;
 		}
@@ -1098,6 +1362,7 @@ public partial class Dynamic : Instance
 #if CREATOR
 					if (n is ISpatial) continue;
 #endif
+					if (n is VisibleOnScreenNotifier3D) continue;
 					if (n is VisualInstance3D v3d)
 					{
 						if (!v3d.IsVisibleInTree())
@@ -1147,5 +1412,5 @@ public partial class Dynamic : Instance
 		return bounds ?? new(GetGlobalPosition(), Vector3.One * 0.5f);
 	}
 
-	public virtual Aabb GetSelfBound() { return default; }
+	public virtual Aabb GetSelfBound() { return new(GetGlobalPosition(), Vector3.Zero); }
 }

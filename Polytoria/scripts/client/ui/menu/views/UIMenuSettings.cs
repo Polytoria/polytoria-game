@@ -26,7 +26,7 @@ public sealed partial class UIMenuSettings : UIMenuViewBase
 
 	public override void ShowView()
 	{
-		string firstSection = ClientSettingsRegistry.Sections.OrderBy(s => s.SortOrder).First().Key;
+		string firstSection = ClientSettingsRegistry.Sections.OrderBy(s => s.SortOrder).First(s => IsSectionVisible(s.Key)).Key;
 		SwitchSection(firstSection);
 		base.ShowView();
 	}
@@ -42,6 +42,8 @@ public sealed partial class UIMenuSettings : UIMenuViewBase
 
 		foreach (var section in ClientSettingsRegistry.Sections.OrderBy(s => s.SortOrder))
 		{
+			if (!IsSectionVisible(section.Key)) continue;
+
 			string sectionKey = section.Key;
 			Button btn = CreateCategoryButton(section);
 			btn.ButtonGroup = _categoryButtonGroup;
@@ -50,6 +52,12 @@ public sealed partial class UIMenuSettings : UIMenuViewBase
 			_categoryContainer.AddChild(btn);
 			_categoryButtons[sectionKey] = btn;
 		}
+	}
+
+	private static bool IsSectionVisible(string sectionKey)
+	{
+		var defs = ClientSettingsRegistry.Definitions.Values.Where(d => d.SectionKey == sectionKey).ToArray();
+		return defs.Length == 0 || defs.Any(d => d.IsSupported);
 	}
 
 	private static Button CreateCategoryButton(Shared.Settings.SettingSectionDef section)

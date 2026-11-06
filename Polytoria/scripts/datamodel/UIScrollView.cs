@@ -79,6 +79,7 @@ public partial class UIScrollView : UIContainer
 		{
 			Callable.From(() =>
 			{
+				if (IsDeleted) return;
 				_scrollContainer.ScrollHorizontal = 0;
 				_scrollContainer.ScrollVertical = 0;
 			}).CallDeferred();

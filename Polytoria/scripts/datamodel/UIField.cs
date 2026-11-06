@@ -421,6 +421,7 @@ public partial class UIField : Instance
 	{
 		Callable.From(() =>
 		{
+			if (IsDeleted) return;
 			RecomputeTransform();
 			RecomputeVisible();
 		}).CallDeferred();

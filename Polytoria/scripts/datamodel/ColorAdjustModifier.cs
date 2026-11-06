@@ -77,6 +77,7 @@ public partial class ColorAdjustModifier : LightingModifier
 	public override void PreDelete()
 	{
 		Root.Lighting.environment.AdjustmentEnabled = false;
+		Root.Lighting.environment.EmitChanged();
 		base.PreDelete();
 	}
 
@@ -85,6 +86,7 @@ public partial class ColorAdjustModifier : LightingModifier
 		if (IsHidden)
 		{
 			Root.Lighting.environment.AdjustmentEnabled = false;
+			Root.Lighting.environment.EmitChanged();
 			return;
 		}
 		_tintColorGradient.Gradient.SetColor(1, _tintColor);
@@ -93,6 +95,7 @@ public partial class ColorAdjustModifier : LightingModifier
 		Root.Lighting.environment.AdjustmentContrast = _contrast;
 		Root.Lighting.environment.AdjustmentSaturation = _saturation;
 		Root.Lighting.environment.AdjustmentColorCorrection = _tintColorGradient;
+		Root.Lighting.environment.EmitChanged();
 	}
 
 	public override void HiddenChanged(bool to)

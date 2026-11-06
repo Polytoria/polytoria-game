@@ -497,6 +497,7 @@ public class PTSignal : IScriptObject
 			{
 				_ptCallbacks.RemoveAt(i);
 				if (cb is not null) _ptSet?.Remove(cb);
+				Unsubscribed?.Invoke();
 				continue;
 			}
 		}

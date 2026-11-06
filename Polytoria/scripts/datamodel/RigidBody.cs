@@ -24,21 +24,30 @@ public partial class RigidBody : Physical
 	private float _drag;
 	private float _angularDrag;
 	private float _bounciness;
+	private Vector3 _frozenVelocity;
+	private Vector3 _frozenAngularVelocity;
+	private double _frozenVelocityTime = double.MinValue;
+	private double _frozenAngularVelocityTime = double.MinValue;
 
 	[Editable, ScriptProperty, SyncVar(Unreliable = true, AllowAuthorWrite = true)]
 	public override Vector3 Velocity
 	{
 		get
 		{
-			return GDRigidBody.LinearVelocity;
+			if (!IsFrozen) return GDRigidBody.LinearVelocity;
+			if (!HasOwnerVelocity(_frozenVelocityTime)) return _frozenVelocity;
+			return GetNetParentBasis() * GetNetMotion().Velocity;
 		}
 		set
 		{
+			if (!IsApplyingNetProp) PrepareForce();
+			_frozenVelocity = value;
+			_frozenVelocityTime = Root?.NetTime ?? double.MinValue;
 			if (!IsFrozen || GDRigidBody.LinearVelocity != value)
 			{
 				GDRigidBody.LinearVelocity = value;
 			}
-			OnPropertyChanged();
+			OnPropertyChanged(nameof(Velocity), !IsServerSimulated);
 		}
 	}
 
@@ -47,17 +56,31 @@ public partial class RigidBody : Physical
 	{
 		get
 		{
-			return GDRigidBody.AngularVelocity.FlipEuler();
+			if (!IsFrozen) return GDRigidBody.AngularVelocity.FlipEuler();
+			if (!HasOwnerVelocity(_frozenAngularVelocityTime)) return _frozenAngularVelocity;
+			return (GetNetParentBasis().Orthonormalized() * GetNetMotion().AngularVelocity).FlipEuler();
 		}
 		set
 		{
+			if (!IsApplyingNetProp) PrepareForce();
+			_frozenAngularVelocity = value;
+			_frozenAngularVelocityTime = Root?.NetTime ?? double.MinValue;
 			Vector3 v = value.FlipEuler();
 			if (!IsFrozen || GDRigidBody.AngularVelocity != v)
 			{
 				GDRigidBody.AngularVelocity = v;
 			}
-			OnPropertyChanged();
+			OnPropertyChanged(nameof(AngularVelocity), !IsServerSimulated);
 		}
+	}
+
+	private bool IsServerSimulated => !IsFrozen && Root?.Network?.IsServer == true && NetTransformAuthority == 1;
+
+	private bool HasOwnerVelocity(double after)
+	{
+		if (Root == null || Root.Network == null || NetTransformAuthority == Root.Network.LocalPeerID) return false;
+		if (IsNetBridging || LastNetSampleTime <= after) return false;
+		return true;
 	}
 
 	[Editable, ScriptProperty, DefaultValue(1f)]
@@ -249,15 +272,9 @@ public partial class RigidBody : Physical
 
 	private void OnSleepingStateChanged()
 	{
-		if (IsAsleep && Root != null && Root.Network != null
-			&& NetTransformAuthority == Root.Network.LocalPeerID)
+		if (IsAsleep && !IsNetRestSent(GetLocalTransform()))
 		{
-			UpdateNetTransformReliable();
-
-			if (!Root.Network.IsServer)
-			{
-				SendNetTransformUnreliable(false);
-			}
+			SendRestNetTransform();
 		}
 
 		UpdatePhysicsTick();
@@ -388,10 +405,58 @@ public partial class RigidBody : Physical
 
 	protected override void ApplyFreeze(bool to)
 	{
+		if (to && !GDRigidBody.Freeze)
+		{
+			_frozenVelocity = GDRigidBody.LinearVelocity;
+			_frozenAngularVelocity = GDRigidBody.AngularVelocity.FlipEuler();
+			_frozenVelocityTime = Root?.NetTime ?? double.MinValue;
+			_frozenAngularVelocityTime = _frozenVelocityTime;
+			if (GDRigidBody.IsInsideTree())
+			{
+				PhysicsServer3D.BodySetState(GDRigidBody.GetRid(), PhysicsServer3D.BodyState.Transform, GDRigidBody.GlobalTransform);
+			}
+		}
 		GDRigidBody.Freeze = to;
 		base.ApplyFreeze(to);
 	}
 
+	internal void WakeNetBody()
+	{
+		if (!IsFrozen)
+		{
+			GDRigidBody.Sleeping = false;
+			UpdatePhysicsTick();
+		}
+	}
+
+	protected override void SyncPhysicsTransform()
+	{
+		if (IsFrozen || !GDRigidBody.IsInsideTree()) return;
+		GDRigidBody.SetIgnoreTransformNotification(true);
+		GDRigidBody.GlobalTransform = PhysicsServer3D.BodyGetState(GDRigidBody.GetRid(), PhysicsServer3D.BodyState.Transform).AsTransform3D();
+		GDRigidBody.SetIgnoreTransformNotification(false);
+	}
+
+	protected override Transform3D GetSimulatedTransform()
+	{
+		if (IsFrozen || !GDRigidBody.IsInsideTree()) return GetGlobalTransform();
+		return PhysicsServer3D.BodyGetState(GDRigidBody.GetRid(), PhysicsServer3D.BodyState.Transform).AsTransform3D();
+	}
+
+	protected override (Vector3 Linear, Vector3 Angular) GetNetBodyVelocity()
+	{
+		if (IsFrozen) return default;
+		return (GDRigidBody.LinearVelocity, GDRigidBody.AngularVelocity);
+	}
+
+	protected override void ApplyNetVelocity(Vector3 linear, Vector3 angular)
+	{
+		if (IsFrozen) return;
+		GDRigidBody.LinearVelocity = linear;
+		GDRigidBody.AngularVelocity = angular;
+	}
+
 	internal override bool IsAsleep => !GDRigidBody.Freeze && GDRigidBody.Sleeping;
 	internal override bool IsFrozen => GDRigidBody.Freeze;
+	internal bool HasConstantForce => GDRigidBody.ConstantForce != Vector3.Zero || GDRigidBody.ConstantTorque != Vector3.Zero;
 }

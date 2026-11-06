@@ -10,6 +10,7 @@ using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
 using Polytoria.Utils;
+using Polytoria.Providers.PlayerMovement;
 
 namespace Polytoria.Datamodel;
 
@@ -23,6 +24,7 @@ public partial class NPC : Physical
 	private Tool? _holdingTool;
 	private Seat? _sittingIn;
 	private CharacterModel? _sitPoseModel;
+	private Node? _seatCollisionNode;
 	private CharacterModel? _character;
 	private Vitals? _vitals;
 	private Dynamic? _moveTarget;
@@ -36,6 +38,7 @@ public partial class NPC : Physical
 	private RemoteTransform3D? _toolRemoteTransform;
 	private float _jumpPower = 36;
 	private float _walkSpeed = 16;
+	private PlayerMovementModeEnum _movementMode = PlayerMovementModeEnum.Default;
 	private string _displayName = "";
 	protected RayCast3D FootFwdRaycast = null!;
 	private Sound? _jumpSound;
@@ -275,6 +278,27 @@ public partial class NPC : Physical
 		set
 		{
 			_walkSpeed = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public PlayerMovementModeEnum MovementMode
+	{
+		get => _movementMode;
+		set
+		{
+			_movementMode = value;
+
+			if (this is Player plr)
+			{
+				plr.PlayerMovement = _movementMode switch
+				{
+					PlayerMovementModeEnum.Default => new DefaultMovement() { Root = Root, Target = plr },
+					_ => null,
+				};
+			}
+
 			OnPropertyChanged();
 		}
 	}
@@ -578,6 +602,10 @@ public partial class NPC : Physical
 	{
 		if (n is Tool)
 		{
+			if (n == _holdingTool)
+			{
+				HoldingTool = null;
+			}
 			InternalDetachTool();
 		}
 	}
@@ -666,7 +694,7 @@ public partial class NPC : Physical
 	{
 		base.PhysicsProcess(delta);
 
-		if (Root == null) return;
+		if (Root == null || IsDeleted) return;
 		if (Anchored || IsHidden) return;
 		if (!Root.IsLoaded) return;
 
@@ -676,48 +704,54 @@ public partial class NPC : Physical
 		// Kill player if fall off the map
 		if (Position.Y < Root.Environment.PartDestroyHeight)
 		{
-			Kill();
+			if (this is Player)
+			{
+				Kill();
+			}
+			else if ((Root.Network.IsServer || !ExistInNetwork) && IsNetworkReady)
+			{
+				Delete();
+				return;
+			}
 		}
 
 		if (IsSitting)
 		{
-			if (!Root.Network.IsServer && SittingIn != null)
-			{
-				if (!OverrideNetworkTransform)
-				{
-					InternalSit(SittingIn);
-				}
-				else
-				{
-					ApplySitPose();
-				}
+			if (SittingIn == null) return;
 
-				Velocity = Vector3.Zero;
-				Position = SittingIn.Position + SeatOffset.Y * Up;
+			SetSeatCollisionException((SittingIn.PhysicalRoot ?? SittingIn).GDNode);
+
+			if (Root.Network.IsServer)
+			{
+				SetGlobalPosition(SittingIn.Position + SeatOffset.Y * Up);
 				if (SittingIn.SitDirectionLocked)
 				{
-					Quaternion = SittingIn.Quaternion;
+					GDNode3D.GlobalBasis = new(SittingIn.Quaternion);
 				}
 				else
 				{
-					Quaternion = new Quaternion(Up, SittingIn.Up) * Quaternion;
+					GDNode3D.GlobalBasis = new(new Quaternion(Up, SittingIn.Up) * Quaternion);
 				}
-				Character?.PlayIdle();
+				return;
 			}
+
+			if (!OverrideNetworkTransform)
+			{
+				InternalSit(SittingIn);
+			}
+			else
+			{
+				ApplySitPose();
+			}
+
+			Velocity = Vector3.Zero;
+			FollowSeat();
+			Character?.PlayIdle();
 			return;
 		}
 
-		if (this is Player plr)
-		{
-			if (!plr.IsLocal)
-			{
-				return;
-			}
-			if (plr.MovementMode == Player.PlayerMovementModeEnum.Scripted)
-			{
-				return;
-			}
-		}
+		if (MovementMode == PlayerMovementModeEnum.Scripted) return;
+		if (this is Player plr && !plr.IsLocal) return;
 
 		if (Root.Network.LocalPeerID != NetworkAuthority && ExistInNetwork) return;
 
@@ -870,7 +904,10 @@ public partial class NPC : Physical
 		Anchored = true;
 		OverrideCanCollide = true;
 		OverrideCanCollideTo = false;
-		Unsit(false);
+		if (Root.Network == null || Root.Network.IsServer || NetworkAuthority == Root.Network.LocalPeerID)
+		{
+			Unsit(false);
+		}
 		UpdateCollision();
 
 		Character?.Animator?.StopAnimation();
@@ -1044,10 +1081,43 @@ public partial class NPC : Physical
 		OverrideNetworkTransform = true;
 		SetPhysicsProcess(true);
 		SittingIn = seat;
+		SetSeatCollisionException((seat.PhysicalRoot ?? seat).GDNode);
 		seat.Occupant = this;
 		seat.InvokeSat(this);
 		ApplySitPose();
 		Seated.Invoke(seat);
+	}
+
+	internal void FollowSeat()
+	{
+		if (!IsSitting || SittingIn == null) return;
+
+		Position = SittingIn.Position + SeatOffset.Y * Up;
+		if (SittingIn.SitDirectionLocked)
+		{
+			Quaternion = SittingIn.Quaternion;
+		}
+		else
+		{
+			Quaternion = new Quaternion(Up, SittingIn.Up) * Quaternion;
+		}
+	}
+
+	private void SetSeatCollisionException(Node? node)
+	{
+		if (ReferenceEquals(_seatCollisionNode, node)) return;
+
+		if (_seatCollisionNode != null && Node.IsInstanceValid(_seatCollisionNode))
+		{
+			CharBody3D.RemoveCollisionExceptionWith(_seatCollisionNode);
+		}
+
+		_seatCollisionNode = node;
+
+		if (node != null)
+		{
+			CharBody3D.AddCollisionExceptionWith(node);
+		}
 	}
 
 	private void ApplySitPose()
@@ -1070,6 +1140,7 @@ public partial class NPC : Physical
 			IsSitting = false;
 			OverrideNetworkTransform = false;
 			_sitPoseModel = null;
+			SetSeatCollisionException(null);
 
 			if (SittingIn != null)
 			{
@@ -1141,7 +1212,7 @@ public partial class NPC : Physical
 			_toolRemoteTransform.QueueFree();
 		}
 
-		_toolRemoteTransform = new()
+		RemoteTransform3D rt = _toolRemoteTransform = new()
 		{
 			UpdatePosition = true,
 			UpdateRotation = true,
@@ -1151,16 +1222,17 @@ public partial class NPC : Physical
 		if (Character != null)
 		{
 			Dynamic attachment = Character.GetAttachment(CharacterModel.CharacterAttachmentEnum.HandRight);
-			attachment.GDNode.AddChild(_toolRemoteTransform, @internal: Node.InternalMode.Back);
+			attachment.GDNode.AddChild(rt, @internal: Node.InternalMode.Back);
 		}
 
 		// stick and stones
 		// this is needed because GetPath doesn't update when it entered tree
 		await Globals.Singleton.WaitFrame();
-		_toolRemoteTransform.Position = new Vector3(0, 0, 0);
-		_toolRemoteTransform.RotationDegrees = new Vector3(0, -90, -90);
-		_toolRemoteTransform.UpdateScale = false;
-		_toolRemoteTransform.RemotePath = _toolRemoteTransform.GetPathTo(tool.GDNode);
+		if (!Node.IsInstanceValid(rt) || tool.IsDeleted) return;
+		rt.Position = new Vector3(0, 0, 0);
+		rt.RotationDegrees = new Vector3(0, -90, -90);
+		rt.UpdateScale = false;
+		rt.RemotePath = rt.GetPathTo(tool.GDNode);
 	}
 
 	internal void InternalDetachTool()
@@ -1287,5 +1359,12 @@ public partial class NPC : Physical
 	public void Heal(float amount)
 	{
 		Vitals?.TakeDamage(amount);
+	}
+
+	[ScriptEnum]
+	public enum PlayerMovementModeEnum
+	{
+		Default,
+		Scripted
 	}
 }

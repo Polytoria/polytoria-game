@@ -47,6 +47,7 @@ public sealed partial class InteractionPrompt : Dynamic
 
 
 	private float _scale = 1f;
+	private float _farCheckTimer;
 
 	private bool _useParentForVisibility = false;
 
@@ -409,9 +410,12 @@ public sealed partial class InteractionPrompt : Dynamic
 
 		InteractionPrompt? best = null;
 
+		Vector3? playerPosition = player?.GetGlobalPosition();
+		Transform3D? cameraTransform = camera?.GetGlobalTransform();
+
 		foreach (InteractionPrompt prompt in input.Prompts)
 		{
-			prompt.UpdateState(player, camera, delta);
+			prompt.UpdateState(player, playerPosition, cameraTransform, delta);
 			if (!prompt.CanShow) continue;
 
 			if (prompt.Exclusivity == PromptExclusivityEnum.AlwaysShow)
@@ -470,16 +474,31 @@ public sealed partial class InteractionPrompt : Dynamic
 		return (CanActivate, Priority).CompareTo((other.CanActivate, other.Priority)) > 0;
 	}
 
-	private void UpdateState(Player? player, Camera? camera, double delta)
+	private void UpdateState(Player? player, Vector3? playerPosition, Transform3D? camera, double delta)
 	{
+		_farCheckTimer -= (float)delta;
+		if (IsHidden || _farCheckTimer > 0f)
+		{
+			CanShow = false;
+			CanActivate = false;
+			return;
+		}
+
 		Vector3 position = _prompt.GlobalPosition;
-		float distance = player != null ? player.GetGlobalPosition().DistanceTo(position) : float.PositiveInfinity;
+		float distance = playerPosition is Vector3 playerPos ? playerPos.DistanceTo(position) : float.PositiveInfinity;
 		bool inRange = distance <= _maxDistance;
 
-		float facing = 0f;
-		if (camera != null)
+		if (distance > _maxDistance + 20f)
 		{
-			Transform3D cameraTransform = camera.GetGlobalTransform();
+			_farCheckTimer = 0.25f;
+			CanShow = false;
+			CanActivate = false;
+			return;
+		}
+
+		float facing = 0f;
+		if (camera is Transform3D cameraTransform)
+		{
 			facing = (-cameraTransform.Basis.Z).Dot((position - cameraTransform.Origin).Normalized());
 
 			_losTimer -= (float)delta;

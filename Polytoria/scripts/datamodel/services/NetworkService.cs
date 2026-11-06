@@ -20,6 +20,7 @@ using Polytoria.Utils;
 using Polytoria.Utils.DTOs;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,7 +35,9 @@ public sealed partial class NetworkService : Instance
 	private const int AuthWaitTimeoutSec = 15; // Time wait before user disconnects due to auth timeout
 	private const int HeartbeatIntervalSec = 10; // Server heartbeat interval
 	private const int HeartbeatBeforeCheckPlayers = 5; // Server wait before checking players
-	private const float ConnectTimeoutSec = 90; // Timeout kick if player is not ready
+	private const float ConnectTimeoutSec = 90; // Timeout kick if player stops loading
+	private const float MaxConnectTimeSec = 600;
+	private const float LoadProgressIntervalSec = 5;
 	private const int NetObjDispatchTimeoutMs = 10000; // Time wait before NetObj dispatch is dropped
 
 	// TODO: Narrow this down
@@ -45,14 +48,14 @@ public sealed partial class NetworkService : Instance
 	public const string IntegrityFailureMessage = "Integrity failure, please update your client.";
 	public const string NetworkModeMismatchMessage = "Network mode mismatch.";
 	public const string MultipleDeviceMessage = "Another device is already playing using this account, please leave the game first then try again.";
+	public const string OtherDeviceMessage = "This account joined the game from another device.";
 	public const string ConnectTimeoutMessage = "Connection timeout";
+	private const int MaxServerPhysicsSteps = 4;
 
 	private static readonly Dictionary<NetworkInstance.NetInstanceErrorEnum, string> _netInstanceErrorMessages = new()
 	{
 		{ NetworkInstance.NetInstanceErrorEnum.DataChannelConnectFailure, "Couldn't connect to the data channel, please try rejoining" }
 	};
-
-	private const ENetConnection.CompressionMode CompressionMode = ENetConnection.CompressionMode.Fastlz;
 
 	public event Action? ServerStarted;
 	public event Action? ClientWorldReady;
@@ -71,6 +74,8 @@ public sealed partial class NetworkService : Instance
 	public bool IsDisconnected = false;
 	public bool IsShuttingDown = false;
 	public bool ClientConnected = false;
+	private bool _clientReady;
+	private readonly Dictionary<int, (int Count, double Time)> _loadProgress = [];
 
 
 	// Rate limiters
@@ -300,7 +305,7 @@ public sealed partial class NetworkService : Instance
 				{
 					lock (_rateLimiterLock)
 					{
-						var rateLimiter = _peerRateLimiters[originFromPeer];
+						if (!_peerRateLimiters.TryGetValue(originFromPeer, out var rateLimiter)) return;
 						if (tfm == TransferMode.Reliable)
 						{
 							canSend = rateLimiter.Reliable.TryAccept();
@@ -361,7 +366,9 @@ public sealed partial class NetworkService : Instance
 
 	public void CreateServer(int port = 24221)
 	{
+		Engine.MaxPhysicsStepsPerFrame = MaxServerPhysicsSteps;
 		SetupNetwork();
+		RuntimeHelpers.RunClassConstructor(typeof(PropSyncRegistry).TypeHandle);
 		InitNodes();
 		Root.ListenToNetworkService();
 
@@ -513,6 +520,7 @@ public sealed partial class NetworkService : Instance
 		{
 			_peerRateLimiters.Remove(peerID);
 		}
+		TransformSync.ForgetPeer(peerID);
 
 		Player? plr = _players.GetPlayerFromPeerID(peerID);
 		if (plr != null)
@@ -522,6 +530,14 @@ public sealed partial class NetworkService : Instance
 
 			_players.InvokePlayerRemoved(plr);
 			plr.ForceDelete();
+
+			foreach (NetworkedObject obj in Root.NetworkObjects.Values)
+			{
+				if (obj is Physical p && p.NetTransformAuthority == peerID)
+				{
+					p.SetNetworkAuthority(null);
+				}
+			}
 		}
 	}
 
@@ -662,10 +678,16 @@ public sealed partial class NetworkService : Instance
 		string username = userData.Username;
 
 		// Check for existing player
-		if (_players.GetPlayer(username) != null || _players.GetPlayerFromPeerID(peerID) != null)
+		if (_players.GetPlayerFromPeerID(peerID) != null)
 		{
 			DisconnectPeer(peerID, MultipleDeviceMessage, DisconnectionCodeEnum.MultipleDeviceNotAllowed);
 			return;
+		}
+
+		if (_players.GetPlayer(username) is Player existing)
+		{
+			DisconnectPeer(existing.PeerID, OtherDeviceMessage, DisconnectionCodeEnum.MultipleDeviceNotAllowed);
+			OnPeerDisconnected(existing.PeerID);
 		}
 
 		// Create player based on auth data
@@ -737,11 +759,38 @@ public sealed partial class NetworkService : Instance
 		ReplicateSync.SyncPlaceToPlayer(plr);
 
 		// Connection timeout
-		await Globals.Singleton.WaitAsync(ConnectTimeoutSec);
-		if (!plr.IsDeleted && !plr.IsReady)
+		double start = World.LocalClock;
+		_loadProgress[peerID] = (0, start);
+		while (true)
 		{
-			DisconnectPeer(peerID, ConnectTimeoutMessage, DisconnectionCodeEnum.ConnectTimeout);
-			plr.ForceDelete();
+			await Globals.Singleton.WaitAsync(LoadProgressIntervalSec);
+			if (IsShuttingDown || IsDeleted || plr.IsDeleted || plr.IsReady || !_loadProgress.TryGetValue(peerID, out var progress)) break;
+			double now = World.LocalClock;
+			if (now - progress.Time > ConnectTimeoutSec || now - start > MaxConnectTimeSec)
+			{
+				DisconnectPeer(peerID, ConnectTimeoutMessage, DisconnectionCodeEnum.ConnectTimeout);
+				plr.ForceDelete();
+				break;
+			}
+		}
+		_loadProgress.Remove(peerID);
+	}
+
+	[NetRpc(AuthorityMode.Any, TransferMode = TransferMode.Reliable)]
+	private void NetLoadProgress(int count)
+	{
+		if (_loadProgress.TryGetValue(RemoteSenderId, out var progress) && count > progress.Count)
+		{
+			_loadProgress[RemoteSenderId] = (count, World.LocalClock);
+		}
+	}
+
+	private async void SendLoadProgress()
+	{
+		while (!_clientReady && ClientConnected && !IsShuttingDown && !IsDeleted)
+		{
+			RpcId(1, nameof(NetLoadProgress), Root.NetworkObjects.Count + (NetInstance?.ProcessedMessages ?? 0));
+			await Globals.Singleton.WaitAsync(LoadProgressIntervalSec);
 		}
 	}
 
@@ -751,6 +800,7 @@ public sealed partial class NetworkService : Instance
 		ClientConnected = true;
 		ClientConnectedToServer?.Invoke();
 		placeReplicationStartTime = Time.GetTicksMsec();
+		SendLoadProgress();
 	}
 
 	private void ConnectionFailed(NetworkInstance.NetInstanceErrorEnum netInstanceError)
@@ -938,6 +988,7 @@ public sealed partial class NetworkService : Instance
 	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Reliable)]
 	private void NetRecvReportReady()
 	{
+		_clientReady = true;
 		ClientReady?.Invoke();
 
 		// Dispatch run client scripts
@@ -963,7 +1014,6 @@ public sealed partial class NetworkService : Instance
 	{
 		[JsonInclude] public string Name = null!;
 		[JsonInclude] public string ClassName = null!;
-		[JsonInclude] public string NodePath = null!;
 		[JsonInclude] public string ParentNodePath = null!;
 		[JsonInclude] public string ParentNodeID = null!;
 		[JsonInclude] public int Authority;
@@ -972,6 +1022,7 @@ public sealed partial class NetworkService : Instance
 		[JsonInclude] public bool IsSyncOnce = false;
 		[JsonInclude] public int Index = 0;
 		[JsonInclude] public int Sequence = 0;
+		[JsonInclude] public byte[]? Transform;
 
 		public override readonly bool Equals(object? obj)
 		{
@@ -997,7 +1048,7 @@ public sealed partial class NetworkService : Instance
 	[MemoryPackable]
 	public partial struct NetPropReplicateData()
 	{
-		[JsonInclude] public string Name = null!;
+		[JsonInclude] public ushort Index;
 		[JsonInclude] public byte[] ValueRaw = null!;
 		[JsonInclude] public long Sequence = 0;
 	}

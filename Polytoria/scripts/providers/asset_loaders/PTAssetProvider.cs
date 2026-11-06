@@ -57,7 +57,7 @@ public class PTAssetProvider : IAssetProvider
 			case ResourceType.GuildThumbnail:
 			case ResourceType.GuildBanner:
 				{
-					Image image = await Task.Run(() => DecodeImage(buffer, item.Resize));
+					Image image = await Globals.RunInBackground(() => DecodeImage(buffer, item.Resize));
 					item.Resource = ImageTexture.CreateFromImage(image);
 					result = item;
 					break;
@@ -93,7 +93,7 @@ public class PTAssetProvider : IAssetProvider
 
 	private static async Task<CacheItem> LoadMesh(CacheItem item, byte[] buffer)
 	{
-		Node3D scene = await Task.Run(() =>
+		Node3D scene = await Globals.RunInBackground(() =>
 		{
 			using GltfDocument document = new();
 			using GltfState state = new() { CreateAnimations = true };
