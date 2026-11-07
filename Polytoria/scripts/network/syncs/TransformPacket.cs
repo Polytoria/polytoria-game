@@ -12,10 +12,10 @@ namespace Polytoria.Client.Networking;
 internal static class TransformPacket
 {
 	public const int SnapshotHeaderSize = 9;
-	public const int SnapshotEntrySize = 28;
+	public const int SnapshotEntrySize = 32;
 	public const int CompactHeaderSize = 22;
-	public const int CompactEntryBaseSize = 9;
-	public const int MaxSnapshotPacketSize = 1200;
+	public const int CompactEntryBaseSize = 13;
+	public const int MaxSnapshotPacketSize = 1500;
 	public const int MaxUploadEntries = 1024;
 	public const float PositionStep = 1f / 64;
 	public const float SpinStep = 0.4f;
@@ -33,18 +33,18 @@ internal static class TransformPacket
 	{
 		BinaryPrimitives.WriteUInt16LittleEndian(span, index);
 		transform.CopyTo(span[2..]);
-		BinaryPrimitives.WriteInt16LittleEndian(span[18..], TimeOffset(time, baseTime));
-		span[20] = flags;
-		WriteHalfVector3(span[21..], velocity);
-		span[27] = writeSeq;
+		BinaryPrimitives.WriteInt16LittleEndian(span[22..], TimeOffset(time, baseTime));
+		span[24] = flags;
+		WriteHalfVector3(span[25..], velocity);
+		span[31] = writeSeq;
 	}
 
 	public static UploadEntry ReadEntry(ReadOnlySpan<byte> entry, double baseTime)
 	{
 		ushort index = BinaryPrimitives.ReadUInt16LittleEndian(entry);
-		TransformPayloadDto transform = TransformPayloadDto.FromArray(entry.Slice(2, 16).ToArray());
-		double time = baseTime + BinaryPrimitives.ReadInt16LittleEndian(entry[18..]) / 1000.0;
-		return new(index, transform, time, entry[20], ReadHalfVector3(entry[21..]), entry[27]);
+		TransformPayloadDto transform = TransformPayloadDto.FromArray(entry.Slice(2, 20).ToArray());
+		double time = baseTime + BinaryPrimitives.ReadInt16LittleEndian(entry[22..]) / 1000.0;
+		return new(index, transform, time, entry[24], ReadHalfVector3(entry[25..]), entry[31]);
 	}
 
 	public static int CompactEntrySize(byte[] transform, Vector3 velocity, Vector3 spin, Vector3 origin)
@@ -68,7 +68,7 @@ internal static class TransformPacket
 		BinaryPrimitives.WriteUInt16LittleEndian(span, index);
 		span[2] = flags;
 		BinaryPrimitives.WriteInt16LittleEndian(span[3..], TimeOffset(time, baseTime));
-		transform.AsSpan(12, 4).CopyTo(span[5..]);
+		transform.AsSpan(12, 8).CopyTo(span[5..]);
 		int length = CompactEntryBaseSize;
 		if (mode == 0)
 		{

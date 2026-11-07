@@ -179,7 +179,7 @@ public partial class NetMessage : IScriptObject
 		}
 		foreach ((string key, Quaternion q) in Quaternions)
 		{
-			payload.Quaternions[key] = new UnitQuaternionUInt64Dto(q);
+			payload.Quaternions[key] = new UnitQuaternionDto(q);
 		}
 		foreach ((string key, Variant v) in Variants)
 		{
@@ -215,7 +215,7 @@ public partial class NetMessage : IScriptObject
 		{
 			msg.Colors[key] = c.ToColor();
 		}
-		foreach ((string key, UnitQuaternionUInt64Dto q) in payload.Quaternions)
+		foreach ((string key, UnitQuaternionDto q) in payload.Quaternions)
 		{
 			msg.Quaternions[key] = q.ToQuaternion();
 		}
@@ -244,7 +244,7 @@ public partial class NetMessage : IScriptObject
 		public Dictionary<string, Vector2Dto> Vec2s = [];
 		public Dictionary<string, Vector3Dto> Vec3s = [];
 		public Dictionary<string, ColorDto> Colors = [];
-		public Dictionary<string, UnitQuaternionUInt64Dto> Quaternions = [];
+		public Dictionary<string, UnitQuaternionDto> Quaternions = [];
 		public Dictionary<string, VariantDto> Variants = [];
 		public Dictionary<string, string> Instances = [];
 		public Dictionary<string, byte[]> Buffers = [];

@@ -611,7 +611,7 @@ public partial class NetworkTransformSync : Instance
 				return;
 			}
 
-			if (transform?.Data is not { Length: 16 }) return;
+			if (transform?.Data is not { Length: 20 }) return;
 			if (dyn.HasPendingNetWrite) return;
 			if (dyn.IsAwaitingWriteAck(writeSeq)) return;
 			time = Mathf.Clamp(time, NetService.Root.NetTime - maxAge, NetService.Root.NetTime + MaxFutureTime);
@@ -1027,7 +1027,7 @@ public partial class NetworkTransformSync : Instance
 
 			ushort index = BinaryPrimitives.ReadUInt16LittleEndian(entry);
 			double time = baseTime + BinaryPrimitives.ReadInt16LittleEndian(entry[3..]) / 1000.0;
-			uint rotation = BinaryPrimitives.ReadUInt32LittleEndian(entry[5..]);
+			ulong rotation = BinaryPrimitives.ReadUInt64LittleEndian(entry[5..]);
 			int cursor = CompactEntryBaseSize;
 			Vector3 position;
 			if (mode == 0)
@@ -1050,7 +1050,7 @@ public partial class NetworkTransformSync : Instance
 				cursor += 6;
 			}
 			Vector3 spin = hasSpin ? new Vector3((sbyte)entry[cursor], (sbyte)entry[cursor + 1], (sbyte)entry[cursor + 2]) * SpinStep : Vector3.Zero;
-			TransformPayloadDto transform = TransformPayloadDto.FromArray(TransformPayloadDto.ToArray(position, rotation));
+			TransformPayloadDto transform = new(position, rotation);
 
 			if (!_transformIndexIDs.TryGetValue(index, out string? objID) || NetService.Root.GetNetObjectFromID(objID) is not Dynamic dyn) continue;
 			bool lerp = (flags & LerpFlag) != 0;
