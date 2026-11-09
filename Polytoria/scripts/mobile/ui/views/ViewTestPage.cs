@@ -39,6 +39,11 @@ public partial class ViewTestPage : MobileViewBase
 
 	private void BeginPressed()
 	{
+		if (!MobileUI.DevToolsEnabled)
+		{
+			return;
+		}
+
 		_launchOptions.ConnectAddress = _addressField.Text;
 		using FileAccess devlaunch = FileAccess.Open(DevLaunchPath, FileAccess.ModeFlags.Write);
 		devlaunch.StoreString(JsonSerializer.Serialize(_launchOptions, DevLaunchOptionsGenerationContext.Default.DevLaunchOptions));
