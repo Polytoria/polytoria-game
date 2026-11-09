@@ -162,7 +162,7 @@ public class DefaultMovement : IPlayerMovement
 					// Apply rotation by move direction
 					Vector3 a = new Quaternion(Target.Up, vertical) * Target.Forward;
 					Vector3 b = Target.CharacterVelocity.Slide(vertical).Normalized();
-					float angle = Mathf.Asin(a.Cross(b).Dot(vertical));
+					float angle = Mathf.Asin(Mathf.Clamp(a.Cross(b).Dot(vertical), -1, 1));
 					if (a.Dot(b) < 0) angle = Mathf.Pi - angle;
 					if (angle > Mathf.Pi) angle -= Mathf.Tau;
 					Target.Quaternion = new Quaternion(vertical, angle * MathUtils.ExpDecay((float)delta, NPC.BodyRotateLerp)) * Target.Quaternion;
