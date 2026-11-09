@@ -238,6 +238,9 @@ public partial class UIChat : Control
 			label.Content = msg;
 			return;
 		}
+
+		if (from.IsMuted) return;
+
 		NewChatMessage(from, msg);
 	}
 
