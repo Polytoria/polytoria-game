@@ -371,6 +371,9 @@ public struct APIWorldsData
 	[JsonPropertyName("placeType")]
 	public string PlaceType { get; set; }
 
+	[JsonPropertyName("isLegacy")]
+	public bool IsLegacy { get; set; }
+
 	[JsonPropertyName("genreIcon")]
 	public string GenreIcon { get; set; }
 
@@ -624,6 +627,30 @@ public struct APIPlaceMedia
 	public string Url { get; set; }
 }
 
+public struct APIWorldOfTheWeekResponse
+{
+	[JsonPropertyName("worldOfTheWeek")]
+	public APIWorldOfTheWeek WorldOfTheWeek { get; set; }
+}
+
+public struct APIWorldOfTheWeek
+{
+	[JsonPropertyName("id")]
+	public int Id { get; set; }
+
+	[JsonPropertyName("imageUrl")]
+	public string ImageUrl { get; set; }
+
+	[JsonPropertyName("description")]
+	public string Description { get; set; }
+
+	[JsonPropertyName("weekStart")]
+	public DateTime WeekStart { get; set; }
+
+	[JsonPropertyName("place")]
+	public APIPlaceInfo Place { get; set; }
+}
+
 public enum LibraryQueryTypeEnum
 {
 	Model,
@@ -657,6 +684,8 @@ public enum LibraryQueryTypeEnum
 [JsonSerializable(typeof(APIPlaceMedia))]
 [JsonSerializable(typeof(APIGuildCreator))]
 [JsonSerializable(typeof(APIGuildInfo))]
+[JsonSerializable(typeof(APIWorldOfTheWeekResponse))]
+[JsonSerializable(typeof(APIWorldOfTheWeek))]
 
 [JsonSerializable(typeof(APIJoinPlaceResponse))]
 [JsonSerializable(typeof(APIJoinPlaceRequest))]

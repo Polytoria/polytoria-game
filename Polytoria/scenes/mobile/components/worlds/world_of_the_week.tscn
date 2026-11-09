@@ -1,0 +1,121 @@
+[gd_scene format=3 uid="uid://gqgue5w8rr7v"]
+
+[ext_resource type="Script" uid="uid://b4o55k4sg6cc4" path="res://scripts/mobile/ui/components/worlds/WorldOfTheWeekBanner.cs" id="1_wotwb"]
+[ext_resource type="Texture2D" uid="uid://bhjyduib0gamh" path="res://assets/textures/mobile/ui/wotw_badge.png" id="2_wbadg"]
+[ext_resource type="Texture2D" uid="uid://bprfvkp0rrsl3" path="res://assets/textures/mobile/ui/wotw_play_now.png" id="3_wplay"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wcard"]
+bg_color = Color(0.9254902, 0.9254902, 0.9254902, 1)
+
+[sub_resource type="Gradient" id="Gradient_wshd1"]
+offsets = PackedFloat32Array(0, 0.55, 1)
+colors = PackedColorArray(0, 0, 0, 0.78, 0, 0, 0, 0.45, 0, 0, 0, 0.05)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_wshd1"]
+gradient = SubResource("Gradient_wshd1")
+width = 128
+height = 8
+
+[node name="WorldOfTheWeek" type="Button" unique_id=1707806458 node_paths=PackedStringArray("_thumbnailRect", "_content", "_titleLabel", "_descriptionLabel", "_playButton")]
+custom_minimum_size = Vector2(0, 150)
+offset_right = 402.0
+offset_bottom = 150.0
+mouse_filter = 1
+theme_type_variation = &"BareButton"
+script = ExtResource("1_wotwb")
+_thumbnailRect = NodePath("Card/Thumbnail")
+_content = NodePath("Content")
+_titleLabel = NodePath("Content/Title")
+_descriptionLabel = NodePath("Content/Description")
+_playButton = NodePath("PlayNow")
+
+[node name="Card" type="Panel" parent="." unique_id=1419421549]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_wcard")
+
+[node name="Thumbnail" type="TextureRect" parent="Card" unique_id=238761931]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Shade" type="TextureRect" parent="Card" unique_id=1783859321]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_wshd1")
+expand_mode = 1
+
+[node name="Content" type="VBoxContainer" parent="." unique_id=549151548]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 0.72
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 12.0
+offset_bottom = -12.0
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Badge" type="TextureRect" parent="Content" unique_id=1529957526]
+custom_minimum_size = Vector2(100, 25)
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+texture = ExtResource("2_wbadg")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Title" type="Label" parent="Content" unique_id=782380620]
+layout_mode = 2
+theme_type_variation = &"HeroLabel"
+theme_override_font_sizes/font_size = 20
+text = "World Name"
+text_overrun_behavior = 3
+
+[node name="Description" type="Label" parent="Content" unique_id=289883068]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+theme_type_variation = &"LightLabel"
+theme_override_colors/font_color = Color(1, 1, 1, 0.9)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.3)
+theme_override_constants/line_spacing = -2
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 3
+text_overrun_behavior = 3
+max_lines_visible = 2
+
+[node name="PlayNow" type="TextureButton" parent="." unique_id=176076585]
+custom_minimum_size = Vector2(128, 48)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -140.0
+offset_top = -56.0
+offset_right = -12.0
+offset_bottom = -8.0
+grow_horizontal = 0
+grow_vertical = 0
+pivot_offset_ratio = Vector2(0.5, 0.5)
+texture_normal = ExtResource("3_wplay")
+ignore_texture_size = true
+stretch_mode = 5

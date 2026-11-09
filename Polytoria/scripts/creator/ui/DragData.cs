@@ -67,7 +67,23 @@ public partial class DragData : IDragDataUnion
 
 	public static IDragDataUnion? Deserialize(Variant from)
 	{
-		return SerializeUtils.Deserialize<IDragDataUnion>(from.AsByteArray());
+
+		if (from.VariantType != Variant.Type.PackedByteArray)
+			return null;
+
+		var data = from.AsByteArray();
+
+		if (data.Length == 0)
+			return null;
+
+		try
+		{
+			return SerializeUtils.Deserialize<IDragDataUnion>(data);
+		}
+		catch (MemoryPackSerializationException)
+		{
+			return null;
+		}
 	}
 }
 

@@ -54,7 +54,6 @@ public sealed partial class Player : NPC
 	private bool _useBubbleChat = true;
 	private bool _autoLoadAppearance = true;
 	private bool _allowAnimationWhileMoving = false;
-	private PlayerMovementModeEnum _movementMode = PlayerMovementModeEnum.Default;
 	private PlayerRotationModeEnum _rotationMode = PlayerRotationModeEnum.Automatic;
 	private Team? _team;
 	private Color _chatColorBeforeTeam;
@@ -294,24 +293,6 @@ public sealed partial class Player : NPC
 	}
 
 	[Editable, ScriptProperty]
-	public PlayerMovementModeEnum MovementMode
-	{
-		get => _movementMode;
-		set
-		{
-			_movementMode = value;
-
-			PlayerMovement = _movementMode switch
-			{
-				PlayerMovementModeEnum.Default => new DefaultMovement() { Root = Root, Target = this },
-				_ => null,
-			};
-
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
 	public PlayerRotationModeEnum RotationMode
 	{
 		get => _rotationMode;
@@ -424,7 +405,6 @@ public sealed partial class Player : NPC
 		{
 			bool oldVal = _isReady;
 			_isReady = value;
-			GD.PushWarning($"{Name} update is ready {oldVal} -> {_isReady}");
 			UpdatePlrReady();
 			if (value != oldVal && value)
 			{
@@ -515,6 +495,7 @@ public sealed partial class Player : NPC
 	{
 		Root.Input.GodotInputEvent -= OnInput;
 		Died.Disconnect(OnPlayerDied);
+		Root.Players.PropertyChanged.Disconnect<string>(OnPlayersPropertyChanged);
 		PlayerMovement = null!;
 		base.PreDelete();
 	}
@@ -589,7 +570,6 @@ public sealed partial class Player : NPC
 		}
 		if (!IsLocal)
 		{
-			UpdateTransformTick(delta);
 			if (Root.Network.IsServer && !IsSitting)
 			{
 				CharBody3D.Velocity = LastVelocity;
@@ -802,6 +782,7 @@ public sealed partial class Player : NPC
 	{
 		if (Root.SessionType != World.SessionTypeEnum.Client) { return; }
 		if (!IsLocal || !Root.Input.IsGameFocused) { return; }
+		if (Root.Input.IsPromptKey(@event)) { return; }
 
 		if (@event.IsActionPressed("activate"))
 		{
@@ -848,15 +829,13 @@ public sealed partial class Player : NPC
 
 	private async void OnPlayerDied()
 	{
-		if (IsLocal)
-		{
-			UnequipTool();
-		}
+		UnequipTool();
 		Velocity = Vector3.Zero;
 		if (!Root.Network.IsServer) return; // Respawn on server only
 
 		// Respawn on client
 		await Globals.Singleton.WaitAsync(RespawnTime);
+		if (IsDeleted) return;
 		Respawn();
 	}
 
@@ -864,6 +843,7 @@ public sealed partial class Player : NPC
 	internal void OnNetReady()
 	{
 		IsLocal = true;
+		Nametag?.UpdateNameTag();
 		SendPing();
 
 		CamAttach = Globals.LoadInstance<Dynamic>(Root);
@@ -1130,6 +1110,8 @@ public sealed partial class Player : NPC
 		{
 			foreach (Instance item in Root.PlayerDefaults.Inventory.GetChildren())
 			{
+				if (Inventory.FindChild(item.Name) != null || HoldingTool?.Name == item.Name) continue;
+
 				NetworkedObject a = item.Clone();
 				if (a is Instance i)
 				{
@@ -1166,12 +1148,6 @@ public sealed partial class Player : NPC
 		}
 	}
 
-	internal override bool TransformNetworkCheck(TransformPayloadDto newTransform)
-	{
-		// TODO: Make sanity checks here
-		return true;
-	}
-
 	internal void AdminKick()
 	{
 		RpcId(1, nameof(NetAdminKick));
@@ -1189,13 +1165,6 @@ public sealed partial class Player : NPC
 		{
 			Kick("You have been kicked by game administrator.");
 		}
-	}
-
-	[ScriptEnum]
-	public enum PlayerMovementModeEnum
-	{
-		Default,
-		Scripted
 	}
 
 	[ScriptEnum]

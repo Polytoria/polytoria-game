@@ -2,8 +2,16 @@
 
 [ext_resource type="Theme" uid="uid://dofh67vfwf6qe" path="res://resources/themes/mobile.tres" id="1_ce93kd"]
 [ext_resource type="Script" uid="uid://l0idfs5x4p8u" path="res://scripts/mobile/ui/views/profile/ViewProfilePage.cs" id="2_juo4d3"]
+[ext_resource type="Texture2D" uid="uid://wlrvgtw6qeuw" path="res://assets/textures/mobile/home/headerbg_color.png" id="3_hdrbg"]
+[ext_resource type="PackedScene" uid="uid://dilt4dmnlsyd6" path="res://scenes/mobile/components/shared/avatar_preview.tscn" id="4_avprv"]
+[ext_resource type="Texture2D" uid="uid://cbx31oy7e53n3" path="res://assets/textures/mobile/ui/zigzag_edge.svg" id="5_zigzg"]
+[ext_resource type="Texture2D" uid="uid://4vij7ecn2odt" path="res://assets/textures/ui-icons/door-exit.svg" id="6_dexit"]
+[ext_resource type="Shader" uid="uid://cnyumiybq1htl" path="res://resources/shaders/ui/horizontal_tile.gdshader" id="20_htile"]
 
-[node name="Control" type="Control" unique_id=1423770553]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_htile"]
+shader = ExtResource("20_htile")
+
+[node name="Profile" type="Control" unique_id=1423770553 node_paths=PackedStringArray("_avatar", "_usernameLabel", "_memberSinceLabel", "_descriptionLabel", "_aboutCard")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -12,64 +20,124 @@ grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("1_ce93kd")
 script = ExtResource("2_juo4d3")
+_avatar = NodePath("Scroll/Content/Hero/Avatar")
+_usernameLabel = NodePath("Scroll/Content/Body/Layout/Identity/Username")
+_memberSinceLabel = NodePath("Scroll/Content/Body/Layout/Identity/MemberSince")
+_descriptionLabel = NodePath("Scroll/Content/Body/Layout/About/Layout/Description")
+_aboutCard = NodePath("Scroll/Content/Body/Layout/About")
 
-[node name="ScrollContainer" type="ScrollContainer" parent="." unique_id=6478972]
+[node name="Scroll" type="ScrollContainer" parent="." unique_id=117441775]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+horizontal_scroll_mode = 0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="ScrollContainer" unique_id=1729516494]
+[node name="Content" type="VBoxContainer" parent="Scroll" unique_id=1119662154]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_constants/separation = 12
+theme_override_constants/separation = 0
 
-[node name="Spacer" type="Control" parent="ScrollContainer/VBoxContainer" unique_id=1817787239]
-custom_minimum_size = Vector2(0, 24)
+[node name="Hero" type="Control" parent="Scroll/Content" unique_id=1168799218]
+custom_minimum_size = Vector2(0, 230)
+clip_contents = true
 layout_mode = 2
+mouse_filter = 1
 
-[node name="AvatarCenter" type="CenterContainer" parent="ScrollContainer/VBoxContainer" unique_id=76571564]
-layout_mode = 2
-
-[node name="Avatar" type="TextureRect" parent="ScrollContainer/VBoxContainer/AvatarCenter" unique_id=1433010078]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(160, 160)
-layout_mode = 2
+[node name="Background" type="TextureRect" parent="Scroll/Content/Hero" unique_id=2025523089]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_hdrbg")
 expand_mode = 1
-stretch_mode = 5
+stretch_mode = 6
 
-[node name="Username" type="Label" parent="ScrollContainer/VBoxContainer" unique_id=1562478107]
-layout_mode = 2
-theme_override_font_sizes/font_size = 24
-horizontal_alignment = 1
+[node name="Avatar" parent="Scroll/Content/Hero" unique_id=152719425 instance=ExtResource("4_avprv")]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -130.0
+offset_top = -250.0
+offset_right = 130.0
+offset_bottom = 10.0
+grow_horizontal = 2
+grow_vertical = 0
+_modelRotation = Vector3(0, 0, 0)
 
-[node name="MemberSince" type="Label" parent="ScrollContainer/VBoxContainer" unique_id=1362199164]
-modulate = Color(1, 1, 1, 0.6)
-layout_mode = 2
-horizontal_alignment = 1
+[node name="Edge" type="TextureRect" parent="Scroll/Content/Hero" unique_id=635469001]
+material = SubResource("ShaderMaterial_htile")
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -9.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+texture = ExtResource("5_zigzg")
+expand_mode = 1
+stretch_mode = 1
 
-[node name="DescriptionMargin" type="MarginContainer" parent="ScrollContainer/VBoxContainer" unique_id=472160907]
+[node name="Body" type="MarginContainer" parent="Scroll/Content" unique_id=572777652]
 layout_mode = 2
-theme_override_constants/margin_left = 24
+theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 24
+theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 24
 
-[node name="Description" type="Label" parent="ScrollContainer/VBoxContainer/DescriptionMargin" unique_id=770032699]
+[node name="Layout" type="VBoxContainer" parent="Scroll/Content/Body" unique_id=395570047]
 layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Identity" type="VBoxContainer" parent="Scroll/Content/Body/Layout" unique_id=1121596341]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Username" type="Label" parent="Scroll/Content/Body/Layout/Identity" unique_id=1871835516]
+layout_mode = 2
+theme_type_variation = &"HeadingLabel"
+theme_override_font_sizes/font_size = 26
+text = "Player"
 horizontal_alignment = 1
+text_overrun_behavior = 3
+
+[node name="MemberSince" type="Label" parent="Scroll/Content/Body/Layout/Identity" unique_id=1486553027]
+layout_mode = 2
+theme_type_variation = &"SubtleLabel"
+horizontal_alignment = 1
+
+[node name="About" type="PanelContainer" parent="Scroll/Content/Body/Layout" unique_id=93786049]
+visible = false
+layout_mode = 2
+theme_type_variation = &"CardPanel"
+
+[node name="Layout" type="VBoxContainer" parent="Scroll/Content/Body/Layout/About" unique_id=308353785]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Scroll/Content/Body/Layout/About/Layout" unique_id=370293243]
+layout_mode = 2
+theme_type_variation = &"CardTitleLabel"
+theme_override_font_sizes/font_size = 16
+text = "About"
+
+[node name="Description" type="Label" parent="Scroll/Content/Body/Layout/About/Layout" unique_id=1975880413]
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
 autowrap_mode = 3
 
-[node name="LogoutMargin" type="MarginContainer" parent="ScrollContainer/VBoxContainer" unique_id=1526839617]
-layout_mode = 2
-theme_override_constants/margin_left = 100
-theme_override_constants/margin_top = 32
-theme_override_constants/margin_right = 100
-theme_override_constants/margin_bottom = 0
-
-[node name="Button" type="Button" parent="ScrollContainer/VBoxContainer/LogoutMargin" unique_id=1701048513]
+[node name="Logout" type="Button" parent="Scroll/Content/Body/Layout" unique_id=497019758]
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 text = "Log out"
+icon = ExtResource("6_dexit")

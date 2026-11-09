@@ -43,7 +43,7 @@ public class PTVector3 : IScriptGDObject
 		return vector;
 	}
 
-	[ScriptMethod]
+	[ScriptMethod(ConvertParamsToGD = false)]
 	public static PTVector3 New()
 	{
 		return new()
@@ -54,7 +54,7 @@ public class PTVector3 : IScriptGDObject
 		};
 	}
 
-	[ScriptMethod]
+	[ScriptMethod(ConvertParamsToGD = false)]
 	public static PTVector3 New(float d)
 	{
 		return new()
@@ -65,7 +65,7 @@ public class PTVector3 : IScriptGDObject
 		};
 	}
 
-	[ScriptMethod]
+	[ScriptMethod(ConvertParamsToGD = false)]
 	public static PTVector3 New(float x, float y)
 	{
 		return new()
@@ -76,7 +76,7 @@ public class PTVector3 : IScriptGDObject
 		};
 	}
 
-	[ScriptMethod]
+	[ScriptMethod(ConvertParamsToGD = false)]
 	public static PTVector3 New(float x, float y, float z)
 	{
 		//PT.Print("New vector3: ", x, y, z);
@@ -88,7 +88,7 @@ public class PTVector3 : IScriptGDObject
 		};
 	}
 
-	[ScriptMethod]
+	[ScriptMethod(ConvertParamsToGD = false)]
 	public static PTVector3 New(PTVector2 v)
 	{
 		return new()

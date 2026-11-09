@@ -143,6 +143,7 @@ public partial class UIInventory : Control
 	{
 		if (!Visible) return;
 		if (@event.IsEcho()) return;
+		if (CoreUI.Root.Input.IsPromptKey(@event)) return;
 		if (@event.IsActionPressed("toggle_backpack"))
 		{
 			ToggleBackpack();
@@ -154,6 +155,7 @@ public partial class UIInventory : Control
 	{
 		if (!Visible) return;
 		if (@event.IsEcho()) return;
+		if (CoreUI.Root.Input.IsPromptKey(@event)) return;
 		if (@event is InputEventKey key)
 		{
 			if (!key.Pressed) { return; }

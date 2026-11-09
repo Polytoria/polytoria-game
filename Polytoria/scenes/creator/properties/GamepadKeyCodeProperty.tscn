@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://k4hi44g3ksef"]
+
+[ext_resource type="Script" uid="uid://o4lhi4e0hf24" path="res://scripts/creator/properties/GamepadKeyCodeProperty.cs" id="1_gamepad"]
+
+[node name="GamepadKeyCode" type="OptionButton" unique_id=1638492057]
+custom_minimum_size = Vector2(0, 24)
+size_flags_horizontal = 3
+alignment = 1
+text_overrun_behavior = 1
+fit_to_longest_item = false
+script = ExtResource("1_gamepad")

@@ -30,7 +30,9 @@ public partial class NewUserSplash : Control
 
 	public void ShowSplash()
 	{
-		GetNode<AnimationPlayer>("AnimPlay").Play("appear");
+		AnimationPlayer animPlay = GetNode<AnimationPlayer>("AnimPlay");
+		animPlay.Play("appear");
+		animPlay.Queue("idle");
 	}
 
 	private void OnRegisterPressed()

@@ -12,6 +12,12 @@ public sealed partial class Truss : Part
 	private float _climbSpeed;
 	private bool _climbable;
 
+	public override void InitOverrides()
+	{
+		base.InitOverrides();
+		Shape = ShapeEnum.Truss;
+	}
+
 	[Editable, ScriptProperty, DefaultValue(1f)]
 	public float ClimbSpeed
 	{

@@ -12,34 +12,34 @@ namespace Polytoria.Mobile.UI;
 
 public partial class ViewTestPage : MobileViewBase
 {
-	private Button BeginButton = null!;
-	private LineEdit AddresssField = null!;
+	[Export] private Button _beginButton = null!;
+	[Export] private LineEdit _addressField = null!;
+	[Export] private Button _restartButton = null!;
+	[Export] private Label _versionLabel = null!;
 	private DevLaunchOptions _launchOptions = new();
 	private const string DevLaunchPath = "user://devlaunch";
 
 
 	public override void _Ready()
 	{
-		BeginButton = GetNode<Button>("ConnectField/BeginButton");
-		GetNode<Button>("RestartApp").Pressed += () =>
+		_restartButton.Pressed += () =>
 		{
 			Globals.Singleton.SwitchEntry(Globals.AppEntryEnum.MobileUI);
 		};
-		AddresssField = GetNode<LineEdit>("ConnectField/AddressField");
-		GetNode<Label>("Version").Text = $"Running v{Globals.AppVersion}";
+		_versionLabel.Text = $"Running v{Globals.AppVersion}";
 
 		if (FileAccess.FileExists(DevLaunchPath))
 		{
 			_launchOptions = JsonSerializer.Deserialize(FileAccess.GetFileAsString(DevLaunchPath), DevLaunchOptionsGenerationContext.Default.DevLaunchOptions)!;
 		}
 
-		AddresssField.Text = _launchOptions.ConnectAddress;
-		BeginButton.Pressed += BeginPressed;
+		_addressField.Text = _launchOptions.ConnectAddress;
+		_beginButton.Pressed += BeginPressed;
 	}
 
 	private void BeginPressed()
 	{
-		_launchOptions.ConnectAddress = AddresssField.Text;
+		_launchOptions.ConnectAddress = _addressField.Text;
 		using FileAccess devlaunch = FileAccess.Open(DevLaunchPath, FileAccess.ModeFlags.Write);
 		devlaunch.StoreString(JsonSerializer.Serialize(_launchOptions, DevLaunchOptionsGenerationContext.Default.DevLaunchOptions));
 		devlaunch.Close();

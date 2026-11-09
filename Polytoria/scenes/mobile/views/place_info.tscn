@@ -3,175 +3,299 @@
 [ext_resource type="Theme" uid="uid://dofh67vfwf6qe" path="res://resources/themes/mobile.tres" id="1_fkwcp"]
 [ext_resource type="Script" uid="uid://c6cfyk477lxm2" path="res://scripts/mobile/ui/views/worlds/ViewPlaceInfo.cs" id="2_o0lns"]
 [ext_resource type="Texture2D" uid="uid://wlrvgtw6qeuw" path="res://assets/textures/mobile/home/headerbg_color.png" id="3_2b3aw"]
-[ext_resource type="PackedScene" uid="uid://baoot5bioy8p6" path="res://scenes/mobile/ui/success_gradient.tscn" id="4_vkmeh"]
+[ext_resource type="Texture2D" uid="uid://cbx31oy7e53n3" path="res://assets/textures/mobile/ui/zigzag_edge.svg" id="4_zigzg"]
 [ext_resource type="Texture2D" uid="uid://ca1mu3488yl80" path="res://assets/textures/ui-icons/play-filled.svg" id="5_e6spv"]
+[ext_resource type="Texture2D" uid="uid://c60spvojllrt4" path="res://assets/textures/ui-icons/chevron-left.svg" id="6_chevl"]
+[ext_resource type="Texture2D" uid="uid://q41v5u10ix88" path="res://assets/textures/ui-icons/users.svg" id="7_users"]
+[ext_resource type="Texture2D" uid="uid://clo2nxfldx3yo" path="res://assets/textures/ui-icons/rocket.svg" id="8_rockt"]
+[ext_resource type="Texture2D" uid="uid://f8k4hb5wuttg" path="res://assets/textures/ui-icons/thumb-up.svg" id="9_thmbu"]
+[ext_resource type="Shader" uid="uid://cnyumiybq1htl" path="res://resources/shaders/ui/horizontal_tile.gdshader" id="20_htile"]
 
-[sub_resource type="Gradient" id="Gradient_w46nw"]
-colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_htile"]
+shader = ExtResource("20_htile")
 
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_ccoek"]
-gradient = SubResource("Gradient_w46nw")
-fill_from = Vector2(1, 1)
-fill_to = Vector2(0.94871795, 0)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bckbt"]
+bg_color = Color(1, 1, 1, 0.92)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+shadow_color = Color(0, 0, 0, 0.15)
+shadow_size = 6
+shadow_offset = Vector2(0, 2)
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_0s7as"]
-content_margin_left = 16.0
-content_margin_top = 16.0
-content_margin_right = 16.0
-content_margin_bottom = 16.0
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bckpr"]
+bg_color = Color(0.92, 0.92, 0.92, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ub80p"]
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+[sub_resource type="Gradient" id="Gradient_plyfd"]
+offsets = PackedFloat32Array(0, 0.45)
+colors = PackedColorArray(0.98039216, 0.98039216, 0.98039216, 0, 0.98039216, 0.98039216, 0.98039216, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_axuuk"]
-bg_color = Color(0.6, 0.6, 0.6, 0.6784314)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_plyfd"]
+gradient = SubResource("Gradient_plyfd")
+width = 8
+fill_to = Vector2(0, 1)
 
-[node name="Control" type="ColorRect" unique_id=882536811 node_paths=PackedStringArray("_playButton", "_genreLabel", "_placeNameLabel", "_creatorNameLabel", "_thumbnailRect", "_thumbnailGradient")]
+[node name="PlaceInfo" type="Control" unique_id=882536811 node_paths=PackedStringArray("_playButton", "_backButton", "_scroll", "_thumbnailRect", "_genreChip", "_genreLabel", "_placeNameLabel", "_creatorNameLabel", "_playingLabel", "_visitsLabel", "_ratingLabel", "_descriptionLabel")]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_right = -768.0
 grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("1_fkwcp")
-color = Color(0.12941177, 0.24313726, 0.38039216, 1)
 script = ExtResource("2_o0lns")
-_playButton = NodePath("Play")
-_genreLabel = NodePath("ScrollContainer/VBoxContainer/PanelContainer/Layout/Layout/HBoxContainer/Label")
-_placeNameLabel = NodePath("ScrollContainer/VBoxContainer/PanelContainer/Layout/Layout/Label3")
-_creatorNameLabel = NodePath("ScrollContainer/VBoxContainer/PanelContainer/Layout/Layout/Label")
-_thumbnailRect = NodePath("ScrollContainer/VBoxContainer/Control/TextureRect2")
-_thumbnailGradient = NodePath("ScrollContainer/VBoxContainer/Control/TextureRect2/TextureRect")
+_playButton = NodePath("PlayBar/Play")
+_backButton = NodePath("Back")
+_scroll = NodePath("Scroll")
+_thumbnailRect = NodePath("Scroll/Content/Hero/Thumbnail")
+_genreChip = NodePath("Scroll/Content/Body/Layout/Genre")
+_genreLabel = NodePath("Scroll/Content/Body/Layout/Genre/Label")
+_placeNameLabel = NodePath("Scroll/Content/Body/Layout/Title/Name")
+_creatorNameLabel = NodePath("Scroll/Content/Body/Layout/Title/Creator")
+_playingLabel = NodePath("Scroll/Content/Body/Layout/Stats/Playing/Layout/Label")
+_visitsLabel = NodePath("Scroll/Content/Body/Layout/Stats/Visits/Layout/Label")
+_ratingLabel = NodePath("Scroll/Content/Body/Layout/Stats/Rating/Layout/Label")
+_descriptionLabel = NodePath("Scroll/Content/Body/Layout/Description")
 
-[node name="ScrollContainer" type="ScrollContainer" parent="." unique_id=1116018527]
+[node name="Scroll" type="ScrollContainer" parent="." unique_id=973265925]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+horizontal_scroll_mode = 0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="ScrollContainer" unique_id=1508638074]
+[node name="Content" type="VBoxContainer" parent="Scroll" unique_id=131525192]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 3
+theme_override_constants/separation = 0
 
-[node name="Control" type="Panel" parent="ScrollContainer/VBoxContainer" unique_id=194862004]
+[node name="Hero" type="Control" parent="Scroll/Content" unique_id=2001173789]
+custom_minimum_size = Vector2(0, 230)
 clip_contents = true
-custom_minimum_size = Vector2(0, 225)
 layout_mode = 2
 mouse_filter = 1
 
-[node name="TextureRect2" type="TextureRect" parent="ScrollContainer/VBoxContainer/Control" unique_id=1097271203]
+[node name="Thumbnail" type="TextureRect" parent="Scroll/Content/Hero" unique_id=801768702]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 texture = ExtResource("3_2b3aw")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="TextureRect" type="TextureRect" parent="ScrollContainer/VBoxContainer/Control/TextureRect2" unique_id=1034406600]
-modulate = Color(0.12919998, 0.24206008, 0.38, 1)
+[node name="Edge" type="TextureRect" parent="Scroll/Content/Hero" unique_id=916165743]
+material = SubResource("ShaderMaterial_htile")
 layout_mode = 1
-anchors_preset = 15
+anchors_preset = 12
+anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = 161.0
+offset_top = -9.0
 grow_horizontal = 2
-grow_vertical = 2
-texture = SubResource("GradientTexture2D_ccoek")
+grow_vertical = 0
+mouse_filter = 2
+texture = ExtResource("4_zigzg")
 expand_mode = 1
+stretch_mode = 1
 
-[node name="PanelContainer" type="PanelContainer" parent="ScrollContainer/VBoxContainer" unique_id=2068670489]
+[node name="Body" type="MarginContainer" parent="Scroll/Content" unique_id=1666485669]
 layout_mode = 2
-mouse_filter = 1
-theme_override_styles/panel = SubResource("StyleBoxEmpty_0s7as")
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 110
 
-[node name="Layout" type="VBoxContainer" parent="ScrollContainer/VBoxContainer/PanelContainer" unique_id=900607788]
+[node name="Layout" type="VBoxContainer" parent="Scroll/Content/Body" unique_id=1296054917]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 14
 
-[node name="Layout" type="VBoxContainer" parent="ScrollContainer/VBoxContainer/PanelContainer/Layout" unique_id=2078253147]
+[node name="Genre" type="PanelContainer" parent="Scroll/Content/Body/Layout" unique_id=1532155972]
+visible = false
 layout_mode = 2
-theme_override_constants/separation = 0
-alignment = 2
+size_flags_horizontal = 0
+theme_type_variation = &"ChipPanel"
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ScrollContainer/VBoxContainer/PanelContainer/Layout/Layout" unique_id=1389179205]
-modulate = Color(1, 1, 1, 0.78431374)
+[node name="Label" type="Label" parent="Scroll/Content/Body/Layout/Genre" unique_id=972916847]
 layout_mode = 2
-
-[node name="Label" type="Label" parent="ScrollContainer/VBoxContainer/PanelContainer/Layout/Layout/HBoxContainer" unique_id=515916808]
-layout_mode = 2
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"LightLabel"
+theme_override_font_sizes/font_size = 13
 text = "Genre"
 
-[node name="Label3" type="Label" parent="ScrollContainer/VBoxContainer/PanelContainer/Layout/Layout" unique_id=2087641446]
+[node name="Title" type="VBoxContainer" parent="Scroll/Content/Body/Layout" unique_id=1895747942]
 layout_mode = 2
-theme_override_constants/line_spacing = -8
-theme_override_font_sizes/font_size = 32
-text = "Place Name"
+theme_override_constants/separation = 2
+
+[node name="Name" type="Label" parent="Scroll/Content/Body/Layout/Title" unique_id=1417051480]
+layout_mode = 2
+theme_type_variation = &"HeadingLabel"
+theme_override_font_sizes/font_size = 28
+text = "World Name"
 autowrap_mode = 3
 
-[node name="Label" type="Label" parent="ScrollContainer/VBoxContainer/PanelContainer/Layout/Layout" unique_id=1397042833]
+[node name="Creator" type="Label" parent="Scroll/Content/Body/Layout/Title" unique_id=1862592929]
 layout_mode = 2
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"SubtleLabel"
+theme_override_font_sizes/font_size = 15
 text = "By Username"
 
-[node name="TextureRect" type="TextureRect" parent="ScrollContainer/VBoxContainer/PanelContainer/Layout/Layout" unique_id=1956159128]
+[node name="Stats" type="HBoxContainer" parent="Scroll/Content/Body/Layout" unique_id=310010301]
 layout_mode = 2
 
-[node name="Play" type="Button" parent="." unique_id=1628177988]
-clip_children = 1
-custom_minimum_size = Vector2(0, 60)
+[node name="Playing" type="PanelContainer" parent="Scroll/Content/Body/Layout/Stats" unique_id=1333196909]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"PillPanel"
+
+[node name="Layout" type="HBoxContainer" parent="Scroll/Content/Body/Layout/Stats/Playing" unique_id=1398999245]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="Icon" type="TextureRect" parent="Scroll/Content/Body/Layout/Stats/Playing/Layout" unique_id=1033342570]
+self_modulate = Color(0.8862745, 0.25882354, 0.25882354, 1)
+custom_minimum_size = Vector2(16, 0)
+layout_mode = 2
+texture = ExtResource("7_users")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="Scroll/Content/Body/Layout/Stats/Playing/Layout" unique_id=227098875]
+layout_mode = 2
+theme_type_variation = &"CardTitleLabel"
+theme_override_font_sizes/font_size = 13
+text = "--"
+
+[node name="Visits" type="PanelContainer" parent="Scroll/Content/Body/Layout/Stats" unique_id=453296258]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"PillPanel"
+
+[node name="Layout" type="HBoxContainer" parent="Scroll/Content/Body/Layout/Stats/Visits" unique_id=4300724]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="Icon" type="TextureRect" parent="Scroll/Content/Body/Layout/Stats/Visits/Layout" unique_id=39248273]
+self_modulate = Color(0.8862745, 0.25882354, 0.25882354, 1)
+custom_minimum_size = Vector2(16, 0)
+layout_mode = 2
+texture = ExtResource("8_rockt")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="Scroll/Content/Body/Layout/Stats/Visits/Layout" unique_id=911403689]
+layout_mode = 2
+theme_type_variation = &"CardTitleLabel"
+theme_override_font_sizes/font_size = 13
+text = "--"
+
+[node name="Rating" type="PanelContainer" parent="Scroll/Content/Body/Layout/Stats" unique_id=223304772]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"PillPanel"
+
+[node name="Layout" type="HBoxContainer" parent="Scroll/Content/Body/Layout/Stats/Rating" unique_id=841789368]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="Icon" type="TextureRect" parent="Scroll/Content/Body/Layout/Stats/Rating/Layout" unique_id=581732572]
+self_modulate = Color(0.8862745, 0.25882354, 0.25882354, 1)
+custom_minimum_size = Vector2(16, 0)
+layout_mode = 2
+texture = ExtResource("9_thmbu")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="Scroll/Content/Body/Layout/Stats/Rating/Layout" unique_id=2054961590]
+layout_mode = 2
+theme_type_variation = &"CardTitleLabel"
+theme_override_font_sizes/font_size = 13
+text = "--"
+
+[node name="Description" type="Label" parent="Scroll/Content/Body/Layout" unique_id=2101188989]
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+autowrap_mode = 3
+
+[node name="Back" type="Button" parent="." unique_id=247193159]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 1
+offset_left = 14.0
+offset_top = 14.0
+offset_right = 54.0
+offset_bottom = 54.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_bckbt")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_bckpr")
+theme_override_styles/hover = SubResource("StyleBoxFlat_bckbt")
+theme_override_styles/focus = SubResource("StyleBoxFlat_bckbt")
+icon = ExtResource("6_chevl")
+icon_alignment = 1
+expand_icon = true
+
+[node name="PlayBar" type="TextureRect" parent="." unique_id=2136263842]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -96.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_plyfd")
+expand_mode = 1
+
+[node name="Play" type="Button" parent="PlayBar" unique_id=1531298580]
+custom_minimum_size = Vector2(0, 58)
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 16.0
-offset_top = -76.0
-offset_right = -20.0
+offset_top = -74.0
+offset_right = -16.0
 offset_bottom = -16.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_styles/normal = SubResource("StyleBoxFlat_ub80p")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_axuuk")
-theme_override_styles/hover = SubResource("StyleBoxFlat_ub80p")
+pivot_offset_ratio = Vector2(0.5, 0.5)
+theme_type_variation = &"PrimaryButton"
 
-[node name="TextureRect" parent="Play" unique_id=2058874076 instance=ExtResource("4_vkmeh")]
-layout_mode = 1
-
-[node name="HBoxContainer" type="HBoxContainer" parent="Play" unique_id=478733318]
-modulate = Color(0, 0, 0, 0.7647059)
+[node name="Layout" type="HBoxContainer" parent="PlayBar/Play" unique_id=830325904]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_top = -2.0
+offset_bottom = -2.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 8
+mouse_filter = 2
+theme_override_constants/separation = 10
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="Play/HBoxContainer" unique_id=1015192304]
-custom_minimum_size = Vector2(24, 0)
+[node name="Icon" type="TextureRect" parent="PlayBar/Play/Layout" unique_id=383631717]
+custom_minimum_size = Vector2(22, 0)
 layout_mode = 2
+mouse_filter = 2
 texture = ExtResource("5_e6spv")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label" type="Label" parent="Play/HBoxContainer" unique_id=1278878899]
+[node name="Label" type="Label" parent="PlayBar/Play/Layout" unique_id=1193017391]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_type_variation = &"HeroLabel"
+theme_override_font_sizes/font_size = 20
 text = "Play"
-horizontal_alignment = 1
-vertical_alignment = 1

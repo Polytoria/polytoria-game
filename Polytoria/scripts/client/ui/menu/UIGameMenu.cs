@@ -11,7 +11,12 @@ namespace Polytoria.Client.UI;
 
 public partial class UIGameMenu : Control
 {
+	private const float MobileScreenMargin = 8f;
+
 	public Vector2 GameMenuSize = new(960, 524);
+
+	[Export] public bool ForceMobileLayout;
+
 	private readonly Dictionary<GameMenuViewEnum, UIMenuViewBase> _loadedViews = [];
 	private UIMenuViewBase? _currentView = null;
 
@@ -21,6 +26,7 @@ public partial class UIGameMenu : Control
 	[Export] private Control _gameMenuPanel = null!;
 
 	public bool IsShowing = false;
+	public bool UseMobileLayout => Globals.IsMobileBuild || ForceMobileLayout;
 
 	public CoreUIRoot CoreUI = null!;
 	public event Action<bool>? IsShowingChanged;
@@ -73,6 +79,12 @@ public partial class UIGameMenu : Control
 
 	private void RefreshSize()
 	{
+		if (UseMobileLayout)
+		{
+			FitToScreen();
+			return;
+		}
+
 		Rect2 rect = GetViewportRect();
 		if (rect.Size.X < GameMenuSize.X)
 		{
@@ -91,6 +103,39 @@ public partial class UIGameMenu : Control
 			_gameMenuPanel.Size = new(_gameMenuPanel.Size.X, GameMenuSize.Y);
 		}
 		_gameMenuPanel.SetDeferred(Control.PropertyName.AnchorsPreset, (int)LayoutPreset.Center);
+	}
+
+	private void FitToScreen()
+	{
+		Rect2 viewport = GetViewportRect();
+		Rect2 area = GetSafeArea().Grow(-MobileScreenMargin);
+		float scale = Mathf.Min(1f, Mathf.Min(area.Size.X / GameMenuSize.X, area.Size.Y / GameMenuSize.Y));
+
+		_gameMenuPanel.Size = GameMenuSize;
+		_gameMenuPanel.SetDeferred(Control.PropertyName.AnchorsPreset, (int)LayoutPreset.Center);
+
+		Control holder = _gameMenuPanel.GetParent<Control>();
+		holder.Scale = new(scale, scale);
+		holder.Position = area.GetCenter() - viewport.GetCenter();
+	}
+
+	private Rect2 GetSafeArea()
+	{
+		Rect2 viewport = GetViewportRect();
+		if (!Globals.IsMobileBuild)
+		{
+			return viewport;
+		}
+
+		Rect2I safe = DisplayServer.GetDisplaySafeArea();
+		Vector2 windowSize = DisplayServer.WindowGetSize();
+		if (safe.Size.X <= 0 || windowSize.X <= 0)
+		{
+			return viewport;
+		}
+
+		float toCanvas = viewport.Size.X / windowSize.X;
+		return new Rect2((Vector2)safe.Position * toCanvas, (Vector2)safe.Size * toCanvas).Intersection(viewport);
 	}
 
 	public void HideMenu()

@@ -1,0 +1,84 @@
+[gd_scene format=3 uid="uid://hnhcydcq4uil"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sklth"]
+bg_color = Color(0.9254902, 0.9254902, 0.9254902, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sklbr"]
+bg_color = Color(0.9254902, 0.9254902, 0.9254902, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="Animation" id="Animation_4rst1"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="Animation" id="Animation_p7lse"]
+resource_name = "pulse"
+length = 1.2
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.6, 1.2),
+"transitions": PackedFloat32Array(-2, -2, -2),
+"update": 0,
+"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0.45), Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_skl0n"]
+_data = {
+&"RESET": SubResource("Animation_4rst1"),
+&"pulse": SubResource("Animation_p7lse")
+}
+
+[node name="PlaceCardSkeleton" type="VBoxContainer" unique_id=1163944932]
+custom_minimum_size = Vector2(114, 180)
+offset_right = 114.0
+offset_bottom = 180.0
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Thumbnail" type="Panel" parent="." unique_id=1995251207]
+custom_minimum_size = Vector2(114, 114)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_sklth")
+
+[node name="TitleBar" type="Panel" parent="." unique_id=2003690113]
+custom_minimum_size = Vector2(96, 14)
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_sklbr")
+
+[node name="StatsBar" type="Panel" parent="." unique_id=735278400]
+custom_minimum_size = Vector2(64, 10)
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_sklbr")
+
+[node name="AnimPlay" type="AnimationPlayer" parent="." unique_id=1360379592]
+libraries/ = SubResource("AnimationLibrary_skl0n")
+autoplay = &"pulse"

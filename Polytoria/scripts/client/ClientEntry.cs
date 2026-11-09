@@ -430,7 +430,7 @@ public sealed partial class ClientEntry : Node3D
 					_connectTimer = new() { OneShot = true };
 					AddChild(_connectTimer);
 					_connectTimer.Timeout += PollServerStatus;
-					_connectTimer.Start(StatusPollIntervalSec);
+					PollServerStatus();
 				}
 				catch (Exception ex)
 				{

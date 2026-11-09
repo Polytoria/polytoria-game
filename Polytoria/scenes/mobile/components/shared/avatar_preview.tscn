@@ -1,0 +1,46 @@
+[gd_scene format=3 uid="uid://dilt4dmnlsyd6"]
+
+[ext_resource type="Script" uid="uid://b1xac637ps5qf" path="res://scripts/mobile/ui/components/shared/AvatarPreview.cs" id="1_avprv"]
+
+[sub_resource type="Environment" id="Environment_avenv"]
+background_mode = 1
+ambient_light_source = 2
+ambient_light_color = Color(0.62, 0.66, 0.74, 1)
+ambient_light_energy = 0.45
+tonemap_mode = 3
+
+[node name="AvatarPreview" type="TextureRect" unique_id=1502767018 node_paths=PackedStringArray("_viewport")]
+custom_minimum_size = Vector2(260, 260)
+offset_right = 260.0
+offset_bottom = 260.0
+mouse_filter = 2
+expand_mode = 1
+script = ExtResource("1_avprv")
+_viewport = NodePath("SubViewport")
+
+[node name="SubViewport" type="SubViewport" parent="." unique_id=340935484]
+own_world_3d = true
+transparent_bg = true
+handle_input_locally = false
+msaa_3d = 1
+size = Vector2i(260, 260)
+render_target_update_mode = 3
+
+[node name="Camera3D" type="Camera3D" parent="SubViewport" unique_id=840715974]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.6, 10.5)
+fov = 38.0
+
+[node name="KeyLight" type="DirectionalLight3D" parent="SubViewport" unique_id=1285888525]
+transform = Transform3D(0.8660254, 0.25, -0.4330127, 0, 0.8660254, 0.5, 0.5, -0.4330127, 0.75, 0, 0, 0)
+light_color = Color(1, 0.97, 0.92, 1)
+light_energy = 0.65
+light_specular = 0.0
+
+[node name="FillLight" type="DirectionalLight3D" parent="SubViewport" unique_id=182344160]
+transform = Transform3D(0.8660254, -0.1545085, 0.4755283, 0, 0.9510565, 0.309017, -0.5, -0.2676166, 0.8236391, 0, 0, 0)
+light_color = Color(0.78, 0.84, 1, 1)
+light_energy = 0.2
+light_specular = 0.0
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="SubViewport" unique_id=1402442122]
+environment = SubResource("Environment_avenv")

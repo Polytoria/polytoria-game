@@ -8,6 +8,7 @@ using Polytoria.Datamodel.Data;
 using Polytoria.Networking;
 using Polytoria.Scripting;
 using Polytoria.Shared;
+using Polytoria.Client.Networking;
 using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
@@ -24,7 +25,6 @@ public partial class Physical : Dynamic
 	private static readonly Dictionary<Node, Physical> _proxyToPhysical = [];
 	private static readonly ConditionalWeakTable<CollisionShape3D, RemoteLinkConfig> _remoteLinkConfigs = [];
 	private static readonly ConditionalWeakTable<CollisionShape3D, TrackedNodesState> _trackedNodes = [];
-	internal readonly Dictionary<int, Physical> _rootShapeIndexToPhysical = [];
 
 	private sealed class RemoteLinkConfig
 	{
@@ -40,6 +40,9 @@ public partial class Physical : Dynamic
 	}
 
 	private const float TouchedGapCheck = 20f;
+	private const double TouchEndDelay = 0.1;
+	private const double LateMotionWindow = 0.5;
+	private const float NetGainNearDistance = 6f;
 	private bool _anchored = true;
 	private bool _canCollide = true;
 	private uint _collisionLayers = 1, _collisionMask = 1;
@@ -50,11 +53,15 @@ public partial class Physical : Dynamic
 	private bool _netEnsureTouchArea = false;
 
 	private CollisionObject3D? _registeredCollisionBody;
+	private CollisionObject3D? _appliedLayersBody;
+	private uint _appliedLayers, _appliedMask;
 
 	private int _touchedListenerCount = 0;
 	private bool _canTouch = false;
 
 	private readonly Dictionary<Physical, int> _touchContacts = [];
+	private readonly Dictionary<Physical, ulong> _touchEnding = [];
+	private ulong _touchEndCount = 0;
 
 	public List<CollisionShape3D> CollisionShapes = [];
 	public List<CollisionShape3D> AreaCollisionShapes = [];
@@ -101,10 +108,20 @@ public partial class Physical : Dynamic
 
 			bool oldVal = _anchored;
 			_anchored = value;
+			Root?.Network?.TransformSync.Ownership.Update(this);
 
 			if (oldVal != _anchored)
 			{
 				UpdateFreeze();
+			}
+
+			if (_anchored)
+			{
+				if (this is RigidBody && Root != null && Root.Network != null && Root.Network.IsServer && NetTransformAuthority != 1)
+				{
+					AssignNetworkOwner(1);
+				}
+				SendRestNetTransform();
 			}
 
 			OnPropertyChanged();
@@ -181,7 +198,16 @@ public partial class Physical : Dynamic
 			return;
 		}
 
-		collisionObject3D.CollisionLayer = GetAppliedCollisionLayers();
+		uint layers = GetAppliedCollisionLayers();
+		if (_appliedLayersBody == collisionObject3D && _appliedLayers == layers && _appliedMask == _collisionMask)
+		{
+			return;
+		}
+
+		_appliedLayersBody = collisionObject3D;
+		_appliedLayers = layers;
+		_appliedMask = _collisionMask;
+		collisionObject3D.CollisionLayer = layers;
 		collisionObject3D.CollisionMask = _collisionMask;
 	}
 
@@ -197,7 +223,8 @@ public partial class Physical : Dynamic
 			}
 
 			// Freeze the object on non physics authority
-			if (Root.SessionType == World.SessionTypeEnum.Client && Root.Network.LocalPeerID != NetTransformAuthority && ExistInNetwork)
+			if (Root.SessionType == World.SessionTypeEnum.Client &&
+				(Root.Network.LocalPeerID != NetTransformAuthority || IsNetGaining) && !IsNetBridging && ExistInNetwork)
 			{
 				finalVal = true;
 			}
@@ -447,6 +474,8 @@ public partial class Physical : Dynamic
 
 	public override void PreDelete()
 	{
+		Root?.Network?.TransformSync.Ownership.Remove(this);
+		Root?.Network?.TransformSync.EndBridge(this, false);
 		ClearCollisionBody();
 		Root?.Loaded.Disconnect(OnRootReady);
 		// _proxyToPhysical.Remove(PhysicalArea);
@@ -477,6 +506,7 @@ public partial class Physical : Dynamic
 		CollisionRootShapes.Clear();
 		CollisionShapes.Clear();
 		_touchContacts.Clear();
+		_touchEnding.Clear();
 
 		Touched.Subscribed -= OnTouchSubscribed;
 		Touched.Unsubscribed -= OnTouchUnsubscribed;
@@ -504,6 +534,11 @@ public partial class Physical : Dynamic
 		UpdateCollision();
 		UpdateFreeze();
 		base.Ready();
+
+		if (this is RigidBody && Root != null && Root.Network != null && Root.Network.IsServer)
+		{
+			Root.Network.TransformSync.Ownership.Add(this);
+		}
 	}
 
 	private CollisionObject3D? GetCollisionObject()
@@ -603,33 +638,108 @@ public partial class Physical : Dynamic
 
 	public override void PhysicsProcess(double delta)
 	{
-		bool asleep = IsAsleep;
-		UpdateTransformTick(delta);
-		if (Root == null || Root?.Network == null) { return; }
+		if (Root == null || Root.Network == null) { return; }
 
 		bool localSim = NetTransformAuthority == Root.Network.LocalPeerID || !ExistInNetwork;
 
 		// Sync if has authority and not anchored, if so. sync in interval
-		if (NetTransformAuthority == Root.Network.LocalPeerID && !Anchored && !asleep)
-		{
-			UpdateNetTransform();
-		}
+		bool sample = NetTransformAuthority == Root.Network.LocalPeerID && !Anchored && !OverrideNetworkTransform && !IsNetGaining &&
+			Engine.GetPhysicsFrames() % NetworkTransformSync.TickSteps == 0;
+		bool markMoved = localSim && !Anchored && Root.Bridge != null && this is Part;
+		bool moveChildren = localSim && !Anchored && !Root.Network.IsServer && Children.Count > 0;
 
-		if (localSim && !Anchored && !asleep && this is Part part)
+		if ((sample || markMoved || moveChildren) && !IsAsleep)
 		{
-			Root.Bridge?.MarkMoved(part);
+			if (moveChildren) QueueTransformUpdate();
+			if (sample) UpdateNetTransform();
+			if (markMoved && this is Part part) Root.Bridge?.MarkMoved(part);
 		}
 		base.PhysicsProcess(delta);
 	}
+
+	internal bool NetworkOwnershipAuto { get; set; } = true;
+	internal double LastServerPush { get; private set; } = double.MinValue;
 
 	[ScriptMethod]
 	public void SetNetworkAuthority(Player? plr)
 	{
 		if (!Root.Network.IsServer) throw new InvalidOperationException("Set authority can only be called from server");
-		int peerId = plr?.PeerID ?? 1;
-		NetTransformAuthority = peerId;
-		RpcId(peerId, nameof(NetGivenAuthority));
-		UpdateFreeze();
+		NetworkOwnershipAuto = false;
+		AssignNetworkOwner(GetOwnerPeerID(plr));
+	}
+
+	[ScriptMethod]
+	public void SetNetworkOwner(Player? plr)
+	{
+		CheckNetworkOwnershipCall();
+		NetworkOwnershipAuto = false;
+		AssignNetworkOwner(GetOwnerPeerID(plr));
+	}
+
+	private int GetOwnerPeerID(Player? plr)
+	{
+		return plr != null && !plr.IsDeleted && Root.Players.GetPlayerFromPeerID(plr.PeerID) == plr ? plr.PeerID : 1;
+	}
+
+	[ScriptMethod]
+	public Player? GetNetworkOwner()
+	{
+		Player? owner = Root.Players.GetPlayerFromPeerID(NetTransformAuthority);
+		if (owner != null || Root.Network.IsServer) return owner;
+		foreach (Player plr in Root.Players.GetPlayers())
+		{
+			if (plr.PeerID == NetTransformAuthority) return plr;
+		}
+		return null;
+	}
+
+	[ScriptMethod]
+	public void SetNetworkOwnershipAuto()
+	{
+		CheckNetworkOwnershipCall();
+		NetworkOwnershipAuto = true;
+	}
+
+	[ScriptMethod]
+	public bool GetNetworkOwnershipAuto()
+	{
+		if (!Root.Network.IsServer) throw new InvalidOperationException("Network ownership can only be read from the server");
+		return NetworkOwnershipAuto;
+	}
+
+	[ScriptMethod]
+	public bool CanSetNetworkOwnership()
+	{
+		return Root.Network.IsServer && !Anchored && this is RigidBody;
+	}
+
+	private void CheckNetworkOwnershipCall()
+	{
+		if (!Root.Network.IsServer) throw new InvalidOperationException("Network ownership can only be set from the server");
+		if (Anchored) throw new InvalidOperationException("Network ownership cannot be set on anchored parts");
+		if (this is not RigidBody) throw new InvalidOperationException("Network ownership can only be set on parts");
+	}
+
+	internal void AssignNetworkOwner(int peerID)
+	{
+		Vector3 linear = Vector3.Zero;
+		Vector3 angular = Vector3.Zero;
+		bool changed = peerID != NetTransformAuthority;
+		if (peerID != 1 && changed && Root.Network.IsServer)
+		{
+			var bridge = Root.Network.TransformSync.StartBridge(this);
+			linear = bridge.Velocity;
+			angular = bridge.AngularVelocity;
+		}
+		else if (peerID == 1 && Root.Network.IsServer)
+		{
+			Root.Network.TransformSync.EndBridge(this, false);
+		}
+		NetTransformAuthority = peerID;
+		if (peerID != 1 && changed)
+		{
+			RpcId(peerID, nameof(NetGivenAuthority), linear, angular);
+		}
 
 		// if is RigidBody, give authority to child too
 		if (this is RigidBody)
@@ -638,17 +748,134 @@ public partial class Physical : Dynamic
 			{
 				if (item is Physical phy)
 				{
-					phy.SetNetworkAuthority(plr);
+					phy.AssignNetworkOwner(peerID);
 				}
 			}
 		}
 	}
 
 	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Reliable)]
-	private void NetGivenAuthority()
+	private void NetGivenAuthority(Vector3 linear, Vector3 angular)
 	{
+		if (NetTransformAuthority == Root.Network.LocalPeerID)
+		{
+			if (!IsNetGaining && World.LocalClock - NetTransformAuthorityChangedAt < LateMotionWindow)
+			{
+				Motion.GainMotion = (linear, angular);
+				if (TryGetGainVelocity(out Vector3 late, out Vector3 lateAngular)) ApplyNetVelocity(late, lateAngular);
+			}
+			return;
+		}
+		Motion.GainMotion = (linear, angular);
 		NetTransformAuthority = Root.Network.LocalPeerID;
+	}
+
+	internal override void OnNetTransformAuthorityChanged()
+	{
+		if (Root == null || Root.Network == null || NetTransformAuthority != Root.Network.LocalPeerID)
+		{
+			UpdateFreeze();
+			return;
+		}
+
+		if (!Root.Network.IsServer && Root.IsLoaded && CanStartNetGain())
+		{
+			StartNetGain();
+			UpdateFreeze();
+			return;
+		}
+
+		ApplyLatestNetSample();
 		UpdateFreeze();
+
+		if (TryGetGainVelocity(out Vector3 linear, out Vector3 angular))
+		{
+			ApplyNetVelocity(linear, angular);
+		}
+	}
+
+	protected virtual void ApplyNetVelocity(Vector3 linear, Vector3 angular) { }
+
+	internal bool IsNetBridging => netMotion != null && netMotion.IsBridging;
+
+	internal bool IsNetResting => netMotion == null || netMotion.IsResting;
+
+	internal void BeginNetBridge(Vector3 linear, Vector3 angular)
+	{
+		NetMotion net = Motion;
+		net.IsBridging = true;
+		net.Reset();
+		Basis parent = GetNetParentBasis();
+		UpdateFreeze();
+		ApplyNetVelocity(parent * linear, parent.Orthonormalized() * angular);
+	}
+
+	internal void EndNetBridge(bool freeze)
+	{
+		Motion.IsBridging = false;
+		if (freeze) UpdateFreeze();
+	}
+
+	internal (Transform3D Transform, Vector3 Velocity) GetNetBridgeState()
+	{
+		return (GetLocalTransform(), GetNetSendVelocity(false) ?? Vector3.Zero);
+	}
+
+	private bool CanStartNetGain()
+	{
+		if (netMotion == null || !netMotion.CanGain) return false;
+		if (Root.Players.LocalPlayer is Player local &&
+			local.GetGlobalPosition().DistanceTo(GetGlobalPosition()) < Size.Length() / 2 + NetGainNearDistance)
+		{
+			return false;
+		}
+		return true;
+	}
+
+	private void StartNetGain()
+	{
+		Motion.StartGain();
+		StartInterpolating();
+	}
+
+	internal override void FinishNetGain()
+	{
+		if (!IsNetGaining) return;
+
+		bool moving = TryGetGainVelocity(out Vector3 linear, out Vector3 angular);
+		netMotion!.FinishGain();
+		UpdateFreeze();
+		if (moving)
+		{
+			ApplyNetVelocity(linear, angular);
+		}
+	}
+
+	private bool TryGetGainVelocity(out Vector3 linear, out Vector3 angular)
+	{
+		var motion = netMotion?.GainMotion;
+		if (netMotion != null) netMotion.GainMotion = null;
+		if (TryGetNetVelocity(out linear, out angular)) return true;
+		if (motion == null) return false;
+
+		Basis parent = GetNetParentBasis();
+		linear = parent * motion.Value.Linear;
+		angular = parent.Orthonormalized() * motion.Value.Angular;
+		return true;
+	}
+
+	protected void SendRestNetTransform()
+	{
+		if (Root == null || Root.Network == null || !Root.IsLoaded || NetTransformAuthority != Root.Network.LocalPeerID) return;
+
+		if (Root.Network.IsServer)
+		{
+			SendNetTransformReliable(true, true);
+		}
+		else
+		{
+			SendNetTransformUnreliable(true, true);
+		}
 	}
 
 	/// <summary>
@@ -848,6 +1075,12 @@ public partial class Physical : Dynamic
 	private void EnsureRemoteTransform(CollisionShape3D origin)
 	{
 		if (!Node.IsInstanceValid(origin)) return;
+
+		if (this is Part && origin.GetParent() == GDNode && GetRemoteLinkConfig(origin)?.Target is Node3D target)
+		{
+			origin.Transform = target.Transform;
+			return;
+		}
 
 		if (HasValidTrackedNodes(origin, static state => state.CollisionSyncNodes))
 		{
@@ -1095,7 +1328,7 @@ public partial class Physical : Dynamic
 		// Only allow player hit invoke
 		if (hit != null && hit is Player plr)
 		{
-			InternalInvokeTouchEnded(plr);
+			InternalInvokeTouchEnded(plr, true);
 		}
 	}
 
@@ -1129,19 +1362,25 @@ public partial class Physical : Dynamic
 		if (_touchContacts.TryGetValue(physical, out int count))
 		{
 			_touchContacts[physical] = count + 1;
+			_touchEnding.Remove(physical);
 			return;
+		}
+
+		foreach (Physical stale in _touchContacts.Keys.Where(p => p.IsDeleted).ToArray())
+		{
+			_touchContacts.Remove(stale);
 		}
 
 		_touchContacts[physical] = 1;
 		Touched.Invoke(physical);
 	}
 
-	private void InternalInvokeTouchEnded(Physical physical)
+	private void InternalInvokeTouchEnded(Physical physical, bool immediate = false)
 	{
 		// Ignore player that's not ready
 		if (physical is Player plr && !plr.IsReady) return;
 
-		if (!_touchContacts.TryGetValue(physical, out int count))
+		if (!_touchContacts.TryGetValue(physical, out int count) || count == 0)
 			return;
 
 		if (count > 1)
@@ -1150,6 +1389,27 @@ public partial class Physical : Dynamic
 			return;
 		}
 
+		if (immediate || !GDNode.IsInsideTree())
+		{
+			_touchEnding.Remove(physical);
+			_touchContacts.Remove(physical);
+			TouchEnded.Invoke(physical);
+			return;
+		}
+
+		_touchContacts[physical] = 0;
+		_touchEndCount++;
+		ulong ending = _touchEndCount;
+		_touchEnding[physical] = ending;
+		GDNode.GetTree().CreateTimer(TouchEndDelay).Timeout += () => FinishTouchEnded(physical, ending);
+	}
+
+	private void FinishTouchEnded(Physical physical, ulong ending)
+	{
+		if (!_touchEnding.TryGetValue(physical, out ulong current) || current != ending)
+			return;
+
+		_touchEnding.Remove(physical);
 		_touchContacts.Remove(physical);
 		TouchEnded.Invoke(physical);
 	}
@@ -1222,9 +1482,9 @@ public partial class Physical : Dynamic
 
 		List<Physical> phys = [];
 
-		foreach (var (physical, _) in _touchContacts)
+		foreach (var (physical, count) in _touchContacts)
 		{
-			if (physical == null || physical.IsDeleted)
+			if (count == 0 || physical == null || physical.IsDeleted)
 				continue;
 
 			phys.Add(physical);
@@ -1248,6 +1508,7 @@ public partial class Physical : Dynamic
 	[ScriptMethod]
 	public void AddForce(Vector3 force, ForceModeEnum mode = ForceModeEnum.Force)
 	{
+		PrepareForce();
 		ApplyAddForce(force, mode);
 	}
 
@@ -1256,6 +1517,7 @@ public partial class Physical : Dynamic
 	[ScriptMethod]
 	public void AddTorque(Vector3 force, ForceModeEnum mode = ForceModeEnum.Force)
 	{
+		PrepareForce();
 		ApplyAddTorque(force, mode);
 	}
 
@@ -1264,6 +1526,7 @@ public partial class Physical : Dynamic
 	[ScriptMethod]
 	public void AddForceAtPosition(Vector3 force, Vector3 position, ForceModeEnum mode = ForceModeEnum.Force)
 	{
+		PrepareForce();
 		ApplyAddForceAtPosition(force, position, mode);
 	}
 
@@ -1272,6 +1535,7 @@ public partial class Physical : Dynamic
 	[ScriptMethod]
 	public void AddRelativeForce(Vector3 force, ForceModeEnum mode = ForceModeEnum.Force)
 	{
+		PrepareForce();
 		ApplyAddRelativeForce(force, mode);
 	}
 
@@ -1280,10 +1544,22 @@ public partial class Physical : Dynamic
 	[ScriptMethod]
 	public void AddRelativeTorque(Vector3 torque, ForceModeEnum mode = ForceModeEnum.Force)
 	{
+		PrepareForce();
 		ApplyAddRelativeTorque(torque, mode);
 	}
 
 	internal virtual void ApplyAddRelativeTorque(Vector3 torque, ForceModeEnum mode) { throw new NotImplementedException(ClassName + " does not support this force function"); }
+
+	protected void PrepareForce()
+	{
+		FinishNetGain();
+		if (this is not RigidBody || Root == null || Root.Network == null || !Root.Network.IsServer || !ExistInNetwork || IsApplyingNetProp) return;
+		LastServerPush = World.LocalClock;
+		if (NetTransformAuthority != 1 && NetworkOwnershipAuto)
+		{
+			AssignNetworkOwner(1);
+		}
+	}
 
 	[ScriptEnum("ForceMode")]
 	public enum ForceModeEnum

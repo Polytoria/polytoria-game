@@ -14,6 +14,14 @@ public partial class PTMeshAsset : MeshAsset
 	private uint _assetID;
 	private ImageAsset? _texture;
 
+	[ScriptMethod]
+	public static PTMeshAsset FromID([ScriptingCaller] Script caller, uint id)
+	{
+		PTMeshAsset asset = (PTMeshAsset)NetworkedObject.NewFromScript(caller, "PTMeshAsset")!;
+		asset.AssetID = id;
+		return asset;
+	}
+
 	[Editable, ScriptProperty]
 	public ImageAsset? Texture
 	{

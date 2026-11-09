@@ -1,0 +1,137 @@
+[gd_scene format=3 uid="uid://ym8q7klded8m"]
+
+[ext_resource type="Script" uid="uid://dry4lodsdeuj0" path="res://scripts/client/ui/prompt/UIInteractionPrompt.cs" id="1_prompt"]
+[ext_resource type="Theme" uid="uid://2f3k1nh6p5ac" path="res://resources/themes/hud.tres" id="9_hud"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tile"]
+content_margin_left = 5.0
+content_margin_top = 5.0
+content_margin_right = 5.0
+content_margin_bottom = 5.0
+bg_color = Color(0, 0, 0, 0.6)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_keycap"]
+content_margin_left = 9.0
+content_margin_top = 3.0
+content_margin_right = 9.0
+content_margin_bottom = 7.0
+bg_color = Color(1, 1, 1, 1)
+border_width_bottom = 4
+border_color = Color(0.7, 0.72, 0.76, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_track"]
+bg_color = Color(1, 1, 1, 0.15)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fill"]
+bg_color = Color(0.30980393, 0.9098039, 0.5137255, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[node name="PromptStyle2" type="Control" unique_id=1288390546 node_paths=PackedStringArray("_body", "_title", "_subtitle", "_progressBar", "_keyLabel", "_keyIcon", "_keyCap")]
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 2
+theme = ExtResource("9_hud")
+script = ExtResource("1_prompt")
+_body = NodePath("Body")
+_title = NodePath("Body/Text/Title")
+_subtitle = NodePath("Body/Text/Subtitle")
+_progressBar = NodePath("Body/KeyTile/Key/Progress")
+_keyLabel = NodePath("Body/KeyTile/Key/KeyCap/KeyLabel")
+_keyIcon = NodePath("Body/KeyTile/Key/KeyIcon")
+_keyCap = NodePath("Body/KeyTile/Key/KeyCap")
+
+[node name="Body" type="HBoxContainer" parent="." unique_id=1851043917]
+layout_mode = 0
+theme_override_constants/separation = 8
+
+[node name="KeyTile" type="PanelContainer" parent="Body" unique_id=403318296]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_tile")
+
+[node name="Key" type="VBoxContainer" parent="Body/KeyTile" unique_id=403318295]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="KeyCap" type="PanelContainer" parent="Body/KeyTile/Key" unique_id=1659124420]
+custom_minimum_size = Vector2(34, 34)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_keycap")
+
+[node name="KeyLabel" type="Label" parent="Body/KeyTile/Key/KeyCap" unique_id=2009153771]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.1, 0.12, 1)
+theme_override_constants/outline_size = 0
+theme_override_font_sizes/font_size = 17
+text = "E"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="KeyIcon" type="TextureRect" parent="Body/KeyTile/Key" unique_id=1395276710]
+visible = false
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Progress" type="ProgressBar" parent="Body/KeyTile/Key" unique_id=127504236]
+custom_minimum_size = Vector2(0, 4)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_track")
+theme_override_styles/fill = SubResource("StyleBoxFlat_fill")
+max_value = 1.0
+step = 0.0
+show_percentage = false
+
+[node name="Text" type="VBoxContainer" parent="Body" unique_id=1530268064]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = -3
+
+[node name="Title" type="RichTextLabel" parent="Body/Text" unique_id=2116806327]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/normal_font_size = 18
+bbcode_enabled = true
+text = "Interact"
+fit_content = true
+scroll_active = false
+autowrap_mode = 0
+
+[node name="Subtitle" type="RichTextLabel" parent="Body/Text" unique_id=1937710263]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(1, 1, 1, 0.85)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/normal_font_size = 14
+bbcode_enabled = true
+text = "Subtitle"
+fit_content = true
+scroll_active = false
+autowrap_mode = 0

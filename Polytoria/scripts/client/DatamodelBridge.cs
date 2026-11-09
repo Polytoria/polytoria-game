@@ -19,7 +19,7 @@ public partial class DatamodelBridge : Node3D
 	private const int SplitGroupSize = 512;
 
 	private World Root = null!;
-	public long SeparatedPartCount = 0;
+	public long SeparatedPartCount => _handlers.Count - _handles.Count;
 
 	private readonly Dictionary<Part, PartHandle> _handles = new(ReferenceEqualityComparer.Instance);
 	private readonly Dictionary<ChunkKey, ChunkBatch> _batches = [];
@@ -28,12 +28,21 @@ public partial class DatamodelBridge : Node3D
 	private readonly List<Part> _dirtyParts = [];
 	private readonly HashSet<Part> _recheck = new(ReferenceEqualityComparer.Instance);
 	private readonly Dictionary<Part, System.Action<object>> _handlers = new(ReferenceEqualityComparer.Instance);
+	private readonly HashSet<ChunkBatch> _attachedBatches = [];
 	private Rid _scenario;
+
+	private readonly bool _useOccluders = ProjectSettings.GetSetting("rendering/occlusion_culling/use_occlusion_culling").AsBool();
+	private readonly Dictionary<(Vector3I, Rid), OccluderChunk> _occluderChunks = [];
+	private readonly Dictionary<Part, OccluderChunk> _partOccluders = new(ReferenceEqualityComparer.Instance);
+	private readonly HashSet<OccluderChunk> _dirtyOccluders = [];
+	private readonly BoxOccluder3D _boxOccluder = new();
+	private ulong _occluderRebuildTime;
 
 	private readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materials = [];
 
 	private bool isGameReady = false;
 	private bool _renderingEnabled;
+	private double _shadowBudgetTimer;
 
 	public void Attach(World root, bool manualRebuild = false)
 	{
@@ -41,11 +50,12 @@ public partial class DatamodelBridge : Node3D
 		{
 			Root.InstanceEnteredTree -= OnInstanceAdded;
 			Root.InstanceExitingTree -= OnInstanceRemoving;
+			RenderingServer.FramePreDraw -= OnFramePreDraw;
 		}
 
 		Root = root;
 		root.Bridge = this;
-		_renderingEnabled = DisplayServer.GetName() != "headless";
+		_renderingEnabled = !Globals.IsHeadless;
 		SetProcess(_renderingEnabled);
 
 		if (!_renderingEnabled)
@@ -53,11 +63,14 @@ public partial class DatamodelBridge : Node3D
 			return;
 		}
 
+		ProcessPriority = 100;
+
 		_scenario = Root.World3D.Scenario;
 
 		root.InstanceEnteredTree += OnInstanceAdded;
 		root.InstanceExitingTree += OnInstanceRemoving;
 		root.Loaded.Once(OnGameReady);
+		RenderingServer.FramePreDraw += OnFramePreDraw;
 
 		if (manualRebuild)
 		{
@@ -80,6 +93,7 @@ public partial class DatamodelBridge : Node3D
 				Root.InstanceEnteredTree -= OnInstanceAdded;
 				Root.InstanceExitingTree -= OnInstanceRemoving;
 				Root.Loaded.Disconnect(OnGameReady);
+				RenderingServer.FramePreDraw -= OnFramePreDraw;
 
 				// Cleanup parts
 				foreach (Part item in new List<Part>(_handlers.Keys))
@@ -92,8 +106,16 @@ public partial class DatamodelBridge : Node3D
 					RemoveFromBatch(item);
 				}
 
+				foreach (OccluderChunk chunk in _occluderChunks.Values)
+				{
+					chunk.Free();
+				}
+
 				_dirty.Clear();
 				_recheck.Clear();
+				_occluderChunks.Clear();
+				_partOccluders.Clear();
+				_dirtyOccluders.Clear();
 			}
 
 			Root.Bridge = null!;
@@ -137,7 +159,16 @@ public partial class DatamodelBridge : Node3D
 
 	public override void _Process(double delta)
 	{
-		if (!_renderingEnabled || !isGameReady) return;
+		Dynamic.FlushTransformUpdates();
+		if (!_renderingEnabled) return;
+
+		_shadowBudgetTimer -= delta;
+		if ((_shadowBudgetTimer <= 0 || Light.ShadowBudgetDirty) && Root.SessionType != World.SessionTypeEnum.Creator && GetViewport()?.GetCamera3D() is Camera3D camera)
+		{
+			_shadowBudgetTimer = Light.UpdateShadowBudget(camera.GlobalPosition) ? 0 : 0.25;
+		}
+
+		if (!isGameReady) return;
 		if (_dirty.Count == 0) return;
 
 		_dirtyParts.Clear();
@@ -152,8 +183,10 @@ public partial class DatamodelBridge : Node3D
 
 				if (_handles.TryGetValue(part, out PartHandle? moved))
 				{
+					UntrackOccluder(part);
+
 					Transform3D transform = part.GetGlobalTransform();
-					ChunkKey movedKey = GetKeyForPart(part, transform.Origin);
+					ChunkKey movedKey = GetKeyForPart(part, transform.Origin, moved.Key.Scenario, moved.Key.IsAttached);
 					if (!movedKey.Equals(moved.Key))
 					{
 						RemoveFromBatch(part);
@@ -185,42 +218,71 @@ public partial class DatamodelBridge : Node3D
 				else
 				{
 					handle!.Batch.MultiMesh.SetInstanceTransform(handle.Index, part.GetGlobalTransform());
-					handle.Batch.MultiMesh.SetInstanceColor(handle.Index, part.Color.SrgbToLinear());
+					handle.Batch.MultiMesh.SetInstanceColor(handle.Index, GetInstanceColor(part));
+					TrackOccluder(part, newKey);
 				}
 			}
-			else
+			else if (inBatch)
 			{
-				if (inBatch)
+				RemoveFromBatch(part);
+			}
+		}
+	}
+
+	private void OnFramePreDraw()
+	{
+		if (_dirtyOccluders.Count != 0 && Time.GetTicksMsec() >= _occluderRebuildTime)
+		{
+			foreach (OccluderChunk chunk in _dirtyOccluders)
+			{
+				RebuildOccluder(chunk);
+			}
+			_dirtyOccluders.Clear();
+		}
+
+		foreach (ChunkBatch batch in _attachedBatches)
+		{
+			for (int i = 0; i < batch.Count; i++)
+			{
+				Part part = batch.Parts[i];
+				if (!IsInstanceValid(part.GDNode3D) || !part.GDNode3D.IsVisibleInTree())
 				{
-					RemoveFromBatch(part);
+					batch.MultiMesh.SetInstanceTransform(i, Transform3D.Identity.Scaled(Vector3.Zero));
+					continue;
 				}
 
-				if (!part.IsMeshSeparated && !part.IsDeleted)
-				{
-					part.CreateSeparateMesh();
-				}
+				batch.MultiMesh.SetInstanceTransform(i, part.GetGlobalTransform());
 			}
 		}
 	}
 
 	private ChunkKey GetKeyForPart(Part part)
 	{
-		return GetKeyForPart(part, part.Position);
+		Rid scenario = part.GDNode3D.GetWorld3D()?.Scenario ?? _scenario;
+		return GetKeyForPart(part, part.Position, scenario, IsPartAttached(part));
 	}
 
-	private ChunkKey GetKeyForPart(Part part, Vector3 position)
+	private ChunkKey GetKeyForPart(Part part, Vector3 position, Rid scenario, bool isAttached)
 	{
-		bool isDynamic = !part.Anchored;
+		bool isDynamic = !part.Anchored || isAttached;
 		bool split = !isDynamic && _groupCounts.GetValueOrDefault((part.Material, part.Shape)) >= SplitGroupSize;
-		float size = split ? ChunkBaseSize : CoarseChunkSize;
+		Vector3I coord = isAttached ? Vector3I.Zero : GetChunkCoord(position, split ? ChunkBaseSize : CoarseChunkSize);
 
+		return new ChunkKey(coord, part.Material, part.Shape, part.Color.A < 1f, part.CastShadows, isDynamic, isAttached, scenario);
+	}
+
+	private static Vector3I GetChunkCoord(Vector3 position, float size)
+	{
 		Vector3 pos = position + new Vector3(size * 0.5f, size * 0.5f, size * 0.5f);
-		Vector3I coord = new(
+		return new(
 			Mathf.FloorToInt(pos.X / size),
 			Mathf.FloorToInt(pos.Y / size),
 			Mathf.FloorToInt(pos.Z / size));
+	}
 
-		return new ChunkKey(coord, part.Material, part.Shape, part.Color.A < 1f, part.CastShadows, isDynamic);
+	private static Color GetInstanceColor(Part part)
+	{
+		return Globals.RenderingMethod == "gl_compatibility" ? part.Color : part.Color.SrgbToLinear();
 	}
 
 	private void OnInstanceAdded(Instance instance)
@@ -242,6 +304,15 @@ public partial class DatamodelBridge : Node3D
 	private void OnGameReady()
 	{
 		isGameReady = true;
+
+		foreach (Part part in _handlers.Keys)
+		{
+			if (!_handles.ContainsKey(part) && !part.IsHidden)
+			{
+				_dirty.Add(part);
+				_recheck.Add(part);
+			}
+		}
 	}
 
 	private void AddToBatch(Part part, ChunkKey key)
@@ -260,7 +331,7 @@ public partial class DatamodelBridge : Node3D
 			};
 
 			Rid rid = RenderingServer.InstanceCreate();
-			RenderingServer.InstanceSetScenario(rid, _scenario);
+			RenderingServer.InstanceSetScenario(rid, key.Scenario);
 			RenderingServer.InstanceSetBase(rid, mm.GetRid());
 			RenderingServer.InstanceSetTransform(rid, Transform3D.Identity);
 			RenderingServer.InstanceGeometrySetCastShadowsSetting(rid, key.CastShadows ? RenderingServer.ShadowCastingSetting.On : RenderingServer.ShadowCastingSetting.Off);
@@ -278,9 +349,11 @@ public partial class DatamodelBridge : Node3D
 			};
 
 			_batches.Add(key, batch);
+			if (key.IsAttached)
+			{
+				_attachedBatches.Add(batch);
+			}
 		}
-
-		part.RemoveSeparateMesh();
 
 		int index = batch.Count;
 		ResizeBatch(batch, index + 1);
@@ -290,10 +363,11 @@ public partial class DatamodelBridge : Node3D
 		batch.MultiMesh.VisibleInstanceCount = batch.Count;
 
 		batch.MultiMesh.SetInstanceTransform(index, part.GetGlobalTransform());
-		batch.MultiMesh.SetInstanceColor(index, part.Color.SrgbToLinear());
+		batch.MultiMesh.SetInstanceColor(index, GetInstanceColor(part));
 
 		_handles[part] = new PartHandle { Key = key, Batch = batch, Index = index };
 
+		TrackOccluder(part, key);
 		UpdateGroupCount(key.Material, key.Shape, key.IsDynamic, 1);
 	}
 
@@ -317,6 +391,8 @@ public partial class DatamodelBridge : Node3D
 	private void RemoveFromBatch(Part part)
 	{
 		if (!_handles.TryGetValue(part, out PartHandle? handle)) return;
+		UntrackOccluder(part);
+
 		if (!_batches.TryGetValue(handle.Key, out var batch) || batch.Count <= 0)
 		{
 			_handles.Remove(part);
@@ -339,7 +415,7 @@ public partial class DatamodelBridge : Node3D
 			// prevents a bunch of error spam. idk why these nodes often arent in the tree but this kept spamming errors
 			bool inTree = IsInstanceValid(lastPart.GDNode3D) && lastPart.GDNode3D.IsInsideTree();
 			batch.MultiMesh.SetInstanceTransform(index, inTree ? lastPart.GetGlobalTransform() : Transform3D.Identity.Scaled(Vector3.Zero));
-			batch.MultiMesh.SetInstanceColor(index, lastPart.Color.SrgbToLinear());
+			batch.MultiMesh.SetInstanceColor(index, GetInstanceColor(lastPart));
 		}
 
 		batch.Parts.RemoveAt(lastIndex);
@@ -351,7 +427,9 @@ public partial class DatamodelBridge : Node3D
 		if (batch.Count == 0)
 		{
 			RenderingServer.FreeRid(batch.Rid);
+			batch.MultiMesh.Dispose();
 			_batches.Remove(handle.Key);
+			_attachedBatches.Remove(batch);
 		}
 
 		_handles.Remove(part);
@@ -376,7 +454,7 @@ public partial class DatamodelBridge : Node3D
 		{
 			var p = batch.Parts[i];
 			batch.MultiMesh.SetInstanceTransform(i, p.GetGlobalTransform());
-			batch.MultiMesh.SetInstanceColor(i, p.Color.SrgbToLinear());
+			batch.MultiMesh.SetInstanceColor(i, GetInstanceColor(p));
 		}
 	}
 
@@ -387,7 +465,6 @@ public partial class DatamodelBridge : Node3D
 		if (!IsPartEligible(part))
 		{
 			ConnectHandler(part);
-			part.CreateSeparateMesh();
 			return;
 		}
 
@@ -459,23 +536,108 @@ public partial class DatamodelBridge : Node3D
 		if (!_renderingEnabled) return;
 
 		DisconnectHandler(part);
-
-		if (!part.IsDeleted)
-		{
-			part.CreateSeparateMesh();
-		}
-
 		RemoveFromBatch(part);
 	}
+
+	private static bool IsPartAttached(Part part) => part.IsHeld || part.IsDescendantOfClass<Camera>();
 
 	public static bool IsPartEligible(Part part)
 	{
 		if (part.IsHidden || part.IsInTemporary) return false;
-		if (part.OverrideNoMultiMesh) return false;
 		if (!IsInstanceValid(part.GDNode3D) || !part.GDNode3D.IsInsideTree()) return false;
 		if (part.IsDeleted) return false;
-		if (part.IsDescendantOfClass<Camera>()) return false;
 		return true;
+	}
+
+	private static bool IsOccluder(Part part, ChunkKey key)
+	{
+		if (key.IsDynamic || key.IsAttached || key.IsTransparent || key.Shape != Part.ShapeEnum.Brick) return false;
+
+		Vector3 size = part.Size.Abs();
+		float largest = Mathf.Max(size.X, Mathf.Max(size.Y, size.Z));
+		float middle = size.X + size.Y + size.Z - largest - Mathf.Min(size.X, Mathf.Min(size.Y, size.Z));
+
+		return middle >= 1f && middle * largest >= 16f;
+	}
+
+	private void TrackOccluder(Part part, ChunkKey key)
+	{
+		if (!_useOccluders) return;
+
+		if (!IsOccluder(part, key))
+		{
+			UntrackOccluder(part);
+			return;
+		}
+
+		Vector3I coord = GetChunkCoord(part.Position, 64f);
+		if (_partOccluders.TryGetValue(part, out OccluderChunk? current) && (current.Coord != coord || current.Scenario != key.Scenario))
+		{
+			UntrackOccluder(part);
+		}
+
+		if (!_occluderChunks.TryGetValue((coord, key.Scenario), out OccluderChunk? chunk))
+		{
+			chunk = new OccluderChunk { Coord = coord, Scenario = key.Scenario };
+			_occluderChunks.Add((coord, key.Scenario), chunk);
+		}
+
+		if (_dirtyOccluders.Count == 0)
+		{
+			_occluderRebuildTime = Time.GetTicksMsec() + 300;
+		}
+
+		chunk.Parts.Add(part);
+		_partOccluders[part] = chunk;
+		_dirtyOccluders.Add(chunk);
+	}
+
+	private void UntrackOccluder(Part part)
+	{
+		if (_partOccluders.Remove(part, out OccluderChunk? chunk))
+		{
+			chunk.Parts.Remove(part);
+			_dirtyOccluders.Add(chunk);
+			_occluderRebuildTime = 0;
+		}
+	}
+
+	private void RebuildOccluder(OccluderChunk chunk)
+	{
+		if (chunk.Parts.Count == 0)
+		{
+			chunk.Free();
+			_occluderChunks.Remove((chunk.Coord, chunk.Scenario));
+			return;
+		}
+
+		Vector3[] boxVertices = _boxOccluder.GetVertices();
+		int[] boxIndices = _boxOccluder.GetIndices();
+		List<Vector3> vertices = [];
+		List<int> indices = [];
+
+		foreach (Part part in chunk.Parts)
+		{
+			Transform3D transform = part.GetGlobalTransform();
+
+			foreach (int index in boxIndices)
+			{
+				indices.Add(vertices.Count + index);
+			}
+
+			foreach (Vector3 vertex in boxVertices)
+			{
+				vertices.Add(transform * vertex);
+			}
+		}
+
+		if (!chunk.Occluder.IsValid)
+		{
+			chunk.Occluder = RenderingServer.OccluderCreate();
+			chunk.Instance = RenderingServer.InstanceCreate2(chunk.Occluder, chunk.Scenario);
+		}
+
+		RenderingServer.OccluderSetMesh(chunk.Occluder, [.. vertices], [.. indices]);
 	}
 
 	private class PartHandle
@@ -491,7 +653,9 @@ public partial class DatamodelBridge : Node3D
 		Part.ShapeEnum Shape,
 		bool IsTransparent,
 		bool CastShadows,
-		bool IsDynamic);
+		bool IsDynamic,
+		bool IsAttached,
+		Rid Scenario);
 
 	private class ChunkBatch
 	{
@@ -500,5 +664,20 @@ public partial class DatamodelBridge : Node3D
 		public Rid Rid;
 		public List<Part> Parts = [];
 		public int Count;
+	}
+
+	private class OccluderChunk
+	{
+		public Vector3I Coord;
+		public Rid Scenario;
+		public Rid Occluder;
+		public Rid Instance;
+		public HashSet<Part> Parts = new(ReferenceEqualityComparer.Instance);
+
+		public void Free()
+		{
+			if (Instance.IsValid) RenderingServer.FreeRid(Instance);
+			if (Occluder.IsValid) RenderingServer.FreeRid(Occluder);
+		}
 	}
 }

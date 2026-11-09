@@ -21,6 +21,7 @@ public static class SharedSettingKeys
 		public const string Preset = "graphics.preset";
 		public const string RenderScale = "graphics.render_scale";
 		public const string Msaa = "graphics.msaa";
+		public const string ScreenSpaceAA = "graphics.screen_space_aa";
 		public const string ShadowQuality = "graphics.shadow_quality";
 		public const string ShadowDistance = "graphics.shadow_distance";
 	}
@@ -37,6 +38,7 @@ public static class SharedSettingKeys
 		public const string SdfgiCascades = "graphics.post_processing.sdfgi_cascades";
 		public const string SsilRadius = "graphics.post_processing.ssil_radius";
 		public const string NormalMaps = "graphics.post_processing.normal_maps";
+		public const string EffectsQuality = "graphics.post_processing.effects_quality";
 	}
 
 	public static class Advanced

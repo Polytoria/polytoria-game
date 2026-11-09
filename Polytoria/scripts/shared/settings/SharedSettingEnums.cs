@@ -50,3 +50,17 @@ public enum MsaaOption
 	X4 = 4,
 	X8 = 8
 }
+
+public enum ScreenSpaceAAOption
+{
+	Off = 0,
+	Fxaa = 1,
+	Smaa = 2
+}
+
+public enum EffectsQualityOption
+{
+	Low = 0,
+	Medium = 1,
+	High = 2
+}

@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+using Godot;
 using Polytoria.Attributes;
 using Polytoria.Datamodel.Data;
 using Polytoria.Scripting;
@@ -21,9 +22,23 @@ namespace Polytoria.Datamodel.Services;
 [SaveIgnore]
 public sealed partial class HttpService : Instance
 {
+	public record struct HttpServiceLimits(int standard, int trusted) : IScriptObject
+	{
+		[ScriptMetamethod(ScriptObjectMetamethod.ToString)]
+		public static string ToString(HttpServiceLimits? obj)
+		{
+			if (obj == null || !obj.HasValue) return "<HttpServiceLimits>";
+			return $"<HttpServiceLimits: standard={obj.Value.standard}, trusted={obj.Value.trusted}>";
+		}
+	}
+	private record struct TrustedTarget(string origin, string? scopeLimit);
+
 	private const int MaxRequestsPerMinute = 90;
 	private int _requestsThisMinute = 0;
+	private int _trustedRequestsThisMinute = 0;
 	private int _currentMinute;
+
+	private List<TrustedTarget> _trustedTargets = [];
 	private PTHttpClient _client = new();
 
 	public override void Init()
@@ -32,7 +47,12 @@ public sealed partial class HttpService : Instance
 		base.Init();
 	}
 
-	private bool RateLimit()
+	private int GetTrustedRequestAllowance()
+	{
+		return 300 + (Root.Players.PlayersCount * 150);
+	}
+
+	private void CheckRateLimits()
 	{
 		int minute = (int)DateTimeOffset.Now.ToUnixTimeSeconds() / 60;
 
@@ -40,6 +60,23 @@ public sealed partial class HttpService : Instance
 		{
 			_currentMinute = minute;
 			_requestsThisMinute = 0;
+			_trustedRequestsThisMinute = 0;
+		}
+	}
+
+	private bool RateLimit(bool isTrusted = false)
+	{
+		CheckRateLimits();
+
+		if (isTrusted)
+		{
+			if (_trustedRequestsThisMinute >= GetTrustedRequestAllowance())
+			{
+				return false;
+			}
+
+			_trustedRequestsThisMinute++;
+			return true;
 		}
 
 		if (_requestsThisMinute >= MaxRequestsPerMinute)
@@ -49,6 +86,72 @@ public sealed partial class HttpService : Instance
 
 		_requestsThisMinute++;
 		return true;
+	}
+
+	private bool IsTrusted(HttpRequestData data)
+	{
+		if (data.URL == null) return false;
+
+		if (!Uri.TryCreate(data.URL, UriKind.Absolute, out Uri? parsedUri))
+		{
+			return false;
+		}
+
+		string origin = $"{parsedUri.Scheme}://{parsedUri.Host}:{parsedUri.Port}";
+
+		foreach (TrustedTarget target in _trustedTargets)
+		{
+			if (string.Equals(target.origin, origin, StringComparison.OrdinalIgnoreCase))
+			{
+				if (target.scopeLimit == null || parsedUri.AbsolutePath.StartsWith(target.scopeLimit, StringComparison.OrdinalIgnoreCase))
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	private bool TryAddTrustedTarget(HttpRequestData req, HttpResponseHeaders resHeaders, out TrustedTarget? addedTarget)
+	{
+		addedTarget = null;
+
+		if (resHeaders.TryGetValues("X-PT-Trusted-World-Id", out IEnumerable<string>? worldIds))
+		{
+			worldIds = worldIds.Where(id => int.TryParse(id, out int parsedId) && parsedId == Root.WorldID);
+
+			if (worldIds.Any())
+			{
+				if (req.URL == null) return false;
+
+				if (!Uri.TryCreate(req.URL, UriKind.Absolute, out Uri? parsedUri))
+				{
+					return false;
+				}
+
+				string origin = $"{parsedUri.Scheme}://{parsedUri.Host}:{parsedUri.Port}";
+
+				string? scopeLimit = null;
+				if (resHeaders.TryGetValues("X-PT-Limit-Scope", out IEnumerable<string>? scopeLimits))
+				{
+					scopeLimit = scopeLimits.FirstOrDefault();
+				}
+
+				addedTarget = new TrustedTarget(origin, scopeLimit);
+				if (!_trustedTargets.Contains((TrustedTarget)addedTarget))
+				{
+					_trustedTargets.Add((TrustedTarget)addedTarget);
+					return true;
+				}
+				else
+				{
+					return false;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	private bool LegacyRateLimit(PTCallback? callback = null)
@@ -78,12 +181,14 @@ public sealed partial class HttpService : Instance
 			throw new InvalidOperationException("URL is required");
 		}
 
-		if (!RateLimit())
+		CheckURLPass(data.URL, Root.IsLocalTest);
+
+		var trusted = IsTrusted(data);
+		if (!RateLimit(trusted))
 		{
 			throw new Exception("Http limit exceeded");
 		}
 
-		CheckURLPass(data.URL, Root.IsLocalTest);
 
 		HttpContent? content = null;
 		if (data.Body != null)
@@ -138,6 +243,17 @@ public sealed partial class HttpService : Instance
 			headers[key] = string.Join(",", val);
 		}
 
+		if (TryAddTrustedTarget(data, res.Headers, out TrustedTarget? addedTarget) && addedTarget != null)
+		{
+			if (IsTrusted(data))
+			{
+				// readjust ratelimits afterwards
+				_requestsThisMinute--;
+				_trustedRequestsThisMinute++;
+			}
+			PT.Print($"Added trusted target for {addedTarget.Value.origin}" + (addedTarget.Value.scopeLimit != null ? $" with scope {addedTarget.Value.scopeLimit}" : " with no scope limit"));
+		}
+
 		HttpResponseData resData = new()
 		{
 			Success = res.IsSuccessStatusCode,
@@ -145,7 +261,9 @@ public sealed partial class HttpService : Instance
 			Body = await res.Content.ReadAsStringAsync(),
 			Buffer = await res.Content.ReadAsByteArrayAsync(),
 			Headers = headers,
-			responseMsg = res
+			responseMsg = res,
+			// check again whether trusted even when a TrustedTarget was added, because the addedTargets scope might not include the request URL
+			Trusted = trusted || (addedTarget != null && IsTrusted(data))
 		};
 
 		return resData;
@@ -264,6 +382,16 @@ public sealed partial class HttpService : Instance
 		return response.Buffer;
 	}
 
+	[ScriptMethod]
+	public HttpServiceLimits GetLimits()
+	{
+		CheckRateLimits();
+
+		return new HttpServiceLimits(
+			standard: MaxRequestsPerMinute - _requestsThisMinute,
+			trusted: GetTrustedRequestAllowance() - _trustedRequestsThisMinute
+		);
+	}
 
 	[ScriptMethod, Attributes.Obsolete("Use GetAsync instead")]
 	public void Get(string url, PTCallback? callback = null, Dictionary<string, string>? headers = null)

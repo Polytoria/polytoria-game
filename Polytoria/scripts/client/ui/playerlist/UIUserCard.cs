@@ -18,6 +18,8 @@ public partial class UIUserCard : Control
 	private const string UserCardStat = "res://scenes/client/ui/playerlist/stats/user_card_stat.tscn";
 
 	private readonly Dictionary<Stat, UIUserCardStat> _statToUserCardStat = [];
+	private readonly Dictionary<Stat, Action> _statDeletedHandlers = [];
+	private readonly Dictionary<Stat, Action<object>> _statPropertyHandlers = [];
 
 	[Export] private Label _usernameLabel = null!;
 	[Export] private Control _statsContainer = null!;
@@ -70,9 +72,11 @@ public partial class UIUserCard : Control
 
 	private void AddStat(Stat stat)
 	{
-		if (_statToUserCardStat.ContainsKey(stat)) return;
+		if (_statPropertyHandlers.ContainsKey(stat)) return;
 
-		stat.PropertyChanged.Connect(_ => OnStatVisibilityChanged(stat));
+		Action<object> onChanged = _ => OnStatVisibilityChanged(stat);
+		_statPropertyHandlers[stat] = onChanged;
+		stat.PropertyChanged.Connect(onChanged);
 
 		if (!stat.Visible) return;
 
@@ -92,13 +96,9 @@ public partial class UIUserCard : Control
 
 		_statToUserCardStat.Add(stat, s);
 
-		void OnStatDeleted()
-		{
-			stat.Deleted -= OnStatDeleted;
-			RemoveStat(stat);
-		}
-
-		stat.Deleted += OnStatDeleted;
+		Action onDeleted = () => RemoveStat(stat);
+		_statDeletedHandlers[stat] = onDeleted;
+		stat.Deleted += onDeleted;
 		RefreshBox();
 	}
 
@@ -118,14 +118,25 @@ public partial class UIUserCard : Control
 		}
 		else if (!stat.Visible && hasRow)
 		{
-			_statToUserCardStat[stat].QueueFree();
-			_statToUserCardStat.Remove(stat);
-			RefreshBox();
+			RemoveStatRow(stat);
 		}
 	}
 
 	private void RemoveStat(Stat stat)
 	{
+		if (_statPropertyHandlers.Remove(stat, out Action<object>? onChanged))
+		{
+			stat.PropertyChanged.Disconnect(onChanged);
+		}
+		RemoveStatRow(stat);
+	}
+
+	private void RemoveStatRow(Stat stat)
+	{
+		if (_statDeletedHandlers.Remove(stat, out Action? onDeleted))
+		{
+			stat.Deleted -= onDeleted;
+		}
 		if (_statToUserCardStat.TryGetValue(stat, out var statUI))
 		{
 			statUI.QueueFree();

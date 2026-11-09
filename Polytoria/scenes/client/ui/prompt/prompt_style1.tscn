@@ -1,0 +1,136 @@
+[gd_scene format=3 uid="uid://qstwed2k1pjc"]
+
+[ext_resource type="Script" uid="uid://dry4lodsdeuj0" path="res://scripts/client/ui/prompt/UIInteractionPrompt.cs" id="1_prompt"]
+[ext_resource type="Theme" uid="uid://2f3k1nh6p5ac" path="res://resources/themes/hud.tres" id="9_hud"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_body"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0, 0, 0, 0.6)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_progress"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fill"]
+bg_color = Color(0.30980393, 0.9098039, 0.5137255, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_keycap"]
+content_margin_left = 9.0
+content_margin_top = 3.0
+content_margin_right = 9.0
+content_margin_bottom = 7.0
+bg_color = Color(1, 1, 1, 1)
+border_width_bottom = 4
+border_color = Color(0.7, 0.72, 0.76, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="PromptStyle1" type="Control" unique_id=1418093527 node_paths=PackedStringArray("_body", "_title", "_subtitle", "_progressBar", "_keyLabel", "_keyIcon", "_keyCap")]
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 2
+theme = ExtResource("9_hud")
+script = ExtResource("1_prompt")
+_body = NodePath("Body")
+_title = NodePath("Body/Content/Layout/Text/Title")
+_subtitle = NodePath("Body/Content/Layout/Text/Subtitle")
+_progressBar = NodePath("Body/Panel/Progress")
+_keyLabel = NodePath("Body/Content/Layout/KeyCap/KeyLabel")
+_keyIcon = NodePath("Body/Content/Layout/KeyIcon")
+_keyCap = NodePath("Body/Content/Layout/KeyCap")
+
+[node name="Body" type="PanelContainer" parent="." unique_id=642715301]
+layout_mode = 0
+theme_override_styles/panel = SubResource("StyleBoxEmpty_body")
+
+[node name="Panel" type="Panel" parent="Body" unique_id=1960228754]
+clip_children = 2
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Progress" type="ProgressBar" parent="Body/Panel" unique_id=1203398746]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_styles/background = SubResource("StyleBoxEmpty_progress")
+theme_override_styles/fill = SubResource("StyleBoxFlat_fill")
+max_value = 1.0
+step = 0.0
+show_percentage = false
+
+[node name="Content" type="MarginContainer" parent="Body" unique_id=1734106885]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 7
+theme_override_constants/margin_top = 7
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 9
+
+[node name="Layout" type="HBoxContainer" parent="Body/Content" unique_id=327714904]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="KeyCap" type="PanelContainer" parent="Body/Content/Layout" unique_id=1575036112]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_keycap")
+
+[node name="KeyLabel" type="Label" parent="Body/Content/Layout/KeyCap" unique_id=880530616]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.1, 0.12, 1)
+theme_override_constants/outline_size = 0
+theme_override_font_sizes/font_size = 18
+text = "E"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="KeyIcon" type="TextureRect" parent="Body/Content/Layout" unique_id=1590772960]
+visible = false
+custom_minimum_size = Vector2(42, 42)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Text" type="VBoxContainer" parent="Body/Content/Layout" unique_id=2047113522]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = -1
+
+[node name="Title" type="RichTextLabel" parent="Body/Content/Layout/Text" unique_id=1590772961]
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/normal_font_size = 18
+bbcode_enabled = true
+text = "Interact"
+fit_content = true
+scroll_active = false
+autowrap_mode = 0
+
+[node name="Subtitle" type="RichTextLabel" parent="Body/Content/Layout/Text" unique_id=1172318036]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(1, 1, 1, 0.72)
+theme_override_font_sizes/normal_font_size = 14
+bbcode_enabled = true
+text = "Subtitle"
+fit_content = true
+scroll_active = false
+autowrap_mode = 0

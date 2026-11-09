@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://bmpvsnx8gc6ot"]
+
+[ext_resource type="Script" uid="uid://bneg4tbkwvhm8" path="res://scripts/creator/properties/KeyCodeProperty.cs" id="1_keycode"]
+
+[node name="KeyCode" type="Button" unique_id=1729384756]
+custom_minimum_size = Vector2(0, 24)
+size_flags_horizontal = 3
+text_overrun_behavior = 1
+script = ExtResource("1_keycode")

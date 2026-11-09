@@ -30,58 +30,23 @@ public partial class TransformPayloadDto
 		}
 	}
 
-	public uint RawRotation
+	public ulong RawRotation
 	{
-		get => BinaryPrimitives.ReadUInt32LittleEndian(Data.AsSpan(12, 4));
-		set => BinaryPrimitives.WriteUInt32LittleEndian(Data.AsSpan(12, 4), value);
+		get => BinaryPrimitives.ReadUInt64LittleEndian(Data.AsSpan(12, 8));
+		set => BinaryPrimitives.WriteUInt64LittleEndian(Data.AsSpan(12, 8), value);
 	}
 
 	public Quaternion Rotation
 	{
 		get => UnitQuaternionDto.FromCompressed(RawRotation);
-		set
-		{
-			RawRotation = UnitQuaternionDto.ToCompressed(value);
-		}
-	}
-
-	// UnitQuaternionDto is suitable for most network replication, however may be problematic at larger scales.
-	// UnitQuaternionDto has a ~0.137 degree step and uses 4 bytes,
-	// UnitQuaternionUInt64Dto has a ~0.003 497 degree step and uses 8 bytes.
-	// This is the the unimplemented TransformPayload logic for higher precision network replication of rotations.
-	[MemoryPackIgnore]
-	[JsonIgnore]
-	public ulong RawRotationUInt64
-	{
-		get => BitConverter.ToUInt64(Data, 12);
-		set
-		{
-			byte[] rot = BitConverter.GetBytes(value);
-			Array.Copy(rot, 0, Data, 12, 8);
-		}
-	}
-
-	[MemoryPackIgnore]
-	[JsonIgnore]
-	public Quaternion RotationUInt64
-	{
-		get => UnitQuaternionUInt64Dto.FromCompressed(RawRotationUInt64);
-		set
-		{
-			RawRotationUInt64 = UnitQuaternionUInt64Dto.ToCompressed(value);
-		}
+		set => RawRotation = UnitQuaternionDto.ToCompressed(value);
 	}
 
 	[MemoryPackConstructor, JsonConstructor]
 	public TransformPayloadDto() { }
-	public TransformPayloadDto(byte[] bytes)
-	{
-		Data = bytes;
-	}
-	public TransformPayloadDto(Vector3 position, Quaternion rotation)
-	{
-		Data = ToArray(position, rotation);
-	}
+	public TransformPayloadDto(byte[] bytes) { Data = bytes; }
+	public TransformPayloadDto(Vector3 position, ulong rotation) { Data = ToArray(position, rotation); }
+	public TransformPayloadDto(Vector3 position, Quaternion rotation) { Data = ToArray(position, rotation); }
 
 	public bool IsEqualApprox(TransformPayloadDto other) => Position.IsEqualApprox(other.Position) && Rotation.IsEqualApprox(other.Rotation);
 
@@ -97,7 +62,7 @@ public partial class TransformPayloadDto
 		return $"{Vector3Dto.ToString(Position)}|{UnitQuaternionDto.ToString(Rotation)}";
 	}
 
-	public static byte[] ToArray(Vector3 Position, uint Rotation) => CreateData(Position, Rotation);
+	public static byte[] ToArray(Vector3 Position, ulong Rotation) => CreateData(Position, Rotation);
 	public static byte[] ToArray(Vector3 Position, Quaternion Rotation) => ToArray(Position, UnitQuaternionDto.ToCompressed(Rotation));
 	public static byte[] ToArray(Transform3D t) => ToArray(t.Origin, t.Basis.GetRotationQuaternion());
 	public static byte[] ToArray(TransformPayloadDto t) => [.. t.Data];
@@ -105,13 +70,13 @@ public partial class TransformPayloadDto
 	public static TransformPayloadDto FromArray(byte[] f) => new(f);
 	public static TransformPayloadDto FromGDTransform(Transform3D t) => new(t.Origin, t.Basis.GetRotationQuaternion());
 
-	private static byte[] CreateData(Vector3 position, uint rotation)
+	private static byte[] CreateData(Vector3 position, ulong rotation)
 	{
-		byte[] data = new byte[16];
+		byte[] data = new byte[20];
 		BinaryPrimitives.WriteSingleLittleEndian(data.AsSpan(0, 4), position.X);
 		BinaryPrimitives.WriteSingleLittleEndian(data.AsSpan(4, 4), position.Y);
 		BinaryPrimitives.WriteSingleLittleEndian(data.AsSpan(8, 4), position.Z);
-		BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(12, 4), rotation);
+		BinaryPrimitives.WriteUInt64LittleEndian(data.AsSpan(12, 8), rotation);
 		return data;
 	}
 }

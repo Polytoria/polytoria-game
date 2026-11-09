@@ -86,6 +86,14 @@ public static class PolyAPI
 		);
 	}
 
+	public static Task<APIWorldOfTheWeekResponse> GetWorldOfTheWeek()
+	{
+		return _client.GetFromJsonAsync(
+			Globals.ApiEndpoint.PathJoin("/v1/places/world-of-the-week"),
+			APIGenerationContext.Default.APIWorldOfTheWeekResponse
+		);
+	}
+
 	public static Task<APIFeedPostRoot> GetFeedPosts(int page = 1)
 	{
 		return _client.GetFromJsonAsync(
@@ -94,10 +102,10 @@ public static class PolyAPI
 		);
 	}
 
-	public static Task<APIWorldsRoot> GetWorlds()
+	public static Task<APIWorldsRoot> GetWorlds(int page = 1)
 	{
 		return _client.GetFromJsonAsync(
-			Globals.MainEndpoint.PathJoin("/api/places"),
+			Globals.MainEndpoint.PathJoin("/api/places?page=" + page.ToString()),
 			APIGenerationContext.Default.APIWorldsRoot
 		);
 	}

@@ -27,6 +27,7 @@ public sealed partial class Camera : Dynamic
 	[ScriptProperty] new public Vector3 Forward => -GetGlobalTransform().Basis.Z.Normalized();
 
 	private CameraModeEnum _mode;
+	private PhysicsRayQueryParameters3D? _clipQuery;
 	private float _fov;
 	private bool _clipThroughWalls;
 	private float _minDistance;
@@ -81,6 +82,10 @@ public sealed partial class Camera : Dynamic
 		get => _mode;
 		set
 		{
+			// Matching EnterFirstPerson is ran in CameraProcess
+			if (IsFirstPerson && value != CameraModeEnum.Follow)
+				ExitFirstPerson();
+
 			_mode = value;
 			OnPropertyChanged();
 		}
@@ -448,6 +453,15 @@ public sealed partial class Camera : Dynamic
 		_inputHelper.GodotUnhandledInputEvent -= OnInput;
 		_inputHelper.GodotInputEvent -= OnInputEarly;
 		_inputHelper.QueueFree();
+		if (Root.Input != null)
+		{
+			Root.Input.GameFocused.Disconnect(OnGameFocused);
+			Root.Input.GameUnfocused.Disconnect(OnGameUnfocused);
+		}
+		if (Node.IsInstanceValid(_turnX))
+		{
+			_turnX.QueueFree();
+		}
 		base.PreDelete();
 	}
 
@@ -535,13 +549,15 @@ public sealed partial class Camera : Dynamic
 				Vector3 origin = computedPosition;
 
 				PhysicsDirectSpaceState3D spaceState = Camera3D.GetWorld3D().DirectSpaceState;
-				PhysicsRayQueryParameters3D query = PhysicsRayQueryParameters3D.Create(origin, desiredCamPos);
-				query.HitFromInside = false;
+				_clipQuery ??= new PhysicsRayQueryParameters3D();
+				_clipQuery.From = origin;
+				_clipQuery.To = desiredCamPos;
+				_clipQuery.HitFromInside = false;
 
 				// Fliter only clipping layers
-				query.CollisionMask = Entity.CameraClipCollisionLayerMask;
+				_clipQuery.CollisionMask = Entity.CameraClipCollisionLayerMask;
 
-				Dictionary? result = spaceState.IntersectRay(query);
+				using Dictionary result = spaceState.IntersectRay(_clipQuery);
 
 				if (result.Count > 0)
 				{

@@ -29,23 +29,37 @@ namespace Polytoria.Datamodel;
 [Static("world")]
 public sealed partial class World : Instance
 {
-	private const double SyncInterval = 5.0;
+	private const double ClockSyncFastInterval = 0.25;
+	private const double ClockSyncInterval = 1.0;
+	private const int ClockSyncFastCount = 8;
+	private const int ClockSampleCount = 8;
+	private const double ClockSlewRate = 0.05;
+	private const double ClockSnapThreshold = 0.25;
 	private const double VitalInterval = 3.0;
-	private const int SyncSampleCount = 5;
 
 	private double _vitalTimer = 0;
 
-	private decimal _serverTime = 0;
+	private static ulong _clockFrame = ulong.MaxValue;
+	private static double _clock;
+	private static double _previousClock;
+	private static ulong _physicsClockFrame;
+	private static double _physicsClock;
 
-	private decimal _clientTimeOffset = 0;
+	private double _clockOffset;
+	private double _clockOffsetTarget;
+	private bool _clockSynced;
+	private int _clockSyncCount;
 	private double _lastSyncRequest = 0;
+	private readonly List<(double Rtt, double Offset)> _clockSamples = [];
+	private readonly HashSet<Dynamic> _interpolating = [];
+	internal IReadOnlySet<Dynamic> Interpolating => _interpolating;
+	private readonly List<Dynamic> _interpolationDone = [];
+	private readonly Dictionary<int, NetTimeline> _netTimelines = [];
+	private readonly HashSet<int> _removedTimelinePeers = [];
 	private uint _nextId = 0;
 	private long _vitalAssetMemory = 0;
 
 	private bool _isLegacyWorld = false;
-
-	private readonly Queue<double> _rttSamples = new();
-	private double _averageRtt = 0;
 
 	private const int ServerHighLoadThreshold = 10;
 	private static World? _current;
@@ -191,22 +205,74 @@ public sealed partial class World : Instance
 	public decimal UpTime { get; private set; } = 0;
 
 	[ScriptProperty]
-	public decimal ServerTime
+	public decimal ServerTime => (decimal)NetTime;
+
+	internal static double LocalClock
 	{
 		get
 		{
-			if (Network.IsServer)
+			ulong frame = Engine.GetProcessFrames();
+			if (frame != _clockFrame)
 			{
-				return _serverTime;
+				_clockFrame = frame;
+				_previousClock = _clock;
+				_clock = Time.GetTicksUsec() / 1e6;
 			}
-			else
-			{
-				// Client: local time + offset - half RTT to account for network delay
-				decimal localTime = Time.GetTicksMsec() / 1000m;
-				decimal rttCompensation = (decimal)(_averageRtt / 2.0);
-				return localTime + _clientTimeOffset - rttCompensation;
-			}
+			return _clock;
 		}
+	}
+
+	internal static double PhysicsClock
+	{
+		get
+		{
+			ulong frame = Engine.GetPhysicsFrames();
+			if (frame != _physicsClockFrame)
+			{
+				double now = Time.GetTicksUsec() / 1e6;
+				double step = 1.0 / Engine.PhysicsTicksPerSecond;
+				double next = _physicsClock + (frame - _physicsClockFrame) * step;
+				_physicsClock = _physicsClockFrame == 0 || next < now - 0.1 ? now : Mathf.Min(next, now);
+				_physicsClockFrame = frame;
+			}
+			return _physicsClock;
+		}
+	}
+
+	internal static double LocalFrameTime => LocalClock - _previousClock;
+
+	internal double NetTime => LocalClock + _clockOffset;
+
+	internal double NetTimeNow => Time.GetTicksUsec() / 1e6 + _clockOffset;
+
+	internal int SnapshotThrottle { get; set; } = 1;
+
+	internal double PhysicsNetTime => PhysicsClock + _clockOffset;
+
+	internal double ClockSnapTotal { get; private set; }
+
+	internal bool IsClockSynced => _clockSynced || Network == null || Network.IsServer;
+
+	internal void AddInterpolating(Dynamic dyn)
+	{
+		_interpolating.Add(dyn);
+	}
+
+	internal NetTimeline GetNetTimeline(int peerID)
+	{
+		if (!_netTimelines.TryGetValue(peerID, out NetTimeline? timeline))
+		{
+			if (_removedTimelinePeers.Contains(peerID)) return GetNetTimeline(1);
+			timeline = new(this);
+			_netTimelines[peerID] = timeline;
+		}
+		return timeline;
+	}
+
+	internal void RemoveNetTimeline(int peerID)
+	{
+		_netTimelines.Remove(peerID);
+		_removedTimelinePeers.Add(peerID);
 	}
 
 	[ScriptProperty, Attributes.Obsolete("Use Players.PlayersCount instead")]
@@ -252,6 +318,7 @@ public sealed partial class World : Instance
 	{
 		base.Init();
 		SetProcess(true);
+		_clockOffset = -LocalClock;
 #if CREATOR
 		Properties.Singleton?.Insert(this);
 #endif
@@ -267,6 +334,7 @@ public sealed partial class World : Instance
 		Objects.Clear();
 		_pendingReadyRequests.Clear();
 		_pendingRequests.Clear();
+		_interpolating.Clear();
 		base.PreDelete();
 	}
 
@@ -280,9 +348,6 @@ public sealed partial class World : Instance
 		{
 			if (Network.IsServer)
 			{
-				// Server: increment authoritative time
-				_serverTime += (decimal)delta;
-
 				_vitalTimer += delta;
 
 				if (_vitalTimer > VitalInterval)
@@ -293,14 +358,42 @@ public sealed partial class World : Instance
 			}
 			else if (SessionType == SessionTypeEnum.Client)
 			{
-				// Client: periodically request sync
-				double currentTime = Time.GetTicksMsec() / 1000.0;
-				if (currentTime - _lastSyncRequest >= SyncInterval)
+				double currentTime = Time.GetTicksUsec() / 1e6;
+				if (currentTime - _lastSyncRequest >= (_clockSyncCount < ClockSyncFastCount ? ClockSyncFastInterval : ClockSyncInterval))
 				{
 					_lastSyncRequest = currentTime;
-					RequestClockSync();
+					_clockSyncCount++;
+					RpcId(1, nameof(NetRecvClockSyncRequest), currentTime);
+				}
+
+				if (_clockSynced)
+				{
+					double diff = _clockOffsetTarget - _clockOffset;
+					if (Mathf.Abs(diff) > ClockSnapThreshold)
+					{
+						_clockOffset += diff;
+						ClockSnapTotal += diff;
+					}
+					else
+					{
+						double step = delta * ClockSlewRate;
+						_clockOffset += Mathf.Clamp(diff, -step, step);
+					}
 				}
 			}
+		}
+
+		foreach (Dynamic dyn in _interpolating)
+		{
+			if (dyn.IsDeleted || !dyn.UpdateTransformTick(delta))
+			{
+				_interpolationDone.Add(dyn);
+			}
+		}
+		if (_interpolationDone.Count > 0)
+		{
+			_interpolating.ExceptWith(_interpolationDone);
+			_interpolationDone.Clear();
 		}
 		base.Process(delta);
 	}
@@ -316,45 +409,32 @@ public sealed partial class World : Instance
 
 	#region Clock Sync
 
-	private void RequestClockSync()
-	{
-		double clientSendTime = Time.GetTicksMsec() / 1000.0;
-		RpcId(1, nameof(NetRecvClockSyncRequest), clientSendTime);
-	}
-
-	[NetRpc(AuthorityMode.Any, TransferMode = TransferMode.Reliable)]
+	[NetRpc(AuthorityMode.Any, TransferMode = TransferMode.Unreliable)]
 	private void NetRecvClockSyncRequest(double clientSendTime)
 	{
-		RpcId(RemoteSenderId, nameof(NetRecvSyncResponse), _serverTime, clientSendTime);
+		RpcId(RemoteSenderId, nameof(NetRecvSyncResponse), Time.GetTicksUsec() / 1e6 + _clockOffset, clientSendTime);
 	}
 
-	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
-	private void NetRecvSyncResponse(decimal serverTime, double clientSendTime)
+	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Unreliable)]
+	private void NetRecvSyncResponse(double serverTime, double clientSendTime)
 	{
-		double clientReceiveTime = Time.GetTicksMsec() / 1000.0;
+		double clientReceiveTime = Time.GetTicksUsec() / 1e6;
 		double rtt = clientReceiveTime - clientSendTime;
+		if (rtt < 0) return;
 
-		// Track RTT samples for averaging
-		_rttSamples.Enqueue(rtt);
-		if (_rttSamples.Count > SyncSampleCount)
+		_clockSamples.Add((rtt, serverTime + rtt / 2 - clientReceiveTime));
+		if (_clockSamples.Count > ClockSampleCount)
 		{
-			_rttSamples.Dequeue();
+			_clockSamples.RemoveAt(0);
 		}
 
-		// Calculate average RTT
-		double totalRtt = 0;
-		foreach (double sample in _rttSamples)
+		_clockOffsetTarget = _clockSamples.MinBy(s => s.Rtt).Offset;
+
+		if (!_clockSynced)
 		{
-			totalRtt += sample;
+			_clockOffset = _clockOffsetTarget;
+			_clockSynced = true;
 		}
-		_averageRtt = totalRtt / _rttSamples.Count;
-
-		// Calculate offset, server time was accurate at (clientSendTime + RTT/2)
-		decimal estimatedServerTimeNow = serverTime + (decimal)(rtt / 2.0);
-		decimal currentLocalTime = (decimal)clientReceiveTime;
-
-		// Update offset
-		_clientTimeOffset = estimatedServerTimeNow - currentLocalTime;
 	}
 
 	#endregion

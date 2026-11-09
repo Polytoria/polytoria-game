@@ -57,5 +57,6 @@ public partial class Accessory : Dynamic
 		base.ExitTree();
 		_targetCharacter = null;
 		remoteTransform?.QueueFree();
+		remoteTransform = null;
 	}
 }

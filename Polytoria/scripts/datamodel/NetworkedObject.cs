@@ -35,7 +35,9 @@ public partial class NetworkedObject : IScriptObject
 	private int _sequence = 0;
 	private World _game = null!;
 	private bool _isReplicating = true;
+	internal bool IsApplyingNetProp => !_isReplicating;
 	private bool _isDeleted = false;
+	internal int LuauObjectID;
 
 	private bool _processRegistered = false;
 	private bool _physicsProcessRegistered = false;
@@ -50,8 +52,8 @@ public partial class NetworkedObject : IScriptObject
 
 	internal bool InvokedEntry = false;
 	private HashSet<NetworkedObject>? _nonInstanceChildren;
-	private Dictionary<string, long>? _propertySequence;
-	internal Dictionary<string, long> PropertySequence => _propertySequence ??= [];
+	private long[]? _propertySequence;
+	private long[] PropertySequence => _propertySequence ??= new long[PropSyncRegistry.GetProps(GetType()).Count];
 
 	public NetworkedObject? NetworkParent
 	{
@@ -72,6 +74,8 @@ public partial class NetworkedObject : IScriptObject
 			{
 				selfpreI.RemoveNameFromParent();
 				selfpreI.RemoveLegacyNameFromParent();
+				if (preI.legacyChild.TryGetValue(selfpreI.LegacyName, out Instance? current) && current == selfpreI)
+					preI.legacyChild.Remove(selfpreI.LegacyName);
 				List<Instance> siblings = preI.Children;
 				int childIdx = 0;
 				while (childIdx < siblings.Count && !ReferenceEquals(siblings[childIdx], selfpreI)) childIdx++;
@@ -730,13 +734,13 @@ public partial class NetworkedObject : IScriptObject
 	{
 		foreach (PropertyInfo propInfo in GetScriptProperties())
 		{
-			if (propInfo.PropertyType == typeof(PTSignal))
+			if (propInfo.PropertyType.IsAssignableTo(typeof(PTSignal)))
 			{
 				// Disconnect all signals
 				object? val = propInfo.GetValue(this);
 				if (val is PTSignal signal)
 				{
-					signal.DisconnectAll();
+					signal.DisconnectAll(propInfo.PropertyType == typeof(PTSignal));
 				}
 			}
 			else if (propInfo.PropertyType.IsAssignableTo(typeof(NetworkedObject)) || propInfo.PropertyType.IsAssignableTo(typeof(RefCounted)))
@@ -1128,30 +1132,26 @@ public partial class NetworkedObject : IScriptObject
 	/// <summary>
 	/// Get sequence of property name
 	/// </summary>
-	/// <param name="propertyName"></param>
+	/// <param name="prop"></param>
 	/// <returns></returns>
-	internal long GetSequenceForProp(string propertyName)
+	internal long GetSequenceForProp(PropSyncProp prop)
 	{
-		PropertySequence.TryGetValue(propertyName, out long val);
-		val += 1;
-		PropertySequence[propertyName] = val;
-
-		return val;
+		return ++PropertySequence[prop.Index];
 	}
 
 	/// <summary>
 	/// Compare sequence with the property
 	/// </summary>
-	/// <param name="propertyName"></param>
+	/// <param name="prop"></param>
 	/// <param name="sequence"></param>
 	/// <returns></returns>
-	internal bool CompareSequenceForProp(string propertyName, long sequence)
+	internal bool CompareSequenceForProp(PropSyncProp prop, long sequence)
 	{
-		PropertySequence.TryGetValue(propertyName, out long val);
+		long[] sequences = PropertySequence;
 
-		if (sequence > val)
+		if (sequence > sequences[prop.Index])
 		{
-			PropertySequence[propertyName] = sequence;
+			sequences[prop.Index] = sequence;
 			return true;
 		}
 
@@ -1183,7 +1183,6 @@ public partial class NetworkedObject : IScriptObject
 			ClassName = ClassName,
 			Authority = NetworkAuthority,
 			Props = GetNetPropReplicateData(),
-			NodePath = NetworkPath,
 			ParentNodePath = NetworkParent?.NetworkPath ?? "",
 			ParentNodeID = NetworkParent?.NetworkedObjectID ?? "",
 			NetworkID = NetworkedObjectID,
@@ -1198,10 +1197,8 @@ public partial class NetworkedObject : IScriptObject
 		string className = data.ClassName;
 		int authority = data.Authority;
 		NetPropReplicateData[] props = data.Props;
-		//PT.Print(Root.Network.LocalPeerID, " ", data.nodePath, " on the way");
 
-		NetworkedObject? existingObj = null;
-
+		NetworkedObject? existingObj;
 
 		if (this is Instance i3)
 		{
@@ -1211,7 +1208,6 @@ public partial class NetworkedObject : IScriptObject
 		{
 			existingObj = FindNonInstanceChild(objName);
 		}
-
 
 		if (existingObj != null)
 		{
@@ -1336,11 +1332,13 @@ public partial class NetworkedObject : IScriptObject
 	/// <param name="isSyncOnce"></param>
 	public void ApplyNetProps(NetPropReplicateData[] props, bool isSyncOnce)
 	{
+		(_lastSyncedValues ??= []).EnsureCapacity(props.Length);
+
 		foreach (NetPropReplicateData prop in props)
 		{
 			try
 			{
-				RecvPropUpdate(prop.Name, prop.ValueRaw, prop.Sequence);
+				RecvPropUpdate(prop.Index, prop.ValueRaw, prop.Sequence);
 			}
 			catch (Exception ex)
 			{
@@ -1357,7 +1355,7 @@ public partial class NetworkedObject : IScriptObject
 	{
 		Dictionary<string, PropSyncProp> entries = PropSyncRegistry.GetProps(GetType());
 
-		List<NetPropReplicateData> replicateData = [];
+		List<NetPropReplicateData> replicateData = new(entries.Count);
 
 		foreach (PropSyncProp entry in entries.Values)
 		{
@@ -1377,9 +1375,9 @@ public partial class NetworkedObject : IScriptObject
 			{
 				replicateData.Add(new NetPropReplicateData
 				{
-					Name = entry.Name,
+					Index = (ushort)entry.Index,
 					ValueRaw = entry.Serialize(value),
-					Sequence = GetSequenceForProp(entry.Name)
+					Sequence = GetSequenceForProp(entry)
 				});
 			}
 		}
@@ -1393,14 +1391,14 @@ public partial class NetworkedObject : IScriptObject
 		{ NetID = NetworkedObjectID };
 	}
 
-	internal void RecvPropUpdate(string propName, byte[] propValueRaw, long sequence)
+	internal void RecvPropUpdate(int propIndex, byte[] propValueRaw, long sequence)
 	{
-		PropSyncProp? entry = PropSyncRegistry.GetProp(GetType(), propName);
+		PropSyncProp? entry = PropSyncRegistry.GetProp(GetType(), propIndex);
 
 		if (entry == null) return;
 
 		// Check sequence
-		if (sequence != -1 && !CompareSequenceForProp(propName, sequence))
+		if (sequence != -1 && !CompareSequenceForProp(entry, sequence))
 		{
 			return;
 		}
@@ -1412,7 +1410,7 @@ public partial class NetworkedObject : IScriptObject
 		}
 		catch (Exception ex)
 		{
-			PT.PrintErr("Failed to deserialize prop ", propName, " on ", GetType().Name, ": ", ex);
+			PT.PrintErr("Failed to deserialize prop ", entry.Name, " on ", GetType().Name, ": ", ex);
 			return;
 		}
 
@@ -1429,10 +1427,15 @@ public partial class NetworkedObject : IScriptObject
 				NetworkedObject? refObj = Root.GetNetObjectFromID(nref.NetID);
 				if (refObj == null)
 				{
-					PendingProps.Add(propName);
+					PendingProps.Add(entry.Name);
 					NetPropNetworkedObjectRef newRef = nref;
 					newRef.TargetProp = entry;
-					Root.Network.PropSync.PendingRefs[newRef] = this;
+					if (!Root.Network.PropSync.PendingRefs.TryGetValue(nref.NetID, out var refs))
+					{
+						refs = [];
+						Root.Network.PropSync.PendingRefs[nref.NetID] = refs;
+					}
+					refs.Add((newRef, this));
 				}
 				else
 				{
@@ -1450,7 +1453,10 @@ public partial class NetworkedObject : IScriptObject
 		_isReplicating = false;
 		try
 		{
-			(_lastSyncedValues ??= [])[prop.Name] = value;
+			if (Root.Network.IsServer || NetworkPropSync.CheckPropHasAuthority(prop, this, Root.Network.LocalPeerID))
+				(_lastSyncedValues ??= [])[prop.Name] = value;
+			else
+				_lastSyncedValues?.Remove(prop.Name);
 			prop.SetValue(this, value);
 		}
 		catch (InvalidOperationException) { }
@@ -1458,7 +1464,7 @@ public partial class NetworkedObject : IScriptObject
 		{
 			PT.PrintErr(ex);
 		}
-		PendingProps.Remove(prop.Name);
+		_pendingProps?.Remove(prop.Name);
 		_isReplicating = true;
 	}
 
@@ -1773,6 +1779,16 @@ public partial class NetworkedObject : IScriptObject
 		InitGDNode();
 	}
 
+	private void RunProcess(double delta)
+	{
+		if (!IsDeleted) Process(delta);
+	}
+
+	private void RunPhysicsProcess(double delta)
+	{
+		if (!IsDeleted) PhysicsProcess(delta);
+	}
+
 	public void SetProcess(bool enabled)
 	{
 		if (IsDeleted) return;
@@ -1780,13 +1796,13 @@ public partial class NetworkedObject : IScriptObject
 		if (enabled)
 		{
 			if (_processRegistered) return;
-			Globals.GodotProcess += Process;
+			Globals.GodotProcess += RunProcess;
 			_processRegistered = true;
 		}
 		else
 		{
 			if (!_processRegistered) return;
-			Globals.GodotProcess -= Process;
+			Globals.GodotProcess -= RunProcess;
 			_processRegistered = false;
 		}
 	}
@@ -1798,13 +1814,13 @@ public partial class NetworkedObject : IScriptObject
 		if (enabled)
 		{
 			if (_physicsProcessRegistered) return;
-			Globals.GodotPhysicsProcess += PhysicsProcess;
+			Globals.GodotPhysicsProcess += RunPhysicsProcess;
 			_physicsProcessRegistered = true;
 		}
 		else
 		{
 			if (!_physicsProcessRegistered) return;
-			Globals.GodotPhysicsProcess -= PhysicsProcess;
+			Globals.GodotPhysicsProcess -= RunPhysicsProcess;
 			_physicsProcessRegistered = false;
 		}
 	}

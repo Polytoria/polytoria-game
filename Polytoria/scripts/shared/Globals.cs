@@ -12,6 +12,7 @@ using Polytoria.Datamodel;
 using Polytoria.Datamodel.Resources;
 using Polytoria.Scripting.Luau;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -19,7 +20,6 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Mesh = Godot.Mesh;
-using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Metadata;
 using Polytoria.Extensions;
@@ -69,10 +69,12 @@ public sealed partial class Globals : Node
 	private static readonly Dictionary<string, Material> _skyboxesCache = [];
 
 	private static readonly Dictionary<(Part.PartMaterialEnum, bool), Material> _materialCache = [];
+	private static readonly HashSet<string> _missingResources = [];
 	private readonly PriorityQueue<ScheduledWait, (ulong Target, ulong Order)> _waitQueue = new();
 	private ulong _nextWaitOrder;
 	private bool _processingWaits;
 	private static bool _isExiting = false;
+	private static int _backgroundTasks;
 
 	public static bool IsExiting => _isExiting;
 
@@ -119,6 +121,11 @@ public sealed partial class Globals : Node
 	/// </summary>
 	public static bool IsMobileBuild { get; private set; } = false;
 	/// <summary>
+	/// Check if headless <3
+	/// </summary>
+	public static bool IsHeadless { get; private set; } = false;
+	public static string RenderingMethod { get; private set; } = "";
+	/// <summary>
 	/// Check if Godot is available, this can be false in unit testing environments
 	/// </summary>
 	public static bool GDAvailable { get; private set; } = false;
@@ -129,7 +136,7 @@ public sealed partial class Globals : Node
 	public static event Action<double>? GodotPhysicsProcess;
 	public static event Action<int>? GodotNotification;
 
-	private readonly static ConditionalWeakTable<string, Type> _typesCache = [];
+	private readonly static ConcurrentDictionary<string, Type> _typesCache = [];
 
 	static Globals()
 	{
@@ -148,6 +155,8 @@ public sealed partial class Globals : Node
 		IsServerBuild = OS.HasFeature("server");
 		IsInGDEditor = OS.HasFeature("editor");
 		IsMobileBuild = OS.HasFeature("mobile");
+		IsHeadless = DisplayServer.GetName() == "headless";
+		RenderingMethod = RenderingServer.GetCurrentRenderingMethod();
 
 		GDAvailable = true;
 
@@ -200,6 +209,7 @@ public sealed partial class Globals : Node
 	{
 		if (_isExiting) return;
 		GodotProcess?.Invoke(delta);
+		Dynamic.FlushTransformUpdates();
 		base._Process(delta);
 	}
 
@@ -236,7 +246,7 @@ public sealed partial class Globals : Node
 
 		if (TypeRegistry.InstantiableTypes.TryGetValue(className, out t))
 		{
-			_typesCache.AddOrUpdate(className, t);
+			_typesCache[className] = t;
 			return t;
 		}
 
@@ -253,7 +263,7 @@ public sealed partial class Globals : Node
 			t = Type.GetType(ns + className);
 			if (t != null)
 			{
-				_typesCache.AddOrUpdate(className, t);
+				_typesCache[className] = t;
 				return t;
 			}
 		}
@@ -352,11 +362,10 @@ public sealed partial class Globals : Node
 			return mat;
 		}
 
-		mat = ResourceLoader.Load<Material>($"res://resources/materials/parts/{material}.tres", cacheMode: ResourceLoader.CacheMode.IgnoreDeep);
+		mat = ResourceLoader.Load<Material>($"res://resources/materials/parts/{material}.tres", cacheMode: ResourceLoader.CacheMode.Ignore);
 		if (!isOpaque && mat is ShaderMaterial shadMat && shadMat.Shader.ResourcePath.EndsWith("part.gdshader"))
 		{
-			Shader shader = ResourceLoader.Load<Shader>("res://resources/shaders/part/part_transparent.gdshader", cacheMode: ResourceLoader.CacheMode.IgnoreDeep);
-			shadMat.Shader = shader;
+			shadMat.Shader = ResourceLoader.Load<Shader>("res://resources/shaders/part/part_transparent.gdshader");
 		}
 		_materialCache[(material, isOpaque)] = mat;
 		return mat;
@@ -385,8 +394,14 @@ public sealed partial class Globals : Node
 			return cachedResource;
 		}
 
+		if (_missingResources.Contains(path))
+		{
+			return null;
+		}
+
 		if (!ResourceLoader.Exists(path))
 		{
+			_missingResources.Add(path);
 			return null;
 		}
 
@@ -565,6 +580,23 @@ public sealed partial class Globals : Node
 		await ToSignal(GetTree(), SceneTree.SignalName.PhysicsFrame);
 	}
 
+	public static Task<T> RunInBackground<T>(Func<T> work)
+	{
+		return Task.Run(() =>
+		{
+			Interlocked.Increment(ref _backgroundTasks);
+			try
+			{
+				if (_isExiting) throw new OperationCanceledException();
+				return work();
+			}
+			finally
+			{
+				Interlocked.Decrement(ref _backgroundTasks);
+			}
+		});
+	}
+
 	public async void Quit(bool force = false, int code = 0)
 	{
 #if CREATOR
@@ -594,6 +626,11 @@ public sealed partial class Globals : Node
 			CurrentAppEntryNode?.QueueFree();
 			Callable.From(() =>
 			{
+				long deadline = System.Environment.TickCount64 + 3000;
+				while (Volatile.Read(ref _backgroundTasks) > 0 && System.Environment.TickCount64 < deadline)
+				{
+					Thread.Sleep(1);
+				}
 				GetTree().Quit(code);
 			}).CallDeferred();
 		}).CallDeferred();
