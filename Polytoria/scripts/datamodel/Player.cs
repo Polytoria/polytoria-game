@@ -998,6 +998,7 @@ public sealed partial class Player : NPC
 	[ScriptMethod]
 	public void Kick(string reason)
 	{
+		reason = FilterService.Filter(reason);
 		if (Root.Network.IsServer)
 		{
 			// Kick by server
