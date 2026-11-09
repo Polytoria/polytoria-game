@@ -249,6 +249,12 @@ public sealed partial class PolytorianModel : CharacterModel
 	[ScriptProperty] public PTSignal RagdollStarted { get; private set; } = new();
 	[ScriptProperty] public PTSignal RagdollStopped { get; private set; } = new();
 
+	public override void InitOverrides()
+	{
+		HeadColor = TorsoColor = LeftArmColor = RightArmColor = LeftLegColor = RightLegColor = _defaultBodyColor;
+		base.InitOverrides();
+	}
+
 	public override void Init()
 	{
 		FaceImage = null;
