@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://yjby0rfel6dp"
-path="res://.godot/imported/Papyrus.ttf-ef1ff3d0c352d1076e6d37d69a7ad148.fontdata"
+uid="uid://do2vbh0whnca"
+path="res://.godot/imported/ComicRelief-Regular.ttf-5986505f34f2b53033c08259661d9a6c.fontdata"
 
 [deps]
 
-source_file="res://assets/fonts/built-in/Papyrus.ttf"
-dest_files=["res://.godot/imported/Papyrus.ttf-ef1ff3d0c352d1076e6d37d69a7ad148.fontdata"]
+source_file="res://assets/fonts/built-in/ComicRelief/ComicRelief-Regular.ttf"
+dest_files=["res://.godot/imported/ComicRelief-Regular.ttf-5986505f34f2b53033c08259661d9a6c.fontdata"]
 
 [params]
 
@@ -22,7 +22,7 @@ msdf_size=48
 allow_system_fallback=true
 force_autohinter=false
 modulate_color_glyphs=false
-hinting=1
+hinting=3
 subpixel_positioning=4
 keep_rounding_remainders=true
 oversampling=0.0

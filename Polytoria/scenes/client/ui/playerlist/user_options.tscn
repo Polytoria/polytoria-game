@@ -135,7 +135,7 @@ _data = {
 &"disappear": SubResource("Animation_31oub")
 }
 
-[node name="UserOptions" type="Control" unique_id=1089935845 node_paths=PackedStringArray("_animPlay", "_optionsLayout", "_addFriendBtn", "_removeFriendBtn", "_viewProfileBtn", "_loaderView")]
+[node name="UserOptions" type="Control" unique_id=1089935845 node_paths=PackedStringArray("_animPlay", "_optionsLayout", "_addFriendBtn", "_removeFriendBtn", "_viewProfileBtn", "_muteBtn", "_loaderView")]
 layout_mode = 3
 anchors_preset = 1
 anchor_left = 1.0
@@ -151,6 +151,7 @@ _optionsLayout = NodePath("Pivot/PanelContainer/Layout")
 _addFriendBtn = NodePath("Pivot/PanelContainer/Layout/AddFriend")
 _removeFriendBtn = NodePath("Pivot/PanelContainer/Layout/RemoveFriend")
 _viewProfileBtn = NodePath("Pivot/PanelContainer/Layout/ViewProfile")
+_muteBtn = NodePath("Pivot/PanelContainer/Layout/Mute")
 _loaderView = NodePath("Pivot/PanelContainer/LoaderView")
 
 [node name="Pivot" type="Control" parent="." unique_id=923873893]
@@ -195,6 +196,14 @@ layout_mode = 2
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("StyleBoxEmpty_4fqi5")
 text = "View Profile"
+flat = true
+alignment = 0
+
+[node name="Mute" type="Button" parent="Pivot/PanelContainer/Layout" unique_id=724185390]
+layout_mode = 2
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_4fqi5")
+text = "Mute"
 flat = true
 alignment = 0
 

@@ -33,6 +33,8 @@ public partial class BubbleChat : Node3D
 
 	private void OnPlayerChatted(string msg)
 	{
+		if (TargetPlayer.IsMuted) return;
+
 		if (TargetPlayer.Character != null)
 		{
 			Aabb? bounds = TargetPlayer.Character.GetAttachment(CharacterModel.CharacterAttachmentEnum.Head).CalculateBounds();

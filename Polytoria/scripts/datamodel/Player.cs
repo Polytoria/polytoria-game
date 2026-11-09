@@ -920,6 +920,21 @@ public sealed partial class Player : NPC
 		}
 	}
 
+	internal event Action? MutedChanged;
+
+	internal bool IsMuted
+	{
+		get => _isMuted;
+		set
+		{
+			if (_isMuted == value) return;
+			_isMuted = value;
+			MutedChanged?.Invoke();
+		}
+	}
+
+	private bool _isMuted;
+
 	internal void InvokeChatted(string msg)
 	{
 		Chatted.Invoke(msg);
@@ -998,6 +1013,7 @@ public sealed partial class Player : NPC
 	[ScriptMethod]
 	public void Kick(string reason)
 	{
+		reason = FilterService.Filter(reason);
 		if (Root.Network.IsServer)
 		{
 			// Kick by server

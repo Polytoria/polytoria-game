@@ -27,7 +27,8 @@ public partial class MobileUI : Control
 
 	private const float ViewSlideOffset = 18f;
 	private const int MenuMaxFps = 60;
-	private static readonly MobileViewEnum[] PreloadedViews = [MobileViewEnum.Worlds, MobileViewEnum.PlaceInfo, MobileViewEnum.Profile, MobileViewEnum.Dev];
+	private static readonly MobileViewEnum[] PreloadedViews = [MobileViewEnum.Worlds, MobileViewEnum.PlaceInfo, MobileViewEnum.Profile];
+	public static bool DevToolsEnabled => OS.IsDebugBuild();
 
 	public event Action<MobileViewEnum>? ViewPathSwitched;
 
@@ -90,6 +91,10 @@ public partial class MobileUI : Control
 		}
 
 		_mainView = GetNode<Control>("Layout/MainView");
+		if (!DevToolsEnabled)
+		{
+			GetNode("Layout/Navbar/Buttons/Dev").Free();
+		}
 		if (Globals.IsMobileBuild)
 		{
 			DisplayServer.ScreenSetOrientation(DisplayServer.ScreenOrientation.Portrait);
@@ -200,6 +205,11 @@ public partial class MobileUI : Control
 	public void SwitchTo(MobileViewEnum viewEnum, object? args = null)
 	{
 		if (viewEnum == CurrentView && args == null)
+		{
+			return;
+		}
+
+		if (viewEnum == MobileViewEnum.Dev && !DevToolsEnabled)
 		{
 			return;
 		}

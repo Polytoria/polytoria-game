@@ -89,6 +89,10 @@ public partial class BuiltInFontAsset : FontAsset
 
 		// Sora
 		{ (BuiltInTextFontPresetEnum.Sora, FontStyleEnum.Normal), "Sora.ttf" },
+
+		// IM Fell English
+		{ (BuiltInTextFontPresetEnum.IMFellEnglish, FontStyleEnum.Normal), "IMFellEnglish/IMFellEnglish-Regular.ttf" },
+		{ (BuiltInTextFontPresetEnum.IMFellEnglish, FontStyleEnum.Italic), "IMFellEnglish/IMFellEnglish-Italic.ttf" },
 	};
 
 	private readonly Dictionary<(BuiltInTextFontPresetEnum, FontWeightEnum, FontStyleEnum), string> StaticFontMapping = new()
@@ -127,11 +131,9 @@ public partial class BuiltInFontAsset : FontAsset
 		{ (BuiltInTextFontPresetEnum.ComicNeue, FontWeightEnum.Light, FontStyleEnum.Italic), "ComicNeue/ComicNeue-LightItalic.ttf" },
 		{ (BuiltInTextFontPresetEnum.ComicNeue, FontWeightEnum.Regular, FontStyleEnum.Italic), "ComicNeue/ComicNeue-Italic.ttf" },
 		{ (BuiltInTextFontPresetEnum.ComicNeue, FontWeightEnum.Bold, FontStyleEnum.Italic), "ComicNeue/ComicNeue-BoldItalic.ttf" },
-		// Papyrus (only regular)
-		{ (BuiltInTextFontPresetEnum.Papyrus, FontWeightEnum.Regular, FontStyleEnum.Normal), "Papyrus.ttf" },
-		
-		// Comic Sans MS (only regular)
-		{ (BuiltInTextFontPresetEnum.ComicSansMS, FontWeightEnum.Regular, FontStyleEnum.Normal), "Comic Sans MS.ttf" },
+		// Comic Relief
+		{ (BuiltInTextFontPresetEnum.ComicRelief, FontWeightEnum.Regular, FontStyleEnum.Normal), "ComicRelief/ComicRelief-Regular.ttf" },
+		{ (BuiltInTextFontPresetEnum.ComicRelief, FontWeightEnum.Bold, FontStyleEnum.Normal), "ComicRelief/ComicRelief-Bold.ttf" },
 
 		// Better VCR (only regular)		
 		{ (BuiltInTextFontPresetEnum.BetterVCR, FontWeightEnum.Regular, FontStyleEnum.Normal), "Better-VCR.ttf" },
@@ -168,8 +170,8 @@ public partial class BuiltInFontAsset : FontAsset
 		{ BuiltInTextFontPresetEnum.Fredoka, "Fredoka-VariableFont_wdth,wght.ttf" },
 		{ BuiltInTextFontPresetEnum.ComicNeue, "ComicNeue/ComicNeue-Regular.ttf" },
 		{ BuiltInTextFontPresetEnum.Orbitron, "Orbitron-VariableFont_wght.ttf" },
-		{ BuiltInTextFontPresetEnum.Papyrus, "Papyrus.ttf" },
-		{ BuiltInTextFontPresetEnum.ComicSansMS, "Comic Sans MS.ttf" },
+		{ BuiltInTextFontPresetEnum.IMFellEnglish, "IMFellEnglish/IMFellEnglish-Regular.ttf" },
+		{ BuiltInTextFontPresetEnum.ComicRelief, "ComicRelief/ComicRelief-Regular.ttf" },
 		{ BuiltInTextFontPresetEnum.JetBrainsMono, "JetBrainsMono-VariableFont_wght.ttf" },
 		{ BuiltInTextFontPresetEnum.BetterVCR, "Better-VCR.ttf" },
 		{ BuiltInTextFontPresetEnum.Unageo, "Unageo-VariableFont_wght.ttf" },
@@ -236,7 +238,7 @@ public partial class BuiltInFontAsset : FontAsset
 	public enum BuiltInTextFontPresetEnum
 	{
 		SourceSans, PressStart2P, Montserrat, RobotoMono, Rubik, Poppins,
-		Domine, Fredoka, ComicNeue, Orbitron, Papyrus, ComicSansMS, JetBrainsMono,
+		Domine, Fredoka, ComicNeue, Orbitron, IMFellEnglish, ComicRelief, JetBrainsMono,
 		BetterVCR, Unageo, ModrntUrban, DSEG7, Anton, BebasNeue, Kalam, Caveat, Sora
 	}
 }

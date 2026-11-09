@@ -18,6 +18,33 @@ public partial class ViewProfilePage : MobileViewBase
 	[Export] private Label _memberSinceLabel = null!;
 	[Export] private Label _descriptionLabel = null!;
 	[Export] private Control _aboutCard = null!;
+	[Export] private Button _logoutButton = null!;
+	[Export] private Button _privacyButton = null!;
+	[Export] private Button _termsButton = null!;
+	[Export] private Button _deleteAccountButton = null!;
+
+	private const string PrivacyPolicyUrl = "https://polytoria.com/legal/privacy";
+	private const string TermsUrl = "https://polytoria.com/legal/terms";
+	private const string DeleteAccountUrl = "https://polytoria.com/my/settings/account";
+
+	public override void _Ready()
+	{
+		_logoutButton.Pressed += OnLogoutPressed;
+		_privacyButton.Pressed += () => OS.ShellOpen(PrivacyPolicyUrl);
+		_termsButton.Pressed += () => OS.ShellOpen(TermsUrl);
+		_deleteAccountButton.Pressed += () => OS.ShellOpen(DeleteAccountUrl);
+		base._Ready();
+	}
+
+	private void OnLogoutPressed()
+	{
+		PolyMobileAuthAPI.Logout();
+		_usernameLabel.Text = "";
+		_memberSinceLabel.Text = "";
+		_descriptionLabel.Text = "";
+		_aboutCard.Visible = false;
+		MobileUI.Singleton.SwitchTo(MobileViewEnum.Home);
+	}
 
 	public override void _EnterTree()
 	{

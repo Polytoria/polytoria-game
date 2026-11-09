@@ -6,12 +6,15 @@
 [ext_resource type="PackedScene" uid="uid://dilt4dmnlsyd6" path="res://scenes/mobile/components/shared/avatar_preview.tscn" id="4_avprv"]
 [ext_resource type="Texture2D" uid="uid://cbx31oy7e53n3" path="res://assets/textures/mobile/ui/zigzag_edge.svg" id="5_zigzg"]
 [ext_resource type="Texture2D" uid="uid://4vij7ecn2odt" path="res://assets/textures/ui-icons/door-exit.svg" id="6_dexit"]
+[ext_resource type="Texture2D" uid="uid://ka6cwlxhk8jr" path="res://assets/textures/ui-icons/lock.svg" id="7_lock"]
+[ext_resource type="Texture2D" uid="uid://bstnds573cu1e" path="res://assets/textures/ui-icons/trash.svg" id="8_trash"]
+[ext_resource type="Texture2D" uid="uid://s8s4c260vsrm" path="res://assets/textures/ui-icons/file-text.svg" id="9_file"]
 [ext_resource type="Shader" uid="uid://cnyumiybq1htl" path="res://resources/shaders/ui/horizontal_tile.gdshader" id="20_htile"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_htile"]
 shader = ExtResource("20_htile")
 
-[node name="Profile" type="Control" unique_id=1423770553 node_paths=PackedStringArray("_avatar", "_usernameLabel", "_memberSinceLabel", "_descriptionLabel", "_aboutCard")]
+[node name="Profile" type="Control" unique_id=1423770553 node_paths=PackedStringArray("_avatar", "_usernameLabel", "_memberSinceLabel", "_descriptionLabel", "_aboutCard", "_logoutButton", "_privacyButton", "_termsButton", "_deleteAccountButton")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -25,6 +28,10 @@ _usernameLabel = NodePath("Scroll/Content/Body/Layout/Identity/Username")
 _memberSinceLabel = NodePath("Scroll/Content/Body/Layout/Identity/MemberSince")
 _descriptionLabel = NodePath("Scroll/Content/Body/Layout/About/Layout/Description")
 _aboutCard = NodePath("Scroll/Content/Body/Layout/About")
+_logoutButton = NodePath("Scroll/Content/Body/Layout/Logout")
+_privacyButton = NodePath("Scroll/Content/Body/Layout/Legal/PrivacyPolicy")
+_termsButton = NodePath("Scroll/Content/Body/Layout/Legal/Terms")
+_deleteAccountButton = NodePath("Scroll/Content/Body/Layout/DeleteAccount")
 
 [node name="Scroll" type="ScrollContainer" parent="." unique_id=117441775]
 layout_mode = 1
@@ -38,6 +45,7 @@ horizontal_scroll_mode = 0
 [node name="Content" type="VBoxContainer" parent="Scroll" unique_id=1119662154]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 0
 
 [node name="Hero" type="Control" parent="Scroll/Content" unique_id=1168799218]
@@ -90,6 +98,7 @@ stretch_mode = 1
 
 [node name="Body" type="MarginContainer" parent="Scroll/Content" unique_id=572777652]
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 20
@@ -141,3 +150,39 @@ custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 text = "Log out"
 icon = ExtResource("6_dexit")
+
+[node name="DeleteAccount" type="Button" parent="Scroll/Content/Body/Layout" unique_id=1764310923]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+text = "Delete account"
+icon = ExtResource("8_trash")
+
+[node name="Spacer" type="Control" parent="Scroll/Content/Body/Layout" unique_id=1764310925]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Legal" type="HBoxContainer" parent="Scroll/Content/Body/Layout" unique_id=1764310924]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="PrivacyPolicy" type="Button" parent="Scroll/Content/Body/Layout/Legal" unique_id=1764310921]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5176471, 0.5176471, 0.5176471, 1)
+theme_override_colors/icon_normal_color = Color(0.5176471, 0.5176471, 0.5176471, 1)
+theme_override_constants/icon_max_width = 16
+theme_override_font_sizes/font_size = 14
+text = "Privacy Policy"
+icon = ExtResource("7_lock")
+flat = true
+
+[node name="Terms" type="Button" parent="Scroll/Content/Body/Layout/Legal" unique_id=1764310922]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5176471, 0.5176471, 0.5176471, 1)
+theme_override_colors/icon_normal_color = Color(0.5176471, 0.5176471, 0.5176471, 1)
+theme_override_constants/icon_max_width = 16
+theme_override_font_sizes/font_size = 14
+text = "Terms of Service"
+icon = ExtResource("9_file")
+flat = true

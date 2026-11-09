@@ -84,7 +84,7 @@ public partial class UIChatLabel : RichTextLabel
 			text = $"{badgeBBCode}{(badgeBBCode.Length > 0 ? " " : "")}{nameText}: {Content}";
 		}
 
-		if (!string.IsNullOrEmpty(FontPath))
+		if (!string.IsNullOrEmpty(FontPath) && ResourceLoader.Exists(FontPath))
 			text = $"[font={FontPath}]{text}[/font]";
 
 		if (FontSize > 0)

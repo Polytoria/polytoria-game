@@ -151,10 +151,10 @@ public sealed partial class Globals : Node
 		UseLogRPC = OS.HasFeature("rpclog");
 		UseNetTrace = OS.HasFeature("nettrace");
 		UseNoHttp = OS.HasFeature("nohttp");
-		IsBetaBuild = OS.HasFeature("beta");
 		IsServerBuild = OS.HasFeature("server");
 		IsInGDEditor = OS.HasFeature("editor");
 		IsMobileBuild = OS.HasFeature("mobile");
+		IsBetaBuild = OS.HasFeature("beta") && !(IsMobileBuild && !OS.IsDebugBuild());
 		IsHeadless = DisplayServer.GetName() == "headless";
 		RenderingMethod = RenderingServer.GetCurrentRenderingMethod();
 

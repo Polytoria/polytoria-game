@@ -29,8 +29,10 @@ public partial class UIChatButton : Button
 		PutUnreadBadge();
 	}
 
-	private void OnNewChatMessage(Player _plr, string _msg)
+	private void OnNewChatMessage(Player plr, string _msg)
 	{
+		if (plr.IsMuted) return;
+
 		PutUnreadBadge();
 	}
 

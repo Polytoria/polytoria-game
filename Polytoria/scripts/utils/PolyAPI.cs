@@ -22,6 +22,11 @@ public static class PolyAPI
 		_client.DefaultRequestHeaders.Add("Authorization", "Bearer " + userToken);
 	}
 
+	public static void ClearAuthToken()
+	{
+		_client.DefaultRequestHeaders.Remove("Authorization");
+	}
+
 	public static Task<APIUserInfo> GetUserFromID(int userID)
 	{
 		return _client.GetFromJsonAsync(
