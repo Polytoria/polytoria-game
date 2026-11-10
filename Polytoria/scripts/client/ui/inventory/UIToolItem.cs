@@ -183,7 +183,7 @@ public partial class UIToolItem : Button
 
 	private void OnToolPropChanged(string propName)
 	{
-		if (propName == "Name")
+		if (propName == "Name" || propName == "DisplayName")
 		{
 			UpdateName();
 		}
@@ -191,7 +191,8 @@ public partial class UIToolItem : Button
 
 	private void UpdateName()
 	{
-		_toolNameLabel.Text = LinkedTool.Name;
+		var name = LinkedTool.DisplayName;
+		_toolNameLabel.Text = name != string.Empty ? name : LinkedTool.Name;
 	}
 
 	private void OnToolEquipped()
