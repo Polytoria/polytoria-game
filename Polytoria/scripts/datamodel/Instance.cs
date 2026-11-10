@@ -102,7 +102,7 @@ public partial class Instance : NetworkedObject
 			if (Root != null && value != null)
 			{
 				oldParentIsTemp = oldParent == Root.TemporaryContainer;
-				chunkOverride = Root.Network.IsServer && oldParentIsTemp && !AutoReplicate;
+				chunkOverride = Root.Network != null && Root.Network.IsServer && oldParentIsTemp && !AutoReplicate;
 				isTemp = value == Root.TemporaryContainer || value.IsDescendantOf(Root.TemporaryContainer);
 
 				if (IsInTemporary && !isTemp)
