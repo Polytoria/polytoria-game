@@ -14,10 +14,24 @@ public struct APIFriendRequest
 	public int FriendID { get; set; }
 }
 
+public struct APIFriendUser
+{
+	[JsonPropertyName("id")]
+	public int Id { get; set; }
+	[JsonPropertyName("username")]
+	public string Username { get; set; }
+	[JsonPropertyName("thumbnail")]
+	public string? Thumbnail { get; set; }
+}
+
 public struct APIAreFriendsResponse
 {
 	[JsonPropertyName("areFriends")]
 	public bool AreFriends { get; set; }
+	[JsonPropertyName("friendsSince")]
+	public string? FriendsSince { get; set; }
+	[JsonPropertyName("user")]
+	public APIFriendUser? User { get; set; }
 }
 
 [JsonSerializable(typeof(APIFriendRequest))]
