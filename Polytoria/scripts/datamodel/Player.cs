@@ -52,6 +52,7 @@ public sealed partial class Player : NPC
 	private bool _useHeadTurning = false;
 	private int _userID;
 	private bool _useBubbleChat = true;
+	private bool _chatBubbleVisible = true;
 	private bool _autoLoadAppearance = true;
 	private bool _allowAnimationWhileMoving = false;
 	private PlayerRotationModeEnum _rotationMode = PlayerRotationModeEnum.Automatic;
@@ -241,7 +242,7 @@ public sealed partial class Player : NPC
 		set
 		{
 			_useBubbleChat = value;
-			_bubbleChat?.Visible = _useBubbleChat;
+			UpdateChatBubbleVisibility();
 			OnPropertyChanged();
 		}
 	}
@@ -301,6 +302,23 @@ public sealed partial class Player : NPC
 			_rotationMode = value;
 			OnPropertyChanged();
 		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool ChatBubbleVisible
+	{
+		get => _chatBubbleVisible;
+		set
+		{
+			_chatBubbleVisible = value;
+			UpdateChatBubbleVisibility();
+			OnPropertyChanged();
+		}
+	}
+
+	private void UpdateChatBubbleVisibility()
+	{
+		_bubbleChat.Visible = _useBubbleChat && _chatBubbleVisible;
 	}
 
 	[ScriptProperty]
@@ -486,7 +504,7 @@ public sealed partial class Player : NPC
 
 		_bubbleChat = Globals.CreateInstanceFromScene<BubbleChat>(BubbleChatScene);
 		_bubbleChat.TargetPlayer = this;
-		_bubbleChat.Visible = _useBubbleChat;
+		ChatBubbleVisible = _useBubbleChat;
 		GDNode.AddChild(_bubbleChat, @internal: Node.InternalMode.Back);
 		excludedBoundNodes.Add(_bubbleChat);
 	}
@@ -955,16 +973,14 @@ public sealed partial class Player : NPC
 
 	private void OnFirstPersonEntered()
 	{
-		if (Character == null) return;
-		Character.GDNode3D.Visible = false;
-		_bubbleChat.Visible = false;
+		Character?.Visible = false;
+		ChatBubbleVisible = false;
 	}
 
 	private void OnFirstPersonExited()
 	{
-		if (Character == null) return;
-		Character.GDNode3D.Visible = true;
-		_bubbleChat.Visible = true;
+		Character?.Visible = true;
+		ChatBubbleVisible = true;
 	}
 
 	public async Task WarpToSpawnPoint()
