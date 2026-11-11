@@ -42,7 +42,7 @@ public partial class CreatorSession : Node, IDisposable
 		""**/*.meta"": true
     }
 }";
-
+	/* these "" strings are messing with syntax highlighting with a comment, this comment should fix that */
 	private static int _worldSessionCounter = 0;
 
 	private Timer _backupTimer = null!;
@@ -320,7 +320,13 @@ public partial class CreatorSession : Node, IDisposable
 			// Load world
 			try
 			{
-				PolyFormat.LoadWorld(root, worldData, migrateCoords);
+				PolyFormat.PolyRootData? data = PolyFormat.LoadWorld(root, worldData, migrateCoords);
+				if (data != null)
+				{
+					string version = data.Value.Version;
+					ProjectManager.LoadDefaultScripts(this, version);
+					ProjectManager.AddDefaultInstances(this, root, version);
+				}
 				root.InvokeReady();
 			}
 			catch (Exception ex)
@@ -358,7 +364,7 @@ public partial class CreatorSession : Node, IDisposable
 		root.ForceDelete();
 	}
 
-	public World? OpenMainWorld(World? worldOverride = null)
+	public World OpenMainWorld(World? worldOverride = null)
 	{
 		return OpenWorld(Metadata.MainWorld, worldOverride);
 	}
@@ -429,9 +435,9 @@ public partial class CreatorSession : Node, IDisposable
 		return File.GetAttributes(GlobalizePath(path));
 	}
 
-	public void CreateScript(string atPath)
+	public string? CreateScript(string atPath)
 	{
-		if (!atPath.EndsWith(".luau")) return;
+		if (!atPath.EndsWith(".luau")) return null;
 		string scriptPath = Path.Join(ProjectFolderPath, atPath).SanitizePath();
 		string relativeScriptPath = Path.GetRelativePath(ProjectFolderPath, scriptPath).SanitizePath();
 
@@ -459,7 +465,7 @@ return module";
 
 		if (CreatorService.Interface.PendingCreateScriptAt != null)
 		{
-			if (World.Current == null) return;
+			if (World.Current == null) return null;
 			World currentGame = World.Current;
 			Script? scriptToCreate = null;
 			switch (scriptType)
@@ -490,6 +496,8 @@ return module";
 		FileBrowserTab.BrowserTree.AutoSelects.Clear();
 		FileBrowserTab.BrowserTree.AutoSelects.Add(relativeScriptPath);
 		RescanFolder();
+
+		return scriptPath;
 	}
 
 	public async Task CreateWorld(string atPath)
