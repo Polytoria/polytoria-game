@@ -999,7 +999,7 @@ public sealed partial class Player : NPC
 					0
 				);
 				while (Root.Environment.CurrentCamera == null) await Task.Delay(100);
-				Root.Environment.CurrentCamera.RotationOffset = new Vector3(
+				Root.Environment.CurrentCamera.Rotation += new Vector3(
 					0,
 					Root.Entry.DebugSpawnRot.Value,
 					0
