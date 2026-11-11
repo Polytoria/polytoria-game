@@ -15,6 +15,17 @@ public partial class BodyRotation : Instance
 	private float _force = 0;
 	private float _acceptanceAngle = 5;
 
+	[ScriptProperty, CloneIgnore, SaveIgnore]
+	public Quaternion TargetQuaternion
+	{
+		get => _targetQuaternion;
+		set
+		{
+			_targetQuaternion = value;
+			OnPropertyChanged();
+		}
+	}
+
 	[Editable, ScriptProperty]
 	public Vector3 TargetRotation
 	{
