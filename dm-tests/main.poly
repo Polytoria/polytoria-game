@@ -1,5 +1,5 @@
 {
-  "Version": "2.0.21\u002Bdev",
+  "Version": "2.0.22\u002Bdev",
   "FileType": 0,
   "Objects": [
     {
@@ -28,17 +28,20 @@
               "ClassName": "Camera",
               "ID": "aaa76f8a-2883-425c-8fff-d076245e0c2d",
               "Properties": {
+                "CanLock": true,
                 "PositionOffset": [
                   0,
                   0,
                   0
                 ],
+                "QuaternionOffset": [
+                  9223512776490680319
+                ],
                 "RotationOffset": [
-                  0,
+                  -0,
                   0,
                   0
                 ],
-                "CanLock": true,
                 "SensitivityMultiplier": 1,
                 "LocalPosition": [
                   0,
@@ -66,22 +69,23 @@
               "ClassName": "Part",
               "ID": "00dfbee5-3674-4d2e-898f-6435dfa2b39b",
               "Properties": {
-                "Material": 5,
                 "Color": "aeff9aff",
-                "Velocity": [
-                  -0,
-                  0,
-                  0
-                ],
+                "Material": 5,
                 "AngularVelocity": [
                   0,
                   -0,
                   -0
                 ],
+                "Velocity": [
+                  -0,
+                  0,
+                  0
+                ],
                 "Anchored": true,
                 "CanCollide": true,
                 "CollisionLayers": 1,
                 "CollisionMask": 1,
+                "RayPassthrough": 0,
                 "LocalPosition": [
                   -7.9231944E-07,
                   0,
@@ -109,23 +113,24 @@
               "ClassName": "Part",
               "ID": "cd4fb8a1-e184-4188-ac4d-be81abba8989",
               "Properties": {
-                "Material": 2,
                 "Color": "ffffffff",
+                "Material": 2,
                 "IsSpawn": true,
-                "Velocity": [
-                  -0,
-                  0,
-                  0
-                ],
                 "AngularVelocity": [
                   0,
                   -0,
                   -0
                 ],
+                "Velocity": [
+                  -0,
+                  0,
+                  0
+                ],
                 "Anchored": true,
                 "CanCollide": true,
                 "CollisionLayers": 1,
                 "CollisionMask": 1,
+                "RayPassthrough": 0,
                 "LocalPosition": [
                   0,
                   3,
@@ -223,20 +228,21 @@
                   "ID": "eed179a1-a73a-44db-af9d-3d90e5df6cb1",
                   "Properties": {
                     "Color": "ffffffff",
-                    "Velocity": [
-                      -0,
-                      0,
-                      0
-                    ],
                     "AngularVelocity": [
                       0,
                       -0,
                       -0
                     ],
+                    "Velocity": [
+                      -0,
+                      0,
+                      0
+                    ],
                     "Anchored": true,
                     "CanCollide": true,
                     "CollisionLayers": 1,
                     "CollisionMask": 1,
+                    "RayPassthrough": 0,
                     "LocalPosition": [
                       -1.5,
                       0.6666665,
@@ -264,20 +270,21 @@
                   "ID": "736dec07-c830-4531-8ce8-fb508bad0f53",
                   "Properties": {
                     "Color": "ffffffff",
-                    "Velocity": [
-                      -0,
-                      0,
-                      0
-                    ],
                     "AngularVelocity": [
                       0,
                       -0,
                       -0
                     ],
+                    "Velocity": [
+                      -0,
+                      0,
+                      0
+                    ],
                     "Anchored": true,
                     "CanCollide": true,
                     "CollisionLayers": 1,
                     "CollisionMask": 1,
+                    "RayPassthrough": 0,
                     "LocalPosition": [
                       1.5,
                       -1.3333335,
@@ -305,20 +312,21 @@
                   "ID": "817325ce-6f7b-4607-919f-fc1a8b7833f2",
                   "Properties": {
                     "Color": "ffffffff",
-                    "Velocity": [
-                      -0,
-                      0,
-                      0
-                    ],
                     "AngularVelocity": [
                       0,
                       -0,
                       -0
                     ],
+                    "Velocity": [
+                      -0,
+                      0,
+                      0
+                    ],
                     "Anchored": true,
                     "CanCollide": true,
                     "CollisionLayers": 1,
                     "CollisionMask": 1,
+                    "RayPassthrough": 0,
                     "LocalPosition": [
                       0,
                       0.6666665,
@@ -349,9 +357,9 @@
               "ClassName": "GUI",
               "ID": "37e92f6b-4471-4843-8a8a-e5f1d9c1df26",
               "Properties": {
+                "AvoidCoreUI": false,
                 "Visible": true,
                 "ZIndex": 0,
-                "AvoidCoreUI": false,
                 "Tags": []
               },
               "Children": [],
@@ -363,9 +371,9 @@
               "ClassName": "ServerScript",
               "ID": "6f6c4203-5947-48e4-b7cd-9f6ef0777af9",
               "Properties": {
+                "Compatibility": false,
                 "IsEnabled": true,
                 "LinkedScript": "a93b913c-6f06-4bad-8c9b-7931e439569f",
-                "Compatibility": false,
                 "Tags": []
               },
               "Children": [],
@@ -401,20 +409,21 @@
                   "ID": "deeae264-4abb-4bdf-8b46-52a32edb7a97",
                   "Properties": {
                     "Color": "ffffffff",
-                    "Velocity": [
-                      0,
-                      0,
-                      0
-                    ],
                     "AngularVelocity": [
                       0,
                       -0,
                       -0
                     ],
+                    "Velocity": [
+                      0,
+                      0,
+                      0
+                    ],
                     "Anchored": true,
                     "CanCollide": true,
                     "CollisionLayers": 1,
                     "CollisionMask": 1,
+                    "RayPassthrough": 0,
                     "LocalPosition": [
                       0,
                       0,
@@ -442,20 +451,21 @@
                   "ID": "75462023-371d-4956-a6b2-ba7e730b077c",
                   "Properties": {
                     "Color": "ffffffff",
-                    "Velocity": [
-                      0,
-                      0,
-                      0
-                    ],
                     "AngularVelocity": [
                       0,
                       -0,
                       -0
                     ],
+                    "Velocity": [
+                      0,
+                      0,
+                      0
+                    ],
                     "Anchored": true,
                     "CanCollide": true,
                     "CollisionLayers": 1,
                     "CollisionMask": 1,
+                    "RayPassthrough": 0,
                     "LocalPosition": [
                       0,
                       0,
@@ -483,20 +493,21 @@
                   "ID": "606f1f2b-afeb-49a9-ae0d-61a1b66aad01",
                   "Properties": {
                     "Color": "ffffffff",
-                    "Velocity": [
-                      0,
-                      0,
-                      0
-                    ],
                     "AngularVelocity": [
                       0,
                       -0,
                       -0
                     ],
+                    "Velocity": [
+                      0,
+                      0,
+                      0
+                    ],
                     "Anchored": true,
                     "CanCollide": true,
                     "CollisionLayers": 1,
                     "CollisionMask": 1,
+                    "RayPassthrough": 0,
                     "LocalPosition": [
                       0,
                       0,
@@ -523,39 +534,45 @@
                   "ClassName": "NPC",
                   "ID": "297651b0-836e-4ebd-87c9-99363fcc1e6c",
                   "Properties": {
-                    "Velocity": [
-                      0,
-                      0,
-                      0
-                    ],
-                    "SeatOffset": [
-                      0,
-                      1.5,
-                      0
-                    ],
+                    "Character": "c4f96fd9-aba4-4141-80e8-f4bb0086646d",
+                    "DisplayName": "",
                     "Health": 100,
-                    "MaxHealth": 100,
                     "JumpPower": 36,
-                    "WalkSpeed": 16,
-                    "UseNametag": true,
+                    "JumpSound": "ddc48a2c-a146-4bed-8bc1-f279e0e0e46f",
+                    "MaxHealth": 100,
                     "NametagOffset": [
                       0,
                       0,
                       0
                     ],
                     "NametagVisibleRadius": 40,
-                    "DisplayName": "",
-                    "JumpSound": "ddc48a2c-a146-4bed-8bc1-f279e0e0e46f",
-                    "Character": "c4f96fd9-aba4-4141-80e8-f4bb0086646d",
+                    "SeatOffset": [
+                      0,
+                      1.5,
+                      0
+                    ],
+                    "UseNametag": true,
+                    "Velocity": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "Vertical": [
+                      0,
+                      1,
+                      0
+                    ],
+                    "WalkSpeed": 16,
                     "Anchored": false,
-                    "CanCollide": true,
-                    "CollisionLayers": 1,
-                    "CollisionMask": 3,
                     "AngularVelocity": [
                       0,
                       -0,
                       -0
                     ],
+                    "CanCollide": true,
+                    "CollisionLayers": 1,
+                    "CollisionMask": 3,
+                    "RayPassthrough": 0,
                     "LocalPosition": [
                       0,
                       3,
@@ -580,11 +597,11 @@
                       "ID": "c4f96fd9-aba4-4141-80e8-f4bb0086646d",
                       "Properties": {
                         "HeadColor": "ffffffff",
-                        "TorsoColor": "ffffffff",
                         "LeftArmColor": "ffffffff",
-                        "RightArmColor": "ffffffff",
                         "LeftLegColor": "ffffffff",
+                        "RightArmColor": "ffffffff",
                         "RightLegColor": "ffffffff",
+                        "TorsoColor": "ffffffff",
                         "Animator": "6ff8f25d-eec7-4398-a265-0a80f845247c",
                         "LocalPosition": [
                           0,
@@ -624,17 +641,17 @@
                       "ClassName": "Sound",
                       "ID": "ddc48a2c-a146-4bed-8bc1-f279e0e0e46f",
                       "Properties": {
+                        "AttenuationMode": 0,
                         "Audio": "d3e89ca2-fdcb-40e4-b44b-dada777d3496",
-                        "Volume": 0.5,
-                        "Pitch": 1,
-                        "Pan": 0,
                         "Autoplay": false,
                         "Loop": false,
                         "LoopStart": 0,
-                        "PlayInWorld": true,
-                        "Paused": false,
                         "MaxDistance": 60,
-                        "AttenuationMode": 0,
+                        "Pan": 0,
+                        "Paused": false,
+                        "Pitch": 1,
+                        "PlayInWorld": true,
+                        "Volume": 0.5,
                         "LocalPosition": [
                           0,
                           0,
@@ -663,6 +680,538 @@
               ],
               "LinkedModel": null,
               "IsLinkedChild": false
+            },
+            {
+              "Name": "OverlapSuite",
+              "ClassName": "Model",
+              "ID": "98f3085c-0afc-420d-8f86-f4688b5086b3",
+              "Properties": {
+                "LocalPosition": [
+                  17,
+                  3.5,
+                  -11
+                ],
+                "LocalRotation": [
+                  -0,
+                  0,
+                  0
+                ],
+                "LocalSize": [
+                  1,
+                  1,
+                  1
+                ],
+                "Tags": []
+              },
+              "Children": [
+                {
+                  "Name": "Grid",
+                  "ClassName": "Model",
+                  "ID": "19c40b8b-d46b-4b72-b3e8-5c3ba3248f3f",
+                  "Properties": {
+                    "LocalPosition": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "LocalRotation": [
+                      -0,
+                      0,
+                      0
+                    ],
+                    "LocalSize": [
+                      1,
+                      1,
+                      1
+                    ],
+                    "Tags": []
+                  },
+                  "Children": [
+                    {
+                      "Name": "Part",
+                      "ClassName": "Part",
+                      "ID": "b7311be8-edf3-43b4-a039-41afa1d3d48d",
+                      "Properties": {
+                        "Color": "ffffffff",
+                        "AngularVelocity": [
+                          0,
+                          -0,
+                          -0
+                        ],
+                        "Velocity": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "Anchored": true,
+                        "CanCollide": true,
+                        "CollisionLayers": 1,
+                        "CollisionMask": 1,
+                        "RayPassthrough": 0,
+                        "LocalPosition": [
+                          -2,
+                          0,
+                          2
+                        ],
+                        "LocalRotation": [
+                          -0,
+                          0,
+                          0
+                        ],
+                        "LocalSize": [
+                          2,
+                          2,
+                          2
+                        ],
+                        "Tags": [
+                          "OverlapTargetB"
+                        ]
+                      },
+                      "Children": [],
+                      "LinkedModel": null,
+                      "IsLinkedChild": false
+                    },
+                    {
+                      "Name": "Part2",
+                      "ClassName": "Part",
+                      "ID": "ad56f332-7a8d-4387-98d8-6a84f02414c5",
+                      "Properties": {
+                        "Color": "ffffffff",
+                        "AngularVelocity": [
+                          0,
+                          -0,
+                          -0
+                        ],
+                        "Velocity": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "Anchored": true,
+                        "CanCollide": true,
+                        "CollisionLayers": 1,
+                        "CollisionMask": 1,
+                        "RayPassthrough": 0,
+                        "LocalPosition": [
+                          0,
+                          0,
+                          2
+                        ],
+                        "LocalRotation": [
+                          -0,
+                          0,
+                          0
+                        ],
+                        "LocalSize": [
+                          2,
+                          2,
+                          2
+                        ],
+                        "Tags": [
+                          "OverlapTargetB"
+                        ]
+                      },
+                      "Children": [],
+                      "LinkedModel": null,
+                      "IsLinkedChild": false
+                    },
+                    {
+                      "Name": "Part3",
+                      "ClassName": "Part",
+                      "ID": "0b6b97ea-8a43-42c2-b7bb-4592614c1938",
+                      "Properties": {
+                        "Color": "ffffffff",
+                        "AngularVelocity": [
+                          0,
+                          -0,
+                          -0
+                        ],
+                        "Velocity": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "Anchored": true,
+                        "CanCollide": true,
+                        "CollisionLayers": 1,
+                        "CollisionMask": 1,
+                        "RayPassthrough": 0,
+                        "LocalPosition": [
+                          2,
+                          0,
+                          2
+                        ],
+                        "LocalRotation": [
+                          -0,
+                          0,
+                          0
+                        ],
+                        "LocalSize": [
+                          2,
+                          2,
+                          2
+                        ],
+                        "Tags": []
+                      },
+                      "Children": [],
+                      "LinkedModel": null,
+                      "IsLinkedChild": false
+                    },
+                    {
+                      "Name": "Part4",
+                      "ClassName": "Part",
+                      "ID": "ea1e344f-7082-48a8-8e64-ed8b3e0355de",
+                      "Properties": {
+                        "Color": "ffffffff",
+                        "AngularVelocity": [
+                          0,
+                          -0,
+                          -0
+                        ],
+                        "Velocity": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "Anchored": true,
+                        "CanCollide": true,
+                        "CollisionLayers": 1,
+                        "CollisionMask": 1,
+                        "RayPassthrough": 0,
+                        "LocalPosition": [
+                          -2,
+                          0,
+                          0
+                        ],
+                        "LocalRotation": [
+                          -0,
+                          0,
+                          0
+                        ],
+                        "LocalSize": [
+                          2,
+                          2,
+                          2
+                        ],
+                        "Tags": [
+                          "OverlapTargetB",
+                          "OverlapTargetR"
+                        ]
+                      },
+                      "Children": [],
+                      "LinkedModel": null,
+                      "IsLinkedChild": false
+                    },
+                    {
+                      "Name": "Part5",
+                      "ClassName": "Part",
+                      "ID": "935f0b68-46f7-4a5a-aa4a-a7f34560a4b6",
+                      "Properties": {
+                        "Color": "ffffffff",
+                        "AngularVelocity": [
+                          0,
+                          -0,
+                          -0
+                        ],
+                        "Velocity": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "Anchored": true,
+                        "CanCollide": true,
+                        "CollisionLayers": 1,
+                        "CollisionMask": 1,
+                        "RayPassthrough": 0,
+                        "LocalPosition": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "LocalRotation": [
+                          -0,
+                          0,
+                          0
+                        ],
+                        "LocalSize": [
+                          2,
+                          2,
+                          2
+                        ],
+                        "Tags": [
+                          "OverlapTargetB",
+                          "OverlapTargetR"
+                        ]
+                      },
+                      "Children": [],
+                      "LinkedModel": null,
+                      "IsLinkedChild": false
+                    },
+                    {
+                      "Name": "Part6",
+                      "ClassName": "Part",
+                      "ID": "0e9cefe5-baeb-4c63-8191-fcaa0da21a9a",
+                      "Properties": {
+                        "Color": "ffffffff",
+                        "AngularVelocity": [
+                          0,
+                          -0,
+                          -0
+                        ],
+                        "Velocity": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "Anchored": true,
+                        "CanCollide": true,
+                        "CollisionLayers": 1,
+                        "CollisionMask": 1,
+                        "RayPassthrough": 0,
+                        "LocalPosition": [
+                          2,
+                          0,
+                          0
+                        ],
+                        "LocalRotation": [
+                          -0,
+                          0,
+                          0
+                        ],
+                        "LocalSize": [
+                          2,
+                          2,
+                          2
+                        ],
+                        "Tags": [
+                          "OverlapTargetR"
+                        ]
+                      },
+                      "Children": [],
+                      "LinkedModel": null,
+                      "IsLinkedChild": false
+                    },
+                    {
+                      "Name": "Part7",
+                      "ClassName": "Part",
+                      "ID": "7aaad477-545a-43cf-82dd-d7c0b628fa1f",
+                      "Properties": {
+                        "Color": "ffffffff",
+                        "AngularVelocity": [
+                          0,
+                          -0,
+                          -0
+                        ],
+                        "Velocity": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "Anchored": true,
+                        "CanCollide": true,
+                        "CollisionLayers": 1,
+                        "CollisionMask": 1,
+                        "RayPassthrough": 0,
+                        "LocalPosition": [
+                          -2,
+                          0,
+                          -2
+                        ],
+                        "LocalRotation": [
+                          -0,
+                          0,
+                          0
+                        ],
+                        "LocalSize": [
+                          2,
+                          2,
+                          2
+                        ],
+                        "Tags": []
+                      },
+                      "Children": [],
+                      "LinkedModel": null,
+                      "IsLinkedChild": false
+                    },
+                    {
+                      "Name": "Part8",
+                      "ClassName": "Part",
+                      "ID": "678754c0-9385-4a53-bc0b-aeffa98e89ac",
+                      "Properties": {
+                        "Color": "ffffffff",
+                        "AngularVelocity": [
+                          0,
+                          -0,
+                          -0
+                        ],
+                        "Velocity": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "Anchored": true,
+                        "CanCollide": true,
+                        "CollisionLayers": 1,
+                        "CollisionMask": 1,
+                        "RayPassthrough": 0,
+                        "LocalPosition": [
+                          0,
+                          0,
+                          -2
+                        ],
+                        "LocalRotation": [
+                          -0,
+                          0,
+                          0
+                        ],
+                        "LocalSize": [
+                          2,
+                          2,
+                          2
+                        ],
+                        "Tags": [
+                          "OverlapTargetB"
+                        ]
+                      },
+                      "Children": [],
+                      "LinkedModel": null,
+                      "IsLinkedChild": false
+                    },
+                    {
+                      "Name": "Part9",
+                      "ClassName": "Part",
+                      "ID": "02f168ae-63ac-46e6-9fca-427cdd6bfb43",
+                      "Properties": {
+                        "Color": "ffffffff",
+                        "AngularVelocity": [
+                          0,
+                          -0,
+                          -0
+                        ],
+                        "Velocity": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "Anchored": true,
+                        "CanCollide": true,
+                        "CollisionLayers": 1,
+                        "CollisionMask": 1,
+                        "RayPassthrough": 0,
+                        "LocalPosition": [
+                          2,
+                          0,
+                          -2
+                        ],
+                        "LocalRotation": [
+                          -0,
+                          0,
+                          0
+                        ],
+                        "LocalSize": [
+                          2,
+                          2,
+                          2
+                        ],
+                        "Tags": [
+                          "OverlapTargetB"
+                        ]
+                      },
+                      "Children": [],
+                      "LinkedModel": null,
+                      "IsLinkedChild": false
+                    }
+                  ],
+                  "LinkedModel": null,
+                  "IsLinkedChild": false
+                },
+                {
+                  "Name": "RedCheck",
+                  "ClassName": "Part",
+                  "ID": "53ec36c7-33aa-48ea-84e4-a8a7eb1aac07",
+                  "Properties": {
+                    "Color": "ff000080",
+                    "AngularVelocity": [
+                      0,
+                      -0,
+                      -0
+                    ],
+                    "Velocity": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "Anchored": true,
+                    "CanCollide": false,
+                    "CollisionLayers": 1,
+                    "CollisionMask": 1,
+                    "RayPassthrough": 0,
+                    "LocalPosition": [
+                      0,
+                      1,
+                      0
+                    ],
+                    "LocalRotation": [
+                      -0,
+                      0,
+                      0
+                    ],
+                    "LocalSize": [
+                      7,
+                      1,
+                      1
+                    ],
+                    "Tags": []
+                  },
+                  "Children": [],
+                  "LinkedModel": null,
+                  "IsLinkedChild": false
+                },
+                {
+                  "Name": "BlueCheck",
+                  "ClassName": "Part",
+                  "ID": "4a22d95e-29a9-4cdc-aed5-b9bc71282826",
+                  "Properties": {
+                    "Color": "0000ff80",
+                    "AngularVelocity": [
+                      0,
+                      -0,
+                      -0
+                    ],
+                    "Velocity": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "Anchored": true,
+                    "CanCollide": true,
+                    "CollisionLayers": 1,
+                    "CollisionMask": 1,
+                    "RayPassthrough": 0,
+                    "LocalPosition": [
+                      -0.558012,
+                      1,
+                      -0.033493996
+                    ],
+                    "LocalRotation": [
+                      -0,
+                      -30.000002,
+                      0
+                    ],
+                    "LocalSize": [
+                      1,
+                      2,
+                      5.5000005
+                    ],
+                    "Tags": []
+                  },
+                  "Children": [],
+                  "LinkedModel": null,
+                  "IsLinkedChild": false
+                }
+              ],
+              "LinkedModel": null,
+              "IsLinkedChild": false
             }
           ],
           "LinkedModel": null,
@@ -673,13 +1222,13 @@
           "ClassName": "Lighting",
           "ID": "1762c2d0-e6fe-4ace-92b5-4e9a6acb77f0",
           "Properties": {
-            "Skybox": 0,
-            "AmbientSource": 0,
             "AmbientColor": "00000000",
-            "FogEnabled": false,
+            "AmbientSource": 0,
             "FogColor": "00000000",
-            "FogStartDistance": 0,
+            "FogEnabled": false,
             "FogEndDistance": 0,
+            "FogStartDistance": 0,
+            "Skybox": 0,
             "Tags": []
           },
           "Children": [
@@ -688,12 +1237,12 @@
               "ClassName": "SunLight",
               "ID": "5f3df07f-79a2-47fd-9f05-80e088ec16c1",
               "Properties": {
-                "Enabled": true,
-                "Color": "fff4d6ff",
                 "Brightness": 1,
+                "Color": "fff4d6ff",
+                "Enabled": true,
                 "LightSize": 0,
-                "Specular": 0.5,
                 "Shadows": true,
+                "Specular": 0.5,
                 "LocalPosition": [
                   0,
                   15,
@@ -745,9 +1294,9 @@
               "ClassName": "ServerScript",
               "ID": "64619df7-eb8f-4557-813d-f18e31e79021",
               "Properties": {
+                "Compatibility": false,
                 "IsEnabled": true,
                 "LinkedScript": "89491b6c-e61c-4e5d-9c18-1dd92c755c27",
-                "Compatibility": false,
                 "Tags": []
               },
               "Children": [],
@@ -767,9 +1316,9 @@
                   "ClassName": "ServerScript",
                   "ID": "4e40b47c-7f6f-4189-84cf-1c980c5dc89a",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "8b8c5c05-ef99-4557-9f36-1ec640d8b490",
-                    "Compatibility": false,
                     "Tags": []
                   },
                   "Children": [],
@@ -781,9 +1330,9 @@
                   "ClassName": "ServerScript",
                   "ID": "06671fcb-e0c0-46f2-8161-7405520386b0",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "4610ce03-c257-46b8-9611-b4e9fdbdce3d",
-                    "Compatibility": false,
                     "Tags": []
                   },
                   "Children": [
@@ -792,9 +1341,9 @@
                       "ClassName": "ModuleScript",
                       "ID": "11878b54-fe6b-43b5-9e1a-fd40124087ea",
                       "Properties": {
+                        "Compatibility": false,
                         "IsEnabled": true,
                         "LinkedScript": "65b54b87-f927-410a-84a7-fce3500a9e55",
-                        "Compatibility": false,
                         "Tags": []
                       },
                       "Children": [],
@@ -810,9 +1359,9 @@
                   "ClassName": "ServerScript",
                   "ID": "35ef930d-22b4-4333-b361-14fd35413829",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "14d8d20b-9e14-41ab-a3ec-a986fe3af774",
-                    "Compatibility": false,
                     "Tags": []
                   },
                   "Children": [
@@ -821,9 +1370,9 @@
                       "ClassName": "ServerScript",
                       "ID": "ff3a9bf6-aa67-4058-b7de-d0737a5721ae",
                       "Properties": {
+                        "Compatibility": false,
                         "IsEnabled": true,
                         "LinkedScript": "bb09a7ec-0622-4d5f-a0cf-2a0f670e769d",
-                        "Compatibility": false,
                         "Tags": []
                       },
                       "Children": [],
@@ -839,9 +1388,9 @@
                   "ClassName": "ServerScript",
                   "ID": "b361c4d0-5db0-486e-8839-c6f189bced0e",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "78954961-43b1-4869-98c6-d63b5419c0ef",
-                    "Compatibility": false,
                     "Tags": []
                   },
                   "Children": [],
@@ -853,9 +1402,9 @@
                   "ClassName": "ServerScript",
                   "ID": "c9c7d7bc-9c00-4abb-a47c-79f18dda44ba",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "b47e708d-f9bb-4b77-b4d3-3156bc43693c",
-                    "Compatibility": false,
                     "Tags": []
                   },
                   "Children": [],
@@ -867,9 +1416,9 @@
                   "ClassName": "ServerScript",
                   "ID": "9193e434-e2ea-4e5d-bdaf-ec81327051dd",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "12d7528b-ef15-4ddf-8aec-e90a08f8b788",
-                    "Compatibility": false,
                     "Tags": []
                   },
                   "Children": [],
@@ -881,9 +1430,9 @@
                   "ClassName": "ServerScript",
                   "ID": "e83acfa3-a639-452a-b1a6-8b723345d3af",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "517dca2e-ad74-4b40-9bf3-b6a1bf5c3547",
-                    "Compatibility": false,
                     "Tags": []
                   },
                   "Children": [],
@@ -895,9 +1444,9 @@
                   "ClassName": "ServerScript",
                   "ID": "8c69d11b-edce-4199-9aa0-9ae4b6bebea8",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "3e4a781a-3db1-4c13-b402-d11b27b50613",
-                    "Compatibility": false,
                     "Tags": []
                   },
                   "Children": [],
@@ -909,9 +1458,9 @@
                   "ClassName": "ServerScript",
                   "ID": "6d1e1b8c-88f4-4d75-a2a2-9eb8ed6c6530",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "19551d6f-db85-41bf-9f2e-a47010ec6f09",
-                    "Compatibility": false,
                     "Tags": []
                   },
                   "Children": [],
@@ -923,9 +1472,9 @@
                   "ClassName": "ServerScript",
                   "ID": "829de6ed-5329-4528-9dc4-c25e07002cf0",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "37ff717d-dbf6-4836-a3be-bc336c3aac94",
-                    "Compatibility": false,
                     "Tags": []
                   },
                   "Children": [],
@@ -937,9 +1486,23 @@
                   "ClassName": "ServerScript",
                   "ID": "019e5197-71a2-44b0-837b-d0cf5a677e23",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "0f03a8a8-c46c-4d24-9d82-ea6d9bc607de",
+                    "Tags": []
+                  },
+                  "Children": [],
+                  "LinkedModel": null,
+                  "IsLinkedChild": false
+                },
+                {
+                  "Name": "OverlapBox",
+                  "ClassName": "ServerScript",
+                  "ID": "dbf7cc16-76cd-4ea1-82a0-1762e8550817",
+                  "Properties": {
                     "Compatibility": false,
+                    "IsEnabled": true,
+                    "LinkedScript": "78c1af03-3967-48ae-b189-f2a36f229890",
                     "Tags": []
                   },
                   "Children": [],
@@ -951,9 +1514,9 @@
                   "ClassName": "ServerScript",
                   "ID": "2a647b4c-9d7c-4ee8-8ba0-c90c231e36f8",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "c102ab47-bbfd-4273-a6a8-520ed7c2f5b7",
-                    "Compatibility": false,
                     "Tags": []
                   },
                   "Children": [],
@@ -965,9 +1528,9 @@
                   "ClassName": "ServerScript",
                   "ID": "82df70ed-5e52-417f-983c-affbba301887",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "506eea7c-40f9-43e7-9a07-f6602d81a6b9",
-                    "Compatibility": false,
                     "Tags": []
                   },
                   "Children": [],
@@ -979,9 +1542,9 @@
                   "ClassName": "ServerScript",
                   "ID": "fd5afceb-ada2-48b5-b10e-7c54bb7b5feb",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "37e77c09-86de-4e47-99e4-65d15a2cb6e0",
-                    "Compatibility": false,
                     "Tags": []
                   },
                   "Children": [],
@@ -993,9 +1556,9 @@
                   "ClassName": "ServerScript",
                   "ID": "eac8cbb1-30f9-415d-ba4c-b3a71dd8a4e5",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "802ab91a-e897-488c-918f-3eb7426f958e",
-                    "Compatibility": false,
                     "Tags": []
                   },
                   "Children": [],
@@ -1007,9 +1570,9 @@
                   "ClassName": "ServerScript",
                   "ID": "795cf821-3497-4ab1-b3b3-ff31b4fd4fdc",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "24ae6edd-ea4c-4b2d-a8e2-5f0bf2873ac5",
-                    "Compatibility": false,
                     "Tags": []
                   },
                   "Children": [],
@@ -1021,9 +1584,9 @@
                   "ClassName": "ServerScript",
                   "ID": "258ae160-116d-4f5f-bea5-980dd9bb944d",
                   "Properties": {
+                    "Compatibility": false,
                     "IsEnabled": true,
                     "LinkedScript": "f2e9ab36-6861-412d-a497-e316423a1c65",
-                    "Compatibility": false,
                     "Tags": []
                   },
                   "Children": [],
@@ -1065,26 +1628,26 @@
           "ClassName": "PlayerDefaults",
           "ID": "2967441f-e3ec-4b39-ac41-f1e78b4f8b49",
           "Properties": {
-            "MaxHealth": 100,
-            "WalkSpeed": 16,
-            "SprintSpeed": 25,
-            "JumpPower": 36,
-            "RespawnTime": 5,
+            "AutoLoadAppearance": true,
+            "CanMove": true,
             "ChatColor": "ffffffff",
             "ChatColorsEnabled": true,
-            "CanMove": true,
-            "StaminaBurn": 1.2,
-            "UseStamina": true,
-            "StaminaEnabled": true,
-            "Stamina": 0,
-            "MaxStamina": 3,
-            "StaminaRegen": 1.2,
+            "JumpPower": 36,
             "KeepInventory": false,
-            "UseHeadTurning": true,
-            "UseBubbleChat": true,
-            "AutoLoadAppearance": true,
             "LoadAppearanceTools": true,
+            "MaxHealth": 100,
+            "MaxStamina": 3,
             "MovementMode": 0,
+            "RespawnTime": 5,
+            "SprintSpeed": 25,
+            "Stamina": 0,
+            "StaminaBurn": 1.2,
+            "StaminaEnabled": true,
+            "StaminaRegen": 1.2,
+            "UseBubbleChat": true,
+            "UseHeadTurning": true,
+            "UseStamina": true,
+            "WalkSpeed": 16,
             "Tags": []
           },
           "Children": [
@@ -1119,8 +1682,8 @@
           "ClassName": "AchievementsService",
           "ID": "e257451b-c674-41b0-905e-eead37540c1e",
           "Properties": {
-            "UseAchievementSound": true,
             "NotifyAchievements": true,
+            "UseAchievementSound": true,
             "Tags": []
           },
           "Children": [],
@@ -1132,17 +1695,17 @@
           "ClassName": "CoreUIService",
           "ID": "1e50f39e-881b-4444-b137-2b90385018a5",
           "Properties": {
-            "CtrlLockCursor": 1,
-            "ChatBubbleRenderDistance": 40,
-            "UseUserCard": true,
-            "UseChat": true,
-            "UseHealthBar": true,
-            "UseLeaderboard": true,
-            "UseHotbar": true,
-            "UseBackpack": false,
-            "UseMenuButton": true,
-            "UseEmoteWheel": true,
             "CanRespawn": true,
+            "ChatBubbleRenderDistance": 40,
+            "CtrlLockCursor": 1,
+            "UseBackpack": false,
+            "UseChat": true,
+            "UseEmoteWheel": true,
+            "UseHealthBar": true,
+            "UseHotbar": true,
+            "UseLeaderboard": true,
+            "UseMenuButton": true,
+            "UseUserCard": true,
             "Tags": []
           },
           "Children": [],
