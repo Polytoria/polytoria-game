@@ -22,6 +22,7 @@ public sealed partial class Camera : Dynamic
 	public const float DefaultScrollSensitivity = 15.0f;
 	private const float TrackpadPinchZoomSensitivity = 0.75f;
 	private const float TrackpadPanSensitivity = 10.0f;
+	private static readonly float PitchMax = Mathf.DegToRad(89f);
 
 	// override default +Z forward orientation as that would be incorrect for the camera
 	[ScriptProperty] new public Vector3 Forward => -GetGlobalTransform().Basis.Z.Normalized();
@@ -53,24 +54,22 @@ public sealed partial class Camera : Dynamic
 	private float _far;
 
 	private float _moveSpeed = 8f;
-	private readonly float _rotateSpeed = 0.005f;
 	private Dynamic? _target = null;
 
 	private bool _isMouseCaptured;
 	private Vector2I _lastMousePosition;
 
-	private Vector2 _currentRotation = Vector2.Zero;
-	private Vector3 _currentMovement = Vector3.Zero;
+	private float _deltaPitch = 0f;
+	private float _deltaYaw = 0f;
 
-	private Vector3 _targetRotation = new(0, 180, 0);
+	private float _pitch = 0f;
+	private float _yaw = Mathf.Pi;
+
 	private float _targetZoom = DefaultZoomDistance;
 	private float _currentZoom = DefaultZoomDistance;
 	private float _distance = DefaultZoomDistance;
 	private bool _turning = false;
 	private Vector2 _turnStartPos;
-	private Node3D _turnX = null!;
-	private Node3D _turnY = null!;
-	private Node3D _turnY2 = null!;
 	private InputHelper _inputHelper = null!;
 
 	internal Camera3D Camera3D = null!;
@@ -240,6 +239,7 @@ public sealed partial class Camera : Dynamic
 		get => _rotationOffset;
 		set
 		{
+			Quaternion *= value * _rotationOffset.Inverse();
 			_rotationOffset = value;
 			OnPropertyChanged();
 		}
@@ -248,10 +248,10 @@ public sealed partial class Camera : Dynamic
 	[Editable, ScriptProperty]
 	public Vector3 RotationOffset
 	{
-		get => MathUtils.Vector3RadToDeg(_rotationOffset.GetEuler());
+		get => QuaternionOffset.GetEuler().RadToDeg();
 		set
 		{
-			_rotationOffset = Quaternion.FromEuler(MathUtils.Vector3DegToRad(value));
+			QuaternionOffset = Quaternion.FromEuler(value.DegToRad());
 			OnPropertyChanged();
 		}
 	}
@@ -289,11 +289,9 @@ public sealed partial class Camera : Dynamic
 		}
 	}
 
+	// TODO: shared sensitivity?
 	[ScriptProperty]
-	public float Sensitivity
-	{
-		get => ClientSettingsService.Instance.Get<float>(ClientSettingKeys.General.CameraSensitivity) * _sensitivityMultipler;
-	}
+	public float Sensitivity => Root.SessionType == World.SessionTypeEnum.Creator ? 1 : ClientSettingsService.Instance.Get<float>(ClientSettingKeys.General.CameraSensitivity) * _sensitivityMultipler;
 
 	[ScriptProperty]
 	public float HorizontalSpeed
@@ -430,13 +428,6 @@ public sealed partial class Camera : Dynamic
 
 		GDNode3D.AddChild(Camera3D = new());
 
-		_turnX = new Node3D();
-		_turnY = new Node3D();
-		_turnY2 = new Node3D();
-		_turnX.AddChild(_turnY);
-		_turnX.AddChild(_turnY2);
-		GDNode3D.GetParent().AddChild(_turnX);
-
 		FOV = 75;
 
 		if (Root.Input != null)
@@ -457,10 +448,6 @@ public sealed partial class Camera : Dynamic
 		{
 			Root.Input.GameFocused.Disconnect(OnGameFocused);
 			Root.Input.GameUnfocused.Disconnect(OnGameUnfocused);
-		}
-		if (Node.IsInstanceValid(_turnX))
-		{
-			_turnX.QueueFree();
 		}
 		base.PreDelete();
 	}
@@ -491,18 +478,13 @@ public sealed partial class Camera : Dynamic
 				}
 
 				// Handle Controller Right stick input
-				float xAxis = Input.GetAxis("cam_rightward", "cam_leftward");
-				float yAxis = Input.GetAxis("cam_downward", "cam_upward");
+				Vector2 axis = Input.GetVector("cam_rightward", "cam_leftward", "cam_downward", "cam_upward");
 
-				_targetRotation += new Vector3(yAxis * VerticalSpeed * 2, xAxis * HorizontalSpeed * 3, 0) * (Sensitivity * (float)delta);
-				LimitRotation();
+				RotateCamera(axis, 2 * (float)delta, 3 * (float)delta);
 			}
 
 			Vector3 computedPosition = Target.Position + PositionOffset;
-			Quaternion computedRotation = QuaternionOffset * Quaternion.FromEuler(MathUtils.Vector3DegToRad(_targetRotation));
-
-			_turnX.GlobalPosition = computedPosition;
-			_turnX.Quaternion = computedRotation;
+			Quaternion currentQuaternion = UpdateRotation();
 
 			LimitZoomDistance();
 
@@ -541,11 +523,9 @@ public sealed partial class Camera : Dynamic
 			_currentZoom = Mathf.Lerp(_currentZoom, _targetZoom, MathUtils.ExpDecay((float)delta, ScrollLerpSpeed));
 			float finalizedZoom = _currentZoom;
 
-			_turnY2.Position = new Vector3(0, 0, _currentZoom);
-
 			if (!ClipThroughWalls)
 			{
-				Vector3 desiredCamPos = _turnY2.GlobalPosition;
+				Vector3 desiredCamPos = computedPosition + (currentQuaternion * new Vector3(0, 0, _currentZoom));
 				Vector3 origin = computedPosition;
 
 				PhysicsDirectSpaceState3D spaceState = Camera3D.GetWorld3D().DirectSpaceState;
@@ -570,9 +550,7 @@ public sealed partial class Camera : Dynamic
 
 			_distance = finalizedZoom;
 
-			_turnY.Position = new Vector3(0, 0, _distance);
-
-			Vector3 posSetto = _turnY.GlobalPosition;
+			Vector3 posSetto = computedPosition + (currentQuaternion * new Vector3(0, 0, _distance));
 
 			// Apply position/rotation
 			if (FollowLerp)
@@ -583,53 +561,39 @@ public sealed partial class Camera : Dynamic
 			{
 				GDNode3D.GlobalPosition = posSetto;
 			}
-
-			GDNode3D.GlobalBasis = _turnY.GlobalBasis;
 		}
 		else if (Mode == CameraModeEnum.Free)
 		{
+			Quaternion currentQuaternion = UpdateRotation();
+
 			if (Input.IsKeyPressed(Key.Ctrl)) return;
 			if (!Root.Input.IsGameFocused) return;
 			Vector2 horizontalInput = Input.GetVector("leftward", "rightward", "forward", "backward");
 			float verticalInput = Input.GetAxis("downward", "upward");
 
-			float speedMultipler = 1;
+			Vector3 movement = new(horizontalInput.X, verticalInput, horizontalInput.Y);
 
-			if (Input.IsActionPressed("freelook_shift"))
-			{
-				speedMultipler = 1.75f;
-			}
+			if (movement == Vector3.Zero) return;
 
-			_currentMovement.X = horizontalInput.X;
-			_currentMovement.Y = verticalInput;
-			_currentMovement.Z = horizontalInput.Y;
+			float speedMultiplier = Input.IsActionPressed("freelook_shift") ? 1.75f : 1;
 
-			if (_currentMovement == Vector3.Zero && _currentRotation == Vector2.Zero)
-			{
-				return;
-			}
-
-			Transform3D temp = GetGlobalTransform();
-
-			if (_currentRotation.X != 0)
-			{
-				temp.Basis = new Basis(Vector3.Up, _currentRotation.X * _rotateSpeed) * temp.Basis;
-				_currentRotation.X = 0;
-			}
-
-			if (_currentRotation.Y != 0)
-			{
-				temp.Basis *= new Basis(Vector3.Right, _currentRotation.Y * _rotateSpeed);
-				_currentRotation.Y = 0;
-			}
-
-			if (_currentMovement != Vector3.Zero)
-			{
-				temp.Origin += temp.Basis * (_currentMovement * (_moveSpeed * speedMultipler) * (float)delta);
-			}
-
-			SetGlobalTransform(temp);
+			GDNode3D.GlobalPosition += currentQuaternion * (movement * (_moveSpeed * speedMultiplier) * (float)delta);
 		}
+	}
+
+	private Quaternion UpdateRotation()
+	{
+		Vector3 tempRotation = (QuaternionOffset.Inverse() * Quaternion).GetEuler();
+		float targetPitch = tempRotation.X + _deltaPitch;
+		float targetYaw = tempRotation.Y + _deltaYaw;
+		_pitch = Mathf.IsFinite(targetPitch) ? Mathf.Clamp(targetPitch, -PitchMax, PitchMax) : 0f;
+		_yaw = Mathf.IsFinite(targetYaw) ? Mathf.Wrap(targetYaw, -Mathf.Pi, Mathf.Pi) : Mathf.Pi;
+		_deltaPitch = 0;
+		_deltaYaw = 0;
+
+		Quaternion quaternion = QuaternionOffset * Quaternion.FromEuler(new(_pitch, _yaw, 0));
+		GDNode3D.GlobalBasis = new(quaternion);
+		return quaternion;
 	}
 
 	private void LimitZoomDistance()
@@ -876,8 +840,8 @@ public sealed partial class Camera : Dynamic
 					Input.WarpMouse(globalMousePos); // Workaround for godotengine/godot#119205
 #endif
 
-					_currentMovement = Vector3.Zero;
-					_currentRotation = Vector2.Zero;
+					_deltaPitch = 0;
+					_deltaYaw = 0;
 				}
 			}
 			else if (button.Pressed)
@@ -911,7 +875,7 @@ public sealed partial class Camera : Dynamic
 		{
 			if (@event is InputEventMouseMotion motion)
 			{
-				_currentRotation = -new Vector2(motion.ScreenRelative.X, motion.ScreenRelative.Y);
+				RotateCamera(motion.ScreenRelative);
 			}
 		}
 
@@ -963,32 +927,15 @@ public sealed partial class Camera : Dynamic
 		RotateCamera(-panGesture.Delta * TrackpadPanSensitivity);
 	}
 
-	private void RotateCamera(Vector2 delta)
+	private void RotateCamera(Vector2 delta, float pitchFactor = -0.004f, float yawFactor = -0.004f)
 	{
-		_targetRotation += new Vector3(
-			delta.Y / -5 * VerticalSpeed * 0.02f,
-			delta.X / -5 * HorizontalSpeed * 0.02f,
-			0
-		) * Sensitivity;
-
-		LimitRotation();
+		_deltaPitch += Mathf.DegToRad(delta.Y * pitchFactor * VerticalSpeed * Sensitivity);
+		_deltaYaw += Mathf.DegToRad(delta.X * yawFactor * HorizontalSpeed * Sensitivity);
 	}
 
 	public void ReceiveDragTouchInput(InputEventScreenDrag dragEvent)
 	{
-		_targetRotation += new Vector3(dragEvent.Relative.Y / -5, dragEvent.Relative.X / -5, 0) * Sensitivity * 2;
-		LimitRotation();
-	}
-
-	private void LimitRotation()
-	{
-		if (!_targetRotation.IsFinite())
-		{
-			_targetRotation = new Vector3(0, 180, 0);
-		}
-
-		_targetRotation.X = Mathf.Clamp(_targetRotation.X, -89, 89);
-		_targetRotation.Y = Mathf.Wrap(_targetRotation.Y, -180, 180);
+		RotateCamera(dragEvent.Relative);
 	}
 
 	[ScriptMethod]
