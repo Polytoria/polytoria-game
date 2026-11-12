@@ -1,0 +1,504 @@
+# LANGUAGE translation for Polytoria for the following files:
+# res://scenes/client/ui/chat/chat.tscn
+# res://scenes/client/ui/playerlist/user_options.tscn
+# res://scenes/client/ui/menu/game_menu.tscn
+# res://scenes/client/ui/menu/views/overview.tscn
+# res://scenes/client/ui/health/health_bar.tscn
+# res://scenes/client/ui/playerlist/leaderboard.tscn
+# res://scenes/client/ui/inventory/inventory.tscn
+# res://scenes/client/ui/capture/capture.tscn
+# res://scenes/client/ui/core/notification/screenshot_toast.tscn
+# res://scenes/client/ui/core/notification/friend_request_toast.tscn
+# res://scenes/client/ui/core/disconnected_ui.tscn
+# res://scripts/client/ui/core/DisconnectedUI.cs
+# res://scripts/client/ui/menu/views/UIMenuOverview.cs
+# res://scripts/client/ui/UILoadingScreen.cs
+# res://scripts/client/settings/ClientSettingsRegistry.cs
+# res://scripts/shared/settings/SharedSettingsRegistry.cs
+# res://scenes/shared/settings/licenses_row.tscn
+# res://scripts/client/ui/settings/SettingRow.cs
+# res://scenes/client/ui/core_ui.tscn
+# res://scripts/datamodel/services/NetworkService.cs
+#
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Polytoria v2.0.19\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: Angelok1\n"
+"Language-Team: https://github.com/ArxelDev | Angelok1\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.9\n"
+
+#: scenes/client/ui/chat/chat.tscn
+msgid "Send a chat message..."
+msgstr "Envía un mensaje por el chat..."
+
+#: scenes/client/ui/playerlist/user_options.tscn
+msgid "Add Friend"
+msgstr "Añadir Amigo"
+
+msgid "Remove Friend"
+msgstr "Eliminar Amigo"
+
+msgid "View Profile"
+msgstr "Ver Perfil"
+
+#: scenes/client/ui/menu/game_menu.tscn
+msgid "Overview"
+msgstr "Resumen"
+
+msgid "Players"
+msgstr "Jugadores"
+
+msgid "Settings"
+msgstr "Ajustes"
+
+#: scenes/client/ui/menu/views/overview.tscn
+msgid "Showcase"
+msgstr "Resumen"
+
+msgid "Statistics"
+msgstr "Estadísticas"
+
+msgid "Screenshot"
+msgstr "Captura de pantalla"
+
+msgid "Respawn"
+msgstr "Reaparecer"
+
+msgid "Leave"
+msgstr "Salir"
+
+#: scenes/client/ui/health/health_bar.tscn
+msgid "HEALTH"
+msgstr "SALUD"
+
+#: scenes/client/ui/playerlist/leaderboard.tscn
+msgid "Playerlist"
+msgstr "Lista de Jugadores"
+
+#: scenes/client/ui/inventory/inventory.tscn
+msgid "Nothing in Inventory"
+msgstr "Inventario Vacío"
+
+msgid "Press ` to close"
+msgstr "Pulsa ` para cerrar"
+
+#: scenes/client/ui/capture/capture.tscn
+#: scenes/client/ui/core/notification/screenshot_toast.tscn
+msgid "Photo Taken!"
+msgstr "¡Foto Tomada!"
+
+msgid "Save"
+msgstr "Guardar"
+
+#: scenes/client/ui/capture/capture.tscn
+msgid "Memory: Captured"
+msgstr "Memoria: Capturada"
+
+#: scenes/client/ui/capture/capture.tscn
+msgid "Share"
+msgstr "Compartir"
+
+#: scenes/client/ui/capture/capture.tscn
+msgid "Close"
+msgstr "Cerrar"
+
+#: scenes/client/ui/capture/capture.tscn
+msgid "Write Caption Here..."
+msgstr "Escribe aquí un comentario para la foto..."
+
+#: scenes/client/ui/capture/capture.tscn
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: scenes/client/ui/core/notification/screenshot_toast.tscn
+msgid "View"
+msgstr "Ver"
+
+#: scenes/client/ui/core/notification/friend_request_toast.tscn
+msgid "Friend Request from.."
+msgstr "Solicitud de Amistad de..."
+
+#: scenes/client/ui/core/notification/friend_request_toast.tscn
+msgid "Accept"
+msgstr "Aceptar"
+
+#: scenes/client/ui/core/notification/friend_request_toast.tscn
+msgid "Ignore"
+msgstr "Ignorar"
+
+#: scenes/client/ui/core/disconnected_ui.tscn
+msgid "Connection Lost"
+msgstr "Conexión Perdida"
+
+msgid "Quit"
+msgstr "Salir"
+
+#: scripts/client/ui/core/DisconnectedUI.cs
+msgid "Code: "
+msgstr "Código: "
+
+#: scripts/datamodel/services/NetworkService.cs
+msgid "Disconnected from server"
+msgstr "Desconectado del servidor"
+
+msgid "Your Polytoria account has been terminated, please visit the website for more info."
+msgstr "Tu cuenta de Polytoria ha sido suspendida. Visita la página web para obtener más información."
+
+msgid "Authentication failure, Please try again."
+msgstr "Error de autenticación. Por favor inténtelo de nuevo."
+
+msgid "Integrity failure, please update your client."
+msgstr "Fallo de integridad, porfavor actualiza tu cliente."
+
+msgid "Network mode mismatch."
+msgstr "Incompatibilidad del Modo de Red."
+
+msgid "Another device is already playing using this account, please leave the game first then try again."
+msgstr "Otro dispositivo ya está jugando con esta cuenta, por favor sal primero del juego, y vuelve a intentarlo."
+
+msgid "Connection timeout"
+msgstr "Tiempo de espera de conexión agotado"
+
+#: scenes/client/ui/core_ui.tscn
+msgid "High Ping."
+msgstr "Ping Alto."
+
+msgid "Server Under Pressure."
+msgstr "Servidor Bajo Presión."
+
+msgid "Radio Silence. The server is not responding right now."
+msgstr "Sin Respuesta. El servidor no responde en este momento."
+
+#: scripts/client/ui/menu/views/UIMenuOverview.cs
+msgid "Playing for "
+msgstr "Jugando por "
+
+#: scripts/client/ui/menu/views/UIMenuOverview.cs
+msgid " Instance"
+msgid_plural " Instances"
+msgstr[0] " Instancia"
+msgstr[1] " Instancias"
+
+msgid " player in the server"
+msgid_plural " players in the server"
+msgstr[0] " jugador en el servidor"
+msgstr[1] " jugadores en el servidor"
+
+#: scripts/client/ui/UILoadingScreen.cs
+msgid "Constructing ({current}/{max})..."
+msgstr "Construyuendo ({current}/{max})..."
+
+#: scripts/client/ui/UILoadingScreen.cs
+msgid "Connecting..."
+msgstr "Conectando..."
+
+#: scripts/client/ui/UILoadingScreen.cs
+msgid "Waiting for player"
+msgstr "Esperando al jugador..."
+
+#: scripts/client/ui/UILoadingScreen.cs
+msgid "Downloading world..."
+msgstr "Descargando mundo..."
+
+#: scripts/client/ui/UILoadingScreen.cs
+msgid "Ready!"
+msgstr "¡Listo!"
+
+#: scripts/client/ui/UILoadingScreen.cs
+msgid "Waiting for server..."
+msgstr "Esperando al servidor..."
+
+#: scripts/client/ui/UILoadingScreen.cs
+msgid "By "
+msgstr "Por "
+
+msgid "Display"
+msgstr "Pantalla"
+
+msgid "Graphics"
+msgstr "Graficos"
+
+msgid "Post Processing"
+msgstr "Post Procesado"
+
+msgid "Overlay"
+msgstr "Superposición"
+
+msgid "Advanced"
+msgstr "Avanzado"
+
+msgid "Chat Colors"
+msgstr "Colores del Chat"
+
+msgid "Show colored usernames in chat."
+msgstr "Mostrar nombres de usuario coloreados en el chat."
+
+msgid "Chat Font"
+msgstr "Fuente del Chat"
+
+msgid "Font used for chat messages."
+msgstr "Fuente usada para los mensajes del chat."
+
+msgid "Default"
+msgstr "Por Defecto"
+
+msgid "Chat Font Size"
+msgstr "Tamaño de Fuente del Chat"
+
+msgid "Font size for chat messages. 0 uses the theme default."
+msgstr "Tamaño de fuente de los mensajes del chat. El valor 0 utiliza el valor por defecto del tema."
+
+msgid "Ctrl Lock"
+msgstr "Bloqueo Ctrl"
+
+msgid "Allow Ctrl Lock while in third person."
+msgstr "Permitir bloqueo de la vista en tercera persona con Ctrl."
+
+msgid "Volume"
+msgstr "Volumen"
+
+msgid "Master game volume."
+msgstr "Ajusta el volumen del juego."
+
+msgid "Camera Sensitivity"
+msgstr "Sensibilidad de la Cámara"
+
+msgid "Camera movement sensitivity."
+msgstr "Sensibilidad del movimiento de la cámara."
+
+msgid "UI Scale"
+msgstr "Escala de la Interfaz"
+
+msgid "Scale of the user interface."
+msgstr "Escala de la interfaz de usuario."
+
+msgid "Performance Overlay"
+msgstr "Superposición de Rendimiento"
+
+msgid "Show performance information on the screen."
+msgstr "Mostrar información sobre el rendimiento en la pantalla."
+
+msgid "None"
+msgstr "Ninguno"
+
+msgid "Minimal"
+msgstr "Mínimo"
+
+msgid "Show Connection Indicators"
+msgstr "Mostrar Indicadores de Conexión"
+
+msgid "Show connection status warnings."
+msgstr "Mostrar advertencias sobre el estado de la conexión."
+
+msgid "Show Advanced Settings"
+msgstr "Mostrar Ajustes Avanzados"
+
+msgid "Shows hidden advanced settings."
+msgstr "Muestra los ajustes avanzados ocultos."
+
+msgid "Automatic"
+msgstr "Automático"
+
+msgid "Language"
+msgstr "Idioma"
+
+msgid "Select the game language."
+msgstr "Selecciona el idioma del juego."
+
+#: scripts/shared/settings/SharedSettingsRegistry.cs
+msgid "Fullscreen"
+msgstr "Pantalla Completa"
+
+msgid "Use fullscreen window mode."
+msgstr "Usa el modo de pantalla completa."
+
+msgid "V-Sync"
+msgstr "Sincronización Vertical (V-Sync)"
+
+msgid "Synchronize frames to display refresh."
+msgstr "Sincronizar los fotogramas con la frecuencia de actualización de la pantalla."
+
+msgid "FPS Preset"
+msgstr "Preajuste de FPS"
+
+msgid ""
+"Set the FPS preset to use.\n"
+"If V-Sync is enabled, framerate won't surpass the display refresh rate."
+msgstr ""
+"Selecciona el ajuste de FPS que desees utilizar.\n"
+"Si la sincronización vertical está activada, la velocidad de fotogramas no superará la frecuencia de actualización de la pantalla."
+
+msgid "Custom"
+msgstr "Personalizado"
+
+msgid "Reduced (30)"
+msgstr "Reducido (30)"
+
+msgid "Standard (60)"
+msgstr "Estándar (60)"
+
+msgid "Extended (90)"
+msgstr "Extendido (90)"
+
+msgid "Smooth (120)"
+msgstr "Suave (120)"
+
+msgid "Slick (144)"
+msgstr "Supersuave (144)"
+
+msgid "Fluid (240)"
+msgstr "Fluido (240)"
+
+msgid "Limitless"
+msgstr "Sin límites"
+
+msgid "FPS Cap"
+msgstr "Límite de FPS"
+
+msgid "Limit the number of frames per second."
+msgstr "Limita el número de fotogramas por segundo."
+
+msgid "Graphics Preset"
+msgstr "Ajustes Por Defecto de los Gráficos"
+
+msgid "Overall graphics quality preset."
+msgstr "Ajustes por defecto de la calidad general de los gráficos."
+
+msgid "Low"
+msgstr "Bajo"
+
+msgid "Medium"
+msgstr "Medio"
+
+msgid "High"
+msgstr "Alto"
+
+msgid "Rendering Method"
+msgstr "Método de Renderizado"
+
+msgid "Rendering method to use. Use compatibility on older hardware."
+msgstr "Método de renderizado a usar. Utilice Compatibilidad para equipos antiguos."
+
+msgid "Auto"
+msgstr "Automático"
+
+msgid "Standard"
+msgstr "Estándar"
+
+msgid "Performance"
+msgstr "Rendimiento"
+
+msgid "Compatibility"
+msgstr "Compatibilidad"
+
+msgid "Render Scale"
+msgstr "Escala de Renderizado"
+
+msgid "The resolution scale to render graphics at."
+msgstr "La escala de resolución a la que se renderizan los gráficos."
+
+msgid "MSAA Level"
+msgstr "Nivel de Suavizado (MSAA)"
+
+msgid "MSAA anti-aliasing level."
+msgstr "Nivel de suavizado."
+
+msgid "Shadow Quality"
+msgstr "Calidad de Sombras"
+
+msgid "Shadow quality level."
+msgstr "Nivel de calidad de las sombras."
+
+msgid "Shadow Distance"
+msgstr "Distancia de Sombras"
+
+msgid "How far shadows are visible."
+msgstr "Hasta qué distancia se ven las sombras."
+
+msgid "Glow"
+msgstr "Resplandor"
+
+msgid "Toggle glow/bloom effect."
+msgstr "Activa o desactiva el efecto de resplandor/bloom."
+
+# SSAO
+msgid "Toggle ambient occlusion effect."
+msgstr "Activa o desactiva el efecto de oclusión ambiental."
+
+# SSR
+msgid "Toggle screen-space reflections."
+msgstr "Activa o desactiva los reflejos en el espacio de la pantalla."
+
+# SSIL
+msgid "Toggle screen-space illuminated lighting."
+msgstr "Activa o desactiva la iluminación en el espacio de la pantalla."
+
+# SDFGI
+msgid "Toggle SDFGI (semi-real-time global illumination) effect."
+msgstr "Activa o desactiva el efecto SDFGI (iluminación global en tiempo semi-real)."
+
+msgid "Normal Maps"
+msgstr "Mapas Normales"
+
+msgid "Toggle normal maps on part materials."
+msgstr "Activa o desactiva los mapas de normales en los materiales de las piezas."
+
+msgid "SDFGI Cell Size"
+msgstr "Tamaño de Celdas SDFGI"
+
+msgid "Size of SDFGI cells. Larger cells improve performance but reduce quality."
+msgstr "Tamaño de las celdas SDFGI. Las celdas más grandes mejoran el rendimiento, pero reducen la calidad."
+
+msgid "SDFGI Cascades"
+msgstr "Cascadas SDFGI"
+
+msgid "Number of cascades for SDFGI."
+msgstr "Número de cascadas para SDFGI."
+
+msgid "SSIL Radius"
+msgstr "Radio SSIL"
+
+msgid "Radius for SSIL effect"
+msgstr "Radio del efecto SSIL"
+
+msgid "Asset Queue"
+msgstr "Cola de Recursos"
+
+msgid "Change how many assets can load at once. Higher = faster, with more potential lag."
+msgstr "Modifica el número de recursos que se pueden cargar a la vez. Más alto = más rápido, pero con mayor riesgo de retrasos."
+
+msgid "Default (5)"
+msgstr "Por Defecto (5)"
+
+msgid "Fast (15)"
+msgstr "Rápido (15)"
+
+msgid "Aggressive (30)"
+msgstr "Agresivo (30)"
+
+msgid "SPEED (60)"
+msgstr "VELOZ (60)"
+
+#: scenes/shared/settings/licenses_row.tscn
+msgid "Licenses"
+msgstr "Licencias"
+
+msgid "View third party licenses and attributions."
+msgstr "Ver licencias de terceros y atribuciones."
+
+msgid "View Licenses"
+msgstr "Ver Licencias"
+
+#: scripts/client/ui/settings/SettingRow.cs
+msgid "Requires restart"
+msgstr "Requiere reiniciar"
