@@ -30,6 +30,7 @@ public partial class BuiltInAudioAsset : AudioAsset
 	{
 		{ BuiltInAudioPresetEnum.Jump, "jump.ogg" },
 		{ BuiltInAudioPresetEnum.Explosion, "explosion.ogg" },
+		{ BuiltInAudioPresetEnum.Death, "death.ogg" },
 	};
 
 	public override void LoadResource()
@@ -38,5 +39,5 @@ public partial class BuiltInAudioAsset : AudioAsset
 	}
 
 	[ScriptEnum]
-	public enum BuiltInAudioPresetEnum { Jump, Explosion };
+	public enum BuiltInAudioPresetEnum { Jump, Explosion, Death };
 }
