@@ -147,7 +147,6 @@ public partial class ToolboxCard : Button
 					PTAudioAsset asset = root.New<PTAudioAsset>();
 					asset.AudioID = ItemData.ID;
 					sound.Audio = asset;
-					sound.Position = root.CreatorContext.Freelook.GetPlacementPosition();
 					root.CreatorContext.Selections.SelectOnly(sound);
 					break;
 				}
