@@ -59,11 +59,9 @@ public sealed partial class Camera : Dynamic
 	private bool _isMouseCaptured;
 	private Vector2I _lastMousePosition;
 
+	private Quaternion _lastRotationOffset = Quaternion.Identity;
 	private float _deltaPitch = 0f;
 	private float _deltaYaw = 0f;
-
-	private float _pitch = 0f;
-	private float _yaw = Mathf.Pi;
 
 	private float _targetZoom = DefaultZoomDistance;
 	private float _currentZoom = DefaultZoomDistance;
@@ -239,7 +237,6 @@ public sealed partial class Camera : Dynamic
 		get => _rotationOffset;
 		set
 		{
-			Quaternion *= value * _rotationOffset.Inverse();
 			_rotationOffset = value;
 			OnPropertyChanged();
 		}
@@ -583,15 +580,22 @@ public sealed partial class Camera : Dynamic
 
 	private Quaternion UpdateRotation()
 	{
-		Vector3 tempRotation = (QuaternionOffset.Inverse() * Quaternion).GetEuler();
+		// have to use the rotation offset from the last update, otherwise the camera won't rotate
+		// according to (potential) new changes
+		Vector3 tempRotation = (_lastRotationOffset.Inverse() * Quaternion).GetEuler();
 		float targetPitch = tempRotation.X + _deltaPitch;
 		float targetYaw = tempRotation.Y + _deltaYaw;
-		_pitch = Mathf.IsFinite(targetPitch) ? Mathf.Clamp(targetPitch, -PitchMax, PitchMax) : 0f;
-		_yaw = Mathf.IsFinite(targetYaw) ? Mathf.Wrap(targetYaw, -Mathf.Pi, Mathf.Pi) : Mathf.Pi;
-		_deltaPitch = 0;
-		_deltaYaw = 0;
 
-		Quaternion quaternion = QuaternionOffset * Quaternion.FromEuler(new(_pitch, _yaw, 0));
+		_deltaPitch = _deltaYaw = 0;
+		_lastRotationOffset = QuaternionOffset;
+
+		// finite checks are required here since NaN will survive through Mathf.Clamp and Mathf.Wrap,
+		// and passing +∞ or -∞ to Mathf.Wrap will result in NaN
+		Quaternion quaternion = QuaternionOffset * Quaternion.FromEuler(new(
+			Mathf.IsFinite(targetPitch) ? Mathf.Clamp(targetPitch, -PitchMax, PitchMax) : 0f,
+			Mathf.IsFinite(targetYaw) ? Mathf.Wrap(targetYaw, -Mathf.Pi, Mathf.Pi) : Mathf.Pi,
+			0
+		));
 		GDNode3D.GlobalBasis = new(quaternion);
 		return quaternion;
 	}
