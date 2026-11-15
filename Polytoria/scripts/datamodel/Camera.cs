@@ -61,7 +61,8 @@ public sealed partial class Camera : Dynamic
 
 	private Quaternion _lastRotationOffset = Quaternion.Identity;
 	private float _deltaPitch = 0f;
-	private float _deltaYaw = 0f;
+	// flip camera around immediately
+	private float _deltaYaw = Mathf.Pi;
 
 	private float _targetZoom = DefaultZoomDistance;
 	private float _currentZoom = DefaultZoomDistance;
