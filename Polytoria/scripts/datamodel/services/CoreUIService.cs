@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Polytoria.Attributes;
+using Polytoria.Client.Settings;
 using Polytoria.Client.UI;
 using Polytoria.Scripting;
 using Polytoria.Shared;
@@ -64,7 +65,7 @@ public sealed partial class CoreUIService : Instance
 	[Editable, ScriptProperty, ScriptLegacyProperty("ChatEnabled")]
 	public bool UseChat
 	{
-		get => _useChat;
+		get => ClientSettingsService.Instance.Get<bool>(ClientSettingKeys.Chat.ChatEnabled) ? _useChat : false;
 		set { _useChat = value; RefreshCoreUIsVisibility(); OnPropertyChanged(); }
 	}
 

@@ -26,6 +26,18 @@ public static class ClientSettingsRegistry
 	{
 		var defs = new Dictionary<string, SettingDef>();
 
+		defs.Add(ClientSettingKeys.Chat.ChatEnabled,
+			new SettingDef<bool>
+			{
+				Key = ClientSettingKeys.Chat.ChatEnabled,
+				SectionKey = "chat",
+				Label = "Chat Enabled",
+				Description = "If the chat interface should be shown.",
+				ValueKind = SettingValueKind.Bool,
+				ControlKind = SettingControlKind.Toggle,
+				DefaultValue = true
+			});
+
 		SharedSettingsRegistry.AddSharedTo(defs);
 
 		defs.Add(ClientSettingKeys.Chat.ChatColors,

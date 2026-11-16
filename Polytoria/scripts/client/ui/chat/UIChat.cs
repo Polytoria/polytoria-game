@@ -7,6 +7,7 @@ using Polytoria.Client.Settings;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Services;
 using Polytoria.Shared;
+using Polytoria.Shared.Settings;
 using System.Collections.Generic;
 
 namespace Polytoria.Client.UI.Chat;
@@ -68,6 +69,7 @@ public partial class UIChat : Control
 		_resizeHandle.MouseEntered += OnResizeHandleMouseEntered;
 		_resizeHandle.MouseExited += OnResizeHandleMouseExited;
 		GetViewport().SizeChanged += ClampToViewport;
+		ClientSettingsService.Instance.Changed += OnSettingChanged;
 
 		if (!LocalPlayer.CanChat || LocalPlayer.IsAgeRestricted)
 		{
@@ -215,8 +217,26 @@ public partial class UIChat : Control
 		base._UnhandledInput(@event);
 	}
 
+	private void OnSettingChanged(SettingChangedEvent e)
+	{
+		if (e.Key == ClientSettingKeys.Chat.ChatEnabled)
+		{
+			SetEnabled(e.NewValue is bool enabled && enabled);
+		}
+	}
+
 	public void SetEnabled(bool enabled)
 	{
+		if (!ClientSettingsService.Instance.Get<bool>(ClientSettingKeys.Chat.ChatEnabled))
+		{
+			if (IsOn) // close if it's still open
+			{
+				_animPlayer.Play("close");
+				CloseEmojiPicker();
+				IsOn = enabled;
+			}
+			return;
+		}
 		if (enabled && !IsOn)
 		{
 			_animPlayer.Play("open");
@@ -240,6 +260,8 @@ public partial class UIChat : Control
 		}
 
 		if (from.IsMuted) return;
+		if (!ClientSettingsService.Instance.Get<bool>(ClientSettingKeys.Chat.ChatEnabled)) return;
+
 
 		NewChatMessage(from, msg);
 	}
