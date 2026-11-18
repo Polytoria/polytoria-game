@@ -127,7 +127,7 @@ public class DefaultMovement : IPlayerMovement
 
 			if (Target.IsClimbing)
 			{
-				float climbSpeed = forwardInput * gdWalkSpeed * Target.ClimbingTruss!.ClimbSpeed;
+				float climbSpeed = forwardInput * gdWalkSpeed * Target.ClimbSpeed;
 
 				// Lock to vertical only and add vertical velocity
 				Target.CharacterVelocity = vertical * climbSpeed;
