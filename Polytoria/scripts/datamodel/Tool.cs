@@ -17,6 +17,7 @@ namespace Polytoria.Datamodel;
 [Instantiable, PhysicalRootStop]
 public sealed partial class Tool : RigidBody
 {
+	private string _displayName = "";
 	private bool _droppable = true;
 	private ImageAsset? _iconImage;
 	private NPC? _holder = null;
@@ -95,6 +96,17 @@ public sealed partial class Tool : RigidBody
 		{
 			_holder = value;
 			UpdateHandHold();
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue("")]
+	public string DisplayName
+	{
+		get => _displayName;
+		set
+		{
+			_displayName = value;
 			OnPropertyChanged();
 		}
 	}
