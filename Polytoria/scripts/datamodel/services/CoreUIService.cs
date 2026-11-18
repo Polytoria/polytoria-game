@@ -65,7 +65,7 @@ public sealed partial class CoreUIService : Instance
 	[Editable, ScriptProperty, ScriptLegacyProperty("ChatEnabled")]
 	public bool UseChat
 	{
-		get => ClientSettingsService.Instance.Get<bool>(ClientSettingKeys.Chat.ChatEnabled) ? _useChat : false;
+		get => _useChat && ClientSettingsService.Instance?.Get<bool>(ClientSettingKeys.Chat.ChatEnabled) != false;
 		set { _useChat = value; RefreshCoreUIsVisibility(); OnPropertyChanged(); }
 	}
 
