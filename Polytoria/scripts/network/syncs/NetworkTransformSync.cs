@@ -27,6 +27,7 @@ public partial class NetworkTransformSync : Instance
 	internal const double TickInterval = 1.0 / 20;
 	internal static readonly ulong TickSteps = (ulong)Mathf.Max(1, Mathf.Round(Engine.PhysicsTicksPerSecond * TickInterval));
 	internal const int TransformChannel = 3;
+	internal const int ReliableTransformChannel = 4;
 
 	private const int SnapshotBudgetBytes = 70 * 1024;
 	private const int SnapshotTickBytes = (int)(SnapshotBudgetBytes * TickInterval);
@@ -42,9 +43,13 @@ public partial class NetworkTransformSync : Instance
 	private const int IndexSweepTicks = 20;
 	private const double IndexReuseDelay = 10;
 	private const double IndexRequestRetry = 1;
+	private const double HeldSnapshotTimeout = 2;
+	private const double PendingTransformTimeout = 10;
+	private const int MaxHeldSnapshots = 8192;
 	private const int OwnershipTicks = 5;
 	private const double PreviousOwnerGrace = 1;
 	private const double BridgeTimeout = 1;
+	private const double MaxBridgeTime = 3;
 
 	private const double MaxFutureTime = 0.1;
 	private const double MaxPastTime = 1.0;
@@ -69,11 +74,13 @@ public partial class NetworkTransformSync : Instance
 	private readonly Dictionary<Physical, (double Start, double Lag)> _bridges = [];
 	private readonly Queue<(ushort Index, double FreedAt)> _freeIndices = new();
 	private readonly List<DueEntry> _dueEntries = [];
+	private readonly List<HeldSnapshot> _heldSnapshots = [];
 	private readonly Dictionary<ushort, (double Time, Vector3 Position, Vector3 Velocity)> _lastQueued = [];
 	private readonly HashSet<Dynamic> _scriptedMovers = [];
 	private readonly Dictionary<int, PeerView> _peerViews = [];
 	private double _nextView;
 	private uint _snapshotTick;
+	private double _lastSnapshotTime;
 	private int _nextIndex;
 	private byte _indexEpoch = 0;
 	private double _tickTimer = 0.0;
@@ -126,6 +133,8 @@ public partial class NetworkTransformSync : Instance
 		}
 		else
 		{
+			ApplyHeldSnapshots();
+			PrunePendingTransforms();
 			FlushTransformsToServer();
 			SendView();
 		}
@@ -211,7 +220,8 @@ public partial class NetworkTransformSync : Instance
 				_bridges.Remove(physical);
 				continue;
 			}
-			if (now - bridge.Start > BridgeTimeout)
+			double bridged = now - bridge.Start;
+			if (bridged > MaxBridgeTime || (bridged > BridgeTimeout && physical.IsAsleep))
 			{
 				EndBridge(physical);
 				continue;
@@ -363,6 +373,16 @@ public partial class NetworkTransformSync : Instance
 		return CheckAuthority(fromPeer, dyn.NetworkAuthority) || CheckAuthority(fromPeer, dyn.NetTransformAuthority);
 	}
 
+	private void PrunePendingTransforms()
+	{
+		if (_pendingTransforms.Count == 0) return;
+		double now = World.LocalClock;
+		foreach (var (objID, pending) in _pendingTransforms)
+		{
+			if (now - pending.At > PendingTransformTimeout) _pendingTransforms.Remove(objID);
+		}
+	}
+
 	internal void DropPendingTransform(string objID)
 	{
 		_pendingTransforms.Remove(objID);
@@ -392,6 +412,7 @@ public partial class NetworkTransformSync : Instance
 		_transformIndexIDs.Clear();
 		_indexRequests.Clear();
 		_freeIndices.Clear();
+		_heldSnapshots.Clear();
 		base.PreDelete();
 	}
 
@@ -518,7 +539,7 @@ public partial class NetworkTransformSync : Instance
 		}, forced: true);
 	}
 
-	[NetRpc(AuthorityMode.Any, TransferMode = TransferMode.Reliable, CallLocal = false, TransferChannel = TransformChannel)]
+	[NetRpc(AuthorityMode.Any, TransferMode = TransferMode.Reliable, CallLocal = false, TransferChannel = ReliableTransformChannel)]
 	private void NetRecvTransformIndexRequest(string objID)
 	{
 		if (NetService.Root.GetNetObjectFromID(objID) is not Dynamic dyn || !CheckDynAuthor(dyn, RemoteSenderId)) return;
@@ -650,39 +671,22 @@ public partial class NetworkTransformSync : Instance
 		PT.PrintErr(message);
 	}
 
-	private void BroadcastGroupedBatch(List<BatchTransformData> batch, string rpcName, TransferMode transferMode, int excludePeer = -1)
-	{
-		if (NetService.NetInstance == null || batch.Count == 0) return;
-
-		byte[] packet = BuildRpcPacket(rpcName, SerializeUtils.Serialize<BatchTransformData[]>([.. batch]));
-
-		if (excludePeer == -1)
-		{
-			NetService.NetInstance.BroadcastMessage(packet, transferMode);
-		}
-		else
-		{
-			NetService.NetInstance.BroadcastMessageExcept(packet, transferMode, 0, excludePeer);
-		}
-	}
-
 	private void BroadcastBatchedTransforms()
 	{
 		if (NetService.NetInstance == null || _pendingBatchUpdate.Count == 0) return;
 
-		Dictionary<int, List<BatchTransformData>> reliableExcept = [];
-
-		List<BatchTransformData> reliableAll = [];
-		List<BatchTransformData> unreliableAll = [];
+		List<BatchTransformData> reliable = [];
+		List<BatchTransformData> unreliable = [];
 
 		foreach (var (k, pending) in _pendingBatchUpdate)
 		{
+			if (NetService.Root.GetNetObjectFromID(k) is not Dynamic dyn || !dyn.ShouldReplicate) continue;
 			Vector3 velocity = Vector3.Zero;
 			if (pending.Velocity is Vector3 given)
 			{
 				velocity = given;
 			}
-			else if (NetService.Root.GetNetObjectFromID(k) is Dynamic dyn)
+			else
 			{
 				velocity = dyn.Motion.DeriveVelocity(pending.Transform.Position, pending.Time);
 			}
@@ -700,28 +704,61 @@ public partial class NetworkTransformSync : Instance
 			if (pending.Reliable)
 			{
 				DropQueuedSnapshot(k);
-				if (pending.ExcludePeer == -1)
-				{
-					reliableAll.Add(batchData);
-				}
-				else
-				{
-					GetOrCreateBatch(reliableExcept, pending.ExcludePeer).Add(batchData);
-				}
+				reliable.Add(batchData);
 			}
 			else
 			{
-				unreliableAll.Add(batchData);
+				unreliable.Add(batchData);
 			}
 		}
 
-		BroadcastGroupedBatch(reliableAll, nameof(NetRecvBatchedTransformsReliable), TransferMode.Reliable);
-		QueueSnapshot(unreliableAll);
+		SendReliableTransforms(reliable);
+		QueueSnapshot(unreliable);
+	}
 
-		// Send reliable batches
-		foreach (var (peerID, batch) in reliableExcept)
+	private void SendReliableTransforms(List<BatchTransformData> batch)
+	{
+		if (batch.Count == 0) return;
+
+		List<TransformIndexData> newIndices = [];
+		List<(ushort Index, BatchTransformData Data)> entries = new(batch.Count);
+		foreach (BatchTransformData data in batch)
 		{
-			BroadcastGroupedBatch(batch, nameof(NetRecvBatchedTransformsReliable), TransferMode.Reliable, peerID);
+			if (!_transformIndices.TryGetValue(data.ObjID, out ushort index))
+			{
+				if (!AddTransformIndex(data.ObjID, out index))
+				{
+					ResetTransformIndices();
+					SendReliableTransforms(batch);
+					return;
+				}
+				newIndices.Add(new(data.ObjID, index));
+			}
+			entries.Add((index, data));
+		}
+
+		if (newIndices.Count > 0)
+		{
+			Rpc(nameof(NetRecvTransformIndices), (int)_indexEpoch, SerializeUtils.Serialize<TransformIndexData[]>([.. newIndices]));
+		}
+
+		double baseTime = NetService.Root.NetTime;
+		foreach (int peerID in NetService.NetInstance!.PeerIds)
+		{
+			byte[] raw = NewUploadBatch(baseTime, entries.Count);
+			int count = 0;
+			foreach (var (index, data) in entries)
+			{
+				if (data.ExcludePeer == peerID) continue;
+				byte flags = (byte)((data.Lerp ? LerpFlag : 0) | (data.Rest ? RestFlag : 0));
+				WriteEntry(raw.AsSpan(SnapshotHeaderSize + count * SnapshotEntrySize), index, data.Transform, data.Time, baseTime,
+					flags, data.Velocity, data.WriteSeq);
+				count++;
+			}
+			if (count > 0)
+			{
+				RpcId(peerID, nameof(NetRecvReliableTransforms), raw.AsSpan(0, SnapshotHeaderSize + count * SnapshotEntrySize).ToArray());
+			}
 		}
 	}
 
@@ -866,10 +903,12 @@ public partial class NetworkTransformSync : Instance
 		if (NetService.NetInstance == null) return;
 		_snapshotTick++;
 		double baseTime = NetService.Root.NetTime;
+		int credit = (int)Mathf.Min(SnapshotBudgetBytes * (World.LocalClock - _lastSnapshotTime), SnapshotBurstBytes);
+		_lastSnapshotTime = World.LocalClock;
 
 		foreach (var (peerID, peer) in _peerSnapshots)
 		{
-			peer.Credit = Mathf.Min(peer.Credit + SnapshotTickBytes, SnapshotBurstBytes);
+			peer.Credit = Mathf.Min(peer.Credit + credit, SnapshotBurstBytes);
 			if (peer.Queued.Count == 0) continue;
 
 			Vector3? focus = NetService.Root.Players.GetPlayerFromPeerID(peerID)?.GetGlobalPosition();
@@ -888,7 +927,7 @@ public partial class NetworkTransformSync : Instance
 				uint waited = _snapshotTick - entry.Since;
 				if (entry.Urgent || waited > period || (_snapshotTick + index) % period == 0)
 				{
-					int size = CompactEntrySize(entry.Transform, entry.Velocity, GetSpinToSend(entry, waited), origin);
+					int size = CompactEntrySize(entry.Transform, entry.Rest, entry.Velocity, GetSpinToSend(entry, waited), origin);
 					float priority;
 					if (entry.Urgent)
 					{
@@ -897,7 +936,7 @@ public partial class NetworkTransformSync : Instance
 					else
 					{
 						bool important = IsImportant(entry) || peer.Fast.Contains(index) || waited >= MaxWaitTicks;
-						priority = (float)waited / period * (important ? ImportantPriority : 1f);
+						priority = (float)Math.Max(waited, 1) / period * (important ? ImportantPriority : 1f);
 					}
 					if (hasView && waited < MaxWaitTicks) priority *= view.Relevance(entry.Position);
 					_dueEntries.Add(new(index, period, priority, size));
@@ -975,7 +1014,7 @@ public partial class NetworkTransformSync : Instance
 		_indexEpoch++;
 	}
 
-	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Reliable, TransferChannel = TransformChannel)]
+	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Reliable, TransferChannel = ReliableTransformChannel)]
 	private void NetRecvTransformIndices(int epoch, byte[] indicesRaw)
 	{
 		if (epoch != _indexEpoch)
@@ -984,6 +1023,7 @@ public partial class NetworkTransformSync : Instance
 			_transformIndexIDs.Clear();
 			_transformIndices.Clear();
 			_indexRequests.Clear();
+			_heldSnapshots.Clear();
 		}
 
 		TransformIndexData[]? indices = SerializeUtils.Deserialize<TransformIndexData[]>(indicesRaw);
@@ -1003,6 +1043,7 @@ public partial class NetworkTransformSync : Instance
 			_transformIndices[data.ObjID] = data.Index;
 			_indexRequests.Remove(data.ObjID);
 		}
+		ApplyHeldSnapshots();
 	}
 
 	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Unreliable, TransferChannel = TransformChannel)]
@@ -1021,14 +1062,24 @@ public partial class NetworkTransformSync : Instance
 			int mode = (flags >> PositionModeShift) & 3;
 			bool hasVelocity = (flags & VelocityFlag) != 0;
 			bool hasSpin = (flags & SpinFlag) != 0;
-			int size = CompactEntryBaseSize + (mode == 0 ? 12 : 6) + (hasVelocity ? 6 : 0) + (hasSpin ? 3 : 0);
+			bool rest = (flags & RestFlag) != 0;
+			int rotationSize = rest ? 8 : 4;
+			int size = CompactEntryBaseSize + rotationSize + (mode == 0 ? 12 : 6) + (hasVelocity ? 6 : 0) + (hasSpin ? 3 : 0);
 			if (offset + size > raw.Length) break;
 			offset += size;
 
 			ushort index = BinaryPrimitives.ReadUInt16LittleEndian(entry);
 			double time = baseTime + BinaryPrimitives.ReadInt16LittleEndian(entry[3..]) / 1000.0;
-			ulong rotation = BinaryPrimitives.ReadUInt64LittleEndian(entry[5..]);
-			int cursor = CompactEntryBaseSize;
+			Quaternion rotation;
+			if (rest)
+			{
+				rotation = UnitQuaternionDto.FromCompressed(BinaryPrimitives.ReadUInt64LittleEndian(entry[CompactEntryBaseSize..]));
+			}
+			else
+			{
+				rotation = UnitQuaternionDto.FromCompressed32(BinaryPrimitives.ReadUInt32LittleEndian(entry[CompactEntryBaseSize..]));
+			}
+			int cursor = CompactEntryBaseSize + rotationSize;
 			Vector3 position;
 			if (mode == 0)
 			{
@@ -1050,19 +1101,34 @@ public partial class NetworkTransformSync : Instance
 				cursor += 6;
 			}
 			Vector3 spin = hasSpin ? new Vector3((sbyte)entry[cursor], (sbyte)entry[cursor + 1], (sbyte)entry[cursor + 2]) * SpinStep : Vector3.Zero;
-			TransformPayloadDto transform = new(position, rotation);
-
-			if (!_transformIndexIDs.TryGetValue(index, out string? objID) || NetService.Root.GetNetObjectFromID(objID) is not Dynamic dyn) continue;
-			bool lerp = (flags & LerpFlag) != 0;
-			if (dyn.NetTransformAuthority == NetService.LocalPeerID && !dyn.IsNetGaining &&
-				(lerp || time <= dyn.NetTransformAuthorityChangedNetTime - NetMotion.MaxGap))
+			HeldSnapshot held = new(index, new(position, rotation), flags, time, velocity, spin, World.LocalClock);
+			if (!ApplySnapshot(held) && _heldSnapshots.Count < MaxHeldSnapshots)
 			{
-				continue;
+				_heldSnapshots.Add(held);
 			}
-
-			int period = 1 << ((flags >> PeriodShift) & 3);
-			dyn.UpdateTransformFromNet(transform, false, lerp, time, period, (flags & RestFlag) != 0, velocity, spin);
 		}
+	}
+
+	private bool ApplySnapshot(HeldSnapshot held)
+	{
+		if (!_transformIndexIDs.TryGetValue(held.Index, out string? objID) || NetService.Root.GetNetObjectFromID(objID) is not Dynamic dyn) return false;
+		bool lerp = (held.Flags & LerpFlag) != 0;
+		if (dyn.NetTransformAuthority == NetService.LocalPeerID && !dyn.IsNetGaining &&
+			(lerp || held.Time <= dyn.NetTransformAuthorityChangedNetTime - NetMotion.MaxGap))
+		{
+			return true;
+		}
+
+		int period = 1 << ((held.Flags >> PeriodShift) & 3);
+		dyn.UpdateTransformFromNet(held.Transform, false, lerp, held.Time, period, (held.Flags & RestFlag) != 0, held.Velocity, held.Spin);
+		return true;
+	}
+
+	private void ApplyHeldSnapshots()
+	{
+		if (_heldSnapshots.Count == 0) return;
+		double now = World.LocalClock;
+		_heldSnapshots.RemoveAll(held => now - held.ReceivedAt > HeldSnapshotTimeout || ApplySnapshot(held));
 	}
 
 	private void SetPendingBatch(string objID, PendingBatchTransform entry, bool forced = false)
@@ -1078,35 +1144,26 @@ public partial class NetworkTransformSync : Instance
 		_pendingBatchUpdate[objID] = entry;
 	}
 
-	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
-	private void NetRecvBatchedTransformsReliable(byte[] transformsRaw)
+	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Reliable, TransferChannel = ReliableTransformChannel)]
+	private void NetRecvReliableTransforms(byte[] raw)
 	{
-		BatchTransformData[]? transforms = SerializeUtils.Deserialize<BatchTransformData[]>(transformsRaw);
-		if (transforms == null) return;
-		foreach (var data in transforms)
+		if (raw.Length < SnapshotHeaderSize || raw[0] != _indexEpoch) return;
+		double baseTime = BinaryPrimitives.ReadDoubleLittleEndian(raw.AsSpan(1));
+		for (int offset = SnapshotHeaderSize; offset + SnapshotEntrySize <= raw.Length; offset += SnapshotEntrySize)
 		{
-			if (data.ExcludePeer == NetService.LocalPeerID) continue;
-			if (NetService.Root.GetNetObjectFromID(data.ObjID) is Dynamic dyn)
+			UploadEntry entry = ReadEntry(raw.AsSpan(offset, SnapshotEntrySize), baseTime);
+			if (!_transformIndexIDs.TryGetValue(entry.Index, out string? objID)) continue;
+			if (NetService.Root.GetNetObjectFromID(objID) is Dynamic dyn)
 			{
-				dyn.UpdateTransformFromNet(TransformPayloadDto.FromArray(data.Transform), true, data.Lerp, data.Time, 1, data.Rest, data.Velocity);
-				if (data.WriteSeq != 0 && dyn.NetTransformAuthority == NetService.LocalPeerID) dyn.AckedServerWrite = data.WriteSeq;
+				dyn.UpdateTransformFromNet(entry.Transform, true, (entry.Flags & LerpFlag) != 0, entry.Time, 1,
+					(entry.Flags & RestFlag) != 0, entry.Velocity);
+				if (entry.WriteSeq != 0 && dyn.NetTransformAuthority == NetService.LocalPeerID) dyn.AckedServerWrite = entry.WriteSeq;
 			}
-			else if (_pendingTransforms.ContainsKey(data.ObjID))
+			else if (!NetService.ReplicateSync.IsRemoved(objID))
 			{
-				_pendingTransforms[data.ObjID] = new() { Transform = TransformPayloadDto.FromArray(data.Transform), FromPeer = RemoteSenderId };
+				_pendingTransforms[objID] = new() { Transform = entry.Transform, FromPeer = RemoteSenderId };
 			}
 		}
-	}
-
-	private static List<BatchTransformData> GetOrCreateBatch(Dictionary<int, List<BatchTransformData>> dict, int excludePeer)
-	{
-		if (!dict.TryGetValue(excludePeer, out var list))
-		{
-			list = [];
-			dict[excludePeer] = list;
-		}
-
-		return list;
 	}
 
 	private struct PendingBatchTransform(TransformPayloadDto transform, bool lerpTransform, int excludePeer)
@@ -1143,6 +1200,8 @@ public partial class NetworkTransformSync : Instance
 		bool Urgent);
 
 	private readonly record struct DueEntry(ushort Index, uint Period, float Priority, int Size);
+
+	private readonly record struct HeldSnapshot(ushort Index, TransformPayloadDto Transform, byte Flags, double Time, Vector3 Velocity, Vector3 Spin, double ReceivedAt);
 
 	private readonly record struct PeerView(Vector3 Origin, Vector3 Forward, double Time)
 	{
@@ -1197,6 +1256,7 @@ public partial class NetworkTransformSync : Instance
 		public TransformPayloadDto Transform = default!;
 		public int FromPeer;
 		public int ToPeer = -1;
+		public double At = World.LocalClock;
 	}
 
 	[MemoryPackable]

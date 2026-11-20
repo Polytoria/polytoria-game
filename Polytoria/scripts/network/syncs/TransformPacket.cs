@@ -14,8 +14,8 @@ internal static class TransformPacket
 	public const int SnapshotHeaderSize = 9;
 	public const int SnapshotEntrySize = 32;
 	public const int CompactHeaderSize = 22;
-	public const int CompactEntryBaseSize = 13;
-	public const int MaxSnapshotPacketSize = 1500;
+	public const int CompactEntryBaseSize = 5;
+	public const int MaxSnapshotPacketSize = 1200;
 	public const int MaxUploadEntries = 1024;
 	public const float PositionStep = 1f / 64;
 	public const float SpinStep = 0.4f;
@@ -47,10 +47,10 @@ internal static class TransformPacket
 		return new(index, transform, time, entry[24], ReadHalfVector3(entry[25..]), entry[31]);
 	}
 
-	public static int CompactEntrySize(byte[] transform, Vector3 velocity, Vector3 spin, Vector3 origin)
+	public static int CompactEntrySize(byte[] transform, bool rest, Vector3 velocity, Vector3 spin, Vector3 origin)
 	{
 		Vector3 position = TransformPayloadDto.FromArray(transform).Position;
-		int size = CompactEntryBaseSize + (CompactPositionMode(position, origin) == 0 ? 12 : 6);
+		int size = CompactEntryBaseSize + (rest ? 8 : 4) + (CompactPositionMode(position, origin) == 0 ? 12 : 6);
 		if (velocity != Vector3.Zero) size += 6;
 		if (spin != Vector3.Zero) size += 3;
 		return size;
@@ -68,8 +68,18 @@ internal static class TransformPacket
 		BinaryPrimitives.WriteUInt16LittleEndian(span, index);
 		span[2] = flags;
 		BinaryPrimitives.WriteInt16LittleEndian(span[3..], TimeOffset(time, baseTime));
-		transform.AsSpan(12, 8).CopyTo(span[5..]);
 		int length = CompactEntryBaseSize;
+		if ((flags & RestFlag) != 0)
+		{
+			transform.AsSpan(12, 8).CopyTo(span[length..]);
+			length += 8;
+		}
+		else
+		{
+			Quaternion rotation = TransformPayloadDto.FromArray(transform).Rotation;
+			BinaryPrimitives.WriteUInt32LittleEndian(span[length..], UnitQuaternionDto.ToCompressed32(rotation));
+			length += 4;
+		}
 		if (mode == 0)
 		{
 			transform.AsSpan(0, 12).CopyTo(span[length..]);

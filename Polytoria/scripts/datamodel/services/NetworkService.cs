@@ -32,7 +32,7 @@ namespace Polytoria.Datamodel.Services;
 public sealed partial class NetworkService : Instance
 {
 	private const int PingIntervalMs = 250; // Ping interval
-	private const int AuthWaitTimeoutSec = 15; // Time wait before user disconnects due to auth timeout
+	private const int AuthWaitTimeoutSec = 30; // Time wait before user disconnects due to auth timeout
 	private const int HeartbeatIntervalSec = 10; // Server heartbeat interval
 	private const int HeartbeatBeforeCheckPlayers = 5; // Server wait before checking players
 	private const float ConnectTimeoutSec = 90; // Timeout kick if player stops loading
@@ -269,12 +269,13 @@ public sealed partial class NetworkService : Instance
 	{
 		try
 		{
+			if (ReplicateSync.IsRemoved(networkId)) return;
 			NetworkedObject? netObj = await Root.WaitForNetObjectAsync(networkId, NetObjDispatchTimeoutMs);
 			if (netObj != null)
 			{
 				DispatchMessage(fromPeer, netMsg, tfm, netObj);
 			}
-			else
+			else if (!ReplicateSync.IsRemoved(networkId))
 			{
 				GD.PushWarning($"Deferred packet dropped, NetworkedObject with ID {networkId} did not exist or was not ready within {NetObjDispatchTimeoutMs}ms of dispatch");
 			}
