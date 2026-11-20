@@ -59,7 +59,6 @@ public sealed partial class Player : NPC
 	private Color _chatColorBeforeTeam;
 
 	internal bool SprintOverride = false;
-	private float _pingStartTime = 0;
 	internal bool SprintHoldAgain = false;
 
 	private double _afkTimer;
@@ -564,6 +563,11 @@ public sealed partial class Player : NPC
 	public override void Process(double delta)
 	{
 		base.Process(delta);
+		NetworkInstance? net = Root.Network.NetInstance;
+		if ((Root.Network.IsServer || IsLocal) && net != null && net.PeerPings.TryGetValue(Root.Network.IsServer ? PeerID : 1, out int ping))
+		{
+			NetworkPing = ping;
+		}
 		if (!Root.Network.IsServer)
 		{
 			UpdateCamera(delta);
@@ -758,26 +762,6 @@ public sealed partial class Player : NPC
 		Character?.SetAnimSpeed(1);
 	}
 
-	private void SendPing()
-	{
-		_pingStartTime = Time.GetTicksMsec();
-		RpcId(1, nameof(NetPingRecv));
-	}
-
-	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
-	private void NetPingRecv()
-	{
-		RpcId(PeerID, nameof(NetPong));
-	}
-
-	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Reliable)]
-	private async void NetPong()
-	{
-		NetworkPing = (int)Math.Round(Time.GetTicksMsec() - _pingStartTime);
-		await Globals.Singleton.WaitAsync(1);
-		SendPing();
-	}
-
 	public void OnInput(InputEvent @event)
 	{
 		if (Root.SessionType != World.SessionTypeEnum.Client) { return; }
@@ -844,7 +828,6 @@ public sealed partial class Player : NPC
 	{
 		IsLocal = true;
 		Nametag?.UpdateNameTag();
-		SendPing();
 
 		CamAttach = Globals.LoadInstance<Dynamic>(Root);
 		CamAttach.Name = "CameraAttachment";

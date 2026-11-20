@@ -437,6 +437,8 @@ public partial class Dynamic : Instance
 
 	internal bool IsNetGaining => netMotion != null && netMotion.IsGaining;
 
+	internal bool IsNetGainPending => netMotion != null && netMotion.IsGainPending;
+
 	internal float GetNetSpeed()
 	{
 		if (Root?.Network != null && NetTransformAuthority == Root.Network.LocalPeerID)
@@ -534,7 +536,12 @@ public partial class Dynamic : Instance
 
 	private void UpdateTransform(double delta)
 	{
-		if (IsNetGaining && (netMotion!.Samples.Count == 0 || netMotion.GainElapsed >= netMotion.GainTime + NetworkTransformSync.TickInterval))
+		if (IsNetGainPending)
+		{
+			if (netMotion!.CanGain) netMotion.StartGain();
+			else if (netMotion.Samples.Count == 0 || netMotion.GainWaitExpired) FinishNetGain();
+		}
+		else if (IsNetGaining && (netMotion!.Samples.Count == 0 || netMotion.GainElapsed >= netMotion.GainTime + NetworkTransformSync.TickInterval))
 		{
 			FinishNetGain();
 		}
@@ -571,7 +578,7 @@ public partial class Dynamic : Instance
 			SetLocalTransformRaw(_currentTransform);
 		}
 
-		if (IsNetGaining && netMotion.GainElapsed >= netMotion.GainTime)
+		if (IsNetGaining && !netMotion.IsGainPending && netMotion.GainElapsed >= netMotion.GainTime)
 		{
 			FinishNetGain();
 		}
@@ -878,12 +885,12 @@ public partial class Dynamic : Instance
 		{
 			return;
 		}
-		if (IsNetGaining && !(lerpTransform && time > 0))
+		if (IsNetGaining && !IsNetGainPending && !(lerpTransform && time > 0))
 		{
 			FinishNetGain();
 		}
 		if (time > 0 && !Root.Network.IsServer &&
-			(lerpTransform || (netMotion != null && netMotion.IsAhead(time) && NetTransformAuthority != Root.Network.LocalPeerID)))
+			(lerpTransform || IsNetGainPending || (netMotion != null && netMotion.IsAhead(time) && NetTransformAuthority != Root.Network.LocalPeerID)))
 		{
 			AddNetSample(transform, time, period, rest, velocity, !lerpTransform, spin);
 			if (isReliable)
@@ -1099,6 +1106,14 @@ public partial class Dynamic : Instance
 
 				// If network is not ready, return
 				if (!IsNetworkReady) return;
+
+				if (ExistInNetwork && !Root.Network.IsServer && NetTransformAuthority == Root.Network.LocalPeerID) return;
+
+				if (netMotion != null && NetTransformAuthority != Root.Network.LocalPeerID &&
+					!netMotion.IsLastSampleBelow(Root.Environment.PartDestroyHeight))
+				{
+					return;
+				}
 
 				Delete();
 			}

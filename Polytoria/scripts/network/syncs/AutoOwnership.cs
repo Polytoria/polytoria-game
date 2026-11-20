@@ -64,6 +64,7 @@ internal sealed class AutoOwnership
 
 	public void UpdateOwners(World root)
 	{
+		if (root.SessionType == World.SessionTypeEnum.Creator) return;
 		bool auto = root.Players.AutoNetworkOwnership;
 		Player[] players = auto ? root.Players.GetPlayers() : [];
 		double now = World.LocalClock;

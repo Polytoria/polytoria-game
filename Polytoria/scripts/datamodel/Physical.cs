@@ -108,6 +108,7 @@ public partial class Physical : Dynamic
 
 			bool oldVal = _anchored;
 			_anchored = value;
+			AnchoredChangedAt = World.LocalClock;
 			Root?.Network?.TransformSync.Ownership.Update(this);
 
 			if (oldVal != _anchored)
@@ -146,6 +147,8 @@ public partial class Physical : Dynamic
 			OnPropertyChanged();
 		}
 	}
+
+	internal double AnchoredChangedAt { get; private set; } = double.MinValue;
 
 	[Editable(CustomPropertyControl = "Bitmap32"), ScriptProperty]
 	public virtual uint CollisionLayers
@@ -380,6 +383,7 @@ public partial class Physical : Dynamic
 	public override void HiddenChanged(bool to)
 	{
 		UpdateCollision();
+		UpdateFreeze();
 
 		if (!to && PhysicalArea != null)
 		{
@@ -778,11 +782,21 @@ public partial class Physical : Dynamic
 			return;
 		}
 
-		if (!Root.Network.IsServer && Root.IsLoaded && CanStartNetGain())
+		if (!Root.Network.IsServer && Root.IsLoaded && !IsNearLocalPlayer())
 		{
-			StartNetGain();
-			UpdateFreeze();
-			return;
+			if (Motion.CanGain)
+			{
+				StartNetGain();
+				UpdateFreeze();
+				return;
+			}
+			if (Motion.Samples.Count > 0 && Root.NetTime - Motion.LastSampleTime < NetMotion.MaxGap)
+			{
+				Motion.WaitGain();
+				StartInterpolating();
+				UpdateFreeze();
+				return;
+			}
 		}
 
 		ApplyLatestNetSample();
@@ -799,6 +813,8 @@ public partial class Physical : Dynamic
 	internal bool IsNetBridging => netMotion != null && netMotion.IsBridging;
 
 	internal bool IsNetResting => netMotion == null || netMotion.IsResting;
+
+	internal bool IsNetAtRest => netMotion == null || netMotion.IsAtRest;
 
 	internal void BeginNetBridge(Vector3 linear, Vector3 angular)
 	{
@@ -821,15 +837,10 @@ public partial class Physical : Dynamic
 		return (GetLocalTransform(), GetNetSendVelocity(false) ?? Vector3.Zero);
 	}
 
-	private bool CanStartNetGain()
+	private bool IsNearLocalPlayer()
 	{
-		if (netMotion == null || !netMotion.CanGain) return false;
-		if (Root.Players.LocalPlayer is Player local &&
-			local.GetGlobalPosition().DistanceTo(GetGlobalPosition()) < Size.Length() / 2 + NetGainNearDistance)
-		{
-			return false;
-		}
-		return true;
+		return Root.Players.LocalPlayer is Player local &&
+			local.GetGlobalPosition().DistanceTo(GetGlobalPosition()) < Size.Length() / 2 + NetGainNearDistance;
 	}
 
 	private void StartNetGain()

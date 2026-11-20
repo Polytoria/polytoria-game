@@ -18,7 +18,7 @@ public sealed partial class Players : Instance
 {
 	private bool _playerCollisionEnabled = true;
 	private bool _useServerAuthority = true;
-	private bool _autoNetworkOwnership = true;
+	private bool _autoNetworkOwnership = false;
 
 	[ScriptProperty]
 	public Player LocalPlayer { get; private set; } = null!;
@@ -45,7 +45,7 @@ public sealed partial class Players : Instance
 		}
 	}
 
-	[Editable, ScriptProperty]
+	[Editable, ScriptProperty, DefaultValue(false)]
 	public bool AutoNetworkOwnership
 	{
 		get => _autoNetworkOwnership;

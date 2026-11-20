@@ -20,15 +20,19 @@ public sealed class NetMotion(Dynamic dyn)
 
 	private const double BlendTime = 0.15;
 	private const float BlendGap = 0.25f;
+	private const float BlendTurn = 0.35f;
 	private const float BlendSettle = 0.001f;
 
 	private const double HandoffExtrapolateLimit = 0.5;
 	private const double ExtrapolateLimit = 0.25;
-	private const double FallExtrapolateLimit = 1;
-	private const int FallSteps = 4;
+	private const double FallExtrapolateLimit = 3;
+	private const int FallSteps = 12;
+	private const ulong MaxCastUsecPerFrame = 2000;
+	private const double AnchorSettleTime = 1;
 
 	private const double GainMinTime = 0.15;
 	private const double GainMaxTime = 0.5;
+	private const double GainWaitTimeout = 1;
 
 	private const float StopRatio = 0.75f;
 	private const float CurveTolerance = 0.25f;
@@ -39,6 +43,8 @@ public sealed class NetMotion(Dynamic dyn)
 
 	private static PhysicsShapeQueryParameters3D? _hitQuery;
 	private static ulong _moverFrame = ulong.MaxValue;
+	private static ulong _castFrame = ulong.MaxValue;
+	private static ulong _castUsec;
 	private static Godot.Collections.Array<Rid> _moverRids = [];
 	private static ulong _gravityFrame = ulong.MaxValue;
 	private static Rid _gravitySpace;
@@ -66,7 +72,10 @@ public sealed class NetMotion(Dynamic dyn)
 	private Vector3 _lastRenderVelocity;
 	private Vector3? _lastRawPosition;
 	private Vector3 _blendOffset;
+	private Quaternion _lastRawRotation = Quaternion.Identity;
+	private Quaternion _rotationBlend = Quaternion.Identity;
 	private double _lastRenderTime;
+	private double _kickTime = double.MinValue;
 	private double _hitSampleTime;
 	private double _hitTime;
 	private bool _hasHit;
@@ -79,13 +88,19 @@ public sealed class NetMotion(Dynamic dyn)
 
 	public bool IsGaining { get; private set; }
 
+	public bool IsGainPending { get; private set; }
+
+	public bool GainWaitExpired => IsGainPending && GainElapsed > GainWaitTimeout;
+
 	public double GainElapsed => dyn.Root.NetTime - _gainStart;
 
 	public double GainTime => _gainTime;
 
 	public double LastSampleTime => Samples.Count > 0 ? Samples[Samples.Count - 1].Time : double.MinValue;
 
-	public bool IsResting => _isAtRest || Samples.Count == 0 || dyn.Root.NetTime - Samples[Samples.Count - 1].Time > MaxGap;
+	public bool IsResting => IsAtRest || dyn.Root.NetTime - (_hasRenderDelay ? _renderDelay : 0) - Samples[Samples.Count - 1].Time > MaxGap;
+
+	public bool IsAtRest => _isAtRest || Samples.Count == 0;
 
 	public float Speed => IsResting ? 0 : Samples[Samples.Count - 1].Velocity.Length();
 
@@ -135,9 +150,17 @@ public sealed class NetMotion(Dynamic dyn)
 		_hasDelayOffset = false;
 	}
 
+	public void WaitGain()
+	{
+		IsGaining = true;
+		IsGainPending = true;
+		_gainStart = dyn.Root.NetTime;
+	}
+
 	public void StartGain()
 	{
 		IsGaining = true;
+		IsGainPending = false;
 		_gainStart = dyn.Root.NetTime;
 		_gainDelay = Mathf.Max(_renderDelay, 0);
 		_gainTime = Mathf.Clamp(_gainDelay * 2, GainMinTime, GainMaxTime);
@@ -147,12 +170,14 @@ public sealed class NetMotion(Dynamic dyn)
 	public void StopGain()
 	{
 		IsGaining = false;
+		IsGainPending = false;
 		_hasDelayOffset = false;
 	}
 
 	public void FinishGain()
 	{
 		IsGaining = false;
+		IsGainPending = false;
 		Reset();
 		_isSeeded = false;
 	}
@@ -188,7 +213,7 @@ public sealed class NetMotion(Dynamic dyn)
 		if (!_canExtrapolate || Samples.Count < 2 || dyn.Root.NetTime - Samples[Samples.Count - 1].Time > MaxGap) return false;
 
 		var last = Samples[Samples.Count - 1];
-		linear = last.Velocity;
+		linear = IsGaining && !IsGainPending && _lastRawPosition != null ? _lastRenderVelocity : last.Velocity;
 		angular = last.Spin;
 		return true;
 	}
@@ -215,6 +240,13 @@ public sealed class NetMotion(Dynamic dyn)
 			if (!(rest || snap) || time < Samples[count - 1].Time) return false;
 			count--;
 			Samples.RemoveAt(count);
+		}
+		if (!rest && velocity.Length() > MinSpeed && count == 0 && !snap)
+		{
+			Transform3D current = dyn.GetLocalTransform();
+			Samples.Add(new(time - NetworkTransformSync.TickInterval * Mathf.Max(period, 1), current.Origin,
+				current.Basis.Orthonormalized().GetRotationQuaternion(), Vector3.Zero, false, Vector3.Zero));
+			count = 1;
 		}
 		var previous = count > 0 ? Samples[count - 1] : default;
 		bool canMeasureSpin = count > 0 && time - previous.Time > MinSampleSpacing && time - previous.Time < MaxGap;
@@ -283,6 +315,7 @@ public sealed class NetMotion(Dynamic dyn)
 			{
 				Vector3 startPosition = lastSample.Position + lastSample.Velocity * (float)(startTime - lastSample.Time);
 				Samples.Add(new(startTime, startPosition, lastSample.Rotation, velocity, false, Vector3.Zero));
+				_kickTime = startTime;
 			}
 		}
 
@@ -342,7 +375,7 @@ public sealed class NetMotion(Dynamic dyn)
 	public double UpdateRenderTime(double delta)
 	{
 		World root = dyn.Root;
-		if (IsGaining)
+		if (IsGaining && !IsGainPending)
 		{
 			double progress = Mathf.Min((root.NetTime - _gainStart) / _gainTime, 1);
 			_renderDelay = _gainDelay * (1 - progress * progress * (3 - 2 * progress));
@@ -448,6 +481,7 @@ public sealed class NetMotion(Dynamic dyn)
 		else
 		{
 			double sinceLast = renderTime - last.Time;
+			double extrapolated = 0;
 			position = last.Position;
 			rotation = last.Rotation;
 			if (_canExtrapolate && Samples.Count >= 2)
@@ -474,7 +508,7 @@ public sealed class NetMotion(Dynamic dyn)
 					}
 					if (!_hasHit && _hitTime < Mathf.Min(sinceLast, FallExtrapolateLimit))
 					{
-						_hitTime = GetHitTime(last.Position, last.Rotation, velocity, gravity, _hitTime, sinceLast, out _hasHit);
+						_hitTime = GetHitTime(last.Position, last.Rotation, velocity, gravity, _hitTime, sinceLast, true, out _hasHit);
 					}
 					extrapolateTime = Mathf.Min(sinceLast, _hitTime);
 				}
@@ -484,6 +518,7 @@ public sealed class NetMotion(Dynamic dyn)
 				}
 				Vector3 offset = velocity * (float)extrapolateTime + fallAcceleration * (float)(extrapolateTime * extrapolateTime / 2);
 				position += offset;
+				extrapolated = extrapolateTime;
 				renderVelocity = sinceLast <= extrapolateTime ? velocity + fallAcceleration * (float)extrapolateTime : Vector3.Zero;
 				if (last.Spin != Vector3.Zero)
 				{
@@ -499,7 +534,8 @@ public sealed class NetMotion(Dynamic dyn)
 					}
 				}
 			}
-			settled = sinceLast > StaleTimeout && !IsGaining && _blendOffset.Length() < BlendSettle;
+			settled = sinceLast > StaleTimeout && sinceLast > extrapolated && !IsGaining && _blendOffset.Length() < BlendSettle &&
+				_rotationBlend == Quaternion.Identity;
 		}
 
 		for (int i = 0; i < Mathf.Min(Samples.Count, 2); i++)
@@ -520,21 +556,37 @@ public sealed class NetMotion(Dynamic dyn)
 			if (deviation.Length() > SnapDistance + Mathf.Max(speed, Samples[0].Velocity.Length()) * MaxGap)
 			{
 				_blendOffset = Vector3.Zero;
+				_rotationBlend = Quaternion.Identity;
 			}
-			else if (deviation.Length() > Mathf.Max(1.5f * speed * renderAdvance, 0.03f))
+			else
 			{
-				_blendOffset -= deviation;
+				if (deviation.Length() > Mathf.Max(1.5f * speed * renderAdvance, 0.03f))
+				{
+					_blendOffset -= deviation;
+				}
+				float turn = GetRotationDelta(_lastRawRotation, rotation).GetAngle();
+				float spin = Mathf.Max(Samples[0].Spin.Length(), Samples[Samples.Count - 1].Spin.Length());
+				if (turn > Mathf.Max(1.5f * spin * renderAdvance, BlendTurn))
+				{
+					_rotationBlend = (_rotationBlend * _lastRawRotation * rotation.Inverse()).Normalized();
+				}
 			}
 		}
 		else
 		{
 			_blendOffset = Vector3.Zero;
+			_rotationBlend = Quaternion.Identity;
 		}
-		_blendOffset *= (float)Mathf.Exp(-delta / BlendTime);
+		float blendKeep = (float)Mathf.Exp(-delta / BlendTime);
+		_blendOffset *= blendKeep;
+		_rotationBlend = Quaternion.Identity.Slerp(_rotationBlend.Normalized(), blendKeep);
+		if (_rotationBlend.GetAngle() < BlendSettle) _rotationBlend = Quaternion.Identity;
 		_lastRawPosition = position;
+		_lastRawRotation = rotation;
 		_lastRenderTime = renderTime;
 		_lastRenderVelocity = renderVelocity;
 		position += _blendOffset;
+		rotation = (_rotationBlend * rotation).Normalized();
 		return true;
 	}
 
@@ -591,8 +643,14 @@ public sealed class NetMotion(Dynamic dyn)
 			next.Velocity * (3 * w2 - 2 * weight);
 	}
 
-	private static bool IsFalling(Sample previous, Sample last, Vector3 gravity)
+	private bool IsFalling(Sample previous, Sample last, Vector3 gravity)
 	{
+		bool launched = previous.Velocity == Vector3.Zero || previous.Time == _kickTime;
+		if (dyn is not Physical { Anchored: true } && launched && last.Velocity.Dot(-gravity.Normalized()) > MoverSpeed)
+		{
+			return true;
+		}
+
 		double sampleGap = last.Time - previous.Time;
 		if (sampleGap > MinSampleSpacing &&
 			previous.Velocity != Vector3.Zero &&
@@ -661,13 +719,13 @@ public sealed class NetMotion(Dynamic dyn)
 			Vector3 velocity = RemoveFall(last.Velocity);
 			return (last.Position + velocity * (float)extrapolateTime, extrapolateTime < sinceLast ? Vector3.Zero : velocity);
 		}
-		double fallTime = Mathf.Min(sinceLast, GetHitTime(last.Position, last.Rotation, last.Velocity, gravity, 0, sinceLast, out _));
+		double fallTime = Mathf.Min(sinceLast, GetHitTime(last.Position, last.Rotation, last.Velocity, gravity, 0, sinceLast, false, out _));
 		Vector3 position = last.Position + last.Velocity * (float)fallTime + gravity * (float)(fallTime * fallTime / 2);
 		return (position, fallTime < sinceLast ? Vector3.Zero : last.Velocity + gravity * (float)fallTime);
 	}
 
 	private double GetHitTime(Vector3 from, Quaternion rotation, Vector3 velocity, Vector3 gravity,
-		double fromTime, double toTime, out bool hit)
+		double fromTime, double toTime, bool budgeted, out bool hit)
 	{
 		hit = false;
 		if (dyn.GDNode3D is not CollisionObject3D body || !body.IsInsideTree()) return FallExtrapolateLimit;
@@ -689,9 +747,24 @@ public sealed class NetMotion(Dynamic dyn)
 			Vector3 endPosition = from + velocity * (float)segmentEnd + gravity * (float)(segmentEnd * segmentEnd / 2);
 			query.Transform = parent * new Transform3D(new Basis(rotation), startPosition) * shape;
 			query.Motion = parent.Basis * (endPosition - startPosition);
+			if (segmentStart <= fromTime && (velocity + gravity * (float)segmentStart).Dot(gravity) > 0)
+			{
+				if (budgeted && CastBudgetSpent) return clearTime;
+				ulong start = Time.GetTicksUsec();
+				bool blocked = IsStartBlocked(space, query, rid);
+				AddCastTime(start);
+				if (blocked)
+				{
+					hit = true;
+					return clearTime;
+				}
+			}
 			for (int tries = 0; tries < FallSteps; tries++)
 			{
+				if (budgeted && CastBudgetSpent) return clearTime;
+				ulong start = Time.GetTicksUsec();
 				float[] cast = space.CastMotion(query);
+				AddCastTime(start);
 				if (cast[0] >= 1) break;
 				if (!IsMoverHit(space, query, cast[1], rid))
 				{
@@ -702,6 +775,19 @@ public sealed class NetMotion(Dynamic dyn)
 			clearTime = segmentEnd;
 		}
 		return clearTime;
+	}
+
+	internal static bool CastBudgetSpent => _castFrame == Engine.GetProcessFrames() && _castUsec >= MaxCastUsecPerFrame;
+
+	private static void AddCastTime(ulong start)
+	{
+		ulong frame = Engine.GetProcessFrames();
+		if (frame != _castFrame)
+		{
+			_castFrame = frame;
+			_castUsec = 0;
+		}
+		_castUsec += Time.GetTicksUsec() - start;
 	}
 
 	private Godot.Collections.Array<Rid> GetMoverRids()
@@ -725,26 +811,47 @@ public sealed class NetMotion(Dynamic dyn)
 	{
 		Transform3D castStart = query.Transform;
 		query.Transform = castStart.Translated(query.Motion * reach);
+		ulong start = Time.GetTicksUsec();
 		var hits = space.IntersectShape(query, 8);
+		AddCastTime(start);
 		query.Transform = castStart;
 		if (hits.Count == 0) return false;
-		var exclude = query.Exclude;
 		foreach (var hit in hits)
 		{
 			Rid rid = (Rid)hit["rid"];
 			if (rid != self)
 			{
 				if (hit["collider"].AsGodotObject() is not Node node) return false;
-				if (NetworkedObject.GetNetObjFromProxy(node) is not Physical physical ||
-					physical.Anchored || physical.GetNetSpeed() <= MoverSpeed)
-				{
-					return false;
-				}
+				if (NetworkedObject.GetNetObjFromProxy(node) is not Physical physical || IsSettled(physical)) return false;
 			}
-			exclude.Add(rid);
+			_moverRids.Add(rid);
 		}
-		query.Exclude = exclude;
+		query.Exclude = _moverRids;
 		return true;
+	}
+
+	private static bool IsStartBlocked(PhysicsDirectSpaceState3D space, PhysicsShapeQueryParameters3D query, Rid self)
+	{
+		foreach (var hit in space.IntersectShape(query, 8))
+		{
+			if ((Rid)hit["rid"] == self) continue;
+			if (hit["collider"].AsGodotObject() is not Node node) return true;
+			if (NetworkedObject.GetNetObjFromProxy(node) is not Physical physical || IsSettled(physical)) return true;
+		}
+		return false;
+	}
+
+	private static bool IsSettled(Physical physical)
+	{
+		if (World.LocalClock - physical.AnchoredChangedAt < AnchorSettleTime) return false;
+		return (physical.Anchored || physical.IsNetAtRest) && physical.GetNetSpeed() <= MoverSpeed;
+	}
+
+	public bool IsLastSampleBelow(float height)
+	{
+		if (Samples.Count == 0) return true;
+		Transform3D parent = dyn.GDNode3D?.GetParentNode3D() is Node3D node ? node.GlobalTransform : Transform3D.Identity;
+		return (parent * Samples[Samples.Count - 1].Position).Y <= height;
 	}
 
 	public Vector3 GetLocalGravity()

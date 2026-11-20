@@ -201,6 +201,7 @@ public partial class NetworkedObject : IScriptObject
 			{
 				preI.RemoveNameFromParent();
 			}
+			UnregisterName();
 			_name = value;
 			ReenforceName();
 			if (this is Instance postI)

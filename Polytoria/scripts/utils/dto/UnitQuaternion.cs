@@ -51,6 +51,49 @@ public partial class UnitQuaternionDto
 		return result;
 	}
 
+	public static uint ToCompressed32(Quaternion src)
+	{
+		int largestComponent = 0;
+		for (int i = 1; i < 4; i++)
+		{
+			if (Math.Abs(src[i]) > Math.Abs(src[largestComponent])) { largestComponent = i; }
+		}
+
+		uint negate = (uint)(src[largestComponent] < 0 ? 1 : 0);
+		uint result = (uint)largestComponent;
+		for (int i = 0; i < 4; i++)
+		{
+			if (i != largestComponent)
+			{
+				uint negbit = (uint)(src[i] < 0 ? 0x1 : 0x0) ^ negate;
+				uint magnitude = (uint)Math.Min(511 * Math.Abs(src[i]) / _oneSqrtTwo + 0.5f, 511);
+				result = (result << 10) | (negbit << 9) | magnitude;
+			}
+		}
+		return result;
+	}
+
+	public static Quaternion FromCompressed32(uint src)
+	{
+		Quaternion result = new Quaternion();
+		int largestComponent = (int)(src >> 30);
+		double sumSquares = 0;
+		for (int i = 3; i >= 0; i--)
+		{
+			if (i != largestComponent)
+			{
+				uint magnitude = src & 511;
+				uint negbit = (src >> 9) & 1;
+				src >>= 10;
+				result[i] = _oneSqrtTwo * (float)magnitude / 511;
+				if (negbit == 0x1) result[i] = -result[i];
+				sumSquares += result[i] * result[i];
+			}
+		}
+		result[largestComponent] = (float)Math.Sqrt(Math.Max(0, 1 - sumSquares));
+		return result.Normalized();
+	}
+
 	public static Quaternion FromCompressed(ulong src)
 	{
 		Quaternion result = new Quaternion();

@@ -778,7 +778,18 @@ public class LuaMetatable : LuaObject
 				}
 
 				if (argIndex != args.Length)
+				{
+					if (attr.Metamethod is ScriptObjectMetamethod.Add or ScriptObjectMetamethod.Sub or ScriptObjectMetamethod.Mul or
+						ScriptObjectMetamethod.Div or ScriptObjectMetamethod.Mod or ScriptObjectMetamethod.Pow)
+					{
+						throw new InvalidOperationException("attempt to perform arithmetic on a nil value");
+					}
+					if (attr.Metamethod is ScriptObjectMetamethod.Lt or ScriptObjectMetamethod.Le)
+					{
+						throw new InvalidOperationException("attempt to compare with a nil value");
+					}
 					Array.Resize(ref args, argIndex);
+				}
 
 				MethodInfo m = ResolveOverload(methods, overloads, args, out bool hasParams, out MethodInvocationData invocation) ?? throw new Exception("couldn't find metamethod with matching overload");
 

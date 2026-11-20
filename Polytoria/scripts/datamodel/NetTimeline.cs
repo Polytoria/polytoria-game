@@ -11,10 +11,10 @@ namespace Polytoria.Datamodel;
 internal sealed class NetTimeline(World root)
 {
 	private const int DelaySampleCount = 500;
-	private const double DelayWindow = 10;
+	private const double DelayWindow = 30;
 	private const double MaxDelay = 1.5;
-	private const double DelayPercentile = 0.9;
-	public const double RiseRate = 0.2;
+	private const double DelayPercentile = 0.95;
+	public const double RiseRate = 0.1;
 	public const double FallRate = 0.05;
 	private const double Deadband = 0.01;
 	private const double MaxFrameTime = 0.25;

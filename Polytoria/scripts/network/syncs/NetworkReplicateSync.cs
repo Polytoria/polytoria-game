@@ -63,12 +63,16 @@ public sealed partial class NetworkReplicateSync : Instance
 	{
 		_recvSeq++;
 		ulong seq = _recvSeq;
+		NetReplicateData[] netObjsData = SerializeUtils.Deserialize<NetReplicateData[]>(ZstdCompressionUtils.Decompress(rawBytes))!;
+		foreach (NetReplicateData data in netObjsData)
+		{
+			if (_removedIDs.TryGetValue(data.NetworkID, out var removed) && removed.Seq < seq) _removedIDs.Remove(data.NetworkID);
+		}
 
 		// Wait frame for all deletion to finish
 		await Globals.Singleton.WaitFrame();
 		await Globals.Singleton.WaitFrame();
 
-		NetReplicateData[] netObjsData = SerializeUtils.Deserialize<NetReplicateData[]>(ZstdCompressionUtils.Decompress(rawBytes))!;
 		NetReplicateData[][] chunked = ArrayUtils.Chunk(netObjsData, PlaceReplicationChunkSize);
 
 		foreach (NetReplicateData data in netObjsData)
@@ -337,6 +341,7 @@ public sealed partial class NetworkReplicateSync : Instance
 
 		foreach (NetReplicateData data in netObjsData)
 		{
+			if (_removedIDs.TryGetValue(data.NetworkID, out var removed) && removed.Seq < seq) _removedIDs.Remove(data.NetworkID);
 			if (data.Transform != null)
 			{
 				NetService.TransformSync.RecvReplicateTransform(data.NetworkID, data.Transform, RemoteSenderId);
@@ -361,6 +366,11 @@ public sealed partial class NetworkReplicateSync : Instance
 				PT.PrintErr($"[Net] Failed to replicate {data.Name}: {ex}");
 			}
 		}
+	}
+
+	internal bool IsRemoved(string netID)
+	{
+		return _removedIDs.ContainsKey(netID);
 	}
 
 	private bool IsRemovedAfter(string? netID, ulong seq)
@@ -444,7 +454,8 @@ public sealed partial class NetworkReplicateSync : Instance
 	{
 		if (NetService.IsServer) return;
 		_recvSeq++;
-		MarkRemoved(nodePath, _recvSeq);
+		ulong seq = _recvSeq;
+		MarkRemoved(nodePath, seq);
 
 		await Globals.Singleton.WaitFrame();
 
@@ -454,6 +465,13 @@ public sealed partial class NetworkReplicateSync : Instance
 		if (targetObj != null)
 		{
 			if (_useNetworkLog) { PT.Print($"[Net] [-] Remove {targetObj.NetworkPath}"); }
+			if (targetObj is Instance instance)
+			{
+				foreach (Instance child in instance.GetDescendants())
+				{
+					if (child.NetworkedObjectID != "") MarkRemoved(child.NetworkedObjectID, seq);
+				}
+			}
 			targetObj.ForceDelete();
 		}
 		else

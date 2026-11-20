@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+using Polytoria.Client.Networking;
 using Polytoria.Shared;
 using System;
 using System.Collections.Concurrent;
@@ -31,6 +32,7 @@ public class NetworkInstance
 
 	private const int DefaultCapacity = 67;
 	private const int DefaultPort = 21441;
+	private const int ChannelCount = 5;
 	private const int PollIntervalMs = 5;
 	private const int MaxActionsPerPoll = 256;
 	private const int MaxInboundEventsBeforeActions = 256;
@@ -42,6 +44,7 @@ public class NetworkInstance
 	internal readonly ConcurrentDictionary<int, ENetPacketPeer> IdToPeer = [];
 	internal readonly ConcurrentDictionary<ENetPacketPeer, int> PeerToId = [];
 	internal readonly ConcurrentDictionary<int, double> PeerRoundTrips = [];
+	internal readonly ConcurrentDictionary<int, int> PeerPings = [];
 	private const int RoundTripIntervalMs = 100;
 	private long _lastRoundTripUpdate;
 
@@ -70,9 +73,9 @@ public class NetworkInstance
 		_peer = new();
 	}
 
-	public void CreateServer(int port = DefaultPort, int maxChannels = 4)
+	public void CreateServer(int port = DefaultPort)
 	{
-		Error e = _peer.CreateHostBound("*", port, DefaultCapacity, maxChannels);
+		Error e = _peer.CreateHostBound("*", port, DefaultCapacity, ChannelCount);
 		_peer.Compress(CompressionMode);
 
 		if (e != Error.Ok)
@@ -85,9 +88,9 @@ public class NetworkInstance
 		PostPeerCreate();
 	}
 
-	public async Task CreateClient(string address, int port, int maxChannels = 4)
+	public async Task CreateClient(string address, int port)
 	{
-		Error e = _peer.CreateHost(DefaultCapacity, maxChannels);
+		Error e = _peer.CreateHost(DefaultCapacity, ChannelCount);
 		_peer.BandwidthLimit(BandwidthInLimit, BandwidthOutLimit);
 		_peer.Compress(CompressionMode);
 
@@ -273,6 +276,7 @@ public class NetworkInstance
 				IdToPeer[peerID] = fromPeer;
 				PeerToId[fromPeer] = peerID;
 				fromPeer.ThrottleConfigure(PacketThrottleInterval, PacketThrottleAcceleration, 0);
+				fromPeer.SetTimeout(32, 15000, 30000);
 
 				if (IsServer)
 				{
@@ -415,6 +419,7 @@ public class NetworkInstance
 			double roundTrip = peer.GetStatistic(ENetPacketPeer.PeerStatistic.RoundTripTime);
 			double variance = peer.GetStatistic(ENetPacketPeer.PeerStatistic.RoundTripTimeVariance);
 			PeerRoundTrips[id] = (roundTrip + 4 * variance) / 1000;
+			PeerPings[id] = Mathf.RoundToInt(roundTrip);
 		}
 	}
 
@@ -422,6 +427,7 @@ public class NetworkInstance
 	{
 		IdToPeer.TryRemove(peerID, out _);
 		PeerRoundTrips.TryRemove(peerID, out _);
+		PeerPings.TryRemove(peerID, out _);
 		PeerToId.TryRemove(peer, out _);
 		if (IsServer)
 		{

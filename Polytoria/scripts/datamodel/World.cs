@@ -54,6 +54,7 @@ public sealed partial class World : Instance
 	private readonly HashSet<Dynamic> _interpolating = [];
 	internal IReadOnlySet<Dynamic> Interpolating => _interpolating;
 	private readonly List<Dynamic> _interpolationDone = [];
+	private int _interpolateStart;
 	private readonly Dictionary<int, NetTimeline> _netTimelines = [];
 	private readonly HashSet<int> _removedTimelinePeers = [];
 	private uint _nextId = 0;
@@ -383,12 +384,20 @@ public sealed partial class World : Instance
 			}
 		}
 
+		int start = _interpolateStart < _interpolating.Count ? _interpolateStart : 0;
+		_interpolateStart = 0;
+		int index = 0;
 		foreach (Dynamic dyn in _interpolating)
 		{
-			if (dyn.IsDeleted || !dyn.UpdateTransformTick(delta))
-			{
-				_interpolationDone.Add(dyn);
-			}
+			if (index >= start) TickInterpolation(dyn, delta, index);
+			index++;
+		}
+		index = 0;
+		foreach (Dynamic dyn in _interpolating)
+		{
+			if (index >= start) break;
+			TickInterpolation(dyn, delta, index);
+			index++;
 		}
 		if (_interpolationDone.Count > 0)
 		{
@@ -396,6 +405,16 @@ public sealed partial class World : Instance
 			_interpolationDone.Clear();
 		}
 		base.Process(delta);
+	}
+
+	private void TickInterpolation(Dynamic dyn, double delta, int index)
+	{
+		bool hadBudget = !NetMotion.CastBudgetSpent;
+		if (dyn.IsDeleted || !dyn.UpdateTransformTick(delta))
+		{
+			_interpolationDone.Add(dyn);
+		}
+		if (hadBudget && NetMotion.CastBudgetSpent) _interpolateStart = index;
 	}
 
 	// update server vital signs
