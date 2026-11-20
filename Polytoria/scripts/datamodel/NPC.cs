@@ -622,6 +622,7 @@ public partial class NPC : Physical
 	public override void CreatorInserted()
 	{
 		Root.Insert.InitializeDefaultNPC(this);
+		DisplayName = "Pauly";
 		base.CreatorInserted();
 	}
 #endif
