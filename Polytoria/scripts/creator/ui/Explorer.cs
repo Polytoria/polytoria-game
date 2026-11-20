@@ -389,7 +389,7 @@ public sealed partial class Explorer : TabContainer
 
 			if (instance.LinkedModel != null)
 			{
-				foreach (Instance ch in instance.ModelChilds.Values)
+				foreach (Instance ch in instance.ModelChildren.Values)
 				{
 					TreeItem? i = GetTreeItemFromInstance(ch);
 					if (i != null)

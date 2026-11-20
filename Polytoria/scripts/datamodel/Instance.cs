@@ -306,7 +306,7 @@ public partial class Instance : NetworkedObject
 	}
 
 
-	public Dictionary<string, Instance> ModelChilds = [];
+	public Dictionary<string, Instance> ModelChildren = [];
 
 	[Editable(IsHidden = true), DefaultValue(false)]
 	public bool EditableChildren
@@ -601,16 +601,16 @@ public partial class Instance : NetworkedObject
 	[ScriptMethod]
 	public Instance[] GetChildrenWithTag(string tag)
 	{
-		List<Instance> childs = [];
+		List<Instance> Children = [];
 		foreach (Instance child in GetChildren())
 		{
 			if (child.HasTag(tag))
 			{
-				childs.Add(child);
+				Children.Add(child);
 			}
 		}
 
-		return [.. childs];
+		return [.. Children];
 	}
 
 	[ScriptMethod]
@@ -934,7 +934,7 @@ public partial class Instance : NetworkedObject
 
 	public Instance? GetModelChildFromID(string objID)
 	{
-		return ModelChilds.TryGetValue(objID, out Instance? instance) ? instance : null;
+		return ModelChildren.TryGetValue(objID, out Instance? instance) ? instance : null;
 	}
 
 #if CREATOR
@@ -960,12 +960,12 @@ public partial class Instance : NetworkedObject
 
 	public void RegisterModelChild(Instance i)
 	{
-		ModelChilds.Add(i.ObjectID, i);
+		ModelChildren.Add(i.ObjectID, i);
 	}
 
 	public void UnregisterModelChild(Instance i)
 	{
-		ModelChilds.Remove(i.ObjectID);
+		ModelChildren.Remove(i.ObjectID);
 	}
 
 	[ScriptMethod]
