@@ -1,4 +1,51 @@
-<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect x="9" y="9" width="30" height="30" rx="2" stroke="#F3F3F3" stroke-width="4"/>
-<path d="M16 26.2333L20.561 31L33 18" stroke="#4FE883" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="48"
+   height="48"
+   viewBox="0 0 48 48"
+   version="1.1"
+   id="svg1"
+   xml:space="preserve"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><defs
+     id="defs1" /><g
+     id="layer1"><g
+       style="fill:none"
+       id="g2"><rect
+         x="9"
+         y="9"
+         width="30"
+         height="30"
+         rx="2"
+         stroke="#f3f3f3"
+         stroke-width="4"
+         id="rect1" /><path
+         d="m 14.250006,15.000022 h 7.499988 L 18,14.999995 v 10.00001"
+         stroke="#4fe883"
+         stroke-width="4"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path1"
+         style="stroke:#4fe883;stroke-width:3.23844;stroke-dasharray:none;stroke-opacity:1" /><rect
+         style="fill:#ffffff;fill-opacity:1;stroke:#ffffff;stroke-width:1;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:5;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:stroke fill markers"
+         id="rect6"
+         width="2"
+         height="22"
+         x="31.286455"
+         y="-0.53173089"
+         ry="1"
+         transform="rotate(27.0357)" /><text
+         xml:space="preserve"
+         style="writing-mode:lr-tb;direction:ltr;fill:#e84f4f;fill-opacity:1;stroke:none;stroke-width:2.271;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:5;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:stroke fill markers"
+         x="31"
+         y="23"
+         id="text8"><tspan
+           id="tspan8"
+           x="31"
+           y="23" /></text><path
+         style="fill:none;fill-opacity:1;stroke:#e84f4f;stroke-width:2.271;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:5;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:stroke fill markers"
+         d="M 33.901959,29 H 30 v 4 -8 h 4 -4 v 4 z"
+         id="path8"
+         transform="matrix(1.25,0,0,1.25,-8.5,-7.25)" /></g></g></svg>
