@@ -37,7 +37,7 @@ public partial class VariantDto
 		Variant.Type.String => src.AsString(),
 		Variant.Type.Vector2 => Vector2Dto.ToString(src.AsVector2()),
 		Variant.Type.Vector3 => Vector3Dto.ToString(src.AsVector3()),
-		Variant.Type.Quaternion => UnitQuaternionUInt64Dto.ToString(src.AsQuaternion()),
+		Variant.Type.Quaternion => UnitQuaternionDto.ToString(src.AsQuaternion()),
 		Variant.Type.Color => ColorDto.ToString(src.AsColor()),
 		_ => throw new ArgumentException($"Unsupported Variant type: {src.VariantType}")
 	};
@@ -53,7 +53,7 @@ public partial class VariantDto
 			Variant.Type.String => src,
 			Variant.Type.Vector2 => Vector2Dto.FromString(src),
 			Variant.Type.Vector3 => Vector3Dto.FromString(src),
-			Variant.Type.Quaternion => UnitQuaternionUInt64Dto.FromString(src),
+			Variant.Type.Quaternion => UnitQuaternionDto.FromString(src),
 			Variant.Type.Color => ColorDto.FromString(src),
 			_ => throw new ArgumentException($"Unsupported Variant type: {type}"),
 		};
@@ -66,7 +66,7 @@ public class VariantJsonConverter : JsonConverter<Variant>
 {
 	private static readonly Vector2JsonConverter Vector2Converter = new();
 	private static readonly Vector3JsonConverter Vector3Converter = new();
-	private static readonly UnitQuaternionUInt64JsonConverter QuaternionConverter = new();
+	private static readonly UnitQuaternionJsonConverter QuaternionConverter = new();
 	private static readonly ColorJsonConverter ColorConverter = new();
 
 	public override Variant Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

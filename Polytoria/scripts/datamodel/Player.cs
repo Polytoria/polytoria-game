@@ -52,15 +52,14 @@ public sealed partial class Player : NPC
 	private bool _useHeadTurning = false;
 	private int _userID;
 	private bool _useBubbleChat = true;
+	private bool _chatBubbleVisible = true;
 	private bool _autoLoadAppearance = true;
 	private bool _allowAnimationWhileMoving = false;
-	private PlayerMovementModeEnum _movementMode = PlayerMovementModeEnum.Default;
 	private PlayerRotationModeEnum _rotationMode = PlayerRotationModeEnum.Automatic;
 	private Team? _team;
 	private Color _chatColorBeforeTeam;
 
 	internal bool SprintOverride = false;
-	private float _pingStartTime = 0;
 	internal bool SprintHoldAgain = false;
 
 	private double _afkTimer;
@@ -242,7 +241,7 @@ public sealed partial class Player : NPC
 		set
 		{
 			_useBubbleChat = value;
-			_bubbleChat?.Visible = _useBubbleChat;
+			UpdateChatBubbleVisibility();
 			OnPropertyChanged();
 		}
 	}
@@ -294,24 +293,6 @@ public sealed partial class Player : NPC
 	}
 
 	[Editable, ScriptProperty]
-	public PlayerMovementModeEnum MovementMode
-	{
-		get => _movementMode;
-		set
-		{
-			_movementMode = value;
-
-			PlayerMovement = _movementMode switch
-			{
-				PlayerMovementModeEnum.Default => new DefaultMovement() { Root = Root, Target = this },
-				_ => null,
-			};
-
-			OnPropertyChanged();
-		}
-	}
-
-	[Editable, ScriptProperty]
 	public PlayerRotationModeEnum RotationMode
 	{
 		get => _rotationMode;
@@ -320,6 +301,23 @@ public sealed partial class Player : NPC
 			_rotationMode = value;
 			OnPropertyChanged();
 		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool ChatBubbleVisible
+	{
+		get => _chatBubbleVisible;
+		set
+		{
+			_chatBubbleVisible = value;
+			UpdateChatBubbleVisibility();
+			OnPropertyChanged();
+		}
+	}
+
+	private void UpdateChatBubbleVisibility()
+	{
+		_bubbleChat.Visible = _useBubbleChat && _chatBubbleVisible;
 	}
 
 	[ScriptProperty]
@@ -424,7 +422,6 @@ public sealed partial class Player : NPC
 		{
 			bool oldVal = _isReady;
 			_isReady = value;
-			GD.PushWarning($"{Name} update is ready {oldVal} -> {_isReady}");
 			UpdatePlrReady();
 			if (value != oldVal && value)
 			{
@@ -506,7 +503,7 @@ public sealed partial class Player : NPC
 
 		_bubbleChat = Globals.CreateInstanceFromScene<BubbleChat>(BubbleChatScene);
 		_bubbleChat.TargetPlayer = this;
-		_bubbleChat.Visible = _useBubbleChat;
+		ChatBubbleVisible = _useBubbleChat;
 		GDNode.AddChild(_bubbleChat, @internal: Node.InternalMode.Back);
 		excludedBoundNodes.Add(_bubbleChat);
 	}
@@ -515,6 +512,7 @@ public sealed partial class Player : NPC
 	{
 		Root.Input.GodotInputEvent -= OnInput;
 		Died.Disconnect(OnPlayerDied);
+		Root.Players.PropertyChanged.Disconnect<string>(OnPlayersPropertyChanged);
 		PlayerMovement = null!;
 		base.PreDelete();
 	}
@@ -583,13 +581,17 @@ public sealed partial class Player : NPC
 	public override void Process(double delta)
 	{
 		base.Process(delta);
+		NetworkInstance? net = Root.Network.NetInstance;
+		if ((Root.Network.IsServer || IsLocal) && net != null && net.PeerPings.TryGetValue(Root.Network.IsServer ? PeerID : 1, out int ping))
+		{
+			NetworkPing = ping;
+		}
 		if (!Root.Network.IsServer)
 		{
 			UpdateCamera(delta);
 		}
 		if (!IsLocal)
 		{
-			UpdateTransformTick(delta);
 			if (Root.Network.IsServer && !IsSitting)
 			{
 				CharBody3D.Velocity = LastVelocity;
@@ -778,30 +780,11 @@ public sealed partial class Player : NPC
 		Character?.SetAnimSpeed(1);
 	}
 
-	private void SendPing()
-	{
-		_pingStartTime = Time.GetTicksMsec();
-		RpcId(1, nameof(NetPingRecv));
-	}
-
-	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Reliable)]
-	private void NetPingRecv()
-	{
-		RpcId(PeerID, nameof(NetPong));
-	}
-
-	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Reliable)]
-	private async void NetPong()
-	{
-		NetworkPing = (int)Math.Round(Time.GetTicksMsec() - _pingStartTime);
-		await Globals.Singleton.WaitAsync(1);
-		SendPing();
-	}
-
 	public void OnInput(InputEvent @event)
 	{
 		if (Root.SessionType != World.SessionTypeEnum.Client) { return; }
 		if (!IsLocal || !Root.Input.IsGameFocused) { return; }
+		if (Root.Input.IsPromptKey(@event)) { return; }
 
 		if (@event.IsActionPressed("activate"))
 		{
@@ -848,15 +831,13 @@ public sealed partial class Player : NPC
 
 	private async void OnPlayerDied()
 	{
-		if (IsLocal)
-		{
-			UnequipTool();
-		}
+		UnequipTool();
 		Velocity = Vector3.Zero;
 		if (!Root.Network.IsServer) return; // Respawn on server only
 
 		// Respawn on client
 		await Globals.Singleton.WaitAsync(RespawnTime);
+		if (IsDeleted) return;
 		Respawn();
 	}
 
@@ -864,7 +845,7 @@ public sealed partial class Player : NPC
 	internal void OnNetReady()
 	{
 		IsLocal = true;
-		SendPing();
+		Nametag?.UpdateNameTag();
 
 		CamAttach = Globals.LoadInstance<Dynamic>(Root);
 		CamAttach.Name = "CameraAttachment";
@@ -940,6 +921,21 @@ public sealed partial class Player : NPC
 		}
 	}
 
+	internal event Action? MutedChanged;
+
+	internal bool IsMuted
+	{
+		get => _isMuted;
+		set
+		{
+			if (_isMuted == value) return;
+			_isMuted = value;
+			MutedChanged?.Invoke();
+		}
+	}
+
+	private bool _isMuted;
+
 	internal void InvokeChatted(string msg)
 	{
 		Chatted.Invoke(msg);
@@ -961,13 +957,13 @@ public sealed partial class Player : NPC
 	private void OnFirstPersonEntered()
 	{
 		Character?.Visible = false;
-		_bubbleChat.Visible = false;
+		ChatBubbleVisible = false;
 	}
 
 	private void OnFirstPersonExited()
 	{
 		Character?.Visible = true;
-		_bubbleChat.Visible = true;
+		ChatBubbleVisible = true;
 	}
 
 	public async Task WarpToSpawnPoint()
@@ -1002,11 +998,7 @@ public sealed partial class Player : NPC
 					0
 				);
 				while (Root.Environment.CurrentCamera == null) await Task.Delay(100);
-				Root.Environment.CurrentCamera.RotationOffset = new Vector3(
-					0,
-					Root.Entry.DebugSpawnRot.Value,
-					0
-				);
+				Root.Environment.CurrentCamera.Rotation = Root.Environment.CurrentCamera.Rotation with { Y = 180 + Root.Entry.DebugSpawnRot.Value };
 			}
 		}
 #endif
@@ -1016,6 +1008,7 @@ public sealed partial class Player : NPC
 	[ScriptMethod]
 	public void Kick(string reason)
 	{
+		reason = FilterService.Filter(reason);
 		if (Root.Network.IsServer)
 		{
 			// Kick by server
@@ -1128,6 +1121,8 @@ public sealed partial class Player : NPC
 		{
 			foreach (Instance item in Root.PlayerDefaults.Inventory.GetChildren())
 			{
+				if (Inventory.FindChild(item.Name) != null || HoldingTool?.Name == item.Name) continue;
+
 				NetworkedObject a = item.Clone();
 				if (a is Instance i)
 				{
@@ -1164,12 +1159,6 @@ public sealed partial class Player : NPC
 		}
 	}
 
-	internal override bool TransformNetworkCheck(TransformPayloadDto newTransform)
-	{
-		// TODO: Make sanity checks here
-		return true;
-	}
-
 	internal void AdminKick()
 	{
 		RpcId(1, nameof(NetAdminKick));
@@ -1187,13 +1176,6 @@ public sealed partial class Player : NPC
 		{
 			Kick("You have been kicked by game administrator.");
 		}
-	}
-
-	[ScriptEnum]
-	public enum PlayerMovementModeEnum
-	{
-		Default,
-		Scripted
 	}
 
 	[ScriptEnum]

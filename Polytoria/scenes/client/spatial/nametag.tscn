@@ -1,83 +1,62 @@
 [gd_scene format=3 uid="uid://bhr73ix2cmhos"]
 
-[sub_resource type="ViewportTexture" id="ViewportTexture_0xxpl"]
-viewport_path = NodePath("SubViewport")
+[ext_resource type="Script" uid="uid://c3y6h2gblov4b" path="res://scripts/client/spatial/Nametag.cs" id="1_0xxpl"]
+[ext_resource type="Shader" uid="uid://dhetxrwn6st4g" path="res://resources/shaders/healthbar.gdshader" id="2_m6t0u"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_0xxpl"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_0xxpl"]
+render_priority = 10
+shader = ExtResource("2_m6t0u")
+shader_parameter/size = Vector2(300, 30)
+shader_parameter/radius = 8.0
+shader_parameter/border = 4.0
+shader_parameter/bg_color = Color(0, 0, 0, 0.498)
+shader_parameter/bg_border_color = Color(0, 0, 0, 0.871)
+shader_parameter/fill_color = Color(0.309, 0.91, 0.51, 1)
+shader_parameter/fill_border_color = Color(0.09, 0.09, 0.09, 0.553)
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_m6t0u"]
+[sub_resource type="QuadMesh" id="QuadMesh_0xxpl"]
+material = SubResource("ShaderMaterial_0xxpl")
+size = Vector2(4.5, 0.45)
+center_offset = Vector3(0, 0.465, 0)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0xxpl"]
-bg_color = Color(0, 0, 0, 0.49803922)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(0, 0, 0, 0.87058824)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+[node name="Nametag" type="Node3D" unique_id=1840837145 node_paths=PackedStringArray("_titleLabel", "_outlineLabel", "_healthBar")]
+script = ExtResource("1_0xxpl")
+_titleLabel = NodePath("Title")
+_outlineLabel = NodePath("Outline")
+_healthBar = NodePath("Healthbar")
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_m6t0u"]
-bg_color = Color(0.3094, 0.91, 0.50960004, 1)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(0.09, 0.09, 0.09, 0.5529412)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-
-[node name="Contents" type="Node3D" unique_id=1840837145]
-
-[node name="Sprite3D" type="Sprite3D" parent="." unique_id=109876010]
-centered = false
-offset = Vector2(-150, 16)
+[node name="Outline" type="Label3D" parent="." unique_id=1503968426]
+sorting_use_aabb_center = false
 pixel_size = 0.015
+offset = Vector2(0, 16)
 billboard = 1
 no_depth_test = true
 render_priority = 10
-texture = SubResource("ViewportTexture_0xxpl")
-
-[node name="SubViewport" type="SubViewport" parent="." unique_id=1177620911]
-transparent_bg = true
-handle_input_locally = false
-size = Vector2i(300, 240)
-
-[node name="Control" type="VBoxContainer" parent="SubViewport" unique_id=1647728664]
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -150.0
-offset_top = -60.0
-offset_right = 150.0
-grow_horizontal = 2
-grow_vertical = 0
-size_flags_horizontal = 6
-theme_override_constants/separation = 4
-alignment = 2
-
-[node name="Title" type="Label" parent="SubViewport/Control" unique_id=2054279508]
-custom_minimum_size = Vector2(300, 0)
-layout_mode = 2
-theme_override_constants/outline_size = 16
-theme_override_font_sizes/font_size = 32
-theme_override_styles/normal = SubResource("StyleBoxEmpty_0xxpl")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_m6t0u")
+outline_render_priority = 10
+modulate = Color(1, 1, 1, 0)
 text = "NAME"
-horizontal_alignment = 1
+outline_size = 16
 vertical_alignment = 2
+line_spacing = 3.0
 autowrap_mode = 1
+width = 300.0
 
-[node name="Healthbar" type="ProgressBar" parent="SubViewport/Control" unique_id=946472907]
-custom_minimum_size = Vector2(0, 30)
-layout_mode = 2
-theme_override_styles/background = SubResource("StyleBoxFlat_0xxpl")
-theme_override_styles/fill = SubResource("StyleBoxFlat_m6t0u")
-value = 70.16
-show_percentage = false
+[node name="Title" type="Label3D" parent="." unique_id=2054279508]
+sorting_offset = 0.01
+sorting_use_aabb_center = false
+pixel_size = 0.015
+offset = Vector2(0, 16)
+billboard = 1
+no_depth_test = true
+render_priority = 10
+text = "NAME"
+outline_size = 0
+vertical_alignment = 2
+line_spacing = 3.0
+autowrap_mode = 1
+width = 300.0
+
+[node name="Healthbar" type="MeshInstance3D" parent="." unique_id=946472907]
+sorting_use_aabb_center = false
+cast_shadow = 0
+mesh = SubResource("QuadMesh_0xxpl")

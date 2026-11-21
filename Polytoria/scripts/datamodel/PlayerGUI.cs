@@ -13,6 +13,7 @@ public partial class PlayerGUI : Instance
 {
 	private const string TouchControlsPath = "res://scenes/client/ui/touch_controls.tscn";
 	internal InputFallbackBase InputFallback = null!;
+	internal Control PromptLayer = null!;
 
 	public override Node CreateGDNode()
 	{
@@ -25,6 +26,9 @@ public partial class PlayerGUI : Instance
 		InputFallback = new InputFallbackBase() { FocusMode = Control.FocusModeEnum.Click, MouseFilter = Control.MouseFilterEnum.Pass };
 		GDNode.AddChild(InputFallback, @internal: Node.InternalMode.Front);
 		InputFallback.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		PromptLayer = new Control() { MouseFilter = Control.MouseFilterEnum.Ignore };
+		GDNode.AddChild(PromptLayer, @internal: Node.InternalMode.Front);
+		PromptLayer.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 	}
 
 	internal void GrabFocus()

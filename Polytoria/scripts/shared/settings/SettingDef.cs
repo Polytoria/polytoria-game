@@ -55,6 +55,9 @@ public abstract class SettingDef
 	public bool IsAdvanced { get; init; }
 	public IReadOnlyList<ISettingCondition>? Conditions { get; init; }
 
+	public Func<bool>? SupportedPredicate { get; init; }
+	public bool IsSupported => SupportedPredicate?.Invoke() ?? true;
+
 	public abstract object UntypedDefault { get; }
 	public abstract Type ValueType { get; }
 	public virtual object? UntypedMinValue => null;

@@ -64,6 +64,18 @@ public static class PolyMobileAuthAPI
 		authData.Close();
 	}
 
+	public static void Logout()
+	{
+		PolyAPI.ClearAuthToken();
+		_authData = new();
+		CurrentUserInfo = default;
+		if (FileAccess.FileExists(AuthDataPath))
+		{
+			DirAccess.RemoveAbsolute(AuthDataPath);
+		}
+		AskForAuthentication?.Invoke();
+	}
+
 	public static void StartMobileAuth()
 	{
 		_authState = Guid.NewGuid().ToString();
