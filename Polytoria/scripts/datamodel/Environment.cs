@@ -576,7 +576,7 @@ public sealed partial class Environment : Instance
 
 			// GetRestInfo doesn't provide the collider, grab it manually
 			Node collider = (Node)GodotObject.InstanceFromId((ulong)result["collider_id"])!;
-			Instance? instance = ColliderToInstance(collider);
+			Instance? instance = ColliderToInstance(collider, (int)result["shape"]);
 
 			Vector3 hitPos = (Vector3)result["point"];
 			Vector3 normal = (Vector3)result["normal"];
