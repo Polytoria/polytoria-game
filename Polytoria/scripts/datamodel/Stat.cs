@@ -66,6 +66,13 @@ public partial class Stat : Instance
 		base.Ready();
 	}
 
+	public override void PreDelete()
+	{
+		Root.Players.PlayerRemoved.Disconnect<Player>(OnPlayerRemoved);
+		Root.Players.PlayerAdded.Disconnect<Player>(OnPlayerAdded);
+		base.PreDelete();
+	}
+
 	[NetRpc(AuthorityMode.Any, TransferMode = TransferMode.Reliable)]
 	private void NetReqPlayerStats()
 	{

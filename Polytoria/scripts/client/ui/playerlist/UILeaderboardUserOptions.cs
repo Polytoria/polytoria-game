@@ -14,6 +14,7 @@ public partial class UILeaderboardUserOptions : Control
 	[Export] private Button _addFriendBtn = null!;
 	[Export] private Button _removeFriendBtn = null!;
 	[Export] private Button _viewProfileBtn = null!;
+	[Export] private Button _muteBtn = null!;
 	[Export] private Control _loaderView = null!;
 	public bool Active { get; private set; } = false;
 	public UILeaderboardUserItem? Target;
@@ -26,7 +27,15 @@ public partial class UILeaderboardUserOptions : Control
 		_viewProfileBtn.Pressed += OnViewProfile;
 		_addFriendBtn.Pressed += OnAddFriend;
 		_removeFriendBtn.Pressed += OnRemoveFriend;
+		_muteBtn.Pressed += OnMute;
 		base._Ready();
+	}
+
+	private void OnMute()
+	{
+		if (Target == null) return;
+		Target.TargetPlayer.IsMuted = !Target.TargetPlayer.IsMuted;
+		Disappear();
 	}
 
 	private void OnAddFriend()
@@ -66,6 +75,9 @@ public partial class UILeaderboardUserOptions : Control
 		Active = true;
 		Target = item;
 		_root = Target.Leaderboard.CoreUI.Root;
+
+		_muteBtn.Visible = !item.TargetPlayer.IsLocal;
+		_muteBtn.Text = item.TargetPlayer.IsMuted ? "Unmute" : "Mute";
 
 		GlobalPosition = item.GetNode<Control>("InfoSpawn").GlobalPosition;
 		_animPlay.Stop();

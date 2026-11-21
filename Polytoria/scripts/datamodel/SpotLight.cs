@@ -23,7 +23,11 @@ public sealed partial class SpotLight : Light
 	public override Node CreateGDNode()
 	{
 		Node3D n = new();
-		SpotLight3D sl = new();
+		SpotLight3D sl = new()
+		{
+			DistanceFadeEnabled = true,
+			DistanceFadeLength = 50f
+		};
 		n.AddChild(sl, @internal: Node.InternalMode.Back);
 		sl.RotationDegrees = new(0, 180, 0); // Facing Z+
 		GDLight = sl;
@@ -55,6 +59,7 @@ public sealed partial class SpotLight : Light
 		{
 			_range = value;
 			GDSpotLight.SpotRange = value;
+			UpdateFade();
 #if CREATOR
 			_cone.Range = value;
 #endif

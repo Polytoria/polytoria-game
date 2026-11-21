@@ -35,7 +35,12 @@ public sealed partial class PreferencesService : Instance
 	[ScriptMethod]
 	public object? Get(string name)
 	{
-		return ClientSettingsService.Instance.GetUntyped(name);
+		object? value = ClientSettingsService.Instance.GetUntyped(name);
+		if (SettingEnumTypes.TryGetValue(name, out var enumType))
+		{
+			return Enum.ToObject(enumType, value!);
+		}
+		return value;
 	}
 
 	public override void Init()

@@ -28,6 +28,7 @@ public partial class UIPurchasePrompt : Control
 	private PTImageAsset? _iconImg;
 	private Tween? _holdTween;
 	private bool _purchaseTriggered;
+	private bool _noticeMode;
 
 	public event Action<bool>? Requested;
 
@@ -83,12 +84,34 @@ public partial class UIPurchasePrompt : Control
 
 	private void OnCancel()
 	{
-		Requested?.Invoke(false);
+		if (!_noticeMode)
+		{
+			Requested?.Invoke(false);
+		}
 		Close();
+	}
+
+	public async Task ShowDisabledNotice()
+	{
+		_noticeMode = true;
+		_purchaseText.Text = "In world purchases disabled on mobile!";
+		_holdTween?.Kill();
+		_purchaseButton.Visible = false;
+		_priceLabel.Visible = false;
+		_iconRect.Visible = false;
+		_cancelButton.Disabled = false;
+
+		_animPlay.Play("RESET");
+		await ToSignal(_animPlay, AnimationPlayer.SignalName.AnimationFinished);
+		_animPlay.Play("appear");
 	}
 
 	public async Task Prompt(APIStoreItem item)
 	{
+		_noticeMode = false;
+		_purchaseButton.Visible = true;
+		_priceLabel.Visible = true;
+		_iconRect.Visible = true;
 		_purchaseText.Text = $"Would you like to buy {item.Name}?";
 		_priceLabel.Text = item.Price!.Value.ToString();
 

@@ -15,6 +15,7 @@ public static class ClientSettingKeys
 
 	public static class Chat
 	{
+		public const string ChatEnabled = "chat.chat_enabled";
 		public const string ChatColors = "chat.chat_colors";
 		public const string ChatFont = "chat.chat_font";
 		public const string ChatFontSize = "chat.chat_font_size";

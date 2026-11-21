@@ -5,41 +5,28 @@
 using Godot;
 using Polytoria.Attributes;
 using Polytoria.Shared;
+using System;
 
 namespace Polytoria.Datamodel;
 
 [Instantiable]
 public partial class Part : Entity
 {
-	private MeshInstance3D? _mesh;
 	private CollisionShape3D _collider = null!;
-	private Material _meshMaterial = null!;
 	private ShapeEnum _shape;
 	private PartMaterialEnum _material;
 	private Color _color = new(1, 1, 1);
-	private bool _isSeparateMesh = false;
 	private bool _castShadows;
 
 	private Node3D _nRemoteAt = null!; // Remote collider proxy
 
 	internal Shape3D ColliderShape => _collider.Shape;
+	public event Action? ShapeChanged;
 
-	public bool IsMeshSeparated => _isSeparateMesh;
 	public int BridgeID = -1;
 
 	public override void EnterTree()
 	{
-		Instance? current = Parent;
-		while (current != null)
-		{
-			if (current is UIViewport)
-			{
-				OverrideNoMultiMesh = true;
-				CreateSeparateMesh();
-			}
-			current = current.Parent;
-		}
-
 		Root?.Bridge?.MarkDirty(this);
 
 		base.EnterTree();
@@ -73,61 +60,27 @@ public partial class Part : Entity
 
 	public override void Ready()
 	{
-		AddCollisionShape(_collider);
-		UpdateCollision();
 		UpdateMeshSize();
 		UpdateShape();
+		UpdateCollision();
 
 		base.Ready();
-	}
-
-	public void CreateSeparateMesh()
-	{
-		if (_isSeparateMesh)
-		{
-			return;
-		}
-		_isSeparateMesh = true;
-		if (Root != null && Root.Bridge != null)
-		{
-			Root.Bridge.SeparatedPartCount++;
-		}
-		GDNode3D.AddChild(_mesh = new(), false);
-		UpdateMeshSize();
-		UpdateShape();
-
-		_meshMaterial = Globals.LoadMaterial(_material, Color.A);
-		_mesh.MaterialOverride = _meshMaterial;
-
-		UpdateColor();
-		UpdateShadow();
 	}
 
 	internal override void OnNodeSizeChanged(Vector3 newSize)
 	{
 		UpdateMeshSize();
+		ShapeChanged?.Invoke();
 		base.OnNodeSizeChanged(newSize);
 	}
 
 	private void UpdateMeshSize()
 	{
-		_mesh?.Scale = NodeSize;
 		_nRemoteAt?.Scale = NodeSize;
-	}
-
-	public void RemoveSeparateMesh()
-	{
-		if (!_isSeparateMesh)
+		if (_collider != null && _collider.GetParent() == GDNode3D)
 		{
-			return;
+			_collider.Scale = NodeSize;
 		}
-		_isSeparateMesh = false;
-		if (Root != null && Root.Bridge != null)
-		{
-			Root.Bridge.SeparatedPartCount--;
-		}
-		_mesh?.Free();
-		_mesh = null;
 	}
 
 	[Editable, ScriptProperty, DefaultValue(ShapeEnum.Brick)]
@@ -143,6 +96,7 @@ public partial class Part : Entity
 
 			_shape = value;
 
+			ShapeChanged?.Invoke();
 			UpdateShape();
 			OnPropertyChanged();
 		}
@@ -161,7 +115,6 @@ public partial class Part : Entity
 
 			_material = value;
 
-			UpdateMaterial();
 			OnPropertyChanged();
 		}
 	}
@@ -180,7 +133,7 @@ public partial class Part : Entity
 			_color = value;
 			//GD.PushWarning("Set color: ", _color);
 
-			UpdateColor();
+			UpdateCamLayer();
 			OnPropertyChanged();
 		}
 	}
@@ -198,66 +151,30 @@ public partial class Part : Entity
 
 			_castShadows = value;
 
-			UpdateShadow();
 			OnPropertyChanged();
 		}
 	}
 
-	// Override this to be excluded from MutliMesh
-	internal bool OverrideNoMultiMesh = false;
+	internal bool IsHeld = false;
 
 	internal void UpdateShape()
 	{
 		if (_collider == null) return;
-		(Godot.Mesh mesh, Shape3D shape) = Globals.LoadShape(_shape.ToString());
-		if (_isSeparateMesh)
-		{
-			_mesh?.Mesh = mesh;
-			_collider.Shape = shape;
-		}
-		else
-		{
-			_collider.Shape = shape;
-		}
+		(_, Shape3D shape) = Globals.LoadShape(_shape.ToString());
+		_collider.Shape = shape;
 		PostCollisionShapeUpdate(_collider);
 	}
 
-	internal void UpdateMaterial()
+	private Aabb PointsToBound(Vector3[] points, Basis transform)
 	{
-		if (!_isSeparateMesh || _mesh == null)
+		Aabb bound = new(Vector3.Zero, Vector3.Zero);
+
+		foreach (Vector3 point in points)
 		{
-			return;
+			bound = bound.Expand(transform * point);
 		}
 
-		_meshMaterial = Globals.LoadMaterial(_material, Color.A);
-		_mesh.MaterialOverride = _meshMaterial;
-
-		UpdateColor();
-	}
-
-	internal void UpdateColor()
-	{
-		if (_isSeparateMesh && _mesh != null)
-		{
-			Material targetMat = Globals.LoadMaterial(_material, Color.A);
-			if (!ReferenceEquals(_meshMaterial, targetMat))
-			{
-				_meshMaterial = targetMat;
-				_mesh.MaterialOverride = _meshMaterial;
-			}
-
-			_mesh.SetInstanceShaderParameter("color", _color);
-		}
-
-		UpdateCamLayer();
-	}
-
-	internal void UpdateShadow()
-	{
-		if (_isSeparateMesh)
-		{
-			_mesh?.CastShadow = _castShadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
-		}
+		return bound;
 	}
 
 	public override Aabb GetSelfBound()
@@ -267,24 +184,73 @@ public partial class Part : Entity
 		Vector3 localSize = Size;
 		Vector3 he = localSize / 2f;
 
-		Vector3 basisScale = t.Basis.Scale;
-
 		// get pure rotation matrix
-		Basis rot = t.Basis;
-		rot.X /= basisScale.X;
-		rot.Y /= basisScale.Y;
-		rot.Z /= basisScale.Z;
-
-		// some dark magic
-		Vector3 worldExtents = new(
-			Mathf.Abs(rot.X.X) * he.X + Mathf.Abs(rot.Y.X) * he.Y + Mathf.Abs(rot.Z.X) * he.Z,
-			Mathf.Abs(rot.X.Y) * he.X + Mathf.Abs(rot.Y.Y) * he.Y + Mathf.Abs(rot.Z.Y) * he.Z,
-			Mathf.Abs(rot.X.Z) * he.X + Mathf.Abs(rot.Y.Z) * he.Y + Mathf.Abs(rot.Z.Z) * he.Z
-		);
+		Basis rot = t.Basis.Orthonormalized();
 
 		Vector3 center = t.Origin;
 
-		return new(center - worldExtents, worldExtents * 2);
+		Aabb bound;
+		switch (Shape)
+		{
+			case ShapeEnum.Wedge:
+				bound = PointsToBound([
+					new( 1,-1, 1 ),
+					new(-1, 1, 1 ),
+					new(-1,-1, 1 ),
+					new( 1,-1,-1 ),
+					new(-1, 1,-1 ),
+					new(-1,-1,-1 ),
+				], rot.ScaledLocal(he));
+				bound.Position += center;
+				return bound;
+			case ShapeEnum.Corner:
+				bound = PointsToBound([
+					new( 1,-1, 1 ),
+					new(-1,-1, 1 ),
+					new( 1,-1,-1 ),
+					new(-1,-1,-1 ),
+					new(-1, 1,-1 ),
+				], rot.ScaledLocal(he));
+				bound.Position += center;
+				return bound;
+			case ShapeEnum.Concave:
+				bound = PointsToBound([
+					new( 1,-1,-1 ),
+					new( 1, 1, 1 ),
+					new( 1,-1, 1 ),
+					new(-1,-1,-1 ),
+					new(-1, 1, 1 ),
+					new(-1,-1, 1 ),
+				], rot.ScaledLocal(he));
+				bound.Position += center;
+				return bound;
+			case ShapeEnum.ConcaveCorner:
+				bound = PointsToBound([
+					new( 1,-1,-1 ),
+					new( 1,-1, 1 ),
+					new(-1,-1,-1 ),
+					new(-1, 1, 1 ),
+					new(-1,-1, 1 ),
+				], rot.ScaledLocal(he));
+				bound.Position += center;
+				return bound;
+			case ShapeEnum.TriangleCorner:
+			case ShapeEnum.TriangleConcaveCorner:
+				bound = PointsToBound([
+					new( 1,-1, 1 ),
+					new(-1,-1,-1 ),
+					new(-1, 1, 1 ),
+					new(-1,-1, 1 ),
+				], rot.ScaledLocal(he));
+				bound.Position += center;
+				return bound;
+			case ShapeEnum.Brick:
+			case ShapeEnum.Truss:
+			case ShapeEnum.Frame:
+			default: // Sphere Cylinder Cone Bevel Octant Torus BeveledCorner are currently unimplemented
+				Vector3 worldExtents = rot.X.Abs() * he.X + rot.Y.Abs() * he.Y + rot.Z.Abs() * he.Z;
+				return new(center - worldExtents, worldExtents * 2);
+		}
 	}
 
 	[ScriptEnum("PartShape")]

@@ -13,12 +13,15 @@ using Polytoria.Formats;
 using Polytoria.Scripting;
 using Polytoria.Networking.Synchronizers;
 using Polytoria.Shared;
+using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Reflection;
+using System.Text;
 
 namespace Polytoria.Datamodel;
 
@@ -38,6 +41,8 @@ public partial class Instance : NetworkedObject
 	private Instance? _modelRoot;
 
 	internal Dictionary<string, Instance> NameToChild = [];
+	internal HashSet<string>? DuplicateNames;
+	internal HashSet<string>? DuplicateLegacyNames;
 	internal List<Instance> Children = [];
 	internal int Index = 0;
 
@@ -55,7 +60,7 @@ public partial class Instance : NetworkedObject
 		}
 		set
 		{
-			if (GetType().IsDefined(typeof(StaticAttribute), false))
+			if (GetType().IsDefinedCached(typeof(StaticAttribute), false))
 			{
 				throw new InvalidOperationException("Cannot reparent a static class");
 			}
@@ -97,7 +102,7 @@ public partial class Instance : NetworkedObject
 			if (Root != null && value != null)
 			{
 				oldParentIsTemp = oldParent == Root.TemporaryContainer;
-				chunkOverride = Root.Network.IsServer && oldParentIsTemp && !AutoReplicate;
+				chunkOverride = Root.Network != null && Root.Network.IsServer && oldParentIsTemp && !AutoReplicate;
 				isTemp = value == Root.TemporaryContainer || value.IsDescendantOf(Root.TemporaryContainer);
 
 				if (IsInTemporary && !isTemp)
@@ -121,14 +126,23 @@ public partial class Instance : NetworkedObject
 					// this is kinda hacky
 					Callable.From(() =>
 					{
-						Root.Network.ReplicateSync.BroadcastChunk([this, .. descendants]);
+						if (IsDeleted) return;
+						Root.Network.ReplicateSync.BroadcastChunk([this, .. Array.FindAll(descendants, d => !d.IsDeleted)]);
 					}).CallDeferred();
 				}
 
 				// Rerun name enforcement in case of reparenting from temp
 				foreach (NetworkedObject item in descendants)
 				{
+					if (item is Instance preI)
+					{
+						preI.RemoveNameFromParent();
+					}
 					item.ReenforceName();
+					if (item is Instance postI)
+					{
+						postI.AddNameToParent();
+					}
 				}
 
 				// NOTE: It's kinda verbose having AutoInvokeReadyOnParent too, but AutoInvokeReady solely won't work with instance created with .New()
@@ -164,9 +178,11 @@ public partial class Instance : NetworkedObject
 
 			while (instance != null)
 			{
-				if (instance is World)
+				string? staticAlias = instance.GetType().GetCustomAttribute<StaticAttribute>(false)?.Alias;
+				if (staticAlias != null)
 				{
-					ancestors.Add("world");
+					ancestors.Add(staticAlias);
+					break;
 				}
 				else
 				{
@@ -176,7 +192,58 @@ public partial class Instance : NetworkedObject
 			}
 
 			ancestors.Reverse();
-			return string.Join('.', ancestors);
+
+			StringBuilder builder = new();
+			bool first = true;
+
+			foreach (string name in ancestors)
+			{
+				// can this name be accessed in Lua using dot.notation?
+				// e.g. "Part" or "_Part", not "", "0Part", or "Part!"
+				bool canAccessWithDot = name.Length != 0 &&
+					(char.IsLetter(name[0]) || name[0] == '_') &&
+					(name.Length == 1 || name.Skip(1).All(c => char.IsLetterOrDigit(c) || c == '_'));
+
+				if (canAccessWithDot)
+				{
+					builder.Append(first ? name : '.' + name);
+				}
+				else
+				{
+					// convert name to ["bracket notation"]
+					// also filter the name similar to Lua's %q format option just in
+					// case it's Evil and can't be read by the interpreter
+
+					builder.Capacity += name.Length + 4;
+					builder.Append("[\"");
+
+					foreach (char c in name)
+					{
+						switch (c)
+						{
+							case '"':
+							case '\\':
+							case '\n':
+								builder.Append('\\');
+								goto default;
+							case '\r':
+								builder.Append("\\r");
+								break;
+							case '\0':
+								builder.Append("\\000");
+								break;
+							default:
+								builder.Append(c);
+								break;
+						}
+					}
+
+					builder.Append("\"]");
+				}
+				first = false;
+			}
+
+			return builder.ToString();
 		}
 	}
 
@@ -239,7 +306,7 @@ public partial class Instance : NetworkedObject
 	}
 
 
-	public Dictionary<string, Instance> ModelChilds = [];
+	public Dictionary<string, Instance> ModelChildren = [];
 
 	[Editable(IsHidden = true), DefaultValue(false)]
 	public bool EditableChildren
@@ -309,33 +376,61 @@ public partial class Instance : NetworkedObject
 
 	internal void AddLegacyNameToParent()
 	{
-		if (_legacyName != null && Parent != null)
+		if (_legacyName != null && Parent != null && !Parent.legacyChild.TryAdd(_legacyName, this))
 		{
-			Parent.legacyChild.TryAdd(_legacyName, this);
+			(Parent.DuplicateLegacyNames ??= []).Add(_legacyName);
 		}
 	}
 
 	internal void RemoveLegacyNameFromParent()
 	{
-		if (_legacyName != null && Parent != null)
+		if (_legacyName != null && Parent != null && Parent.legacyChild.TryGetValue(_legacyName, out Instance? current) && current == this)
 		{
 			Parent.legacyChild.Remove(_legacyName);
+
+			if (Parent.DuplicateLegacyNames?.Contains(_legacyName) != true)
+				return;
+
+			foreach (Instance child in Parent.Children)
+			{
+				if (child != this && child._legacyName == _legacyName)
+				{
+					Parent.legacyChild[_legacyName] = child;
+					return;
+				}
+			}
+
+			Parent.DuplicateLegacyNames.Remove(_legacyName);
 		}
 	}
 
 	internal void AddNameToParent()
 	{
-		if (Name != null && Parent != null)
+		if (Name != null && Parent != null && !Parent.NameToChild.TryAdd(Name, this))
 		{
-			Parent.NameToChild.TryAdd(Name, this);
+			(Parent.DuplicateNames ??= []).Add(Name);
 		}
 	}
 
 	internal void RemoveNameFromParent()
 	{
-		if (Parent != null && Name != null)
+		if (Parent != null && Name != null && Parent.NameToChild.TryGetValue(Name, out Instance? current) && current == this)
 		{
 			Parent.NameToChild.Remove(Name);
+
+			if (Parent.DuplicateNames?.Contains(Name) != true)
+				return;
+
+			foreach (Instance child in Parent.Children)
+			{
+				if (child != this && child.Name == Name)
+				{
+					Parent.NameToChild[Name] = child;
+					return;
+				}
+			}
+
+			Parent.DuplicateNames.Remove(Name);
 		}
 	}
 
@@ -358,18 +453,7 @@ public partial class Instance : NetworkedObject
 	[ScriptMethod]
 	public Instance? FindChild(string name)
 	{
-		if (NameToChild.TryGetValue(name, out Instance? instance)) return instance;
-
-		foreach (Instance child in Children)
-		{
-			if (child.Name == name)
-			{
-				NameToChild[name] = child;
-				return child;
-			}
-		}
-
-		return null;
+		return name != null ? NameToChild.GetValueOrDefault(name) : null;
 	}
 
 	public T? FindChild<T>(string name) where T : Instance
@@ -453,18 +537,16 @@ public partial class Instance : NetworkedObject
 	[ScriptLegacyMethod("FindChild")]
 	public Instance? LegacyFindChild(string name)
 	{
+		if (name == null) return null;
+
 		if (legacyChild.TryGetValue(name, out Instance? val))
 		{
 			return val;
 		}
 
-		foreach (Instance item in GetChildren())
+		if (NameToChild.TryGetValue(name, out Instance? child) && child.LegacyName == name)
 		{
-			if (item.LegacyName != null && item.LegacyName == name)
-			{
-				legacyChild[item.LegacyName] = item;
-				return item;
-			}
+			return child;
 		}
 
 		return null;
@@ -519,16 +601,16 @@ public partial class Instance : NetworkedObject
 	[ScriptMethod]
 	public Instance[] GetChildrenWithTag(string tag)
 	{
-		List<Instance> childs = [];
+		List<Instance> Children = [];
 		foreach (Instance child in GetChildren())
 		{
 			if (child.HasTag(tag))
 			{
-				childs.Add(child);
+				Children.Add(child);
 			}
 		}
 
-		return [.. childs];
+		return [.. Children];
 	}
 
 	[ScriptMethod]
@@ -735,10 +817,10 @@ public partial class Instance : NetworkedObject
 	{
 		foreach (Instance n in GetChildren())
 		{
-			legacyChild.TryAdd(n.LegacyName, n);
+			if (!legacyChild.TryAdd(n.LegacyName, n))
+				(DuplicateLegacyNames ??= []).Add(n.LegacyName);
 		}
 
-		ChildRemoved.Connect(OnChildRemoved);
 		base.Ready();
 	}
 
@@ -746,18 +828,12 @@ public partial class Instance : NetworkedObject
 	{
 		base.PreDelete();
 		ModelRoot?.UnregisterModelChild(this);
-		ChildRemoved.Disconnect(OnChildRemoved);
 		Children.Clear();
 #if CREATOR
 		Renamed.Disconnect(OnRenamed);
 		Explorer.Remove(this);
 		Root?.CreatorContext?.Selections.Deselect(this);
 #endif
-	}
-
-	private void OnChildRemoved(Instance obj)
-	{
-		legacyChild.Remove(obj.LegacyName);
 	}
 
 	[ScriptMethod]
@@ -809,7 +885,14 @@ public partial class Instance : NetworkedObject
 
 	public bool IsDescendantOfClass<T>()
 	{
-		return IsDescendantOfClass(typeof(T).Name);
+		Instance? parent = Parent;
+		while (parent != null)
+		{
+			if (parent is T)
+				return true;
+			parent = parent.Parent;
+		}
+		return false;
 	}
 
 	[ScriptMethod("New")]
@@ -851,7 +934,7 @@ public partial class Instance : NetworkedObject
 
 	public Instance? GetModelChildFromID(string objID)
 	{
-		return ModelChilds.TryGetValue(objID, out Instance? instance) ? instance : null;
+		return ModelChildren.TryGetValue(objID, out Instance? instance) ? instance : null;
 	}
 
 #if CREATOR
@@ -877,12 +960,12 @@ public partial class Instance : NetworkedObject
 
 	public void RegisterModelChild(Instance i)
 	{
-		ModelChilds.Add(i.ObjectID, i);
+		ModelChildren.Add(i.ObjectID, i);
 	}
 
 	public void UnregisterModelChild(Instance i)
 	{
-		ModelChilds.Remove(i.ObjectID);
+		ModelChildren.Remove(i.ObjectID);
 	}
 
 	[ScriptMethod]

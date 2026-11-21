@@ -148,11 +148,14 @@ public partial class Explosion : Dynamic
 			foreach (Instance item in overlaps)
 			{
 				Touched.Invoke(item);
+				if (IsDeleted) return;
+				if (item.IsDeleted) continue;
 
 				if (AffectPredicate != null)
 				{
 					object?[] res = await AffectPredicate.Call(item);
-					if (!(res.Length == 1 && res[0] is bool b && b))
+					if (IsDeleted) return;
+					if (item.IsDeleted || !(res.Length == 1 && res[0] is bool b && b))
 					{
 						continue;
 					}
@@ -182,7 +185,7 @@ public partial class Explosion : Dynamic
 					float forceMagnitude = Force * (1 - (distance / Radius));
 					Vector3 force = direction * forceMagnitude / 100;
 
-					body.ApplyCentralImpulse(force);
+					e.AddForce(force, Physical.ForceModeEnum.Impulse);
 
 					if (_affectWelds)
 					{
