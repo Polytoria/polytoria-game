@@ -1572,6 +1572,12 @@ public partial class Physical : Dynamic
 		}
 	}
 
+	[ScriptMethod]
+	public Vector3 GetVelocityAt(Vector3 pos)
+	{
+		return Velocity + (pos - Position).Cross(AngularVelocity);
+	}
+
 	[ScriptEnum("ForceMode")]
 	public enum ForceModeEnum
 	{

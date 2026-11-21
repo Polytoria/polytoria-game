@@ -129,8 +129,10 @@ public class DefaultMovement : IPlayerMovement
 			{
 				float climbSpeed = forwardInput * gdWalkSpeed * Target.ClimbingTruss!.ClimbSpeed;
 
+				Vector3 restVelocity = Target.ClimbingTruss is RigidBody r ? r.GetVelocityAt(Target.Position) : Vector3.Zero;
+
 				// Lock to vertical only and add vertical velocity
-				Target.CharacterVelocity = vertical * climbSpeed;
+				Target.CharacterVelocity = restVelocity + vertical * climbSpeed;
 
 				finalState = CharacterModel.CharacterModelStateEnum.Climbing;
 				Target.Character?.SetAnimSpeed(climbSpeed / 8);
