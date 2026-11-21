@@ -13,7 +13,6 @@ public partial class Marker3D : Dynamic
 	private float _length;
 	private bool _appearOnTop;
 	private bool _visibleInDev;
-	private bool _visible;
 
 	[Editable, ScriptProperty, DefaultValue(1)]
 	public float Length
@@ -51,18 +50,18 @@ public partial class Marker3D : Dynamic
 		}
 	}
 
-	[Editable, ScriptProperty, DefaultValue(false)]
-	public bool Visible
+	protected override void OnVisibleChanged(bool v)
 	{
-		get => _visible;
-		set
-		{
-			_visible = value;
 #if !CREATOR
-			_meshInstance.Visible = _visible;
+		_meshInstance.Visible = v;
 #endif
-			RenderGizmo();
-		}
+		RenderGizmo();
+	}
+
+	public override void InitOverrides()
+	{
+		base.InitOverrides();
+		Visible = false;
 	}
 
 	public override void Init()
