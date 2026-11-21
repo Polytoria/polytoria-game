@@ -308,12 +308,12 @@ public sealed partial class Text3D : Dynamic
 		if (_useRichText)
 		{
 			_sprite3D.Texture = _subViewport?.GetTexture();
-			_sprite3D.Visible = _visible;
+			_sprite3D.Visible = Visible;
 			_label3D.Visible = false;
 		}
 		else
 		{
-			_label3D.Visible = _visible;
+			_label3D.Visible = Visible;
 			_sprite3D.Visible = false;
 		}
 	}

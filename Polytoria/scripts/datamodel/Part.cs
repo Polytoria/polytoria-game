@@ -267,7 +267,6 @@ public partial class Part : Entity
 	protected override void OnVisibleChanged(bool v)
 	{
 		base.OnVisibleChanged(v);
-		_mesh?.Visible = v;
 		SetBridgeVisibility(v);
 	}
 
