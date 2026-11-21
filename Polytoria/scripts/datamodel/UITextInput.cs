@@ -38,11 +38,11 @@ public partial class UITextInput : UIView
 		{
 			if (_lineEdit.Visible)
 			{
-				return _lineEdit.Text;
+				return Services.FilterService.Filter(_lineEdit.Text);
 			}
 			else if (_textEdit.Visible)
 			{
-				return _textEdit.Text;
+				return Services.FilterService.Filter(_textEdit.Text);
 			}
 			return "";
 		}
@@ -351,6 +351,14 @@ public partial class UITextInput : UIView
 		if (_lineEdit.Visible) { _lineEdit.GrabFocus(); }
 	}
 
+	[ScriptMethod]
+	public void Unfocus()
+	{
+		_textEdit.ReleaseFocus();
+		_lineEdit.ReleaseFocus();
+	}
+
+
 	private void OnTextEditFocusEntered()
 	{
 		FocusEnter.Invoke();
@@ -373,18 +381,18 @@ public partial class UITextInput : UIView
 
 	private void OnTextEditTextChanged()
 	{
-		Changed.Invoke(_textEdit.Text);
+		Changed.Invoke(Services.FilterService.Filter(_textEdit.Text));
 		UpdateTextSize();
 	}
 
 	private void OnLineEditTextChanged(string txt)
 	{
-		Changed.Invoke(txt);
+		Changed.Invoke(Services.FilterService.Filter(txt));
 		UpdateTextSize();
 	}
 
 	private void OnLineEditTextSubmitted(string str)
 	{
-		Submitted.Invoke(str);
+		Submitted.Invoke(Services.FilterService.Filter(str));
 	}
 }

@@ -97,8 +97,8 @@ grow_vertical = 2
 theme_override_constants/separation = 0
 
 [node name="Control" type="Panel" parent="VBoxContainer" unique_id=274152673]
-clip_contents = true
 custom_minimum_size = Vector2(0, 340)
+clip_contents = true
 layout_mode = 2
 mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxTexture_jus44")

@@ -7,6 +7,7 @@ using Polytoria.Client.Settings;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Services;
 using Polytoria.Shared;
+using Polytoria.Shared.Settings;
 using System.Collections.Generic;
 
 namespace Polytoria.Client.UI.Chat;
@@ -68,6 +69,7 @@ public partial class UIChat : Control
 		_resizeHandle.MouseEntered += OnResizeHandleMouseEntered;
 		_resizeHandle.MouseExited += OnResizeHandleMouseExited;
 		GetViewport().SizeChanged += ClampToViewport;
+		ClientSettingsService.Instance.Changed += OnSettingChanged;
 
 		if (!LocalPlayer.CanChat || LocalPlayer.IsAgeRestricted)
 		{
@@ -215,8 +217,26 @@ public partial class UIChat : Control
 		base._UnhandledInput(@event);
 	}
 
+	private void OnSettingChanged(SettingChangedEvent e)
+	{
+		if (e.Key == ClientSettingKeys.Chat.ChatEnabled)
+		{
+			SetEnabled(e.NewValue is bool enabled && enabled);
+		}
+	}
+
 	public void SetEnabled(bool enabled)
 	{
+		if (!ClientSettingsService.Instance.Get<bool>(ClientSettingKeys.Chat.ChatEnabled))
+		{
+			if (IsOn) // close if it's still open
+			{
+				_animPlayer.Play("close");
+				CloseEmojiPicker();
+				IsOn = enabled;
+			}
+			return;
+		}
 		if (enabled && !IsOn)
 		{
 			_animPlayer.Play("open");
@@ -238,6 +258,11 @@ public partial class UIChat : Control
 			label.Content = msg;
 			return;
 		}
+
+		if (from.IsMuted) return;
+		if (!ClientSettingsService.Instance.Get<bool>(ClientSettingKeys.Chat.ChatEnabled)) return;
+
+
 		NewChatMessage(from, msg);
 	}
 
@@ -355,8 +380,8 @@ public partial class UIChat : Control
 			_chatPanel.Size = new Vector2(clampedX, clampedY);
 
 		Vector2 pos = Position;
-		float newX = Mathf.Clamp(pos.X, 0, viewSize.X - clampedX - 16);
-		float newY = Mathf.Clamp(pos.Y, 0, viewSize.Y - clampedY - 16);
+		float newX = Mathf.Clamp(pos.X, 0, Mathf.Max(0, viewSize.X - clampedX - 16));
+		float newY = Mathf.Clamp(pos.Y, 0, Mathf.Max(0, viewSize.Y - clampedY - 16));
 
 		if (pos.X != newX || pos.Y != newY)
 			Position = new Vector2(newX, newY);

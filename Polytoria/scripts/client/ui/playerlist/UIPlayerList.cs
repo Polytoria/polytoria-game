@@ -15,7 +15,7 @@ public partial class UIPlayerList : Node
 
 	public override void _UnhandledKeyInput(InputEvent @event)
 	{
-		if (@event.IsActionPressed("toggle_leaderboard"))
+		if (@event.IsActionPressed("toggle_leaderboard") && !CoreUIRoot.Singleton.Root.Input.IsPromptKey(@event))
 		{
 			ToggleLeaderboard();
 		}

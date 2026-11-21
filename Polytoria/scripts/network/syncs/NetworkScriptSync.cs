@@ -107,21 +107,18 @@ public partial class NetworkScriptSync : Instance
 	{
 		int r = RemoteSenderId;
 		NetworkedObject? obj = NetService.Root.GetNetObjectFromID(netID);
-		if (obj != null && (obj is ClientScript || obj is ModuleScript))
+		if (obj is Datamodel.Script script && script.ShouldReplicate && script is ClientScript or ModuleScript)
 		{
-			if (obj is Datamodel.Script script)
+			try
 			{
-				try
-				{
-					script.TryCompile();
-				}
-				catch (Exception ex)
-				{
-					RpcId(r, nameof(NetLogCompileError), ex.Message);
-					return;
-				}
-				RpcId(r, nameof(NetRecvSource), netID, script.Bytecode);
+				script.TryCompile();
 			}
+			catch (Exception ex)
+			{
+				RpcId(r, nameof(NetLogCompileError), ex.Message);
+				return;
+			}
+			RpcId(r, nameof(NetRecvSource), netID, script.Bytecode);
 		}
 	}
 

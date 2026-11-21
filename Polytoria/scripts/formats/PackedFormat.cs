@@ -462,7 +462,7 @@ public static partial class PackedFormat
 		if (files.TryGetValue("input.json", out byte[]? inputBytes))
 		{
 			string inputMapRaw = System.Text.Encoding.UTF8.GetString(inputBytes);
-			root.Input.MapData = InputMapData.LoadFromString(inputMapRaw);
+			root.Input.MapDataRaw = inputMapRaw;
 		}
 
 		// Default to main

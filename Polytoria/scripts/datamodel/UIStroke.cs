@@ -66,19 +66,6 @@ public partial class UIStroke : Instance
 		base.ExitTree();
 	}
 
-	public override void PreDelete()
-	{
-		if (Parent is UIField field)
-		{
-			field.TransformChanged.Disconnect(OnParentTransformChanged);
-			if (!IsHidden)
-				field.OnStrokeControllerExit();
-		}
-
-		CleanupStrokePanel();
-		base.PreDelete();
-	}
-
 	public override void HiddenChanged(bool to)
 	{
 		if (Parent is UIField field)
@@ -128,7 +115,8 @@ public partial class UIStroke : Instance
 		StyleBoxFlat sb = new()
 		{
 			AntiAliasing = true,
-			AntiAliasingSize = 2,
+			AntiAliasingSize = 1,
+			CornerDetail = 20,
 			CornerRadiusTopLeft = Mathf.RoundToInt(corners.TopLeft),
 			CornerRadiusTopRight = Mathf.RoundToInt(corners.TopRight),
 			CornerRadiusBottomLeft = Mathf.RoundToInt(corners.BottomLeft),

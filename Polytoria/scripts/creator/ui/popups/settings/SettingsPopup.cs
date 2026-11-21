@@ -20,6 +20,7 @@ public sealed partial class SettingsPopup : PopupWindowBase
 
 	private static readonly Dictionary<string, List<SettingDef>> SectionDefs =
 		CreatorSettingsRegistry.Definitions.Values
+			.Where(d => d.IsSupported)
 			.GroupBy(d => d.SectionKey)
 			.ToDictionary(g => g.Key, g => g.ToList());
 

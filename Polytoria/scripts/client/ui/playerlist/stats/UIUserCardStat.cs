@@ -20,11 +20,18 @@ public partial class UIUserCardStat : Node
 		_nameLabel.Text = TargetStat.GetDisplayName();
 		_valueLabel.Text = TargetStat.GetDisplayValue(UIUserCard.TargetPlayer);
 		UIUserCard.TargetPlayer.StatChanged.Connect(OnPlayerStatChanged);
+		TargetStat.PropertyChanged.Connect(OnStatPropertyChanged);
+	}
 
-		TargetStat.PropertyChanged.Connect(() =>
-		{
-			_nameLabel.Text = TargetStat.GetDisplayName();
-		});
+	public override void _ExitTree()
+	{
+		UIUserCard.TargetPlayer.StatChanged.Disconnect(OnPlayerStatChanged);
+		TargetStat.PropertyChanged.Disconnect(OnStatPropertyChanged);
+	}
+
+	private void OnStatPropertyChanged()
+	{
+		_nameLabel.Text = TargetStat.GetDisplayName();
 	}
 
 	private void OnPlayerStatChanged(Stat k, object? _)

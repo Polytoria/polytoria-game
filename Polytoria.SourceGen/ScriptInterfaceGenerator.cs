@@ -19,6 +19,7 @@ public sealed class ScriptInterfaceGenerator : IIncrementalGenerator
 {
 	private const string ScriptPropertyAttributeFullName = "Polytoria.Attributes.ScriptPropertyAttribute";
 	private const string ScriptMethodAttributeFullName = "Polytoria.Attributes.ScriptMethodAttribute";
+	private const string ScriptMetamethodAttributeFullName = "Polytoria.Attributes.ScriptMetamethodAttribute";
 
 	private static readonly DiagnosticDescriptor _unsupportedMemberRule = new(
 #pragma warning disable RS2008 // Enable analyzer release tracking
@@ -46,9 +47,16 @@ public sealed class ScriptInterfaceGenerator : IIncrementalGenerator
 				transform: static (ctx, _) => GetMethodEntry((IMethodSymbol)ctx.TargetSymbol))
 			.Collect();
 
-		context.RegisterSourceOutput(properties.Combine(methods), static (spc, data) =>
+		var metamethods = context.SyntaxProvider
+			.ForAttributeWithMetadataName(
+				ScriptMetamethodAttributeFullName,
+				predicate: static (node, _) => node is MethodDeclarationSyntax,
+				transform: static (ctx, _) => GetMethodEntry((IMethodSymbol)ctx.TargetSymbol))
+			.Collect();
+
+		context.RegisterSourceOutput(properties.Combine(methods).Combine(metamethods), static (spc, data) =>
 		{
-			var (propertyEntries, methodEntries) = data;
+			var ((propertyEntries, methodEntries), metamethodEntries) = data;
 
 			foreach (var entry in propertyEntries)
 			{
@@ -60,7 +68,10 @@ public sealed class ScriptInterfaceGenerator : IIncrementalGenerator
 			}
 			spc.AddSource("ScriptInterfaceInvokers.g.cs", SourceText.From(GenerateSource(
 				[.. propertyEntries.Where(static e => e.Diagnostic is null)],
-				[.. methodEntries.Where(static e => e.Diagnostic is null)]), Encoding.UTF8));
+				[.. methodEntries.Concat(metamethodEntries)
+					.Where(static e => e.Diagnostic is null)
+					.GroupBy(static e => (e.ContainingTypeFullName, e.MethodName, string.Join(",", e.ParameterTypeFullNames)))
+					.Select(static g => g.First())]), Encoding.UTF8));
 		});
 	}
 

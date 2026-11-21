@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
+using Polytoria.Client.Settings;
 using Polytoria.Datamodel;
 using Polytoria.Shared;
 using System.Collections.Generic;
@@ -33,6 +34,9 @@ public partial class BubbleChat : Node3D
 
 	private void OnPlayerChatted(string msg)
 	{
+		if (TargetPlayer.IsMuted) return;
+		if (!ClientSettingsService.Instance.Get<bool>(ClientSettingKeys.Chat.ChatEnabled)) return;
+
 		if (TargetPlayer.Character != null)
 		{
 			Aabb? bounds = TargetPlayer.Character.GetAttachment(CharacterModel.CharacterAttachmentEnum.Head).CalculateBounds();

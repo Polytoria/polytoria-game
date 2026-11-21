@@ -14,6 +14,7 @@ public static class GraphicsPresetManager
 	[
 		SharedSettingKeys.Graphics.RenderScale,
 		SharedSettingKeys.Graphics.Msaa,
+		SharedSettingKeys.Graphics.ScreenSpaceAA,
 		SharedSettingKeys.Graphics.ShadowQuality,
 		SharedSettingKeys.Graphics.ShadowDistance,
 		SharedSettingKeys.PostProcessing.Glow,
@@ -22,6 +23,7 @@ public static class GraphicsPresetManager
 		SharedSettingKeys.PostProcessing.Ssil,
 		SharedSettingKeys.PostProcessing.Sdfgi,
 		SharedSettingKeys.PostProcessing.NormalMaps,
+		SharedSettingKeys.PostProcessing.EffectsQuality,
 	];
 
 	public static bool IsPresetManagedKey(string key)
@@ -32,6 +34,7 @@ public static class GraphicsPresetManager
 	private sealed record PresetData(
 		float RenderScale,
 		MsaaOption Msaa,
+		ScreenSpaceAAOption ScreenSpaceAA,
 		ShadowQuality ShadowQuality,
 		float ShadowDistance,
 		bool Glow,
@@ -39,13 +42,15 @@ public static class GraphicsPresetManager
 		bool Ssr,
 		bool Ssil,
 		bool Sdfgi,
-		bool NormalMaps
+		bool NormalMaps,
+		EffectsQualityOption EffectsQuality
 	)
 	{
 		public void ApplyTo(ISettingsContext settings)
 		{
 			settings.Set(SharedSettingKeys.Graphics.RenderScale, RenderScale);
 			settings.Set(SharedSettingKeys.Graphics.Msaa, Msaa);
+			settings.Set(SharedSettingKeys.Graphics.ScreenSpaceAA, ScreenSpaceAA);
 			settings.Set(SharedSettingKeys.Graphics.ShadowQuality, ShadowQuality);
 			settings.Set(SharedSettingKeys.Graphics.ShadowDistance, ShadowDistance);
 			settings.Set(SharedSettingKeys.PostProcessing.Glow, Glow);
@@ -54,6 +59,7 @@ public static class GraphicsPresetManager
 			settings.Set(SharedSettingKeys.PostProcessing.Ssil, Ssil);
 			settings.Set(SharedSettingKeys.PostProcessing.Sdfgi, Sdfgi);
 			settings.Set(SharedSettingKeys.PostProcessing.NormalMaps, NormalMaps);
+			settings.Set(SharedSettingKeys.PostProcessing.EffectsQuality, EffectsQuality);
 		}
 	}
 
@@ -62,6 +68,7 @@ public static class GraphicsPresetManager
 		[GraphicsPreset.Low] = new(
 			RenderScale: 0.75f,
 			Msaa: MsaaOption.Disabled,
+			ScreenSpaceAA: ScreenSpaceAAOption.Fxaa,
 			ShadowQuality: ShadowQuality.Off,
 			ShadowDistance: 100f,
 			Glow: false,
@@ -69,11 +76,13 @@ public static class GraphicsPresetManager
 			Ssr: false,
 			Ssil: false,
 			Sdfgi: false,
-			NormalMaps: false
+			NormalMaps: false,
+			EffectsQuality: EffectsQualityOption.Low
 		),
 		[GraphicsPreset.Medium] = new(
 			RenderScale: 1.0f,
 			Msaa: MsaaOption.X2,
+			ScreenSpaceAA: ScreenSpaceAAOption.Off,
 			ShadowQuality: ShadowQuality.Medium,
 			ShadowDistance: 1000f,
 			Glow: true,
@@ -81,35 +90,41 @@ public static class GraphicsPresetManager
 			Ssr: false,
 			Ssil: false,
 			Sdfgi: false,
-			NormalMaps: true
+			NormalMaps: true,
+			EffectsQuality: EffectsQualityOption.Medium
 		),
 		[GraphicsPreset.High] = new(
 			RenderScale: 1.0f,
 			Msaa: MsaaOption.X4,
+			ScreenSpaceAA: ScreenSpaceAAOption.Off,
 			ShadowQuality: ShadowQuality.High,
+			ShadowDistance: 1250f,
+			Glow: true,
+			Ssao: true,
+			Ssr: false,
+			Ssil: false,
+			Sdfgi: false,
+			NormalMaps: true,
+			EffectsQuality: EffectsQualityOption.Medium
+		),
+		[GraphicsPreset.Ultra] = new(
+			RenderScale: 1.0f,
+			Msaa: MsaaOption.X4,
+			ScreenSpaceAA: ScreenSpaceAAOption.Off,
+			ShadowQuality: ShadowQuality.Ultra,
 			ShadowDistance: 1250f,
 			Glow: true,
 			Ssao: true,
 			Ssr: true,
 			Ssil: false,
 			Sdfgi: false,
-			NormalMaps: true
-		),
-		[GraphicsPreset.Ultra] = new(
-			RenderScale: 1.0f,
-			Msaa: MsaaOption.X8,
-			ShadowQuality: ShadowQuality.Ultra,
-			ShadowDistance: 1250f,
-			Glow: true,
-			Ssao: true,
-			Ssr: true,
-			Ssil: true,
-			Sdfgi: false,
-			NormalMaps: true
+			NormalMaps: true,
+			EffectsQuality: EffectsQualityOption.High
 		),
 		[GraphicsPreset.Photo] = new(
 			RenderScale: 1.0f,
 			Msaa: MsaaOption.X8,
+			ScreenSpaceAA: ScreenSpaceAAOption.Off,
 			ShadowQuality: ShadowQuality.Ultra,
 			ShadowDistance: 1250f,
 			Glow: true,
@@ -117,7 +132,8 @@ public static class GraphicsPresetManager
 			Ssr: true,
 			Ssil: true,
 			Sdfgi: true,
-			NormalMaps: true
+			NormalMaps: true,
+			EffectsQuality: EffectsQualityOption.High
 		),
 	};
 

@@ -12,6 +12,14 @@ public partial class PTAudioAsset : AudioAsset
 {
 	private uint _audioID = 0;
 
+	[ScriptMethod]
+	public static PTAudioAsset FromID([ScriptingCaller] Script caller, uint id)
+	{
+		PTAudioAsset asset = (PTAudioAsset)NetworkedObject.NewFromScript(caller, "PTAudioAsset")!;
+		asset.AudioID = id;
+		return asset;
+	}
+
 	[Editable, ScriptProperty]
 	public uint AudioID
 	{

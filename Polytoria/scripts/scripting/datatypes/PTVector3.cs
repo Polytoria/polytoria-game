@@ -43,7 +43,7 @@ public class PTVector3 : IScriptGDObject
 		return vector;
 	}
 
-	[ScriptMethod]
+	[ScriptMethod(ConvertParamsToGD = false)]
 	public static PTVector3 New()
 	{
 		return new()
@@ -54,7 +54,7 @@ public class PTVector3 : IScriptGDObject
 		};
 	}
 
-	[ScriptMethod]
+	[ScriptMethod(ConvertParamsToGD = false)]
 	public static PTVector3 New(float d)
 	{
 		return new()
@@ -65,7 +65,7 @@ public class PTVector3 : IScriptGDObject
 		};
 	}
 
-	[ScriptMethod]
+	[ScriptMethod(ConvertParamsToGD = false)]
 	public static PTVector3 New(float x, float y)
 	{
 		return new()
@@ -76,7 +76,7 @@ public class PTVector3 : IScriptGDObject
 		};
 	}
 
-	[ScriptMethod]
+	[ScriptMethod(ConvertParamsToGD = false)]
 	public static PTVector3 New(float x, float y, float z)
 	{
 		//PT.Print("New vector3: ", x, y, z);
@@ -88,7 +88,7 @@ public class PTVector3 : IScriptGDObject
 		};
 	}
 
-	[ScriptMethod]
+	[ScriptMethod(ConvertParamsToGD = false)]
 	public static PTVector3 New(PTVector2 v)
 	{
 		return new()
@@ -196,6 +196,7 @@ public class PTVector3 : IScriptGDObject
 	//[ScriptMethod] public static Vector3 ClampMagnitude(Vector3 vector, float maxLength) => vector.Clamp(vector, maxLength);
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTVector3 Cross(PTVector3 lhs, PTVector3 rhs) => FromGDClass(lhs.vector.Cross(rhs.vector));
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float Distance(PTVector3 a, PTVector3 b) => a.vector.DistanceTo(b.vector);
+	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float SqrDistance(PTVector3 a, PTVector3 b) => a.vector.DistanceSquaredTo(b.vector);
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static float Dot(PTVector3 lhs, PTVector3 rhs) => lhs.vector.Dot(rhs.vector);
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTVector3 Lerp(PTVector3 a, PTVector3 b, float t) => FromGDClass(a.vector.Lerp(b.vector, t));
 	[ScriptMethod(ConvertParamsToGD = false, SemiStatic = true)] public static PTVector3 Max(PTVector3 lhs, PTVector3 rhs) => FromGDClass(lhs.vector.Max(rhs.vector));

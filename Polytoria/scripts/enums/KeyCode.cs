@@ -47,6 +47,30 @@ public enum KeyCodeEnum
 	/// </summary>
 	Delete = 4194312,
 	/// <summary>
+	/// <para>Pause key.</para>
+	/// </summary>
+	Pause = 4194313,
+	/// <summary>
+	/// <para>Print Screen key.</para>
+	/// </summary>
+	Print = 4194314,
+	/// <summary>
+	/// <para>System Request key.</para>
+	/// </summary>
+	SysReq = 4194315,
+	/// <summary>
+	/// <para>Clear key.</para>
+	/// </summary>
+	Clear = 4194316,
+	/// <summary>
+	/// <para>Home key.</para>
+	/// </summary>
+	Home = 4194317,
+	/// <summary>
+	/// <para>End key.</para>
+	/// </summary>
+	End = 4194318,
+	/// <summary>
 	/// <para>Left arrow key.</para>
 	/// </summary>
 	Left = 4194319,
@@ -147,6 +171,54 @@ public enum KeyCodeEnum
 	/// </summary>
 	F12 = 4194343,
 	/// <summary>
+	/// <para>F13 key.</para>
+	/// </summary>
+	F13 = 4194344,
+	/// <summary>
+	/// <para>F14 key.</para>
+	/// </summary>
+	F14 = 4194345,
+	/// <summary>
+	/// <para>F15 key.</para>
+	/// </summary>
+	F15 = 4194346,
+	/// <summary>
+	/// <para>F16 key.</para>
+	/// </summary>
+	F16 = 4194347,
+	/// <summary>
+	/// <para>F17 key.</para>
+	/// </summary>
+	F17 = 4194348,
+	/// <summary>
+	/// <para>F18 key.</para>
+	/// </summary>
+	F18 = 4194349,
+	/// <summary>
+	/// <para>F19 key.</para>
+	/// </summary>
+	F19 = 4194350,
+	/// <summary>
+	/// <para>F20 key.</para>
+	/// </summary>
+	F20 = 4194351,
+	/// <summary>
+	/// <para>F21 key.</para>
+	/// </summary>
+	F21 = 4194352,
+	/// <summary>
+	/// <para>F22 key.</para>
+	/// </summary>
+	F22 = 4194353,
+	/// <summary>
+	/// <para>F23 key.</para>
+	/// </summary>
+	F23 = 4194354,
+	/// <summary>
+	/// <para>F24 key.</para>
+	/// </summary>
+	F24 = 4194355,
+	/// <summary>
 	/// <para>Multiply (*) key on the numeric keypad.</para>
 	/// </summary>
 	KpMultiply = 4194433,
@@ -214,6 +286,10 @@ public enum KeyCodeEnum
 	/// <para>Hyper key. (On Linux/X11 only).</para>
 	/// </summary>
 	Hyper = 4194371,
+	/// <summary>
+	/// <para>Help key.</para>
+	/// </summary>
+	Help = 4194373,
 	/// <summary>
 	/// <para>Unknown key.</para>
 	/// </summary>
@@ -562,6 +638,10 @@ public enum KeyCodeEnum
 	/// <para>Game controller D-pad right button.</para>
 	/// </summary>
 	GamepadDpadRight = 1014,
+	/// <summary>
+	/// <para>Game controller SDL miscellaneous button.</para>
+	/// </summary>
+	GamepadMisc1 = 1015,
 	/// <summary>
 	/// <para>Game controller SDL paddle 1 button.</para>
 	/// </summary>

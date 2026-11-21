@@ -3,7 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using Godot;
-using Polytoria.Datamodel.Resources;
 using Polytoria.Mobile.Utils;
 using Polytoria.Schemas.API;
 using Polytoria.Shared;
@@ -14,22 +13,37 @@ namespace Polytoria.Mobile.UI;
 
 public partial class ViewProfilePage : MobileViewBase
 {
-	private TextureRect _avatarRect = null!;
-	private Label _usernameLabel = null!;
-	private Label _descriptionLabel = null!;
-	private Label _memberSinceLabel = null!;
+	[Export] private AvatarPreview _avatar = null!;
+	[Export] private Label _usernameLabel = null!;
+	[Export] private Label _memberSinceLabel = null!;
+	[Export] private Label _descriptionLabel = null!;
+	[Export] private Control _aboutCard = null!;
+	[Export] private Button _logoutButton = null!;
+	[Export] private Button _privacyButton = null!;
+	[Export] private Button _termsButton = null!;
+	[Export] private Button _deleteAccountButton = null!;
 
-	private readonly PTImageAsset _avatarAsset = new();
+	private const string PrivacyPolicyUrl = "https://polytoria.com/legal/privacy";
+	private const string TermsUrl = "https://polytoria.com/legal/terms";
+	private const string DeleteAccountUrl = "https://polytoria.com/my/settings/account";
 
 	public override void _Ready()
 	{
-		_avatarRect = GetNode<TextureRect>("ScrollContainer/VBoxContainer/AvatarCenter/Avatar");
-		_usernameLabel = GetNode<Label>("ScrollContainer/VBoxContainer/Username");
-		_descriptionLabel = GetNode<Label>("ScrollContainer/VBoxContainer/DescriptionMargin/Description");
-		_memberSinceLabel = GetNode<Label>("ScrollContainer/VBoxContainer/MemberSince");
-
-		_avatarAsset.ResourceLoaded += OnAvatarLoaded;
+		_logoutButton.Pressed += OnLogoutPressed;
+		_privacyButton.Pressed += () => OS.ShellOpen(PrivacyPolicyUrl);
+		_termsButton.Pressed += () => OS.ShellOpen(TermsUrl);
+		_deleteAccountButton.Pressed += () => OS.ShellOpen(DeleteAccountUrl);
 		base._Ready();
+	}
+
+	private void OnLogoutPressed()
+	{
+		PolyMobileAuthAPI.Logout();
+		_usernameLabel.Text = "";
+		_memberSinceLabel.Text = "";
+		_descriptionLabel.Text = "";
+		_aboutCard.Visible = false;
+		MobileUI.Singleton.SwitchTo(MobileViewEnum.Home);
 	}
 
 	public override void _EnterTree()
@@ -49,13 +63,9 @@ public partial class ViewProfilePage : MobileViewBase
 		LoadProfile();
 	}
 
-	private void OnAvatarLoaded(Resource resource)
-	{
-		_avatarRect.Texture = (Texture2D)resource;
-	}
-
 	public override void ShowView(object? args)
 	{
+		_avatar.Wave();
 		LoadProfile();
 		base.ShowView(args);
 	}
@@ -68,17 +78,16 @@ public partial class ViewProfilePage : MobileViewBase
 			return;
 		}
 
+		_avatar.LoadUser(userID);
+
 		try
 		{
 			APIUserInfo user = await PolyAPI.GetUserFromID(userID);
 
 			_usernameLabel.Text = user.Username;
-			_descriptionLabel.Text = user.Description;
 			_memberSinceLabel.Text = "Member since " + user.RegisteredAt.ToString("MMM d, yyyy");
-
-			_avatarAsset.ImageType = ImageTypeEnum.UserAvatar;
-			_avatarAsset.ImageID = (uint)user.Id;
-			_avatarAsset.LoadResource();
+			_descriptionLabel.Text = user.Description;
+			_aboutCard.Visible = !string.IsNullOrWhiteSpace(user.Description);
 		}
 		catch (Exception ex)
 		{

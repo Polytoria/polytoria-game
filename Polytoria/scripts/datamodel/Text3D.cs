@@ -30,6 +30,9 @@ public sealed partial class Text3D : Dynamic
 	private float _fontSize = 16;
 	private bool _useRichText = false;
 	private bool _shaded = false;
+	private bool _visible = false;
+	private bool _fixedSize = false;
+	private bool _alwaysOnTop = false;
 
 	private TextHorizontalAlignmentEnum _horizontalAlignment = TextHorizontalAlignmentEnum.Center;
 	private TextVerticalAlignmentEnum _verticalAlignment = TextVerticalAlignmentEnum.Middle;
@@ -229,12 +232,7 @@ public sealed partial class Text3D : Dynamic
 		{
 			_useRichText = value;
 
-			SetEnableRichTextViewport(value);
-			_sprite3D.Texture = _subViewport?.GetTexture();
-
-			_label3D.Visible = !value;
-			_sprite3D.Visible = value;
-
+			ApplyVisibleState();
 			RecomputeSize();
 			OnPropertyChanged();
 		}
@@ -254,6 +252,47 @@ public sealed partial class Text3D : Dynamic
 		}
 	}
 
+	[Editable, ScriptProperty, DefaultValue(false)]
+	public bool AlwaysOnTop
+	{
+		get => _alwaysOnTop;
+		set
+		{
+			_alwaysOnTop = value;
+
+			_label3D.NoDepthTest = value;
+			_sprite3D.NoDepthTest = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool FixedSize
+	{
+		get => _fixedSize;
+		set
+		{
+			_fixedSize = value;
+
+			_label3D.FixedSize = value;
+			_sprite3D.FixedSize = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty]
+	public bool Visible
+	{
+		get => _visible;
+		set
+		{
+			_visible = value;
+
+			ApplyVisibleState();
+			OnPropertyChanged();
+		}
+	}
+
 	private void OnFontLoaded(Resource resource)
 	{
 		SetFontTo((Font)resource);
@@ -268,6 +307,23 @@ public sealed partial class Text3D : Dynamic
 			_richLabel.AddThemeFontOverride("mono_font", f);
 		}
 		RecomputeSize();
+	}
+
+	private void ApplyVisibleState()
+	{
+		SetEnableRichTextViewport(_useRichText);
+
+		if (_useRichText)
+		{
+			_sprite3D.Texture = _subViewport?.GetTexture();
+			_sprite3D.Visible = _visible;
+			_label3D.Visible = false;
+		}
+		else
+		{
+			_label3D.Visible = _visible;
+			_sprite3D.Visible = false;
+		}
 	}
 
 	private void RecomputeSize()
@@ -335,6 +391,9 @@ public sealed partial class Text3D : Dynamic
 		OutlineWidth = 0;
 		OutlineColor = new(0, 0, 0);
 		UseRichText = false;
+		AlwaysOnTop = false;
+		FixedSize = false;
+		Visible = true;
 
 		base.Init();
 	}

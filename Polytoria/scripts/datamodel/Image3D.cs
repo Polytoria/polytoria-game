@@ -30,6 +30,9 @@ public sealed partial class Image3D : Dynamic
 	private bool _shaded;
 	private bool _faceCamera;
 	private bool _doubleSided;
+	private bool _fixedSize;
+	private bool _alwaysOnTop;
+	private bool _visible;
 	private TextureFilterEnum _textureFilter;
 
 	[Editable, ScriptProperty]
@@ -174,6 +177,42 @@ public sealed partial class Image3D : Dynamic
 		}
 	}
 
+	[Editable, ScriptProperty, DefaultValue(false)]
+	public bool FixedSize
+	{
+		get => _fixedSize;
+		set
+		{
+			_fixedSize = value;
+			_material.FixedSize = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue(false)]
+	public bool AlwaysOnTop
+	{
+		get => _alwaysOnTop;
+		set
+		{
+			_alwaysOnTop = value;
+			_material.NoDepthTest = value;
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue(true)]
+	public bool Visible
+	{
+		get => _visible;
+		set
+		{
+			_visible = value;
+			_mesh.Visible = value;
+			OnPropertyChanged();
+		}
+	}
+
 	[Editable, ScriptProperty, DefaultValue(TextureFilterEnum.Linear)]
 	public TextureFilterEnum TextureFilter
 	{
@@ -208,6 +247,7 @@ public sealed partial class Image3D : Dynamic
 
 		Shaded = true;
 		CastShadows = true;
+		Visible = true;
 
 		base.Init();
 	}
@@ -225,6 +265,8 @@ public sealed partial class Image3D : Dynamic
 			return;
 		}
 
+		if (Image is PTImageAsset { IsDeleted: false } current && current.ImageType == _imageType && current.ImageID == result) return;
+
 		PTImageAsset polyImg = New<PTImageAsset>();
 		Image = polyImg;
 		polyImg.ImageType = _imageType;
@@ -233,6 +275,7 @@ public sealed partial class Image3D : Dynamic
 
 	private void OnResourceLoaded(Resource r)
 	{
+		if (IsDeleted || !GodotObject.IsInstanceValid(_mesh)) return;
 		if (r is Texture2D tex)
 		{
 			if (_prevImg == tex) return;
@@ -240,7 +283,11 @@ public sealed partial class Image3D : Dynamic
 			_material.AlbedoTexture = tex;
 
 			// Set transparency depending on the AlphaMode returned from .DetectAlpha()
-			_transparencyType = tex.GetImage().DetectAlpha() switch
+			if (!tex.HasMeta("alpha_mode") && tex.GetImage() is Godot.Image img)
+			{
+				tex.SetMeta("alpha_mode", (int)img.DetectAlpha());
+			}
+			_transparencyType = (Godot.Image.AlphaMode)tex.GetMeta("alpha_mode", 0).AsInt32() switch
 			{
 				Godot.Image.AlphaMode.Blend => BaseMaterial3D.TransparencyEnum.Alpha,
 				Godot.Image.AlphaMode.Bit => BaseMaterial3D.TransparencyEnum.Alpha,

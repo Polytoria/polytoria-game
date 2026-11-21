@@ -161,4 +161,12 @@
 		</Delete>
 		<Message Text="Deleted PDB files: @(FilesDeleted)" Importance="high" />
 	</Target>
+
+	<!-- Disable DynamicallyAccessedMembers Analyzers in debug for improved build times -->
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+		<UseSharedCompilation>true</UseSharedCompilation>
+		<EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+		<EnableAotAnalyzer>false</EnableAotAnalyzer>
+		<EnableSingleFileAnalyzer>false</EnableSingleFileAnalyzer>
+	</PropertyGroup>
 </Project>
