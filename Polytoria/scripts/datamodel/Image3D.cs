@@ -265,6 +265,8 @@ public sealed partial class Image3D : Dynamic
 			return;
 		}
 
+		if (Image is PTImageAsset { IsDeleted: false } current && current.ImageType == _imageType && current.ImageID == result) return;
+
 		PTImageAsset polyImg = New<PTImageAsset>();
 		Image = polyImg;
 		polyImg.ImageType = _imageType;
@@ -273,6 +275,7 @@ public sealed partial class Image3D : Dynamic
 
 	private void OnResourceLoaded(Resource r)
 	{
+		if (IsDeleted || !GodotObject.IsInstanceValid(_mesh)) return;
 		if (r is Texture2D tex)
 		{
 			if (_prevImg == tex) return;
@@ -280,7 +283,11 @@ public sealed partial class Image3D : Dynamic
 			_material.AlbedoTexture = tex;
 
 			// Set transparency depending on the AlphaMode returned from .DetectAlpha()
-			_transparencyType = tex.GetImage().DetectAlpha() switch
+			if (!tex.HasMeta("alpha_mode") && tex.GetImage() is Godot.Image img)
+			{
+				tex.SetMeta("alpha_mode", (int)img.DetectAlpha());
+			}
+			_transparencyType = (Godot.Image.AlphaMode)tex.GetMeta("alpha_mode", 0).AsInt32() switch
 			{
 				Godot.Image.AlphaMode.Blend => BaseMaterial3D.TransparencyEnum.Alpha,
 				Godot.Image.AlphaMode.Bit => BaseMaterial3D.TransparencyEnum.Alpha,

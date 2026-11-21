@@ -113,6 +113,9 @@ public partial class AssetLoader : Node
 			CacheItem result = await task;
 			Callable.From(() => callback(result)).CallDeferred();
 		}
+		catch (OperationCanceledException) when (Globals.IsExiting)
+		{
+		}
 		catch (Exception exception)
 		{
 			Callable.From(() => PT.PrintErr("Failed to load resource (Type: " + item.Type + ", ID: " + item.ID + "): " + exception.Message)).CallDeferred();

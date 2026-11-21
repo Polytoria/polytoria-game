@@ -26,6 +26,18 @@ public static class ClientSettingsRegistry
 	{
 		var defs = new Dictionary<string, SettingDef>();
 
+		defs.Add(ClientSettingKeys.Chat.ChatEnabled,
+			new SettingDef<bool>
+			{
+				Key = ClientSettingKeys.Chat.ChatEnabled,
+				SectionKey = "chat",
+				Label = "Chat Enabled",
+				Description = "If the chat interface should be shown.",
+				ValueKind = SettingValueKind.Bool,
+				ControlKind = SettingControlKind.Toggle,
+				DefaultValue = true
+			});
+
 		SharedSettingsRegistry.AddSharedTo(defs);
 
 		defs.Add(ClientSettingKeys.Chat.ChatColors,
@@ -59,7 +71,7 @@ public static class ClientSettingsRegistry
 					new() { Value = "res://assets/fonts/built-in/Poppins/Poppins-Regular.ttf", Label = "Poppins" },
 					new() { Value = "res://assets/fonts/built-in/ComicNeue/ComicNeue-Regular.ttf", Label = "Comic Neue" },
 					new() { Value = "res://assets/fonts/built-in/PressStart2P-Regular.ttf", Label = "Press Start 2P" },
-					new() { Value = "res://assets/fonts/built-in/Comic Sans MS.ttf", Label = "Comic Sans MS" },
+					new() { Value = "res://assets/fonts/built-in/ComicRelief/ComicRelief-Regular.ttf", Label = "Comic Relief" },
 					new() { Value = "res://assets/fonts/built-in/Fredoka-VariableFont_wdth,wght.ttf", Label = "Fredoka" },
 				]
 			});

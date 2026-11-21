@@ -4,6 +4,7 @@
 
 using Polytoria.Attributes;
 using Polytoria.Scripting;
+using System;
 using System.Collections.Generic;
 
 namespace Polytoria.Datamodel;
@@ -14,6 +15,8 @@ public sealed partial class Stats : Instance
 	public PTSignal<Stat> StatAdded { get; private set; } = new();
 	public PTSignal<Stat> StatRemoved { get; private set; } = new();
 	public PTSignal<Stat> StatPropertyChanged { get; private set; } = new();
+
+	private readonly Dictionary<Stat, Action> _statPropertyHandlers = [];
 
 	public override void Init()
 	{
@@ -58,10 +61,9 @@ public sealed partial class Stats : Instance
 	{
 		if (instance is Stat stat)
 		{
-			stat.PropertyChanged.Connect(() =>
-			{
-				StatPropertyChanged.Invoke(stat);
-			});
+			Action handler = () => StatPropertyChanged.Invoke(stat);
+			_statPropertyHandlers[stat] = handler;
+			stat.PropertyChanged.Connect(handler);
 			StatAdded.Invoke(stat);
 		}
 	}
@@ -70,6 +72,10 @@ public sealed partial class Stats : Instance
 	{
 		if (instance is Stat stat)
 		{
+			if (_statPropertyHandlers.Remove(stat, out Action? handler))
+			{
+				stat.PropertyChanged.Disconnect(handler);
+			}
 			StatRemoved.Invoke(stat);
 		}
 	}

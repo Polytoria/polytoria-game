@@ -80,7 +80,7 @@ public partial class BaseAsset : NetworkedObject
 
 	private void InvalidateTimer()
 	{
-		if (_timer != null && Node.IsInstanceValid(_timer))
+		if (_timer != null && Node.IsInstanceValid(_timer) && !_timer.IsQueuedForDeletion())
 		{
 			_timer.Stop();
 			_timer.Timeout -= DeleteTimerTimeout;

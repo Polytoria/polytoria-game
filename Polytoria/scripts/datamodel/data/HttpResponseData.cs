@@ -16,6 +16,8 @@ public partial class HttpResponseData : IScriptObject
 	[ScriptProperty] public Dictionary<string, string>? Headers { get; internal set; }
 	[ScriptProperty] public string Body { get; internal set; } = "";
 	[ScriptProperty] public byte[] Buffer { get; internal set; } = [];
+	[ScriptProperty] public bool Trusted { get; internal set; } = false;
+
 
 	internal HttpResponseMessage responseMsg = null!;
 }

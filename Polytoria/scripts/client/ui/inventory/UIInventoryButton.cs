@@ -32,7 +32,7 @@ public partial class UIInventoryButton : Button
 
 	public override void _UnhandledInput(InputEvent @event)
 	{
-		if (@event.IsActionPressed("toggle_backpack") && CoreUI.Service.UseBackpack)
+		if (@event.IsActionPressed("toggle_backpack") && CoreUI.Service.UseBackpack && !CoreUI.Root.Input.IsPromptKey(@event))
 		{
 			SetPressedNoSignal(!ButtonPressed);
 		}

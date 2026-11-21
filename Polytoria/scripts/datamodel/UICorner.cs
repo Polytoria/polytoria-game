@@ -110,18 +110,6 @@ public partial class UICorner : Instance
 		base.ExitTree();
 	}
 
-	public override void PreDelete()
-	{
-		if (Parent is UIField field)
-		{
-			field.TransformChanged.Disconnect(OnParentTransformChanged);
-			if (!IsHidden)
-				field.OnCornerControllerExit();
-		}
-
-		base.PreDelete();
-	}
-
 	public override void HiddenChanged(bool to)
 	{
 		if (Parent is UIField field)

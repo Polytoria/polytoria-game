@@ -511,7 +511,7 @@ public sealed partial class Sound : Dynamic
 		// can safely mute on the server since this method doesn't change any properties
 		if (Root.Network.IsServer) return;
 
-		if (_audioPlayer != null)
+		if (_audioPlayer?.Stream != null)
 		{
 			AudioStreamPlayer clone = (AudioStreamPlayer)_audioPlayer.Duplicate();
 			GDNode.AddChild(clone, @internal: Node.InternalMode.Back);
@@ -531,7 +531,7 @@ public sealed partial class Sound : Dynamic
 			clone.Play();
 		}
 
-		if (_audioPlayer3D != null)
+		if (_audioPlayer3D?.Stream != null)
 		{
 			AudioStreamPlayer3D clone3D = (AudioStreamPlayer3D)_audioPlayer3D.Duplicate();
 			GDNode.AddChild(clone3D, @internal: Node.InternalMode.Back);

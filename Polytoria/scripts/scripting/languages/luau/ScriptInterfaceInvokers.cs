@@ -42,6 +42,15 @@ internal static partial class ScriptInterfaceInvokers
 		_invokers.Add(KeyOf(method), invoker);
 	}
 
+	public static IEnumerable<string> MemberNames()
+	{
+		foreach (PropertyKey key in _getters.Keys)
+			yield return key.Name;
+
+		foreach (MethodKey key in _invokers.Keys)
+			yield return key.Name;
+	}
+
 	public static Func<object, object?>? TryGetGetter(PropertyInfo property)
 	{
 		if (_getters.TryGetValue(KeyOf(property), out var getter))

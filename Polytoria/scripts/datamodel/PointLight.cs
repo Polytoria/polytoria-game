@@ -24,7 +24,11 @@ public sealed partial class PointLight : Light
 	public override Node CreateGDNode()
 	{
 		Node3D n = new();
-		OmniLight3D sl = new();
+		OmniLight3D sl = new()
+		{
+			DistanceFadeEnabled = true,
+			DistanceFadeLength = 50f
+		};
 		n.AddChild(sl, @internal: Node.InternalMode.Back);
 		GDLight = sl;
 		GDOmniLight = sl;
@@ -54,6 +58,7 @@ public sealed partial class PointLight : Light
 			_range = value;
 			float v = value / RangeConversion;
 			GDOmniLight.OmniRange = v;
+			UpdateFade();
 #if CREATOR
 			_sphere.Radius = v;
 #endif
