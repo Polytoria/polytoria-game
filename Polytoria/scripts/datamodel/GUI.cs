@@ -53,7 +53,7 @@ public partial class GUI : Instance
 			_avoidCoreUI = value;
 			if (Root.SessionType != World.SessionTypeEnum.Creator)
 			{
-				_control.OffsetTop = value ? CoreUIService.TopInset : 0;
+				_control.OffsetTop = value ? CoreUIService.TopbarInset : 0;
 			}
 			OnPropertyChanged();
 		}

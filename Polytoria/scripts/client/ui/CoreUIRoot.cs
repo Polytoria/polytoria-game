@@ -32,6 +32,7 @@ public partial class CoreUIRoot : CanvasLayer
 	[Export] public UIChatButton ChatButton = null!;
 	[Export] public UIHealthbar HealthBar = null!;
 	[Export] public UILeaderboard Leaderboard = null!;
+	[Export] public UILeaderboardOpener LeaderboardOpener = null!;
 	[Export] public UIInventory Inventory = null!;
 	[Export] public UIInventoryButton InventoryButton = null!;
 	[Export] public UIEmoteWheel EmoteWheel = null!;
