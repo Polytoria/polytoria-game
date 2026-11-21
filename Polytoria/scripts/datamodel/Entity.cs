@@ -95,7 +95,7 @@ public abstract partial class Entity : RigidBody
 	{
 		uint layers = base.GetAppliedCollisionLayers();
 
-		return Color.A > 0.5f
+		return Visible && Color.A > 0.5f
 			? layers | CameraClipCollisionLayerMask
 			: layers & ~CameraClipCollisionLayerMask;
 	}
