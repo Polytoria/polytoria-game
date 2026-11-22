@@ -118,7 +118,8 @@ public sealed partial class ClientEntry : Node3D
 
 		if (!string.IsNullOrWhiteSpace(_creatorTestToken))
 		{
-			PolyCreatorAPI.SetToken(_creatorTestToken);
+			try { PolyCreatorAPI.SetToken(_creatorTestToken); }
+			catch { PT.PrintWarn("Creator test token already set"); }
 		}
 #endif
 		networkMode ??= "client";
