@@ -19,6 +19,7 @@ public partial class RigidBody : Physical
 
 	private float _gravityScale = 1f;
 	private bool _lockRotation = false;
+	private bool _frozen;
 	private float _mass = 1f;
 	private float _friction = 0.6f;
 	private float _drag;
@@ -237,6 +238,7 @@ public partial class RigidBody : Physical
 		base.InitGDNode();
 		RigidBody3D? previous = GDRigidBody;
 		GDRigidBody = (RigidBody3D)GDNode;
+		_frozen = GDRigidBody.Freeze;
 		_appliedPhysicsMaterial = null;
 		UpdatePhysicsMaterial();
 		GDRigidBody.GravityScale = 2;
@@ -417,6 +419,7 @@ public partial class RigidBody : Physical
 			}
 		}
 		GDRigidBody.Freeze = to;
+		_frozen = to;
 		base.ApplyFreeze(to);
 	}
 
@@ -457,6 +460,6 @@ public partial class RigidBody : Physical
 	}
 
 	internal override bool IsAsleep => !GDRigidBody.Freeze && GDRigidBody.Sleeping;
-	internal override bool IsFrozen => GDRigidBody.Freeze;
+	internal override bool IsFrozen => _frozen;
 	internal bool HasConstantForce => GDRigidBody.ConstantForce != Vector3.Zero || GDRigidBody.ConstantTorque != Vector3.Zero;
 }
