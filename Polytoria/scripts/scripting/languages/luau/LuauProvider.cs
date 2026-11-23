@@ -1387,110 +1387,103 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 
 	public void PushValueToLua(LuaState state, object? value)
 	{
-		// TODO: Refactor this so it's not one gazillion if-elses
 		if (value == null)
 		{
 			state.PushNil();
+			return;
 		}
-		else if (value is string strVal)
-		{
-			state.PushString(strVal);
-		}
-		else if (value is int intVal)
-		{
-			state.PushNumber(intVal);
-		}
-		else if (value is uint uintVal)
-		{
-			state.PushNumber(uintVal);
-		}
-		else if (value is ulong ulongVal)
-		{
-			state.PushNumber(ulongVal);
-		}
-		else if (value is long longVal)
-		{
-			state.PushNumber(longVal);
-		}
-		else if (value is double dblVal)
-		{
-			state.PushNumber(dblVal);
-		}
-		else if (value is decimal decimalVal)
-		{
-			state.PushNumber((double)decimalVal);
-		}
-		else if (value is float flVal)
-		{
-			state.PushNumber(flVal);
-		}
-		else if (value is bool boolVal)
-		{
-			state.PushBoolean(boolVal);
-		}
-		else if (value is byte[] byteArrayVal)
-		{
-			state.PushBuffer(byteArrayVal);
-		}
-		else if (TryPushValueType(state, value))
+
+		if (TryPushValueType(state, value))
 		{
 			return;
 		}
-		else if (value is Variant variantVal)
-		{
-			PushCSClass(state, PTVariant.FromGDClass(variantVal));
-		}
-		else if (value is IScriptObject sc) // Handle script objects
-		{
-			PushCSClass(state, sc);
-		}
-		else if (value.GetType().IsEnum) // Handle enums
+
+		if (value.GetType().IsEnum) // Handle enums
 		{
 			PushEnum(state, value.GetType(), Convert.ToInt32(value));
+			return;
 		}
-		else if (value is IDictionary<string, object> dict) // Handle string key Dictionaries
-		{
-			state.NewTable();
-			foreach ((string key, object val) in dict)
-			{
-				state.PushString(key);
-				PushValueToLua(state, val);
-				state.SetTable(-3);
-			}
-		}
-		else if (value is IDictionary<object, object> odict) // Handle Dictionaries
-		{
-			state.NewTable();
-			foreach ((object key, object val) in odict)
-			{
-				PushValueToLua(state, key);
-				PushValueToLua(state, val);
-				state.SetTable(-3);
-			}
-		}
-		else if (value is IEnumerable enumerable) // Handle arrays/lists
-		{
-			state.NewTable();
-			int tableIndex = state.GetTop();
 
-			int index = 1;
-			foreach (object? item in enumerable)
-			{
-				state.PushInteger(index);
-				PushValueToLua(state, item);
-				state.SetTable(tableIndex);
-				index++;
-			}
-		}
-		else if (value is LuaState thread)
+		switch (value)
 		{
-			thread.PushThread();
-			thread.XMove(state, 1);
-		}
-		else // Fallback for unsupported types
-		{
-			GD.PushError("PushValueToLua Unsupported type: ", value.GetType());
-			state.PushNil();
+			case string strVal:
+				state.PushString(strVal);
+				break;
+			case int intVal:
+				state.PushNumber(intVal);
+				break;
+			case uint uintVal:
+				state.PushNumber(uintVal);
+				break;
+			case long longVal:
+				state.PushNumber(longVal);
+				break;
+			case ulong ulongVal:
+				state.PushNumber(ulongVal);
+				break;
+			case double dblVal:
+				state.PushNumber(dblVal);
+				break;
+			case decimal decimalVal:
+				state.PushNumber((double)decimalVal);
+				break;
+			case float flVal:
+				state.PushNumber(flVal);
+				break;
+			case bool boolVal:
+				state.PushBoolean(boolVal);
+				break;
+			case byte[] byteArrayVal:
+				state.PushBuffer(byteArrayVal);
+				break;
+			case Variant variantVal:
+				PushCSClass(state, PTVariant.FromGDClass(variantVal));
+				break;
+			case IScriptObject sc:
+				PushCSClass(state, sc);
+				break;
+			case IDictionary<string, object> dict:
+				state.NewTable(0, dict.Count);
+				foreach ((string key, object val) in dict)
+				{
+					PushValueToLua(state, val);
+					state.SetField(-2, key);
+				}
+				break;
+			case IDictionary<object, object> odict:
+				state.NewTable(0, odict.Count);
+				foreach ((object key, object val) in odict)
+				{
+					PushValueToLua(state, key);
+					PushValueToLua(state, val);
+					state.SetTable(-3);
+				}
+				break;
+			case IList list:
+				state.NewTable(list.Count);
+				for (int i = 0; i < list.Count; i++)
+				{
+					PushValueToLua(state, list[i]);
+					state.RawSetInteger(-2, i + 1);
+				}
+				break;
+			case IEnumerable enumerable:
+				object?[] array = [.. enumerable];
+				state.NewTable(array.Length);
+				for (int i = 0; i < array.Length; i++)
+				{
+					PushValueToLua(state, array[i]);
+					state.RawSetInteger(-2, i + 1);
+				}
+				break;
+			case LuaState thread:
+				thread.PushThread();
+				thread.XMove(state, 1);
+				break;
+			default:
+				GD.PushError("PushValueToLua Unsupported type: ", value.GetType());
+				state.PushNil();
+				break;
 		}
 	}
 

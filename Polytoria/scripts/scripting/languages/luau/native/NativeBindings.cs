@@ -105,7 +105,7 @@ internal partial class NativeBindings
 
 	[LibraryImport(LuaLibraryName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	internal static partial void lua_rawseti(IntPtr luaState, int index, long i);
+	internal static partial void lua_rawseti(IntPtr luaState, int index, int i);
 
 	[SuppressGCTransition]
 	[LibraryImport(LuaLibraryName)]
