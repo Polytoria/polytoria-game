@@ -30,6 +30,7 @@ public partial class Physical : Dynamic
 	{
 		public Node? Target;
 		public Vector3 Offset = Vector3.Zero;
+		public Vector3 Scale = Vector3.One;
 		public bool HasOffset;
 	}
 
@@ -407,6 +408,8 @@ public partial class Physical : Dynamic
 
 	public override void EnterTree()
 	{
+		Physical? oldRoot = PhysicalRoot;
+		bool wasHidden = IsHidden;
 		PhysicalRoot = null;
 		Instance? current = Parent;
 
@@ -433,6 +436,8 @@ public partial class Physical : Dynamic
 		}
 
 		base.EnterTree();
+
+		if (PhysicalRoot == null && oldRoot == null && IsHidden == wasHidden) return;
 
 		foreach (CollisionShape3D item in CollisionShapes.ToArray())
 		{
@@ -910,7 +915,7 @@ public partial class Physical : Dynamic
 	/// <param name="collisionShape">Target collision shape</param>
 	internal void PostCollisionShapeUpdate(CollisionShape3D collisionShape)
 	{
-		RemoveCollisionShape(collisionShape, false);
+		RemoveCollisionShape(collisionShape, false, false);
 		AddCollisionShape(collisionShape);
 	}
 
@@ -919,7 +924,7 @@ public partial class Physical : Dynamic
 	/// </summary>
 	/// <param name="collisionShape">Target collision shape</param>
 	/// <param name="free">Free the shape now?</param>
-	internal void RemoveCollisionShape(CollisionShape3D collisionShape, bool free = true)
+	internal void RemoveCollisionShape(CollisionShape3D collisionShape, bool free = true, bool revert = true)
 	{
 		if (!CollisionShapes.Contains(collisionShape)) return;
 		CollisionShapes.Remove(collisionShape);
@@ -931,7 +936,14 @@ public partial class Physical : Dynamic
 		CleanupTrackedNodes(collisionShape, static state => state.TouchAreaNodes, true);
 		CleanupTrackedNodes(collisionShape, static state => state.CollisionSyncNodes, false);
 
-		RevertCollisionShape(collisionShape);
+		if (revert && !free)
+		{
+			RevertCollisionShape(collisionShape);
+		}
+		else
+		{
+			CollisionRootShapes.Remove(collisionShape);
+		}
 
 		CollisionShapeRemoved?.Invoke(collisionShape);
 
@@ -953,6 +965,11 @@ public partial class Physical : Dynamic
 				if (removeAreaShapes && node is CollisionShape3D shape)
 				{
 					AreaCollisionShapes.Remove(shape);
+				}
+
+				if (node is RemoteTransform3D rt)
+				{
+					rt.RemotePath = new();
 				}
 
 				node.QueueFree();
@@ -1003,6 +1020,30 @@ public partial class Physical : Dynamic
 		config.HasOffset = true;
 	}
 
+	internal static void SetRemoteLinkScale(CollisionShape3D collisionShape, Vector3 scale)
+	{
+		RemoteLinkConfig config = _remoteLinkConfigs.GetOrCreateValue(collisionShape);
+		config.Scale = scale;
+
+		if (!_trackedNodes.TryGetValue(collisionShape, out TrackedNodesState? state)) return;
+
+		foreach (Node node in state.CollisionSyncNodes)
+		{
+			if (node is RemoteTransform3D rt && Node.IsInstanceValid(rt))
+			{
+				rt.Scale = scale;
+			}
+		}
+
+		foreach (Node node in state.TouchAreaNodes)
+		{
+			if (node is RemoteTransform3D rt && Node.IsInstanceValid(rt))
+			{
+				rt.Scale = scale * 1.01f;
+			}
+		}
+	}
+
 	private static RemoteLinkConfig? GetRemoteLinkConfig(CollisionShape3D collisionShape)
 	{
 		if (_remoteLinkConfigs.TryGetValue(collisionShape, out RemoteLinkConfig? config))
@@ -1049,7 +1090,7 @@ public partial class Physical : Dynamic
 	{
 		TrackedNodesState state = GetTrackedNodesState(collisionShape);
 		List<Node> trackedNodes = selector(state);
-		trackedNodes.Clear();
+		trackedNodes.RemoveAll(node => !Node.IsInstanceValid(node));
 		trackedNodes.AddRange(nodes);
 	}
 
@@ -1068,6 +1109,11 @@ public partial class Physical : Dynamic
 		}
 
 		scaleNode.Position = config is { HasOffset: true } ? config.Offset : Vector3.Zero;
+
+		if (config != null)
+		{
+			scaleNode.Scale *= config.Scale;
+		}
 	}
 
 	private RemoteTransform3D CreateRemoteLinkNode(CollisionShape3D origin, Node target)
@@ -1087,9 +1133,9 @@ public partial class Physical : Dynamic
 	{
 		if (!Node.IsInstanceValid(origin)) return;
 
-		if (this is Part && origin.GetParent() == GDNode && GetRemoteLinkConfig(origin)?.Target is Node3D target)
+		if (this is Part && origin.GetParent() == GDNode && GetRemoteLinkConfig(origin) is RemoteLinkConfig config && config.Target is Node3D target)
 		{
-			origin.Transform = target.Transform;
+			origin.Transform = target == GDNode ? new(Basis.FromScale(config.Scale), Vector3.Zero) : target.Transform;
 			return;
 		}
 
@@ -1151,6 +1197,8 @@ public partial class Physical : Dynamic
 				AreaCollisionShapes.Add(areaShape2);
 			}
 		}
+
+		if (createdNodes.Count == 0) return;
 
 		SetTrackedNodes(origin, static state => state.TouchAreaNodes, createdNodes);
 	}

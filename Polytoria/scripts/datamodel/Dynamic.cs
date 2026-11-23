@@ -957,23 +957,26 @@ public partial class Dynamic : Instance
 		if (Root == null) return;
 		if (Root.SessionType != World.SessionTypeEnum.Creator) return;
 
-		_boundArea3D = new()
-		{
-			Monitorable = true,
-			Monitoring = false,
-		};
-		SetCreatorBoundActive(true);
-		_creatorProxyToDyn[_boundArea3D] = this;
-
 		_boundShape = new();
 
-		_boundCollider = new()
+		if (this is not IGroup and not Camera and not Physical)
 		{
-			Shape = _boundShape
-		};
+			_boundArea3D = new()
+			{
+				Monitorable = true,
+				Monitoring = false,
+			};
+			SetCreatorBoundActive(true);
+			_creatorProxyToDyn[_boundArea3D] = this;
 
-		_boundArea3D.AddChild(_boundCollider);
-		Root.Environment.GDNode.AddChild(_boundArea3D, @internal: Node.InternalMode.Back);
+			_boundCollider = new()
+			{
+				Shape = _boundShape
+			};
+
+			_boundArea3D.AddChild(_boundCollider);
+			Root.Environment.GDNode.AddChild(_boundArea3D, @internal: Node.InternalMode.Back);
+		}
 
 		UpdateCreatorBounds();
 	}
@@ -989,7 +992,7 @@ public partial class Dynamic : Instance
 		CreatorBounds = bound;
 
 		_boundShape.Size = bound.Size;
-		_boundCollider.Position = bound.GetCenter();
+		_boundCollider?.Position = bound.GetCenter();
 	}
 
 	public static Dynamic? GetDynFromCreatorBounds(Node collider)
@@ -1167,9 +1170,9 @@ public partial class Dynamic : Instance
 		GDNode3D.Visible = !to;
 
 #if CREATOR
-		if (_boundArea3D != null)
+		if (_boundShape != null)
 		{
-			_boundArea3D.Monitorable = !to;
+			_boundArea3D?.Monitorable = !to;
 			RefreshCreatorBound();
 		}
 #endif
