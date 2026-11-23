@@ -62,6 +62,7 @@ public class NetworkInstance
 	public event Action? ClientDisconnected;
 	public event Action<NetInstanceErrorEnum>? ClientError;
 	public event MessageReceivedHandler? MessageReceived;
+	public double LastReceiveTime { get; private set; }
 
 	public bool IsSilence { get; private set; } = false;
 	internal int ProcessedMessages { get; private set; }
@@ -486,6 +487,7 @@ public class NetworkInstance
 						break;
 					case { Kind: DeferredNetworkEventKind.MessageReceived }:
 						ProcessedMessages++;
+						LastReceiveTime = e.ReceiveTime;
 						MessageReceived?.Invoke(e.PeerID, e.Data!, e.TransferMode);
 						break;
 				}
@@ -601,6 +603,7 @@ public class NetworkInstance
 		public byte[]? Data { get; init; }
 		public TransferMode TransferMode { get; init; }
 		public NetInstanceErrorEnum Error { get; init; }
+		public double ReceiveTime { get; init; }
 
 		public static DeferredNetworkEvent PeerConnected(int peerID) => new() { Kind = DeferredNetworkEventKind.PeerConnected, PeerID = peerID };
 		public static DeferredNetworkEvent PeerDisconnected(int peerID) => new() { Kind = DeferredNetworkEventKind.PeerDisconnected, PeerID = peerID };
@@ -610,6 +613,7 @@ public class NetworkInstance
 		public static DeferredNetworkEvent MessageReceived(int peerID, byte[] data, TransferMode mode) => new()
 		{
 			Kind = DeferredNetworkEventKind.MessageReceived,
+			ReceiveTime = Time.GetTicksUsec() / 1e6,
 			PeerID = peerID,
 			Data = data,
 			TransferMode = mode

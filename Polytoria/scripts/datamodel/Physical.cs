@@ -1283,6 +1283,7 @@ public partial class Physical : Dynamic
 
 	internal Rid[] GetRids()
 	{
+		if (IsDeleted) return [];
 		List<Rid> rids = [];
 		if (PhysicalArea != null)
 		{
