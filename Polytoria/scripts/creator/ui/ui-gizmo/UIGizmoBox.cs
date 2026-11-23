@@ -36,11 +36,14 @@ public partial class UIGizmoBox : Control
 
 	private DragState _dragState;
 	private Handle _resizeCorner;
-	private Vector2 _resizeStartPosOffset;
-	private Vector2 _resizeStartSizeOffset;
 	private Vector2 _resizeStartGlobalMouse;
+	private Vector2 _resizeStartPosOffset;
+	private Vector2 _resizeStartPosRelative;
+	private Vector2 _resizeStartSizeOffset;
+	private Vector2 _resizeStartSizeRelative;
 	private Vector2 _totalResizeDelta;
 	private Vector2 _dragGrabOffset;
+	private bool _dragScale;
 	private bool _showingMeasures;
 	private Vector2 _lastMeasurePos;
 	private Vector2 _lastMeasureSize;
@@ -114,10 +117,23 @@ public partial class UIGizmoBox : Control
 		if (_dragState == DragState.Dragging)
 		{
 			if (Target?.NodeControl == null) { EndDrag(); return; }
-
 			Vector2 targetAbs = globalMouse - _dragGrabOffset;
 			Vector2 snappedAbs = SnapPosition(targetAbs);
-			Target.PositionOffset += (snappedAbs - Target.AbsolutePosition);
+			Vector2 deltaAbs = snappedAbs - Target.AbsolutePosition;
+			if (_dragScale)
+			{
+				Vector2 parentSize = GetParentSize();
+				Vector2 newRelative = Target.PositionRelative;
+				if (parentSize.X > 0)
+					newRelative.X += deltaAbs.X / parentSize.X;
+				if (parentSize.Y > 0)
+					newRelative.Y += deltaAbs.Y / parentSize.Y;
+				Target.PositionRelative = newRelative;
+			}
+			else
+			{
+				Target.PositionOffset += deltaAbs;
+			}
 		}
 		else
 		{
@@ -135,6 +151,7 @@ public partial class UIGizmoBox : Control
 		if (_dragState == DragState.None) return;
 		bool wasResizing = _dragState == DragState.Resizing;
 		_dragState = DragState.None;
+		_dragScale = false;
 		Gizmos?.HideGuidelines();
 		CommitHistory(wasResizing);
 	}
@@ -151,7 +168,7 @@ public partial class UIGizmoBox : Control
 		return expanded.HasPoint(localPos);
 	}
 
-	private Vector2 GetLocalMousePosition() => GetLocalMousePosition(GetGlobalMousePosition());
+	private new Vector2 GetLocalMousePosition() => GetLocalMousePosition(GetGlobalMousePosition());
 
 	private Vector2 GetLocalMousePosition(Vector2 globalMouse)
 	{
@@ -403,9 +420,20 @@ public partial class UIGizmoBox : Control
 		_dragState = DragState.Dragging;
 		_dragGrabOffset = GetGlobalMousePosition() - Target.AbsolutePosition;
 
+		Vector2 parentSize = GetParentSize();
+		_dragScale = Mathf.IsZeroApprox(Target.PositionOffset.X) &&
+			Mathf.IsZeroApprox(Target.PositionOffset.Y) &&
+			(!Mathf.IsZeroApprox(Target.PositionRelative.X) || !Mathf.IsZeroApprox(Target.PositionRelative.Y)) &&
+			parentSize.X > 0 && parentSize.Y > 0;
+
 		history.NewAction("Move UI Element");
-		Vector2 savedPos = Target.PositionOffset;
-		history.AddUndoCallback(new((_) => Target.PositionOffset = savedPos));
+		Vector2 savedPosOffset = Target.PositionOffset;
+		Vector2 savedPosRelative = Target.PositionRelative;
+		history.AddUndoCallback(new((_) =>
+		{
+			Target.PositionOffset = savedPosOffset;
+			Target.PositionRelative = savedPosRelative;
+		}));
 	}
 
 	private void StartResize(Handle handle)
@@ -418,17 +446,23 @@ public partial class UIGizmoBox : Control
 		_dragState = DragState.Resizing;
 		_resizeCorner = handle;
 		_resizeStartPosOffset = Target.PositionOffset;
+		_resizeStartPosRelative = Target.PositionRelative;
 		_resizeStartSizeOffset = Target.SizeOffset;
+		_resizeStartSizeRelative = Target.SizeRelative;
 		_resizeStartGlobalMouse = GetGlobalMousePosition();
 		_totalResizeDelta = Vector2.Zero;
 
 		history.NewAction("Resize UI Element");
-		Vector2 savedPos = Target.PositionOffset;
-		Vector2 savedSize = Target.SizeOffset;
+		Vector2 savedPosOffset = Target.PositionOffset;
+		Vector2 savedPosRelative = Target.PositionRelative;
+		Vector2 savedSizeOffset = Target.SizeOffset;
+		Vector2 savedSizeRelative = Target.SizeRelative;
 		history.AddUndoCallback(new((_) =>
 		{
-			Target.PositionOffset = savedPos;
-			Target.SizeOffset = savedSize;
+			Target.PositionOffset = savedPosOffset;
+			Target.PositionRelative = savedPosRelative;
+			Target.SizeOffset = savedSizeOffset;
+			Target.SizeRelative = savedSizeRelative;
 		}));
 	}
 
@@ -446,7 +480,7 @@ public partial class UIGizmoBox : Control
 		}
 		else if (uniform)
 		{
-			Vector2 startSize = _resizeStartSizeOffset;
+			Vector2 startSize = Target.AbsoluteSize;
 			if (startSize.X == 0 || startSize.Y == 0) { EndDrag(); return; }
 			float scaleX = (startSize.X + totalDelta.X) / startSize.X;
 			float scaleY = (startSize.Y + totalDelta.Y) / startSize.Y;
@@ -467,26 +501,55 @@ public partial class UIGizmoBox : Control
 			onLeft ? totalDelta.X : 0,
 			onTop ? totalDelta.Y : 0);
 
-		Vector2 newSizeOffset = (_resizeStartSizeOffset + sizeChange).Max(Vector2.One).Round();
-		Vector2 actualSizeChange = newSizeOffset - _resizeStartSizeOffset;
+		Vector2 parentSize = GetParentSize();
+		bool useRelativeSizeX = Mathf.IsZeroApprox(_resizeStartSizeOffset.X) && !Mathf.IsZeroApprox(_resizeStartSizeRelative.X) && parentSize.X > 0;
+		bool useRelativeSizeY = Mathf.IsZeroApprox(_resizeStartSizeOffset.Y) && !Mathf.IsZeroApprox(_resizeStartSizeRelative.Y) && parentSize.Y > 0;
+		Vector2 newSizeOffset = _resizeStartSizeOffset;
+		Vector2 newSizeRelative = _resizeStartSizeRelative;
 
+		if (useRelativeSizeX)
+			newSizeRelative.X = Mathf.Max(0.001f, _resizeStartSizeRelative.X + (sizeChange.X / parentSize.X));
+		else
+			newSizeOffset.X = Mathf.Max(1f, Mathf.Round(_resizeStartSizeOffset.X + sizeChange.X));
+		if (useRelativeSizeY)
+			newSizeRelative.Y = Mathf.Max(0.001f, _resizeStartSizeRelative.Y + (sizeChange.Y / parentSize.Y));
+		else
+			newSizeOffset.Y = Mathf.Max(1f, Mathf.Round(_resizeStartSizeOffset.Y + sizeChange.Y));
 
+		Vector2 actualPixelSizeChange = new(
+			useRelativeSizeX ? (newSizeRelative.X - _resizeStartSizeRelative.X) * parentSize.X : newSizeOffset.X - _resizeStartSizeOffset.X,
+			useRelativeSizeY ? (newSizeRelative.Y - _resizeStartSizeRelative.Y) * parentSize.Y : newSizeOffset.Y - _resizeStartSizeOffset.Y
+		);
 		float nodeRot = Target.NodeControl.Rotation;
+		Vector2 totalPosDelta;
 
-		Vector2 newPosOffset;
 		if (centerScale)
 		{
-			Vector2 pivotDelta = ((Target.PivotPoint - DefaultPivot) * actualSizeChange).Rotated(nodeRot);
-			newPosOffset = _resizeStartPosOffset + pivotDelta;
+			totalPosDelta = ((Target.PivotPoint - DefaultPivot) * actualPixelSizeChange).Rotated(nodeRot);
 		}
 		else
 		{
-			Vector2 totalPosDelta = (posChange + Target.PivotPoint * actualSizeChange).Rotated(nodeRot);
-			newPosOffset = _resizeStartPosOffset + totalPosDelta;
+			totalPosDelta = (posChange + Target.PivotPoint * actualPixelSizeChange).Rotated(nodeRot);
 		}
 
+		bool useRelativePosX = Mathf.IsZeroApprox(_resizeStartPosOffset.X) && !Mathf.IsZeroApprox(_resizeStartPosRelative.X) && parentSize.X > 0;
+		bool useRelativePosY = Mathf.IsZeroApprox(_resizeStartPosOffset.Y) && !Mathf.IsZeroApprox(_resizeStartPosRelative.Y) && parentSize.Y > 0;
+		Vector2 newPosOffset = _resizeStartPosOffset;
+		Vector2 newPosRelative = _resizeStartPosRelative;
+
+		if (useRelativePosX)
+			newPosRelative.X += totalPosDelta.X / parentSize.X;
+		else
+			newPosOffset.X = Mathf.Round(_resizeStartPosOffset.X + totalPosDelta.X);
+		if (useRelativePosY)
+			newPosRelative.Y += totalPosDelta.Y / parentSize.Y;
+		else
+			newPosOffset.Y = Mathf.Round(_resizeStartPosOffset.Y + totalPosDelta.Y);
+
+		Target.SizeRelative = newSizeRelative;
 		Target.SizeOffset = newSizeOffset;
-		Target.PositionOffset = newPosOffset.Round();
+		Target.PositionRelative = newPosRelative;
+		Target.PositionOffset = newPosOffset;
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
@@ -754,19 +817,27 @@ public partial class UIGizmoBox : Control
 		CreatorHistory? history = GetHistory();
 		if (history == null) return;
 
-		Vector2 savedPos = Target.PositionOffset;
+		Vector2 savedPosOffset = Target.PositionOffset;
+		Vector2 savedPosRelative = Target.PositionRelative;
 		if (includeSize)
 		{
-			Vector2 savedSize = Target.SizeOffset;
+			Vector2 savedSizeOffset = Target.SizeOffset;
+			Vector2 savedSizeRelative = Target.SizeRelative;
 			history.AddDoCallback(new((_) =>
 			{
-				Target.PositionOffset = savedPos;
-				Target.SizeOffset = savedSize;
+				Target.PositionOffset = savedPosOffset;
+				Target.PositionRelative = savedPosRelative;
+				Target.SizeOffset = savedSizeOffset;
+				Target.SizeRelative = savedSizeRelative;
 			}));
 		}
 		else
 		{
-			history.AddDoCallback(new((_) => Target.PositionOffset = savedPos));
+			history.AddDoCallback(new((_) =>
+			{
+				Target.PositionOffset = savedPosOffset;
+				Target.PositionRelative = savedPosRelative;
+			}));
 		}
 		history.CommitAction();
 	}
@@ -847,5 +918,16 @@ public partial class UIGizmoBox : Control
 			SnapY = [bounds.TL.Y, bounds.TR.Y, bounds.BL.Y, bounds.BR.Y, pivot.Y];
 			Color = color;
 		}
+	}
+
+	private Vector2 GetParentSize()
+	{
+		if (Target?.Parent is UIField parentField)
+			return parentField.AbsoluteSize;
+		if (Target?.Parent is GUI gui)
+			return gui.AbsoluteSize;
+		if (Target?.Parent is GUI3D g3D)
+			return g3D.AbsoluteSize;
+		return Vector2.Zero;
 	}
 }

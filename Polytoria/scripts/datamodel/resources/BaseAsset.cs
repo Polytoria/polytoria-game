@@ -58,8 +58,8 @@ public partial class BaseAsset : NetworkedObject
 
 	public async void UnlinkFrom(NetworkedObject obj)
 	{
+		if (!LinkedTo.Remove(obj)) return;
 		Root = obj.Root;
-		LinkedTo.Remove(obj);
 		LinkCount--;
 		if (LinkedTo.Count == 0)
 		{
@@ -80,11 +80,12 @@ public partial class BaseAsset : NetworkedObject
 
 	private void InvalidateTimer()
 	{
-		if (_timer != null && Node.IsInstanceValid(_timer))
+		if (_timer != null && Node.IsInstanceValid(_timer) && !_timer.IsQueuedForDeletion())
 		{
 			_timer.Stop();
 			_timer.Timeout -= DeleteTimerTimeout;
 			_timer.QueueFree();
+			_timer = null;
 		}
 	}
 

@@ -13,9 +13,10 @@ public partial class NewUserSplash : Control
 	[Export] private Button _loginBtn = null!;
 	[Export] private Button _closeBtn = null!;
 
-
 	public override void _Ready()
 	{
+		_closeBtn.Visible = OS.IsDebugBuild();
+
 		_registerBtn.Pressed += OnRegisterPressed;
 		_loginBtn.Pressed += OnLoginPressed;
 		_closeBtn.Pressed += OnClosePressed;
@@ -29,7 +30,9 @@ public partial class NewUserSplash : Control
 
 	public void ShowSplash()
 	{
-		GetNode<AnimationPlayer>("AnimPlay").Play("appear");
+		AnimationPlayer animPlay = GetNode<AnimationPlayer>("AnimPlay");
+		animPlay.Play("appear");
+		animPlay.Queue("idle");
 	}
 
 	private void OnRegisterPressed()

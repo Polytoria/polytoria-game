@@ -66,6 +66,13 @@ public partial class Stat : Instance
 		base.Ready();
 	}
 
+	public override void PreDelete()
+	{
+		Root.Players.PlayerRemoved.Disconnect<Player>(OnPlayerRemoved);
+		Root.Players.PlayerAdded.Disconnect<Player>(OnPlayerAdded);
+		base.PreDelete();
+	}
+
 	[NetRpc(AuthorityMode.Any, TransferMode = TransferMode.Reliable)]
 	private void NetReqPlayerStats()
 	{
@@ -118,7 +125,7 @@ public partial class Stat : Instance
 			InternalSet(plr, dval);
 			_pendingDoubles.Remove(plr.UserID);
 		}
-		if (_pendingStrings.TryGetValue(plr.UserID, out string sval))
+		if (_pendingStrings.TryGetValue(plr.UserID, out string? sval))
 		{
 			InternalSet(plr, sval);
 			_pendingStrings.Remove(plr.UserID);

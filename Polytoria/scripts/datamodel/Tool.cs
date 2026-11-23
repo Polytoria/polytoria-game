@@ -17,6 +17,7 @@ namespace Polytoria.Datamodel;
 [Instantiable, PhysicalRootStop]
 public sealed partial class Tool : RigidBody
 {
+	private string _displayName = "";
 	private bool _droppable = true;
 	private ImageAsset? _iconImage;
 	private NPC? _holder = null;
@@ -41,11 +42,13 @@ public sealed partial class Tool : RigidBody
 		get => _iconImage;
 		set
 		{
-			_iconImage = value;
-			if (_iconImage != null && _iconImage != value)
+			if (_iconImage != null)
 			{
 				_iconImage.ResourceLoaded -= OnToolImageLoaded;
-				_iconImage.UnlinkFrom(this);
+				if (_iconImage != value)
+				{
+					_iconImage.UnlinkFrom(this);
+				}
 			}
 			OnToolImageLoaded(null);
 			_iconImage = value;
@@ -93,6 +96,17 @@ public sealed partial class Tool : RigidBody
 		{
 			_holder = value;
 			UpdateHandHold();
+			OnPropertyChanged();
+		}
+	}
+
+	[Editable, ScriptProperty, DefaultValue("")]
+	public string DisplayName
+	{
+		get => _displayName;
+		set
+		{
+			_displayName = value;
 			OnPropertyChanged();
 		}
 	}
@@ -154,7 +168,7 @@ public sealed partial class Tool : RigidBody
 		{
 			CanCollide = false;
 			Anchored = true;
-			RegisterNoMultiMesh(this);
+			RegisterHeld(this);
 		}
 		Root.Input.GodotInputEvent += OnInput;
 
@@ -176,7 +190,7 @@ public sealed partial class Tool : RigidBody
 
 	public override void ExitTree()
 	{
-		UnregisterNoMultiMesh(this);
+		UnregisterHeld(this);
 		ChildAdded.Disconnect(ChildAddedA);
 		Root.Input.GodotInputEvent -= OnInput;
 
@@ -272,14 +286,15 @@ public sealed partial class Tool : RigidBody
 		Deactivated.Invoke();
 	}
 
-	private void RegisterNoMultiMesh(Instance instance)
+	private void RegisterHeld(Instance instance)
 	{
 		// Only register if not already registered
 		if (_registeredInstances.Add(instance))
 		{
 			if (instance is Part p)
 			{
-				p.OverrideNoMultiMesh = true;
+				p.IsHeld = true;
+				p.Root?.Bridge?.MarkDirty(p);
 			}
 			if (instance is Physical e)
 			{
@@ -289,22 +304,23 @@ public sealed partial class Tool : RigidBody
 			}
 			foreach (Instance item in instance.GetChildren())
 			{
-				RegisterNoMultiMesh(item);
+				RegisterHeld(item);
 			}
 
-			instance.ChildAdded.Connect(RegisterNoMultiMesh);
-			instance.ChildRemoved.Connect(UnregisterNoMultiMesh);
+			instance.ChildAdded.Connect(RegisterHeld);
+			instance.ChildRemoved.Connect(UnregisterHeld);
 		}
 	}
 
-	private void UnregisterNoMultiMesh(Instance instance)
+	private void UnregisterHeld(Instance instance)
 	{
 		// Only unregister if it was registered
 		if (_registeredInstances.Remove(instance))
 		{
 			if (instance is Part p)
 			{
-				p.OverrideNoMultiMesh = false;
+				p.IsHeld = false;
+				p.Root?.Bridge?.MarkDirty(p);
 			}
 			if (instance is Physical e)
 			{
@@ -315,11 +331,11 @@ public sealed partial class Tool : RigidBody
 
 			foreach (Instance item in instance.GetChildren())
 			{
-				UnregisterNoMultiMesh(item);
+				UnregisterHeld(item);
 			}
 
-			instance.ChildAdded.Disconnect(RegisterNoMultiMesh);
-			instance.ChildRemoved.Disconnect(UnregisterNoMultiMesh);
+			instance.ChildAdded.Disconnect(RegisterHeld);
+			instance.ChildRemoved.Disconnect(UnregisterHeld);
 		}
 	}
 

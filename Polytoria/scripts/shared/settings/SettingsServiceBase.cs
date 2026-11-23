@@ -22,7 +22,7 @@ public abstract partial class SettingsServiceBase : Node, ISettingsContext
 
 	protected SettingsServiceBase()
 	{
-		_headless = DisplayServer.GetName() == "headless";
+		_headless = Globals.IsHeadless;
 		if (!_headless)
 			Globals.BeforeQuit += Save;
 	}

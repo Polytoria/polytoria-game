@@ -35,7 +35,12 @@ public sealed partial class PreferencesService : Instance
 	[ScriptMethod]
 	public object? Get(string name)
 	{
-		return ClientSettingsService.Instance.GetUntyped(name);
+		object? value = ClientSettingsService.Instance.GetUntyped(name);
+		if (SettingEnumTypes.TryGetValue(name, out var enumType))
+		{
+			return Enum.ToObject(enumType, value!);
+		}
+		return value;
 	}
 
 	public override void Init()
@@ -58,13 +63,13 @@ public sealed partial class PreferencesService : Instance
 
 	private void OnSettingChanged(SettingChangedEvent setting)
 	{
-		object value = setting.NewValue;
+		object? value = setting.NewValue;
 
 		if (SettingEnumTypes.TryGetValue(setting.Key, out var enumType))
 		{
-			value = Enum.ToObject(enumType, setting.NewValue);
+			value = Enum.ToObject(enumType, setting.NewValue!);
 		}
 
-		SettingChanged.Invoke(setting.Key, value);
+		SettingChanged.Invoke(setting.Key, value!);
 	}
 }

@@ -78,7 +78,21 @@ public partial class BuiltInFontAsset : FontAsset
 		// Single-variant Variable fonts
 		{ (BuiltInTextFontPresetEnum.Domine, FontStyleEnum.Normal), "Domine-VariableFont_wght.ttf" },
 		{ (BuiltInTextFontPresetEnum.Fredoka, FontStyleEnum.Normal), "Fredoka-VariableFont_wdth,wght.ttf" },
-		{ (BuiltInTextFontPresetEnum.Orbitron, FontStyleEnum.Normal), "Orbitron-VariableFont_wght.ttf" }
+		{ (BuiltInTextFontPresetEnum.Orbitron, FontStyleEnum.Normal), "Orbitron-VariableFont_wght.ttf" },
+
+		// Unageo
+		{ (BuiltInTextFontPresetEnum.Unageo, FontStyleEnum.Normal), "Unageo-VariableFont_wght.ttf" },
+		{ (BuiltInTextFontPresetEnum.Unageo, FontStyleEnum.Italic), "Unageo-italic-VariableFont_wght.ttf" },
+
+		// Caveat
+		{ (BuiltInTextFontPresetEnum.Caveat, FontStyleEnum.Normal), "Caveat.ttf" },
+
+		// Sora
+		{ (BuiltInTextFontPresetEnum.Sora, FontStyleEnum.Normal), "Sora.ttf" },
+
+		// IM Fell English
+		{ (BuiltInTextFontPresetEnum.IMFellEnglish, FontStyleEnum.Normal), "IMFellEnglish/IMFellEnglish-Regular.ttf" },
+		{ (BuiltInTextFontPresetEnum.IMFellEnglish, FontStyleEnum.Italic), "IMFellEnglish/IMFellEnglish-Italic.ttf" },
 	};
 
 	private readonly Dictionary<(BuiltInTextFontPresetEnum, FontWeightEnum, FontStyleEnum), string> StaticFontMapping = new()
@@ -117,11 +131,31 @@ public partial class BuiltInFontAsset : FontAsset
 		{ (BuiltInTextFontPresetEnum.ComicNeue, FontWeightEnum.Light, FontStyleEnum.Italic), "ComicNeue/ComicNeue-LightItalic.ttf" },
 		{ (BuiltInTextFontPresetEnum.ComicNeue, FontWeightEnum.Regular, FontStyleEnum.Italic), "ComicNeue/ComicNeue-Italic.ttf" },
 		{ (BuiltInTextFontPresetEnum.ComicNeue, FontWeightEnum.Bold, FontStyleEnum.Italic), "ComicNeue/ComicNeue-BoldItalic.ttf" },
-		// Papyrus (only regular)
-		{ (BuiltInTextFontPresetEnum.Papyrus, FontWeightEnum.Regular, FontStyleEnum.Normal), "Papyrus.ttf" },
-		
-		// Comic Sans MS (only regular)
-		{ (BuiltInTextFontPresetEnum.ComicSansMS, FontWeightEnum.Regular, FontStyleEnum.Normal), "Comic Sans MS.ttf" },
+		// Comic Relief
+		{ (BuiltInTextFontPresetEnum.ComicRelief, FontWeightEnum.Regular, FontStyleEnum.Normal), "ComicRelief/ComicRelief-Regular.ttf" },
+		{ (BuiltInTextFontPresetEnum.ComicRelief, FontWeightEnum.Bold, FontStyleEnum.Normal), "ComicRelief/ComicRelief-Bold.ttf" },
+
+		// Better VCR (only regular)		
+		{ (BuiltInTextFontPresetEnum.BetterVCR, FontWeightEnum.Regular, FontStyleEnum.Normal), "Better-VCR.ttf" },
+
+		// Modrnt_urban (only regular)
+		{ (BuiltInTextFontPresetEnum.ModrntUrban, FontWeightEnum.Regular, FontStyleEnum.Normal), "Modrnt_urban-Regular.ttf" },
+
+		// DSEG7 Classic (only regular)
+		{ (BuiltInTextFontPresetEnum.DSEG7, FontWeightEnum.Regular, FontStyleEnum.Normal), "DSEG7-Regular.ttf" },
+		{ (BuiltInTextFontPresetEnum.DSEG7, FontWeightEnum.Regular, FontStyleEnum.Italic), "DSEG7-Italic.ttf" },
+
+		// Anton (only regular)
+		{ (BuiltInTextFontPresetEnum.Anton, FontWeightEnum.Regular, FontStyleEnum.Normal), "Anton-Regular.ttf" },
+
+		// Bebas Neue (only regular)
+		{ (BuiltInTextFontPresetEnum.BebasNeue, FontWeightEnum.Regular, FontStyleEnum.Normal), "BebasNeue-Regular.ttf" },
+
+		// Kalam (only regular)
+		{ (BuiltInTextFontPresetEnum.Kalam, FontWeightEnum.Light, FontStyleEnum.Normal), "Kalam/Kalam-Light.ttf" },
+		{ (BuiltInTextFontPresetEnum.Kalam, FontWeightEnum.Regular, FontStyleEnum.Normal), "Kalam/Kalam-Regular.ttf" },
+		{ (BuiltInTextFontPresetEnum.Kalam, FontWeightEnum.Bold, FontStyleEnum.Normal), "Kalam/Kalam-Bold.ttf" },
+
 	};
 
 	private readonly Dictionary<BuiltInTextFontPresetEnum, string> DefaultFontFiles = new()
@@ -136,9 +170,18 @@ public partial class BuiltInFontAsset : FontAsset
 		{ BuiltInTextFontPresetEnum.Fredoka, "Fredoka-VariableFont_wdth,wght.ttf" },
 		{ BuiltInTextFontPresetEnum.ComicNeue, "ComicNeue/ComicNeue-Regular.ttf" },
 		{ BuiltInTextFontPresetEnum.Orbitron, "Orbitron-VariableFont_wght.ttf" },
-		{ BuiltInTextFontPresetEnum.Papyrus, "Papyrus.ttf" },
-		{ BuiltInTextFontPresetEnum.ComicSansMS, "Comic Sans MS.ttf" },
+		{ BuiltInTextFontPresetEnum.IMFellEnglish, "IMFellEnglish/IMFellEnglish-Regular.ttf" },
+		{ BuiltInTextFontPresetEnum.ComicRelief, "ComicRelief/ComicRelief-Regular.ttf" },
 		{ BuiltInTextFontPresetEnum.JetBrainsMono, "JetBrainsMono-VariableFont_wght.ttf" },
+		{ BuiltInTextFontPresetEnum.BetterVCR, "Better-VCR.ttf" },
+		{ BuiltInTextFontPresetEnum.Unageo, "Unageo-VariableFont_wght.ttf" },
+		{ BuiltInTextFontPresetEnum.ModrntUrban, "Modrnt_urban-Regular.ttf" },
+		{ BuiltInTextFontPresetEnum.DSEG7, "DSEG7-Regular.ttf" },
+		{ BuiltInTextFontPresetEnum.Anton, "Anton-Regular.ttf" },
+		{ BuiltInTextFontPresetEnum.BebasNeue, "BebasNeue-Regular.ttf" },
+		{ BuiltInTextFontPresetEnum.Kalam, "Kalam/Kalam-Regular.ttf" },
+		{ BuiltInTextFontPresetEnum.Caveat, "Caveat.ttf" },
+		{ BuiltInTextFontPresetEnum.Sora, "Sora.ttf" },
 	};
 
 	public override void LoadResource()
@@ -195,6 +238,7 @@ public partial class BuiltInFontAsset : FontAsset
 	public enum BuiltInTextFontPresetEnum
 	{
 		SourceSans, PressStart2P, Montserrat, RobotoMono, Rubik, Poppins,
-		Domine, Fredoka, ComicNeue, Orbitron, Papyrus, ComicSansMS, JetBrainsMono
+		Domine, Fredoka, ComicNeue, Orbitron, IMFellEnglish, ComicRelief, JetBrainsMono,
+		BetterVCR, Unageo, ModrntUrban, DSEG7, Anton, BebasNeue, Kalam, Caveat, Sora
 	}
 }

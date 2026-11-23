@@ -6,10 +6,13 @@ using Godot;
 using Polytoria.Attributes;
 using Polytoria.Datamodel.Resources;
 using Polytoria.Enums;
+using Polytoria.Networking;
 using Polytoria.Scripting;
+using Polytoria.Shared;
 using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Polytoria.Datamodel;
 
@@ -31,9 +34,17 @@ public sealed partial class Mesh : Entity
 	private Color _color = new(1, 1, 1);
 	private bool _castShadows;
 	private AnimationPlayer? _animPlay;
+	private bool _animPaused;
+	private double _animPausedAt;
 	private readonly List<MeshInstance3D> _meshInstances = [];
-	private readonly List<Material> _materials = [];
+	private readonly Dictionary<MeshInstance3D, Node3D> _collisionAnchors = [];
+	private VisibleOnScreenNotifier3D? _animNotifier;
+	private readonly List<SurfaceMaterial> _materials = [];
 	private Resource? _prevResource;
+
+	private static readonly ConditionalWeakTable<Godot.Mesh, Shape3D> _convexShapesCache = [];
+	private static readonly ConditionalWeakTable<Godot.Mesh, Shape3D> _concaveShapesCache = [];
+	private static readonly ConditionalWeakTable<StandardMaterial3D, (StringName Name, Variant Value)[]> _materialPropsCache = [];
 
 	[Editable, ScriptProperty]
 	public MeshAsset? Asset
@@ -41,18 +52,27 @@ public sealed partial class Mesh : Entity
 		get => _asset;
 		set
 		{
-			if (_asset != null && _asset != value)
+			if (_asset != null)
 			{
 				_asset.ResourceLoaded -= OnResourceLoaded;
-				_asset.UnlinkFrom(this);
+				_asset.PropertyChanged.Disconnect(UpdateColor);
+				if (_asset != value)
+				{
+					_asset.UnlinkFrom(this);
+				}
 			}
 			_asset = value;
 			if (_meshNode != null && Node.IsInstanceValid(_meshNode))
 			{
 				_meshNode.QueueFree();
 			}
+			_collisionAnchors.Clear();
+			_animNotifier = null;
 			ClearCollisionShapes();
 			_meshNode = null;
+			_animPlay = null;
+			_meshInstances.Clear();
+			_materials.Clear();
 			_prevResource = null;
 			if (_asset != null)
 			{
@@ -68,6 +88,7 @@ public sealed partial class Mesh : Entity
 					_asset.QueueLoadResource();
 				}
 			}
+			_asset?.PropertyChanged.Connect(UpdateColor);
 			OnPropertyChanged();
 		}
 	}
@@ -125,7 +146,7 @@ public sealed partial class Mesh : Entity
 		set
 		{
 			_textureFilter = value;
-			UpdateTextureFilter();
+			UpdateMaterials();
 			OnPropertyChanged();
 		}
 	}
@@ -184,6 +205,7 @@ public sealed partial class Mesh : Entity
 		{
 			if (_animPlay != null)
 			{
+				CatchUpAnimation();
 				return _animPlay.CurrentAnimation;
 			}
 			return null;
@@ -197,6 +219,7 @@ public sealed partial class Mesh : Entity
 		{
 			if (_animPlay != null)
 			{
+				CatchUpAnimation();
 				return _animPlay.IsPlaying();
 			}
 			return false;
@@ -206,6 +229,14 @@ public sealed partial class Mesh : Entity
 	[ScriptProperty] public bool Loading { get; private set; } = false;
 
 	[ScriptProperty] public PTSignal Loaded { get; private set; } = new();
+
+	[SyncVar] public string? ServerAnim { get; internal set; }
+	[SyncVar] public float ServerAnimSpeed { get; internal set; } = 1.0f;
+	[SyncVar] public double ServerAnimStart { get; internal set; }
+
+	private double ServerTime => Root?.Network != null ? (double)Root.ServerTime : 0;
+	private double AnimationTime => Root?.Network != null ? ServerTime : Time.GetTicksMsec() / 1000.0;
+	private bool CanSyncAnim => Root?.Network != null && (Root.Network.IsServer || (HasAuthority && ExistInNetwork));
 
 	[ScriptEnum("MeshCollisionType")]
 	public enum CollisionTypeEnum
@@ -223,6 +254,15 @@ public sealed partial class Mesh : Entity
 		base.Init();
 	}
 
+	public override void Ready()
+	{
+		if (ServerAnim != null)
+		{
+			InternalPlayAnimation(ServerAnim, ServerAnimSpeed, true, ServerAnimStart);
+		}
+		base.Ready();
+	}
+
 	public override void InitOverrides()
 	{
 		Size = Vector3.One * 0.5f;
@@ -231,8 +271,11 @@ public sealed partial class Mesh : Entity
 
 	public override void PreDelete()
 	{
+		_asset?.PropertyChanged.Disconnect(UpdateColor);
 		_materials.Clear();
 		_meshInstances.Clear();
+		_collisionAnchors.Clear();
+		_animNotifier = null;
 		base.PreDelete();
 	}
 
@@ -257,19 +300,6 @@ public sealed partial class Mesh : Entity
 		};
 	}
 
-	private void UpdateTextureFilter()
-	{
-		BaseMaterial3D.TextureFilterEnum godotFilter = ToGodotTextureFilter(_textureFilter);
-
-		foreach (Material material in _materials)
-		{
-			if (material is BaseMaterial3D baseMaterial)
-			{
-				baseMaterial.TextureFilter = godotFilter;
-			}
-		}
-	}
-
 	private void OnResourceLoaded(Resource resource)
 	{
 		if (_prevResource == resource) return;
@@ -279,6 +309,9 @@ public sealed partial class Mesh : Entity
 		{
 			if (!Node.IsInstanceValid(GDNode)) return;
 			_animPlay = null;
+			_animPaused = false;
+			_collisionAnchors.Clear();
+			_animNotifier = null;
 			if (_meshNode != null && Node.IsInstanceValid(_meshNode))
 			{
 				_meshNode?.QueueFree();
@@ -290,6 +323,21 @@ public sealed partial class Mesh : Entity
 			_meshNode.Visible = false;
 			_animPlay = _meshNode.GetNodeOrNull<AnimationPlayer>("AnimationPlayer");
 
+			if (_animPlay != null)
+			{
+				foreach (StringName libName in _animPlay.GetAnimationLibraryList())
+				{
+					AnimationLibrary lib = _animPlay.GetAnimationLibrary(libName);
+					AnimationLibrary newLib = new();
+					foreach (StringName animKey in lib.GetAnimationList())
+					{
+						newLib.AddAnimation(animKey, (Godot.Animation)lib.GetAnimation(animKey).Duplicate());
+					}
+					_animPlay.RemoveAnimationLibrary(libName);
+					_animPlay.AddAnimationLibrary(libName, newLib);
+				}
+			}
+
 			_meshInstances.Clear();
 			_materials.Clear();
 
@@ -300,20 +348,13 @@ public sealed partial class Mesh : Entity
 				{
 					_meshInstances.Add(m3d);
 
-					// Create duplicate so UsePartColor doesn't override each other
-					m3d.Mesh = (Godot.Mesh)m3d.Mesh.Duplicate();
-
-					int surfaceCount = m3d.Mesh.GetSurfaceCount();
+					Godot.Mesh mesh = m3d.Mesh;
+					int surfaceCount = mesh.GetSurfaceCount();
 					for (int i = 0; i < surfaceCount; i++)
 					{
-						// Duplicate material, same as above
-						Material mat = (Material)m3d.Mesh.SurfaceGetMaterial(i).Duplicate();
-						m3d.Mesh.SurfaceSetMaterial(i, mat);
-						_materials.Add(mat);
-						if (mat is StandardMaterial3D sm3d)
+						if (mesh.SurfaceGetMaterial(i) is StandardMaterial3D mat)
 						{
-							mat.SetMeta("_origin_clr", sm3d.AlbedoColor);
-							mat.SetMeta("_origin_hasalpha", sm3d.Transparency != BaseMaterial3D.TransparencyEnum.Disabled);
+							_materials.Add(new(m3d, i, mat));
 						}
 					}
 				}
@@ -321,16 +362,21 @@ public sealed partial class Mesh : Entity
 
 			UpdateColor();
 			UpdateShadows();
-			UpdateTextureFilter();
 
 			_meshContainer.AddChild(obj);
+			CreateCollisionAnchors(obj);
+			SetupAnimationCulling(obj);
 
-			if (PlayAnimationOnStart && _animPlay != null)
+			if (ServerAnim != null)
+			{
+				InternalPlayAnimation(ServerAnim, ServerAnimSpeed, true, ServerAnimStart);
+			}
+			else if (PlayAnimationOnStart && _animPlay != null)
 			{
 				string[] animList = _animPlay.GetAnimationList();
 				if (animList.Length > 0)
 				{
-					PlayAnimation(animList[0]);
+					InternalPlayAnimation(animList[0], 1.0f, true, 0);
 				}
 			}
 
@@ -350,12 +396,123 @@ public sealed partial class Mesh : Entity
 	[ScriptMethod]
 	public void PlayAnimation(string animationName, float speed = 1.0f, bool loop = true)
 	{
-		if (_animPlay == null) { return; }
-		Godot.Animation targetAnim = _animPlay.GetAnimation(animationName);
-		if (targetAnim != null)
+		if (CanSyncAnim)
 		{
-			targetAnim.LoopMode = loop ? Godot.Animation.LoopModeEnum.Linear : Godot.Animation.LoopModeEnum.None;
-			_animPlay.Play(animationName, -1, speed);
+			Rpc(nameof(NetPlayAnimation), animationName, speed, loop, ServerTime);
+		}
+		else
+		{
+			InternalPlayAnimation(animationName, speed, loop, ServerTime);
+		}
+	}
+
+	[NetRpc(AuthorityMode.Authority, CallLocal = true, TransferMode = TransferMode.Reliable)]
+	private void NetPlayAnimation(string animationName, float speed, bool loop, double startTime)
+	{
+		ServerAnim = loop ? animationName : null;
+		ServerAnimSpeed = speed;
+		ServerAnimStart = startTime;
+		InternalPlayAnimation(animationName, speed, loop, startTime);
+	}
+
+	private void InternalPlayAnimation(string animationName, float speed, bool loop, double startTime)
+	{
+		if (_animPlay == null) { return; }
+		if (!_animPlay.HasAnimation(animationName)) { return; }
+		Godot.Animation targetAnim = _animPlay.GetAnimation(animationName);
+		targetAnim.LoopMode = loop ? Godot.Animation.LoopModeEnum.Linear : Godot.Animation.LoopModeEnum.None;
+		_animPlay.Play(animationName, -1, speed);
+
+		double pos = (ServerTime - startTime) * speed;
+		if (loop) pos %= targetAnim.Length;
+		if (pos >= 0 && pos < targetAnim.Length)
+		{
+			_animPlay.Seek(pos, true);
+		}
+		_animPausedAt = AnimationTime;
+		UpdateAnimationBounds();
+	}
+
+	private void SetupAnimationCulling(Node3D meshNode)
+	{
+		if (_animPlay == null || _meshInstances.Count == 0 || Globals.IsHeadless || Root?.SessionType == World.SessionTypeEnum.Renderer) return;
+
+		_animNotifier = new();
+		_animNotifier.ScreenEntered += ResumeAnimation;
+		_animNotifier.ScreenExited += PauseAnimation;
+		meshNode.AddChild(_animNotifier, @internal: Node.InternalMode.Back);
+		UpdateAnimationBounds();
+
+		PauseAnimation();
+	}
+
+	private void UpdateAnimationBounds()
+	{
+		if (_animPlay == null || _animNotifier == null || !GodotObject.IsInstanceValid(_animNotifier)) return;
+
+		Transform3D toLocal = _animNotifier.GetParentNode3D().GlobalTransform.AffineInverse();
+		bool playing = _animPlay.IsPlaying();
+		double length = playing ? _animPlay.CurrentAnimationLength : 0;
+		double pos = playing ? _animPlay.CurrentAnimationPosition : 0;
+		Aabb bounds = new();
+
+		for (int i = 0; i < 8; i++)
+		{
+			if (playing) _animPlay.Seek(length * i / 8, true);
+			foreach (MeshInstance3D m3d in _meshInstances)
+			{
+				Aabb meshBounds = toLocal * m3d.GlobalTransform * m3d.GetAabb();
+				bounds = bounds.Size == Vector3.Zero ? meshBounds : bounds.Merge(meshBounds);
+			}
+			if (!playing) break;
+		}
+
+		if (playing) _animPlay.Seek(pos, true);
+		_animNotifier.Aabb = bounds.Grow(bounds.Size.Length() * 0.1f);
+	}
+
+	private void CreateCollisionAnchors(Node3D meshNode)
+	{
+		if (_animPlay == null) return;
+		foreach (MeshInstance3D m3d in _meshInstances)
+		{
+			Transform3D transform = Transform3D.Identity;
+			for (Node? node = m3d; node != null && node != meshNode; node = node.GetParent())
+			{
+				if (node is Node3D node3D) transform = node3D.Transform * transform;
+			}
+
+			Node3D anchor = new() { Transform = transform };
+			meshNode.AddChild(anchor, @internal: Node.InternalMode.Back);
+			_collisionAnchors[m3d] = anchor;
+		}
+	}
+
+	private void PauseAnimation()
+	{
+		if (_animPlay == null || _animPaused) return;
+		_animPaused = true;
+		_animPausedAt = AnimationTime;
+		_animPlay.ProcessMode = Node.ProcessModeEnum.Disabled;
+	}
+
+	private void ResumeAnimation()
+	{
+		if (_animPlay == null || !_animPaused) return;
+		CatchUpAnimation();
+		_animPaused = false;
+		_animPlay.ProcessMode = Node.ProcessModeEnum.Inherit;
+	}
+
+	private void CatchUpAnimation()
+	{
+		if (!_animPaused || _animPlay == null) return;
+		double now = AnimationTime;
+		double elapsed = now - _animPausedAt;
+		_animPausedAt = now;
+		if (elapsed > 0 && _animPlay.IsPlaying())
+		{
+			_animPlay.Advance(elapsed);
 		}
 	}
 
@@ -368,15 +525,27 @@ public sealed partial class Mesh : Entity
 	[ScriptMethod]
 	public void StopAnimation(string? animationName = null)
 	{
-		if (_animPlay == null) { return; }
-		if (animationName != null)
+		if (CanSyncAnim)
 		{
-			if (_animPlay.CurrentAnimation == animationName)
-			{
-				_animPlay.Stop(true);
-			}
+			Rpc(nameof(NetStopAnimation), animationName ?? "");
 		}
 		else
+		{
+			InternalStopAnimation(animationName);
+		}
+	}
+
+	[NetRpc(AuthorityMode.Authority, CallLocal = true, TransferMode = TransferMode.Reliable)]
+	private void NetStopAnimation(string animationName)
+	{
+		if (animationName == "" || animationName == ServerAnim) ServerAnim = null;
+		InternalStopAnimation(animationName);
+	}
+
+	private void InternalStopAnimation(string? animationName)
+	{
+		if (_animPlay == null) { return; }
+		if (string.IsNullOrEmpty(animationName) || _animPlay.CurrentAnimation == animationName)
 		{
 			_animPlay.Stop(true);
 		}
@@ -411,24 +580,60 @@ public sealed partial class Mesh : Entity
 
 	private void UpdateColor()
 	{
-		foreach (Material item in _materials)
+		UpdateMaterials();
+		UpdateCamLayer();
+	}
+
+	private void UpdateMaterials()
+	{
+		Texture2D? assetTexture = Asset is PTMeshAsset ptma && ptma.Texture?.Resource is Texture2D t2d ? t2d : null;
+		BaseMaterial3D.TextureFilterEnum godotFilter = ToGodotTextureFilter(_textureFilter);
+
+		foreach (SurfaceMaterial item in _materials)
 		{
-			if (item is StandardMaterial3D sm)
+			MaterialState original = item.OriginalState;
+			Color color = UsePartColor ? _color : original.Color;
+
+			BaseMaterial3D.TransparencyEnum transparency = original.Transparency;
+			if (transparency == BaseMaterial3D.TransparencyEnum.Disabled)
+				transparency = color.A < 1 ? BaseMaterial3D.TransparencyEnum.Alpha : BaseMaterial3D.TransparencyEnum.Disabled;
+
+			item.Apply(new(color, assetTexture ?? original.Texture, transparency, godotFilter));
+		}
+	}
+
+	private static StandardMaterial3D DuplicateMaterial(StandardMaterial3D source)
+	{
+		StandardMaterial3D copy = new();
+		foreach ((StringName name, Variant value) in _materialPropsCache.GetValue(source, GetNonDefaultProps))
+		{
+			copy.Set(name, value);
+		}
+		return copy;
+	}
+
+	private static (StringName Name, Variant Value)[] GetNonDefaultProps(StandardMaterial3D source)
+	{
+		using StandardMaterial3D defaults = new();
+		List<(StringName Name, Variant Value)> properties = [];
+
+		foreach (Godot.Collections.Dictionary property in source.GetPropertyList())
+		{
+			if ((property["usage"].As<PropertyUsageFlags>() & PropertyUsageFlags.Storage) == 0)
 			{
-				Color origin = sm.GetMeta("_origin_clr").AsColor();
-				bool hasAlpha = sm.GetMeta("_origin_hasalpha").AsBool();
-				Color setto = _color;
-				if (!UsePartColor)
-				{
-					setto = origin;
-				}
-				sm.AlbedoColor = setto;
-				if (!hasAlpha)
-					sm.Transparency = setto.A < 1 ? BaseMaterial3D.TransparencyEnum.Alpha : BaseMaterial3D.TransparencyEnum.Disabled;
+				continue;
+			}
+
+			StringName name = property["name"].AsStringName();
+			Variant value = source.Get(name);
+			Variant defaultValue = defaults.Get(name);
+			if (value.VariantType != defaultValue.VariantType || !Equals(value.Obj, defaultValue.Obj))
+			{
+				properties.Add((name, value));
 			}
 		}
 
-		UpdateCamLayer();
+		return [.. properties];
 	}
 
 	private void UpdateShadows()
@@ -473,66 +678,65 @@ public sealed partial class Mesh : Entity
 		if (CollisionType == CollisionTypeEnum.Bounds)
 		{
 			// Create box collision from AABB
-			foreach (Node node in GetDescendantsInternal(_meshNode))
+			foreach (MeshInstance3D meshInstance in _meshInstances)
 			{
-				if (node is MeshInstance3D meshInstance)
+				Aabb bounds = meshInstance.GetAabb();
+				BoxShape3D boxShape = new()
 				{
-					Aabb bounds = meshInstance.GetAabb();
-					BoxShape3D boxShape = new()
-					{
-						Size = bounds.Size
-					};
-					CollisionShape3D collisionShape = new()
-					{
-						Shape = boxShape,
-					};
-					GDNode3D.AddChild(collisionShape);
+					Size = bounds.Size
+				};
+				CollisionShape3D collisionShape = new()
+				{
+					Shape = boxShape,
+				};
+				GDNode3D.AddChild(collisionShape);
 
-					SetRemoteLinkTarget(collisionShape, meshInstance);
-					SetRemoteLinkOffset(collisionShape, meshInstance.GetAabb().GetCenter());
-					AddCollisionShape(collisionShape);
-				}
+				SetRemoteLinkTarget(collisionShape, _collisionAnchors.GetValueOrDefault(meshInstance) ?? meshInstance);
+				SetRemoteLinkOffset(collisionShape, bounds.GetCenter());
+				AddCollisionShape(collisionShape);
 			}
 		}
 		else if (CollisionType == CollisionTypeEnum.Convex || CollisionType == CollisionTypeEnum.Exact)
 		{
-			foreach (Node node in GetDescendantsInternal(_meshNode))
+			foreach (MeshInstance3D meshInstance in _meshInstances)
 			{
-				if (node is MeshInstance3D meshInstance)
+				CollisionShape3D collisionShape = new()
 				{
-					Godot.Mesh mesh = meshInstance.Mesh;
-					Vector3[] facesArray = mesh.GetFaces();
-					Shape3D shape;
+					Shape = LoadCollisionShape(meshInstance.Mesh, CollisionType),
+					DebugColor = Color.FromString("#F2821B", new Color())
+				};
 
-					if (CollisionType == CollisionTypeEnum.Convex)
-					{
-						ConvexPolygonShape3D convex = new()
-						{
-							Points = facesArray
-						};
-						shape = convex;
-					}
-					else
-					{
-						ConcavePolygonShape3D concave = new();
-						concave.SetFaces(facesArray);
-						shape = concave;
-					}
-
-					CollisionShape3D collisionShape = new()
-					{
-						Shape = shape,
-						DebugColor = Color.FromString("#F2821B", new Color())
-					};
-
-					GDNode3D.AddChild(collisionShape);
-					SetRemoteLinkTarget(collisionShape, meshInstance);
-					AddCollisionShape(collisionShape);
-				}
+				GDNode3D.AddChild(collisionShape);
+				SetRemoteLinkTarget(collisionShape, _collisionAnchors.GetValueOrDefault(meshInstance) ?? meshInstance);
+				AddCollisionShape(collisionShape);
 			}
 		}
 
 		UpdateCollision();
+	}
+
+	private static Shape3D LoadCollisionShape(Godot.Mesh mesh, CollisionTypeEnum collisionType)
+	{
+		ConditionalWeakTable<Godot.Mesh, Shape3D> cache = collisionType == CollisionTypeEnum.Convex ? _convexShapesCache : _concaveShapesCache;
+		if (cache.TryGetValue(mesh, out Shape3D? shape))
+		{
+			return shape;
+		}
+
+		Vector3[] facesArray = mesh.GetFaces();
+		if (collisionType == CollisionTypeEnum.Convex)
+		{
+			shape = new ConvexPolygonShape3D() { Points = facesArray };
+		}
+		else
+		{
+			ConcavePolygonShape3D concave = new();
+			concave.SetFaces(facesArray);
+			shape = concave;
+		}
+
+		cache.AddOrUpdate(mesh, shape);
+		return shape;
 	}
 
 	public override Aabb GetSelfBound()
@@ -600,6 +804,53 @@ public sealed partial class Mesh : Entity
 		public override readonly int GetHashCode()
 		{
 			return HashCode.Combine(Name, Length);
+		}
+	}
+
+	private readonly record struct MaterialState(Color Color, Texture2D? Texture, BaseMaterial3D.TransparencyEnum Transparency, BaseMaterial3D.TextureFilterEnum TextureFilter);
+
+	private sealed class SurfaceMaterial
+	{
+		private readonly MeshInstance3D _meshInstance;
+		private readonly int _surface;
+		private readonly StandardMaterial3D _material;
+		private MaterialState _state;
+		private bool _isOverridden;
+
+		public SurfaceMaterial(MeshInstance3D meshInstance, int surface, StandardMaterial3D source)
+		{
+			_meshInstance = meshInstance;
+			_surface = surface;
+			_material = DuplicateMaterial(source);
+			OriginalState = new(source.AlbedoColor, source.AlbedoTexture, source.Transparency, source.TextureFilter);
+			_state = OriginalState;
+		}
+
+		public MaterialState OriginalState { get; }
+
+		public void Apply(MaterialState state)
+		{
+			if (state == OriginalState)
+			{
+				if (_isOverridden)
+				{
+					_meshInstance.SetSurfaceOverrideMaterial(_surface, null);
+					_isOverridden = false;
+				}
+				return;
+			}
+
+			if (state.Texture != _state.Texture) _material.AlbedoTexture = state.Texture;
+			if (state.Color != _state.Color) _material.AlbedoColor = state.Color;
+			if (state.Transparency != _state.Transparency) _material.Transparency = state.Transparency;
+			if (state.TextureFilter != _state.TextureFilter) _material.TextureFilter = state.TextureFilter;
+			_state = state;
+
+			if (!_isOverridden)
+			{
+				_meshInstance.SetSurfaceOverrideMaterial(_surface, _material);
+				_isOverridden = true;
+			}
 		}
 	}
 }

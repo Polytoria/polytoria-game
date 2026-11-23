@@ -589,9 +589,9 @@ public sealed partial class Gizmos : Node
 
 				if (selectInstance != null && selectInstance is Dynamic targetDyn)
 				{
-					if (targetDyn.Locked && !isMultiSelect)
+					if (targetDyn.Locked)
 					{
-						Root.CreatorContext.Selections.DeselectAll();
+						if (!isMultiSelect) Root.CreatorContext.Selections.DeselectAll();
 						return;
 					}
 
@@ -684,7 +684,7 @@ public sealed partial class Gizmos : Node
 			item.GDNode3D.Rotation += new Vector3(0, rotateAngle, 0);
 
 			if (_selectionBoxes.TryGetValue(item, out var box)) box.InvalidateBoundCache();
-			item.UpdateCurrentTransformCache();
+			item.QueueTransformUpdate();
 		}
 	}
 
@@ -716,7 +716,7 @@ public sealed partial class Gizmos : Node
 			item.GDNode3D.Rotate(tiltAxis, tiltAngle);
 
 			if (_selectionBoxes.TryGetValue(item, out var box)) box.InvalidateBoundCache();
-			item.UpdateCurrentTransformCache();
+			item.QueueTransformUpdate();
 		}
 	}
 
@@ -801,12 +801,15 @@ public sealed partial class Gizmos : Node
 					foreach (Rid rid in p2.GetRids())
 						excludeArray.Add(rid);
 				}
-				if (n is Dynamic d)
+				if (n is Dynamic d && d.HasBound)
 				{
 					excludeArray.Add(d.GetBoundRid());
 				}
 			}
-			excludeArray.Add(item.GetBoundRid());
+			if (item.HasBound)
+			{
+				excludeArray.Add(item.GetBoundRid());
+			}
 			item.UpdateCreatorBounds();
 		}
 
@@ -850,7 +853,7 @@ public sealed partial class Gizmos : Node
 			foreach (Dynamic item in DragSelected)
 			{
 				item.SetGlobalPosition(item.GetGlobalPosition() + delta);
-				item.UpdateCurrentTransformCache();
+				item.QueueTransformUpdate();
 			}
 		}
 	}

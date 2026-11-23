@@ -24,9 +24,9 @@ public partial class Animator : Instance
 	private AnimationNodeBlend2? _dynBlend = null!;
 	private AnimationNodeStateMachine _dynTrack = null!;
 	private AnimationNodeStateMachinePlayback _dynPlayback = null!;
-	private const string DynBlendPath = "parameters/DynBlend/blend_amount";
+	private static readonly StringName DynBlendPath = "parameters/DynBlend/blend_amount";
+	private static readonly Dictionary<string, StringName> _oneShotActiveParams = [];
 	private float _targetDynBlendValue = 0f;
-	private bool _isPlaying = false;
 	public HashSet<string> AnimationList = [];
 	public Dictionary<string, MeshAnimationAsset> AnimationAssetList = [];
 
@@ -80,10 +80,10 @@ public partial class Animator : Instance
 
 	public override void Init()
 	{
-		if (HasAuthority)
-		{
-			Root?.Network?.PeerPreInit += OnPeerPreInit;
-		}
+		// if (HasAuthority)
+		// {
+		// 	Root?.Network?.PeerPreInit += OnPeerPreInit;
+		// }
 
 		SetProcess(true);
 		base.Init();
@@ -102,19 +102,23 @@ public partial class Animator : Instance
 		}
 	}
 
-	private void OnPeerPreInit(int peerID)
-	{
-		List<AnimationKeyVal> idPair = [];
-		foreach (var (animKey, asset) in AnimationAssetList)
-		{
-			idPair.Add(new() { Key = animKey, ID = asset.NetworkedObjectID });
-		}
-		RpcId(peerID, nameof(NetRecvAnimationAssets), SerializeUtils.Serialize<AnimationKeyVal[]>([.. idPair]));
-	}
+	// private void OnPeerPreInit(int peerID)
+	// {
+	// 	List<AnimationKeyVal> idPair = [];
+	// 	foreach (var (animKey, asset) in AnimationAssetList)
+	// 	{
+	// 		idPair.Add(new() { Key = animKey, ID = asset.NetworkedObjectID });
+	// 	}
+	// 	RpcId(peerID, nameof(NetRecvAnimationAssets), SerializeUtils.Serialize<AnimationKeyVal[]>([.. idPair]));
+	// }
 
 	public override void PreDelete()
 	{
-		Root?.Network?.PeerPreInit -= OnPeerPreInit;
+		// if (HasAuthority)
+		// {
+		// 	Root?.Network?.PeerPreInit -= OnPeerPreInit;
+		// }
+
 		AnimationList.Clear();
 		base.PreDelete();
 	}
@@ -213,13 +217,20 @@ public partial class Animator : Instance
 
 		// Smooth step toward target
 		float currentValue = (float)AnimationTree.Get(DynBlendPath);
-		float newValue = Mathf.Lerp(currentValue, _targetDynBlendValue, MathUtils.ExpDecay((float)delta, BlendSpeed));
-		AnimationTree.Set(DynBlendPath, newValue);
+		if (currentValue != _targetDynBlendValue)
+		{
+			float newValue = Mathf.Lerp(currentValue, _targetDynBlendValue, MathUtils.ExpDecay((float)delta, BlendSpeed));
+			if (Mathf.Abs(newValue - _targetDynBlendValue) < 0.0001f)
+			{
+				newValue = _targetDynBlendValue;
+			}
+			AnimationTree.Set(DynBlendPath, newValue);
+		}
 
 		// Check if pending oneshot became active
 		if (_pendingOneShot != null)
 		{
-			bool isActive = (bool)AnimationTree.Get(_pendingOneShot + "/active");
+			bool isActive = (bool)AnimationTree.Get(GetOneShotActiveParam(_pendingOneShot));
 			if (isActive)
 			{
 				// it's now active
@@ -231,7 +242,7 @@ public partial class Animator : Instance
 		// Check active oneshot
 		if (_currentOneShot != null)
 		{
-			bool isActive = (bool)AnimationTree.Get(_currentOneShot + "/active");
+			bool isActive = (bool)AnimationTree.Get(GetOneShotActiveParam(_currentOneShot));
 
 			// the animation finished or was aborted
 			if (!isActive)
@@ -244,6 +255,16 @@ public partial class Animator : Instance
 				_currentOneShot = null;
 			}
 		}
+	}
+
+	private static StringName GetOneShotActiveParam(string oneShotPath)
+	{
+		if (!_oneShotActiveParams.TryGetValue(oneShotPath, out StringName? param))
+		{
+			param = new StringName(oneShotPath + "/active");
+			_oneShotActiveParams[oneShotPath] = param;
+		}
+		return param;
 	}
 
 	// NOTE: This is disabled until we find a better solution to animations
@@ -509,7 +530,6 @@ public partial class Animator : Instance
 				_dynPlayback.Start(filteredAnimKey);
 			}
 			_targetDynBlendValue = 1;
-			_isPlaying = true;
 		}).CallDeferred();
 	}
 
@@ -583,7 +603,6 @@ public partial class Animator : Instance
 		CurrentAnimation = "";
 		// Stop Dyn playback & Reset blend value to zero
 		_targetDynBlendValue = 0;
-		_isPlaying = false;
 	}
 
 	private void AbortCurrentOneShot()

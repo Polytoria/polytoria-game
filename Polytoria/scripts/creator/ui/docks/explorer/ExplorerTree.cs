@@ -81,6 +81,15 @@ public partial class ExplorerTree : Tree
 		else if (@event.IsActionPressed("rename"))
 		{
 			AcceptEvent();
+
+			var selected = GetSelected();
+
+			// Remove any meta/labels from the item's text
+			if (ItemToInstance.TryGetValue(selected, out var instance))
+			{
+				selected.SetText(0, instance.Name);
+			}
+
 			EditSelected(true);
 		}
 		base._GuiInput(@event);

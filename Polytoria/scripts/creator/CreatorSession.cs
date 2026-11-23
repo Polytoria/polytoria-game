@@ -271,6 +271,7 @@ public partial class CreatorSession : Node, IDisposable
 			netService.IsServer = true;
 		}
 
+		root.Root = root;
 		root.InitEntry();
 
 		root.GDNode.AddChild(dmBridge, true, Node.InternalMode.Back);
@@ -307,7 +308,6 @@ public partial class CreatorSession : Node, IDisposable
 
 		dmBridge.Attach(root, worldOverride != null);
 
-		root.Root = root;
 		root.Setup();
 
 		SyncFileIndex();

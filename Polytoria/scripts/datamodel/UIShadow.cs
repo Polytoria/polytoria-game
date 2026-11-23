@@ -115,7 +115,12 @@ public partial class UIShadow : Instance
 		for (int i = 0; i < count; i++)
 		{
 			Panel panel = UIField.CreateOverlayPanel();
-			StyleBoxFlat sb = new() { AntiAliasing = true, AntiAliasingSize = 2 };
+			StyleBoxFlat sb = new()
+			{
+				AntiAliasing = true,
+				AntiAliasingSize = 1,
+				CornerDetail = 20,
+			};
 			panel.AddThemeStyleboxOverride("panel", sb);
 
 			BlendModeEnum blendMode = _layers[i].BlendMode;

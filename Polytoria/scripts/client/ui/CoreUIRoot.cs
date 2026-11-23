@@ -141,6 +141,7 @@ public partial class CoreUIRoot : CanvasLayer
 		if (@event.IsActionPressed("hide_ui"))
 		{
 			Visible = !Visible;
+			Root?.PlayerGUI?.PromptLayer.Visible = Visible;
 		}
 		if (@event.IsActionPressed("toggle_console"))
 		{

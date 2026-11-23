@@ -4,6 +4,7 @@
 
 using Godot;
 using Polytoria.Creator.LSP.Schemas;
+using Polytoria.Creator.Settings;
 using Polytoria.Shared;
 using System;
 using System.Collections.Generic;
@@ -20,10 +21,24 @@ public static class LuaFormatService
 	{
 		try
 		{
+			string formatArgs = "";
+			if (!LuaFormatService.HasFormatConfig(scriptPath))
+			{
+				IndentationModeEnum indentationMode = CreatorSettingsService.Instance.Get<IndentationModeEnum>(CreatorSettingKeys.CodeEditor.IndentationMode);
+				int indentationSize = CreatorSettingsService.Instance.Get<int>(CreatorSettingKeys.CodeEditor.IndentationSize);
+				string indentModeString = indentationMode == IndentationModeEnum.Tabs
+					? "tabs"
+					: "spaces";
+
+				formatArgs +=
+					$"--indent-type {indentModeString} " +
+					$"--indent-width {indentationSize}";
+			}
+
 			var process = Process.Start(new ProcessStartInfo
 			{
 				FileName = NativeBinHelper.ResolveStyLuaBinPath(),
-				Arguments = $"--stdin-filepath \"{scriptPath}\" -",
+				Arguments = $"{formatArgs} --stdin-filepath \"{scriptPath}\" -",
 				RedirectStandardInput = true,
 				RedirectStandardOutput = true,
 				RedirectStandardError = true,
@@ -51,5 +66,20 @@ public static class LuaFormatService
 			PT.PrintErr($"Formatting failed: {ex.Message}");
 			return scriptText;
 		}
+	}
+
+	public static bool HasFormatConfig(string scriptPath)
+	{
+		string? dir = Path.GetDirectoryName(scriptPath);
+		while (dir != null)
+		{
+			if (
+				File.Exists(Path.Join(dir, "stylua.toml")) ||
+				File.Exists(Path.Join(dir, ".stylua.toml")) ||
+				File.Exists(Path.Join(dir, ".editorconfig"))
+			) return true;
+			dir = Path.GetDirectoryName(dir);
+		}
+		return false;
 	}
 }

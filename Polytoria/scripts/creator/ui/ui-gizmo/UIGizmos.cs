@@ -59,7 +59,7 @@ public partial class UIGizmos : CanvasLayer
 	internal void ShowGuidelines(IReadOnlyList<SnapGuide> guides)
 	{
 		EnsureGuidelineDrawer();
-		_guidelineDrawer.SetGuides(guides);
+		_guidelineDrawer!.SetGuides(guides);
 	}
 
 	internal void HideGuidelines()
@@ -70,7 +70,7 @@ public partial class UIGizmos : CanvasLayer
 	internal void ShowMeasurements(IReadOnlyList<MeasureGuide> measures)
 	{
 		EnsureGuidelineDrawer();
-		_guidelineDrawer.SetMeasures(measures);
+		_guidelineDrawer!.SetMeasures(measures);
 	}
 
 	internal void HideMeasurements()

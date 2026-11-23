@@ -135,6 +135,14 @@ public sealed partial class PurchasesService : Instance
 	{
 		_currentPurchaseRef = refID;
 
+		if (Globals.IsMobileBuild)
+		{
+			_purchasePrompt?.ShowDisabledNotice();
+			SendPurchaseRes(false);
+			_currentPurchaseRef = "";
+			return;
+		}
+
 		PT.Print("Purchase initiated with ID ", assetID);
 
 		try
@@ -175,6 +183,7 @@ public sealed partial class PurchasesService : Instance
 				else
 				{
 					// Purchase declined
+					_pendingPurchases.Remove(refID);
 					request.TaskSource.SetResult(false);
 				}
 			}

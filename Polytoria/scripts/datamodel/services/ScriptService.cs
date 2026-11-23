@@ -32,17 +32,6 @@ public sealed partial class ScriptService : Instance
 	private static readonly Dictionary<CacheKey, PropertyInfo?> _propertyCache = [];
 	private static readonly Dictionary<Type, (MethodInfo, ScriptMetamethodAttribute)[]> _metaMethodCache = [];
 
-	// Dictionary of all proxies
-	public static readonly Dictionary<Type, Type> ProxyMap = new()
-	{
-		{ typeof(Vector3), typeof(PTVector3) },
-		{ typeof(Vector2), typeof(PTVector2) },
-		{ typeof(Color), typeof(PTColor) },
-		{ typeof(Quaternion), typeof(PTQuaternion) },
-		{ typeof(Aabb), typeof(PTBounds) },
-		{ typeof(Variant), typeof(PTVariant) },
-	};
-
 	// Dictionary of all data type exposed to scripting
 	public static readonly Dictionary<string, Type> GlobalDataMap = new()
 	{
@@ -292,6 +281,7 @@ public sealed partial class ScriptService : Instance
 			return underlying == typeof(float)
 				|| underlying == typeof(int)
 				|| underlying == typeof(long)
+				|| underlying == typeof(uint)
 				|| underlying == typeof(short);
 
 		// Array target, check element type compatibility
@@ -456,6 +446,8 @@ public sealed partial class ScriptService : Instance
 				return (int)doubleValue;
 			if (underlayingType == typeof(long))
 				return (long)doubleValue;
+			if (underlayingType == typeof(uint))
+				return (uint)doubleValue;
 			if (underlayingType == typeof(short))
 				return (short)doubleValue;
 		}
@@ -611,6 +603,10 @@ public sealed partial class ScriptService : Instance
 		{
 			return list.Cast<long>().ToArray();
 		}
+		else if (elementType == typeof(uint))
+		{
+			return list.Cast<uint>().ToArray();
+		}
 		else if (elementType == typeof(object))
 		{
 			return list.ToArray();
@@ -671,7 +667,7 @@ public sealed partial class ScriptService : Instance
 		public readonly bool Equals(CacheKey other)
 		{
 			return Type == other.Type &&
-				   Key.Equals(other.Key, StringComparison.CurrentCultureIgnoreCase) &&
+				   Key == other.Key &&
 				   IsCompatibility == other.IsCompatibility;
 		}
 

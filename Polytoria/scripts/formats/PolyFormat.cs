@@ -603,7 +603,16 @@ public static partial class PolyFormat
 			if (prop.HasSaveIgnore) continue;
 			if (!prop.Property.CanRead) continue;
 
-			object? val = prop.Get(obj);
+			object? val; // prevent saving breaking in creator
+			try
+			{
+				val = prop.Get(obj);
+			}
+			catch (Exception ex)
+			{
+				PT.PrintErr($"Failed to read property '{prop.Name}' on '{obj.ClassName}' while saving: {ex}");
+				continue;
+			}
 			if (val == null) continue;
 
 			DefaultValueAttribute? df = prop.Property.GetCustomAttributeCached<DefaultValueAttribute>();
@@ -950,7 +959,7 @@ public static partial class PolyFormat
 	[JsonSourceGenerationOptions(WriteIndented = true, Converters = [
 		typeof(Vector2JsonConverter),
 		typeof(Vector3JsonConverter),
-		typeof(UnitQuaternionUInt64JsonConverter),
+		typeof(UnitQuaternionJsonConverter),
 		typeof(VariantJsonConverter),
 		typeof(ColorJsonConverter),
 		typeof(ColorSeriesJsonConverter),
