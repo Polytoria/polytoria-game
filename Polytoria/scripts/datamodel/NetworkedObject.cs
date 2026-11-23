@@ -1790,12 +1790,28 @@ public partial class NetworkedObject : IScriptObject
 
 	private void RunProcess(double delta)
 	{
-		if (!IsDeleted) Process(delta);
+		if (IsDeleted) return;
+		try
+		{
+			Process(delta);
+		}
+		catch (Exception ex)
+		{
+			PT.PrintErr(ex);
+		}
 	}
 
 	private void RunPhysicsProcess(double delta)
 	{
-		if (!IsDeleted) PhysicsProcess(delta);
+		if (IsDeleted) return;
+		try
+		{
+			PhysicsProcess(delta);
+		}
+		catch (Exception ex)
+		{
+			PT.PrintErr(ex);
+		}
 	}
 
 	public void SetProcess(bool enabled)

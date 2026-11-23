@@ -651,9 +651,9 @@ public partial class NPC : Physical
 		// Kill player if fall off the map
 		if (Position.Y < Root.Environment.PartDestroyHeight)
 		{
-			if (this is Player)
+			if (this is Player player)
 			{
-				Kill();
+				if (Root.Network.IsServer || player.IsLocal) Kill();
 			}
 			else if ((Root.Network.IsServer || !ExistInNetwork) && IsNetworkReady)
 			{

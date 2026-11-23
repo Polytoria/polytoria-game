@@ -32,7 +32,7 @@ public sealed partial class World : Instance
 	private const double ClockSyncFastInterval = 0.25;
 	private const double ClockSyncInterval = 1.0;
 	private const int ClockSyncFastCount = 8;
-	private const int ClockSampleCount = 8;
+	private const int ClockSampleCount = 16;
 	private const double ClockSlewRate = 0.05;
 	private const double ClockSnapThreshold = 0.25;
 	private const double VitalInterval = 3.0;
@@ -50,7 +50,7 @@ public sealed partial class World : Instance
 	private bool _clockSynced;
 	private int _clockSyncCount;
 	private double _lastSyncRequest = 0;
-	private readonly List<(double Rtt, double Offset)> _clockSamples = [];
+	private readonly List<(double Delay, double Offset)> _clockSamples = [];
 	private readonly HashSet<Dynamic> _interpolating = [];
 	internal IReadOnlySet<Dynamic> Interpolating => _interpolating;
 	private readonly List<Dynamic> _interpolationDone = [];
@@ -246,6 +246,8 @@ public sealed partial class World : Instance
 
 	internal double NetTimeNow => Time.GetTicksUsec() / 1e6 + _clockOffset;
 
+	internal double NetReceiveTime => (Network?.NetInstance?.LastReceiveTime ?? LocalClock) + _clockOffset;
+
 	internal int SnapshotThrottle { get; set; } = 1;
 
 	internal double PhysicsNetTime => PhysicsClock + _clockOffset;
@@ -431,23 +433,24 @@ public sealed partial class World : Instance
 	[NetRpc(AuthorityMode.Any, TransferMode = TransferMode.Unreliable)]
 	private void NetRecvClockSyncRequest(double clientSendTime)
 	{
-		RpcId(RemoteSenderId, nameof(NetRecvSyncResponse), Time.GetTicksUsec() / 1e6 + _clockOffset, clientSendTime);
+		double serverReceiveTime = Network.NetInstance!.LastReceiveTime + _clockOffset;
+		RpcId(RemoteSenderId, nameof(NetRecvSyncResponse), clientSendTime, serverReceiveTime, Time.GetTicksUsec() / 1e6 + _clockOffset);
 	}
 
 	[NetRpc(AuthorityMode.Authority, TransferMode = TransferMode.Unreliable)]
-	private void NetRecvSyncResponse(double serverTime, double clientSendTime)
+	private void NetRecvSyncResponse(double clientSendTime, double serverReceiveTime, double serverSendTime)
 	{
-		double clientReceiveTime = Time.GetTicksUsec() / 1e6;
-		double rtt = clientReceiveTime - clientSendTime;
-		if (rtt < 0) return;
+		double clientReceiveTime = Network.NetInstance!.LastReceiveTime;
+		double delay = clientReceiveTime - clientSendTime - (serverSendTime - serverReceiveTime);
+		if (delay < 0) return;
 
-		_clockSamples.Add((rtt, serverTime + rtt / 2 - clientReceiveTime));
+		_clockSamples.Add((delay, (serverReceiveTime - clientSendTime + serverSendTime - clientReceiveTime) / 2));
 		if (_clockSamples.Count > ClockSampleCount)
 		{
 			_clockSamples.RemoveAt(0);
 		}
 
-		_clockOffsetTarget = _clockSamples.MinBy(s => s.Rtt).Offset;
+		_clockOffsetTarget = _clockSamples.MinBy(s => s.Delay).Offset;
 
 		if (!_clockSynced)
 		{

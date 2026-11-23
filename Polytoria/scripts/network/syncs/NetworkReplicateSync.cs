@@ -342,7 +342,7 @@ public sealed partial class NetworkReplicateSync : Instance
 		foreach (NetReplicateData data in netObjsData)
 		{
 			if (_removedIDs.TryGetValue(data.NetworkID, out var removed) && removed.Seq < seq) _removedIDs.Remove(data.NetworkID);
-			if (data.Transform != null)
+			if (data.Transform != null && NetService.Root.GetNetObjectFromID(data.NetworkID) == null)
 			{
 				NetService.TransformSync.RecvReplicateTransform(data.NetworkID, data.Transform, RemoteSenderId);
 			}
@@ -364,6 +364,10 @@ public sealed partial class NetworkReplicateSync : Instance
 			catch (Exception ex)
 			{
 				PT.PrintErr($"[Net] Failed to replicate {data.Name}: {ex}");
+			}
+			if (data.Transform != null && NetService.Root.GetNetObjectFromID(data.NetworkID) != null)
+			{
+				NetService.TransformSync.RecvReplicateTransform(data.NetworkID, data.Transform, RemoteSenderId);
 			}
 		}
 	}

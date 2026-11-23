@@ -36,7 +36,8 @@ internal sealed class NetTimeline(World root)
 	public void AddSample(double time, double gap)
 	{
 		double frameTime = Mathf.Min(World.LocalFrameTime, MaxFrameTime);
-		double requiredDelay = root.NetTime - frameTime - time + Mathf.Max(gap, NetworkTransformSync.TickInterval);
+		double requiredDelay = Mathf.Min(root.NetTime - frameTime, root.NetReceiveTime) - time + Mathf.Max(gap, NetworkTransformSync.TickInterval);
+		if (requiredDelay > MaxDelay) return;
 
 		int lastIndex = (_delayIndex + DelaySampleCount - 1) % DelaySampleCount;
 		if (_delayCount > 0 && World.LocalClock - _delayTimes[lastIndex] < DelayWindow / DelaySampleCount)
