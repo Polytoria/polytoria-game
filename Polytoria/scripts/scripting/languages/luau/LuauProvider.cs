@@ -1433,6 +1433,9 @@ public sealed partial class LuauProvider : IScriptLanguageProvider
 			case bool boolVal:
 				state.PushBoolean(boolVal);
 				break;
+			case byte[] byteArrayVal:
+				state.PushBuffer(byteArrayVal);
+				break;
 			case Variant variantVal:
 				PushCSClass(state, PTVariant.FromGDClass(variantVal));
 				break;
