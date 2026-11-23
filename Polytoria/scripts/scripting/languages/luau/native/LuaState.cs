@@ -271,7 +271,7 @@ public partial class LuaState : IDisposable
 		NativeBindings.lua_rawgeti(_state, index, n);
 	}
 
-	public void RawSetInteger(int index, long i)
+	public void RawSetInteger(int index, int i)
 	{
 		NativeBindings.lua_rawseti(_state, index, i);
 	}
@@ -591,9 +591,9 @@ public partial class LuaState : IDisposable
 		SetGlobal(name);
 	}
 
-	public void NewTable()
+	public void NewTable(int narr = 0, int nrec = 0)
 	{
-		NativeBindings.lua_createtable(_state, 0, 0);
+		NativeBindings.lua_createtable(_state, narr, nrec);
 	}
 
 	public void SetField(int index, string key)
