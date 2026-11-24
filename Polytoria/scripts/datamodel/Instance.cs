@@ -779,14 +779,22 @@ public partial class Instance : NetworkedObject
 	}
 
 	[ScriptMethod]
-	public Instance GetFirstChild()
+	public Instance? GetFirstChild()
 	{
+		if (!Children.Any())
+		{
+			return null;
+		}
 		return Children.First();
 	}
 
 	[ScriptMethod]
-	public Instance GetLastChild()
+	public Instance? GetLastChild()
 	{
+		if (!Children.Any())
+		{
+			return null;
+		}
 		return Children.Last();
 	}
 
