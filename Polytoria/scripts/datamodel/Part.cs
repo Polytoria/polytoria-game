@@ -18,12 +18,12 @@ public partial class Part : Entity
 	private Color _color = new(1, 1, 1);
 	private bool _castShadows;
 
-	private Node3D _nRemoteAt = null!; // Remote collider proxy
-
 	internal Shape3D ColliderShape => _collider.Shape;
 	public event Action? ShapeChanged;
 
 	public int BridgeID = -1;
+
+	private static readonly bool _debugFace = OS.HasFeature("debug-face");
 
 	public override void EnterTree()
 	{
@@ -36,11 +36,9 @@ public partial class Part : Entity
 	{
 		base.Init();
 		GDNode3D.AddChild(_collider = new(), false, Node.InternalMode.Back);
-		GDNode3D.AddChild(_nRemoteAt = new(), false, Node.InternalMode.Back);
-		SetRemoteLinkTarget(_collider, _nRemoteAt);
-		_nRemoteAt.Rotation = Vector3.Zero;
+		SetRemoteLinkTarget(_collider, GDNode3D);
 
-		if (OS.HasFeature("debug-face"))
+		if (_debugFace)
 		{
 			RayCast3D raycast = new()
 			{
@@ -76,8 +74,9 @@ public partial class Part : Entity
 
 	private void UpdateMeshSize()
 	{
-		_nRemoteAt?.Scale = NodeSize;
-		if (_collider != null && _collider.GetParent() == GDNode3D)
+		if (_collider == null) return;
+		SetRemoteLinkScale(_collider, NodeSize);
+		if (_collider.GetParent() == GDNode3D)
 		{
 			_collider.Scale = NodeSize;
 		}
@@ -97,7 +96,10 @@ public partial class Part : Entity
 			_shape = value;
 
 			ShapeChanged?.Invoke();
-			UpdateShape();
+			if (IsPropReady)
+			{
+				UpdateShape();
+			}
 			OnPropertyChanged();
 		}
 	}

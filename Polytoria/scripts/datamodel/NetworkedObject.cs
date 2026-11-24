@@ -44,6 +44,7 @@ public partial class NetworkedObject : IScriptObject
 
 	private static readonly ConditionalWeakTable<Type, PropertyInfo[]> _editablePropertiesCache = [];
 	private static readonly ConditionalWeakTable<Type, PropertyInfo[]> _scriptPropertiesCache = [];
+	private static readonly ConcurrentDictionary<Type, (PropertyInfo[], PropertyInfo[])> _cleanupPropertiesCache = new();
 	private static readonly ConcurrentDictionary<NetworkedObject, Node> _netObjToProxy = new();
 	private static readonly ConcurrentDictionary<Node, NetworkedObject> _proxyToNetObj = new();
 
@@ -368,7 +369,6 @@ public partial class NetworkedObject : IScriptObject
 		if (!Globals.UseNodes) return;
 		Node n = CreateGDNode();
 		OverrideGDNode(n);
-		InitGDNode();
 	}
 
 	internal void ReenforceName()
@@ -741,48 +741,54 @@ public partial class NetworkedObject : IScriptObject
 
 	private void CleanupProperties()
 	{
-		foreach (PropertyInfo propInfo in GetScriptProperties())
+		(PropertyInfo[] signals, PropertyInfo[] refs) = _cleanupPropertiesCache.GetOrAdd(GetType(), _ =>
 		{
-			if (propInfo.PropertyType.IsAssignableTo(typeof(PTSignal)))
+			PropertyInfo[] props = [.. GetScriptProperties()];
+			return ([.. props.Where(p => p.PropertyType.IsAssignableTo(typeof(PTSignal)))],
+				[.. props.Where(p => !p.PropertyType.IsAssignableTo(typeof(PTSignal)) &&
+					(p.PropertyType.IsAssignableTo(typeof(NetworkedObject)) || p.PropertyType.IsAssignableTo(typeof(RefCounted))) &&
+					!p.IsDefined(typeof(IgnoreCleanupAttribute)))]);
+		});
+
+		foreach (PropertyInfo propInfo in signals)
+		{
+			// Disconnect all signals
+			object? val = propInfo.GetValue(this);
+			if (val is PTSignal signal)
 			{
-				// Disconnect all signals
-				object? val = propInfo.GetValue(this);
-				if (val is PTSignal signal)
-				{
-					signal.DisconnectAll(propInfo.PropertyType == typeof(PTSignal));
-				}
+				signal.DisconnectAll(propInfo.PropertyType == typeof(PTSignal));
 			}
-			else if (propInfo.PropertyType.IsAssignableTo(typeof(NetworkedObject)) || propInfo.PropertyType.IsAssignableTo(typeof(RefCounted)))
+		}
+
+		foreach (PropertyInfo propInfo in refs)
+		{
+			// Null references to other NetworkedObjects
+			try
 			{
-				if (propInfo.IsDefined(typeof(IgnoreCleanupAttribute))) continue;
-				// Null references to other NetworkedObjects
-				try
-				{
-					propInfo.SetValue(this, null);
-				}
-				catch { }
+				propInfo.SetValue(this, null);
 			}
+			catch { }
 		}
 	}
 
-	private void InvokeEnterTree()
+	private void InvokeEnterTree(bool moved = true)
 	{
 		if (this is Instance i)
 		{
 			foreach (Instance item in i.GetChildren())
 			{
-				item.InvokeEnterTree();
+				item.InvokeEnterTree(false);
 			}
 		}
 
 		foreach (NetworkedObject item in _nonInstanceChildren ?? [])
 		{
-			item.InvokeEnterTree();
+			item.InvokeEnterTree(false);
 		}
 
 		try
 		{
-			EnterTreeRecheck();
+			EnterTreeRecheck(moved || this is not Dynamic);
 			EnterTree();
 		}
 		catch (Exception ex)
@@ -870,7 +876,7 @@ public partial class NetworkedObject : IScriptObject
 	public virtual void CreatorInserted() { }
 #endif
 
-	private void EnterTreeRecheck()
+	private void EnterTreeRecheck(bool attach = true)
 	{
 		if (IsDeleted) return;
 
@@ -904,7 +910,7 @@ public partial class NetworkedObject : IScriptObject
 			ChunkBroadcastOverride = false;
 		}
 
-		if (GDNode != null && NetworkParent != null)
+		if (attach && GDNode != null && NetworkParent != null)
 		{
 			if (!Node.IsInstanceValid(NetworkParent.SlotNode)) return;
 			Node? parent = GDNode.GetParentOrNull<Node>();
@@ -1790,12 +1796,28 @@ public partial class NetworkedObject : IScriptObject
 
 	private void RunProcess(double delta)
 	{
-		if (!IsDeleted) Process(delta);
+		if (IsDeleted) return;
+		try
+		{
+			Process(delta);
+		}
+		catch (Exception ex)
+		{
+			PT.PrintErr(ex);
+		}
 	}
 
 	private void RunPhysicsProcess(double delta)
 	{
-		if (!IsDeleted) PhysicsProcess(delta);
+		if (IsDeleted) return;
+		try
+		{
+			PhysicsProcess(delta);
+		}
+		catch (Exception ex)
+		{
+			PT.PrintErr(ex);
+		}
 	}
 
 	public void SetProcess(bool enabled)
