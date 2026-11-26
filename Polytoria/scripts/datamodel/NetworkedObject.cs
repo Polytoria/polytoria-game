@@ -1272,6 +1272,11 @@ public partial class NetworkedObject : IScriptObject
 
 	public void SetNetworkAuthority(int peerID, bool recursive = true)
 	{
+		if (NetworkAuthority != peerID && ShouldReplicate && NetworkedObjectID != "" && Root?.Network?.IsServer == true)
+		{
+			_sequence++;
+			Rpc(nameof(NetRecvNetworkAuthority), peerID, _sequence);
+		}
 		NetworkAuthority = peerID;
 		if (recursive)
 		{
@@ -1280,6 +1285,14 @@ public partial class NetworkedObject : IScriptObject
 				item.SetNetworkAuthority(peerID, true);
 			}
 		}
+	}
+
+	[NetRpc(AuthorityMode.Server, TransferMode = TransferMode.Reliable)]
+	private void NetRecvNetworkAuthority(int peerID, int sequence)
+	{
+		if (sequence <= AppliedSequence) return;
+		AppliedSequence = sequence;
+		SetNetworkAuthority(peerID, false);
 	}
 
 	internal NetworkedObject[] GetNetworkDescendants()
