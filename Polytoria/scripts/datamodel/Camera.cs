@@ -84,7 +84,22 @@ public sealed partial class Camera : Dynamic
 			if (IsFirstPerson && value != CameraModeEnum.Follow)
 				ExitFirstPerson();
 
+			if (_mode == CameraModeEnum.Follow && value != CameraModeEnum.Follow)
+			{
+				_dragPanning = false;
+				if (_turning)
+				{
+					StopTurning();
+				}
+			}
+
 			_mode = value;
+
+			if (value == CameraModeEnum.Follow && !_turning && (CtrlLocked || AlwaysLocked) && Root.Environment?.CurrentCamera == this && Root.Input?.IsGameFocused == true)
+			{
+				StartTurning();
+			}
+
 			OnPropertyChanged();
 		}
 	}

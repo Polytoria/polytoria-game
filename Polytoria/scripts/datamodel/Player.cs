@@ -586,7 +586,7 @@ public sealed partial class Player : NPC
 		{
 			NetworkPing = ping;
 		}
-		if (!Root.Network.IsServer)
+		if (IsLocal && !Root.Network.IsServer)
 		{
 			UpdateCamera(delta);
 		}

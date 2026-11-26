@@ -1656,6 +1656,10 @@ public partial class NetworkedObject : IScriptObject
 
 		if (Root.Network.IsServer)
 		{
+			if (entry.TransferMode == TransferMode.Reliable && entry.TransferChannel == 0)
+			{
+				Root.Network.PropSync.BroadcastBatchedProps();
+			}
 			Root.Network.NetInstance.BroadcastMessage(msg, entry.TransferMode, entry.TransferChannel);
 		}
 		else
@@ -1693,6 +1697,10 @@ public partial class NetworkedObject : IScriptObject
 		if (Globals.UseLogRPC)
 		{
 			PT.Print($"RPCID {id} {methodName} ({msg.Length.Bytes().Kilobytes}kb) ({args?.Length ?? 0} args)");
+		}
+		if (Root.Network.IsServer && entry.TransferMode == TransferMode.Reliable && entry.TransferChannel == 0)
+		{
+			Root.Network.PropSync.BroadcastBatchedProps();
 		}
 		Root.Network.NetInstance.SendMessage(id, msg, entry.TransferMode, entry.TransferChannel);
 	}
