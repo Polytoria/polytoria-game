@@ -65,6 +65,7 @@ public sealed partial class FilterService : Instance
 		if (_profanityList.Count == 0)
 		{
 			LoadFilter();
+			if (World.Current?.IsLocalTest == true) return input;
 			return new string('*', input.Length);
 		}
 
