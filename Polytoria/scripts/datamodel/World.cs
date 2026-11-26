@@ -18,7 +18,6 @@ using Polytoria.Utils;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Threading;
 using System.Linq;
 using Polytoria.Networking;
 using Polytoria.Shared.AssetLoaders;
@@ -66,8 +65,8 @@ public sealed partial class World : Instance
 	private static World? _current;
 	private int _worldID = 0;
 	private bool _serverUnderLoad = false;
-	private readonly ConcurrentDictionary<string, TaskCompletionSource<NetworkedObject?>> _pendingRequests = [];
-	private readonly ConcurrentDictionary<string, TaskCompletionSource<NetworkedObject?>> _pendingReadyRequests = [];
+	private readonly ConcurrentDictionary<string, List<TaskCompletionSource<NetworkedObject?>>> _pendingRequests = [];
+	private readonly ConcurrentDictionary<string, List<TaskCompletionSource<NetworkedObject?>>> _pendingReadyRequests = [];
 
 	internal int WorldSessionID = 0;
 
@@ -519,44 +518,50 @@ public sealed partial class World : Instance
 		}
 	}
 
-	private Task<NetworkedObject?> WaitForNetObjectExistAsync(string networkID, int timeoutMs = 5000)
+	private async Task<NetworkedObject?> WaitForNetObjectExistAsync(string networkID, int timeoutMs = 5000)
 	{
 		if (NetworkObjects.TryGetValue(networkID, out NetworkedObject? netObj))
-			return Task.FromResult<NetworkedObject?>(netObj);
+			return netObj;
 
-		TaskCompletionSource<NetworkedObject?> tcs = new();
-		_pendingRequests[networkID] = tcs;
-
-		CancellationTokenSource cts = new(timeoutMs);
-		cts.Token.Register(() =>
-		{
-			_pendingRequests.Remove(networkID, out _);
-			tcs.TrySetResult(null);
-		});
-
-		return tcs.Task;
+		return await WaitPending(_pendingRequests, networkID, timeoutMs);
 	}
 
-	private Task<NetworkedObject?> WaitForNetObjectReadyAsync(string networkID, int timeoutMs = 5000)
+	private async Task<NetworkedObject?> WaitForNetObjectReadyAsync(string networkID, int timeoutMs = 5000)
 	{
 		// Try to get the object first
 		if (!NetworkObjects.TryGetValue(networkID, out NetworkedObject? netObj))
-			return Task.FromResult<NetworkedObject?>(null);
+			return null;
 
 		if (netObj.IsPropReady)
-			return Task.FromResult<NetworkedObject?>(netObj);
+			return netObj;
 
+		return await WaitPending(_pendingReadyRequests, networkID, timeoutMs);
+	}
+
+	private static async Task<NetworkedObject?> WaitPending(ConcurrentDictionary<string, List<TaskCompletionSource<NetworkedObject?>>> pending,
+		string networkID, int timeoutMs)
+	{
 		TaskCompletionSource<NetworkedObject?> tcs = new();
-		_pendingReadyRequests[networkID] = tcs;
+		List<TaskCompletionSource<NetworkedObject?>> waiters = pending.GetOrAdd(networkID, _ => []);
+		lock (waiters) waiters.Add(tcs);
 
-		CancellationTokenSource cts = new(timeoutMs);
-		cts.Token.Register(() =>
+		await Task.WhenAny(tcs.Task, Task.Delay(timeoutMs));
+
+		lock (waiters)
 		{
-			if (_pendingReadyRequests.Remove(networkID, out _))
-				tcs.TrySetResult(null);
-		});
+			waiters.Remove(tcs);
+			if (waiters.Count == 0) pending.TryRemove(KeyValuePair.Create(networkID, waiters));
+		}
+		return tcs.Task.IsCompleted ? tcs.Task.Result : null;
+	}
 
-		return tcs.Task;
+	private static void CompletePending(ConcurrentDictionary<string, List<TaskCompletionSource<NetworkedObject?>>> pending, NetworkedObject netObj)
+	{
+		if (!pending.TryRemove(netObj.NetworkedObjectID, out List<TaskCompletionSource<NetworkedObject?>>? waiters)) return;
+
+		TaskCompletionSource<NetworkedObject?>[] toComplete;
+		lock (waiters) toComplete = [.. waiters];
+		foreach (TaskCompletionSource<NetworkedObject?> tcs in toComplete) tcs.TrySetResult(netObj);
 	}
 
 
@@ -573,11 +578,7 @@ public sealed partial class World : Instance
 	internal void RegisterNetworkedObject(NetworkedObject netObj)
 	{
 		NetworkObjects[netObj.NetworkedObjectID] = netObj;
-		if (_pendingRequests.TryGetValue(netObj.NetworkedObjectID, out var tcs))
-		{
-			_pendingRequests.Remove(netObj.NetworkedObjectID, out _);
-			tcs.SetResult(netObj);
-		}
+		CompletePending(_pendingRequests, netObj);
 	}
 
 	internal void UnregisterNetworkedObject(NetworkedObject netObj)
@@ -597,11 +598,7 @@ public sealed partial class World : Instance
 
 	internal void ReportNetworkedObjectReady(NetworkedObject netObj)
 	{
-		if (_pendingReadyRequests.TryGetValue(netObj.NetworkedObjectID, out var tcs))
-		{
-			_pendingReadyRequests.Remove(netObj.NetworkedObjectID, out _);
-			tcs.SetResult(netObj);
-		}
+		CompletePending(_pendingReadyRequests, netObj);
 	}
 
 	internal void InvokeReady()
