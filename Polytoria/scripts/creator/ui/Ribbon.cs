@@ -84,19 +84,19 @@ public sealed partial class Ribbon : PanelContainer
 
 	public override void _UnhandledKeyInput(InputEvent @event)
 	{
-		if (@event.IsActionPressed("tool_select"))
+		if (@event.IsActionPressed("tool_select") || CreatorService.Interface.ToolMode == ToolModeEnum.Select)
 		{
 			_container.GetNode<Button>("Select").ButtonPressed = true;
 		}
-		else if (@event.IsActionPressed("tool_move"))
+		else if (@event.IsActionPressed("tool_move") || CreatorService.Interface.ToolMode == ToolModeEnum.Move)
 		{
 			_container.GetNode<Button>("Move").ButtonPressed = true;
 		}
-		else if (@event.IsActionPressed("tool_rotate"))
+		else if (@event.IsActionPressed("tool_rotate") || CreatorService.Interface.ToolMode == ToolModeEnum.Rotate)
 		{
 			_container.GetNode<Button>("Rotate").ButtonPressed = true;
 		}
-		else if (@event.IsActionPressed("tool_scale"))
+		else if (@event.IsActionPressed("tool_scale") || CreatorService.Interface.ToolMode == ToolModeEnum.Scale)
 		{
 			_container.GetNode<Button>("Scale").ButtonPressed = true;
 		}
