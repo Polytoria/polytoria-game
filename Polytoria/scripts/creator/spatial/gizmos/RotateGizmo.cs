@@ -18,7 +18,7 @@ public partial class RotateGizmo : Node, IGizmo
 	private Shader _rotateShader = GD.Load<Shader>("res://resources/shaders/gizmos/rotate.gdshader");
 	private Shader _rotateBorderShader = GD.Load<Shader>("res://resources/shaders/gizmos/rotate_border.gdshader");
 
-	public List<Dynamic> Targets { get; set; } = [];
+	public List<Dynamic> Targets { get; set; } = null!;
 	public bool Visible { get; set; }
 	public Gizmos? RootGizmos { get; set; }
 

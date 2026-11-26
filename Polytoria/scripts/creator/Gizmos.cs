@@ -4,6 +4,7 @@
 
 using Godot;
 using Polytoria.Creator.Spatial;
+using Polytoria.Creator.Tools;
 using Polytoria.Datamodel;
 using Polytoria.Datamodel.Creator;
 using Polytoria.Utils;
@@ -80,6 +81,11 @@ public sealed partial class Gizmos : Node
 		Scale.Name = "Scale";
 		Resize.Name = "Resize";
 
+		Move.Targets = Selected;
+		Rotate.Targets = Selected;
+		Scale.Targets = Selected;
+		Resize.Targets = Selected;
+
 		Move.DragStarted += OnMoveDragStarted;
 		Move.DragEnded += OnMoveDragEnded;
 		Move.Dragged += OnMoveDragged;
@@ -102,6 +108,7 @@ public sealed partial class Gizmos : Node
 		AddChild(Resize, true);
 		AddChild(_paintBox = new() { Root = Root, Name = "PaintBox", RootGizmos = this });
 		AddChild(_hoverBox = new() { Root = Root, Name = "HoverBox", RootGizmos = this });
+		Tools.PaintTool.Singleton.HoverBox = _paintBox;
 	}
 
 	private void OnResizeDragStarted()
@@ -422,10 +429,6 @@ public sealed partial class Gizmos : Node
 		AddChild(box);
 		_selectionBoxes[dyn] = box;
 		Selected.Add(dyn);
-		Move.Targets.Add(dyn);
-		Rotate.Targets.Add(dyn);
-		Scale.Targets.Add(dyn);
-		Resize.Targets.Add(dyn);
 	}
 
 	public void Deselect(Dynamic dyn)
@@ -442,10 +445,6 @@ public sealed partial class Gizmos : Node
 			HoveringGizmos = false;
 		}
 		Selected.Remove(dyn);
-		Move.Targets.Remove(dyn);
-		Rotate.Targets.Remove(dyn);
-		Scale.Targets.Remove(dyn);
-		Resize.Targets.Remove(dyn);
 	}
 
 	public static Instance? GetModelRoot(Instance instance)
@@ -495,17 +494,9 @@ public sealed partial class Gizmos : Node
 			}
 		}
 
-		if (toolMode == ToolModeEnum.Paint)
+		if (CreatorService.EnumToTool.TryGetValue(toolMode, out CreatorTool tool))
 		{
-			if (hoveringOn != null && hoveringOn is Part && !hoveringOn.Locked)
-			{
-				_paintBox.SelectionColor = CreatorService.Interface.TargetPartColor;
-				_paintBox.Target = hoveringOn;
-			}
-			else
-			{
-				_paintBox.Target = null;
-			}
+			tool.ProcessInput(@event, hoveringOn);
 		}
 
 		Instance? selectInstance = null;
@@ -727,47 +718,10 @@ public sealed partial class Gizmos : Node
 
 	private void ProcessPaint(IEnumerable<Dynamic> dyns)
 	{
-		List<Part> parts = [];
-		foreach (Dynamic d in dyns)
+		if (CreatorService.EnumToTool.TryGetValue(CreatorService.Interface.ToolMode, out CreatorTool tool))
+		if (tool is IImmediateTool iTool)
 		{
-			if (d is Part p) parts.Add(p);
-		}
-		if (parts.Count == 0) return;
-
-		CreatorHistory history = Root.CreatorContext.History;
-		if (CreatorService.Interface.ToolMode == ToolModeEnum.Paint)
-		{
-			Color newC = CreatorService.Interface.TargetPartColor;
-			Dictionary<Part, Color> oldColors = [];
-			foreach (Part p in parts) oldColors[p] = p.Color;
-
-			history.NewAction("Paint Part");
-			history.AddDoCallback(new((_) =>
-			{
-				foreach (Part p in parts) p.Color = newC;
-			}));
-			history.AddUndoCallback(new((_) =>
-			{
-				foreach (Part p in parts) p.Color = oldColors[p];
-			}));
-			history.CommitAction();
-		}
-		else if (CreatorService.Interface.ToolMode == ToolModeEnum.Brush)
-		{
-			Part.PartMaterialEnum newC = CreatorService.Interface.TargetPartMaterial;
-			Dictionary<Part, Part.PartMaterialEnum> oldMaterials = [];
-			foreach (Part p in parts) oldMaterials[p] = p.Material;
-
-			history.NewAction("Brush Part");
-			history.AddDoCallback(new((_) =>
-			{
-				foreach (Part p in parts) p.Material = newC;
-			}));
-			history.AddUndoCallback(new((_) =>
-			{
-				foreach (Part p in parts) p.Material = oldMaterials[p];
-			}));
-			history.CommitAction();
+			iTool.Apply(Root, dyns);
 		}
 	}
 
