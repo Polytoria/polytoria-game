@@ -542,7 +542,7 @@ public sealed partial class NetworkPropSync : Instance
 	}
 
 	// Broadcast Batched Props to peers
-	private void BroadcastBatchedProps()
+	internal void BroadcastBatchedProps()
 	{
 		if (_batchBroadcasts.Count == 0) return;
 
