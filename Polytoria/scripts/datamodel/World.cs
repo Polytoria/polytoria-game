@@ -129,6 +129,7 @@ public sealed partial class World : Instance
 	public CoreUIService CoreUI => FindChild<CoreUIService>("CoreUI")!;
 	public Stats Stats => FindChild<Stats>("Stats")!;
 	public Teams Teams => FindChild<Teams>("Teams")!;
+	public new TagsService Tags => FindChild<TagsService>("Tags")!;
 	public DatastoreService Datastore => FindChild<DatastoreService>("Datastore")!;
 	public HttpService Http => FindChild<HttpService>("Http")!;
 	public InsertService Insert => FindChild<InsertService>("Insert")!;
@@ -648,6 +649,14 @@ public sealed partial class World : Instance
 	/// <returns></returns>
 	public World Setup()
 	{
+		TagsService? tagsService = FindChild<TagsService>("Tags");
+		if (tagsService == null)
+		{
+			tagsService = Globals.LoadInstance<TagsService>(Root);
+			tagsService.NameOverride = "Tags";
+			tagsService.NetworkParent = this;
+		}
+
 		InputService? inputService = FindChild<InputService>("Input");
 
 		if (inputService == null)
@@ -942,6 +951,7 @@ public sealed partial class World : Instance
 			coreUIService,
 			stats,
 			teams,
+			tagsService,
 			datastoreService,
 			httpService,
 			insertService,

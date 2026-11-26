@@ -99,3 +99,5 @@ declare CreatorGUI: CreatorGUI
 declare Preferences: PreferencesService
 
 declare Hooks: HookService
+
+declare Tags: TagsService
