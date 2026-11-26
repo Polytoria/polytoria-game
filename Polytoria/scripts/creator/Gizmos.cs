@@ -393,6 +393,28 @@ public sealed partial class Gizmos : Node
 
 	public override void _Process(double delta)
 	{
+		bool one = Input.IsKeyPressed(Key.Key1);
+		bool two = Input.IsKeyPressed(Key.Key2);
+		bool three = Input.IsKeyPressed(Key.Key3);
+		bool four = Input.IsKeyPressed(Key.Key4);
+
+		if (one)
+		{
+			CreatorService.Interface.ToolMode = ToolModeEnum.Select;
+		}
+		if (two)
+		{
+			CreatorService.Interface.ToolMode = ToolModeEnum.Move;
+		}
+		if (three)
+		{
+			CreatorService.Interface.ToolMode = ToolModeEnum.Rotate;
+		}
+		if (four)
+		{
+			CreatorService.Interface.ToolMode = ToolModeEnum.Scale;
+		}
+		
 		bool selectionValid = Selected.Count > 0;
 
 		Move.Visible = CreatorService.Interface.ToolMode == ToolModeEnum.Move && selectionValid;
