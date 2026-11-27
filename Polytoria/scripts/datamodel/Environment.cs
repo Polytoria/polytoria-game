@@ -704,7 +704,7 @@ public sealed partial class Environment : Instance
 		[ScriptProperty] public Vector3 Position { get; set; }
 		[ScriptProperty] public Vector3 Normal { get; set; }
 		[ScriptProperty] public float Distance { get; set; }
-		[ScriptProperty] public Instance? Instance { get; set; }
+		[ScriptProperty] public Physical? Instance { get; set; }
 
 		public override readonly int GetHashCode()
 		{
