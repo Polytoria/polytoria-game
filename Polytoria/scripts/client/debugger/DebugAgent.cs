@@ -62,17 +62,13 @@ public class DebugAgent
 		while (true)
 		{
 			if (!_client.Connected) { ClientStarted = false; break; }
-			byte[] buffer = new byte[1024];
+			byte[] header = new byte[4];
 
 			try
 			{
-				int bytesRead = await _stream.ReadAsync(buffer);
-
-				if (bytesRead == 0)
-				{
-					PT.PrintV("Debug server closed connection");
-					break;
-				}
+				await _stream.ReadExactlyAsync(header);
+				byte[] buffer = new byte[BitConverter.ToInt32(header)];
+				await _stream.ReadExactlyAsync(buffer);
 
 				IDebugMessage? msg = SerializeUtils.Deserialize<IDebugMessage>(buffer);
 				if (msg != null)
@@ -84,6 +80,7 @@ public class DebugAgent
 			{
 				PT.PrintErrV(e);
 				PT.PrintErrV($"Receive error: {e.Message}");
+				break;
 			}
 		}
 	}
@@ -150,7 +147,8 @@ public class DebugAgent
 	public async Task SendMessage(IDebugMessage msg)
 	{
 		if (!ClientStarted) return;
-		byte[] data = SerializeUtils.Serialize(msg);
+		byte[] payload = SerializeUtils.Serialize(msg);
+		byte[] data = [.. BitConverter.GetBytes(payload.Length), .. payload];
 		try
 		{
 			await _stream.WriteAsync(data);
