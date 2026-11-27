@@ -87,6 +87,7 @@ public partial class InsertMenuPopup : PopupPanel
 			"Clothing",
 			"NPC",
 			"Tool",
+			"Vitals",
 		},
 		/*
 		["Vehicles"] = new()
