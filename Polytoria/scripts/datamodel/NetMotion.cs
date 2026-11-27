@@ -106,6 +106,8 @@ public sealed class NetMotion(Dynamic dyn)
 
 	public bool IsPlaying => Samples.Count > 0 && _hasRenderDelay && dyn.Root.NetTime - _renderDelay < Samples[Samples.Count - 1].Time;
 
+	public double RenderDelay => _hasRenderDelay ? _renderDelay : 0;
+
 	public bool IsAhead(double time)
 	{
 		if (Samples.Count == 0) return false;
