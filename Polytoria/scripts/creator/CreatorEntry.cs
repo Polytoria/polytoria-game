@@ -11,6 +11,7 @@ using Polytoria.Datamodel.Creator;
 using Polytoria.Shared;
 using Polytoria.Shared.AssetLoaders;
 using Polytoria.Shared.Settings;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -19,6 +20,8 @@ namespace Polytoria.Creator;
 public partial class CreatorEntry : Node
 {
 	public const int CreatorPort = 24220;
+
+	private string? _projectToOpen;
 
 	public async override void _EnterTree()
 	{
@@ -42,11 +45,7 @@ public partial class CreatorEntry : Node
 		GetViewport().GuiEmbedSubwindows = true;
 
 		// Open project
-		cmdargs.TryGetValue("proj", out string? creatorFilePath);
-		if (creatorFilePath != null)
-		{
-			_ = CreatorService.Singleton.CreateNewSession(creatorFilePath);
-		}
+		cmdargs.TryGetValue("proj", out _projectToOpen);
 
 		// Import legacy world cmd arguments
 		cmdargs.TryGetValue("liin", out string? legacyImportIn);
@@ -61,6 +60,23 @@ public partial class CreatorEntry : Node
 		if (launchToken != null)
 		{
 			await PolyCreatorAPI.LoginWithToken(launchToken);
+		}
+	}
+
+	public async override void _Ready()
+	{
+		base._Ready();
+
+		if (_projectToOpen == null) return;
+
+		try
+		{
+			await CreatorService.Singleton.CreateNewSession(_projectToOpen);
+		}
+		catch (Exception ex)
+		{
+			PT.PrintErr(ex);
+			CreatorService.Interface.PopupAlert(ex.Message, "Could not open project");
 		}
 	}
 }
