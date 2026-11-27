@@ -534,6 +534,7 @@ public sealed partial class CreatorService : Node, IScriptObject
 		if (SessionToLocalTestID.ContainsKey(session))
 		{
 			StopLocalTest();
+			LocalTestProcesses.Clear();
 			CleanupLocalTest();
 			LocalTestStopped.Invoke();
 		}

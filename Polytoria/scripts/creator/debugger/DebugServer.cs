@@ -56,16 +56,14 @@ public class DebugServer
 		try
 		{
 			NetworkStream stream = client.GetStream();
-			byte[] buffer = new byte[1024];
+			byte[] header = new byte[4];
 
 			while (ServerStarted)
 			{
-				int bytesRead = await stream.ReadAsync(buffer);
-
-				if (bytesRead == 0)
-				{
-					break; // Client disconnected gracefully
-				}
+				await stream.ReadExactlyAsync(header);
+				byte[] buffer = new byte[BitConverter.ToInt32(header)];
+				await stream.ReadExactlyAsync(buffer);
+				if (Globals.IsExiting) break;
 
 				IDebugMessage? msg = SerializeUtils.Deserialize<IDebugMessage>(buffer);
 				if (msg != null)
@@ -178,7 +176,8 @@ public class DebugServer
 
 	public async void BroadcastMessage(IDebugMessage msg)
 	{
-		byte[] data = SerializeUtils.Serialize(msg);
+		byte[] payload = SerializeUtils.Serialize(msg);
+		byte[] data = [.. BitConverter.GetBytes(payload.Length), .. payload];
 		foreach (TcpClient client in _tcpClients)
 		{
 			NetworkStream stream = client.GetStream();
@@ -188,7 +187,8 @@ public class DebugServer
 
 	private static async void SendMessage(TcpClient client, IDebugMessage msg)
 	{
-		byte[] data = SerializeUtils.Serialize(msg);
+		byte[] payload = SerializeUtils.Serialize(msg);
+		byte[] data = [.. BitConverter.GetBytes(payload.Length), .. payload];
 		NetworkStream stream = client.GetStream();
 		await stream.WriteAsync(data);
 	}

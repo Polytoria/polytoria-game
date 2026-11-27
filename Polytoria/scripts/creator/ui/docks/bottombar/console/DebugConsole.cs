@@ -219,13 +219,7 @@ public partial class DebugConsole : Control
 		// Trim old logs if exceeding limit
 		if (_logs.Count > MaxLogLength)
 		{
-			_logs.RemoveAt(0);
-
-
-
-
-
-
+			_logs.RemoveRange(0, MaxLogLength / 4);
 			ForceFullRebuild();
 			return;
 		}
