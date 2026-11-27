@@ -522,25 +522,52 @@ public partial class LuaState : IDisposable
 
 	public void PushCFunction(LuaFunction func, string? name = null, int n = 0)
 	{
-		IntPtr userdataPtr = NewUserDataDTor((UIntPtr)IntPtr.Size, _functionDtor);
+		// the pushed Lua function has a userdata as an additional upvalue, always storing an IntPtr
+		// that corresponds to a GCHandle, which stops the given LuaFunction from being GC'd by C#.
+
+		// Lua doesn't copy the debug name, so it has to be pinned somewhere in memory by the host.
+		// letting C# convert the name to UTF8 bytes doesn't work, since it'll free that memory
+		// immediately after calling lua_pushcclosurek, meaning the name will most likely be
+		// overwritten the next time Lua needs it.
+		// we're pinning the name ourselves here by converting it to UTF8 bytes, and storing that in
+		// the userdata's memory after the IntPtr. this means that we only have to manually free the
+		// GCHandle, since Lua will free the userdata's memory, including the debug name, for us!
+
+		byte[]? debugNameBytes = null;
+
+		int userdataSize = IntPtr.Size;
+		if (name != null)
+		{
+			debugNameBytes = Encoding.UTF8.GetBytes(name);
+			// +1 for NULL terminator
+			userdataSize += debugNameBytes.Length + 1;
+		}
+		IntPtr userdataPtr = NewUserDataDTor((UIntPtr)userdataSize, _functionDtor);
 
 		GCHandle handle = GCHandle.Alloc(func);
 		IntPtr handlePtr = GCHandle.ToIntPtr(handle);
 		Marshal.WriteIntPtr(userdataPtr, handlePtr);
 
-		NativeBindings.lua_pushcclosurek(_state, func, name, n + 1, null);
+		IntPtr debugNamePtr = 0;
+		if (debugNameBytes != null)
+		{
+			debugNamePtr = userdataPtr + IntPtr.Size;
+			Marshal.Copy(debugNameBytes, 0, debugNamePtr, debugNameBytes.Length);
+			// add NULL terminator
+			Marshal.WriteByte(debugNamePtr + debugNameBytes.Length, 0);
+		}
+
+		NativeBindings.lua_pushcclosurek(_state, func, debugNamePtr, n + 1, null);
 	}
 
 	private static void FunctionGarbageCollect(IntPtr ud)
 	{
 		IntPtr handlePtr = Marshal.ReadIntPtr(ud);
 		if (handlePtr == IntPtr.Zero) return;
-		GCHandle handle = GCHandle.FromIntPtr(handlePtr);
 
-		if (handle.IsAllocated)
-		{
-			handle.Free();
-		}
+		GCHandle handle = GCHandle.FromIntPtr(handlePtr);
+		// GCHandle.IsAllocated just checks if the handle is 0, no need to repeat that here
+		handle.Free();
 	}
 
 	public bool PushThread()
