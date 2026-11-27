@@ -2,16 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-using Godot;
 using Polytoria.Attributes;
-using Polytoria.Client.WebAPI;
 using Polytoria.Networking;
-using Polytoria.Schemas.API;
+using Polytoria.Providers.Achievements;
 using Polytoria.Scripting;
-using Polytoria.Shared;
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace Polytoria.Datamodel.Services;
@@ -22,13 +18,19 @@ public sealed partial class AchievementsService : Instance
 	private const int MaxRequestsPerMinute = 30;
 	private const int RequestsPerPlayerModifier = 10;
 
-	private readonly PTHttpClient _client = new();
+	private IAchievementsProvider _provider = null!;
 
 	private bool _useAchievementSound = true;
 	private bool _notifyAchievements = true;
 	private readonly HashSet<int> _gotAchievements = [];
 	private int _requestsThisMinute = 0;
 	private int _currentMinute = 0;
+
+	public override void Init()
+	{
+		_provider = Root.Network.IsProd ? new PTAchievementsProvider() : new LocalAchievementsProvider();
+		base.Init();
+	}
 
 	[ScriptProperty] public PTSignal<int> GotAchievement { get; private set; } = new();
 
@@ -102,15 +104,10 @@ public sealed partial class AchievementsService : Instance
 			throw new Exception("Request limit exceeded, please try again later.");
 		}
 
-		bool hasPrev = false;
+		bool hasPrev = await _provider.RequestHasAchievement(userID, achievementID);
+		await _provider.RequestGiveAchievement(userID, achievementID);
 
-		if (Root.Network.IsProd)
-		{
-			hasPrev = await RequestHasAchievement(userID, achievementID);
-			await RequestGiveAchievement(userID, achievementID);
-		}
-
-		if (targetPlr != null && (!hasPrev || Root.IsLocalTest))
+		if (targetPlr != null && !hasPrev)
 		{
 			RpcId(targetPlr.PeerID, nameof(NetRecvAchievement), achievementID);
 		}
@@ -151,44 +148,7 @@ public sealed partial class AchievementsService : Instance
 			throw new Exception("Request limit exceeded, please try again later.");
 		}
 
-		if (Root.Network.IsProd)
-		{
-			return await RequestHasAchievement(userID, achievementID);
-		}
-
-		return false;
-	}
-
-	internal async Task RequestGiveAchievement(int userID, int achievementID)
-	{
-		SetHttpClientAuthToken();
-
-		List<KeyValuePair<string, string>> formVariables =
-		[
-			new("userID", userID.ToString()),
-			new("achievementID", achievementID.ToString()),
-		];
-		FormUrlEncodedContent formContent = new(formVariables);
-
-		using var pa = await _client.PostAsync(
-			Globals.ApiEndpoint.PathJoin("/v1/game/server/achievements/award"),
-			formContent
-		);
-	}
-
-	internal async Task<bool> RequestHasAchievement(int userID, int achievementID)
-	{
-		SetHttpClientAuthToken();
-		APIHasAchievementResponse res = await _client.GetFromJsonAsync(
-			Globals.ApiEndpoint.PathJoin("/v1/game/server/achievements/has-achievement?userID=" + userID + "&achievementID=" + achievementID),
-			ServerAPIGenerationContext.Default.APIHasAchievementResponse
-		);
-		return res.HasAchievement;
-	}
-
-	private void SetHttpClientAuthToken()
-	{
-		_client.DefaultRequestHeaders["Authorization"] = PolyServerAPI.AuthToken;
+		return await _provider.RequestHasAchievement(userID, achievementID);
 	}
 
 	private void ServerGuard()
