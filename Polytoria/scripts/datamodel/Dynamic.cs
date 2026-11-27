@@ -450,6 +450,24 @@ public partial class Dynamic : Instance
 
 	internal double LastNetSampleTime => netMotion?.LastSampleTime ?? double.MinValue;
 
+	[ScriptProperty]
+	public decimal NetRenderTime
+	{
+		get
+		{
+			if (Root?.Network == null) return 0;
+			if (NetTransformAuthority == Root.Network.LocalPeerID || netMotion == null || netMotion.Samples.Count == 0)
+			{
+				return Root.ServerTime;
+			}
+			if (Root.Network.IsServer)
+			{
+				return (decimal)netMotion.LastSampleTime;
+			}
+			return Root.ServerTime - (decimal)netMotion.RenderDelay;
+		}
+	}
+
 	internal Vector3 LimitNetVelocity(Vector3 position, double time, Vector3 velocity)
 	{
 		if (!float.IsFinite(velocity.X) || !float.IsFinite(velocity.Y) || !float.IsFinite(velocity.Z)) return Vector3.Zero;
