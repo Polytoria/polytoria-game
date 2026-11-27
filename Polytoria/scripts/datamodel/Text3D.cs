@@ -30,7 +30,6 @@ public sealed partial class Text3D : Dynamic
 	private float _fontSize = 16;
 	private bool _useRichText = false;
 	private bool _shaded = false;
-	private bool _visible = false;
 	private bool _fixedSize = false;
 	private bool _alwaysOnTop = false;
 
@@ -280,19 +279,6 @@ public sealed partial class Text3D : Dynamic
 		}
 	}
 
-	[Editable, ScriptProperty]
-	public bool Visible
-	{
-		get => _visible;
-		set
-		{
-			_visible = value;
-
-			ApplyVisibleState();
-			OnPropertyChanged();
-		}
-	}
-
 	private void OnFontLoaded(Resource resource)
 	{
 		SetFontTo((Font)resource);
@@ -309,6 +295,12 @@ public sealed partial class Text3D : Dynamic
 		RecomputeSize();
 	}
 
+	protected override void OnVisibleChanged(bool v)
+	{
+		base.OnVisibleChanged(v);
+		ApplyVisibleState();
+	}
+
 	private void ApplyVisibleState()
 	{
 		SetEnableRichTextViewport(_useRichText);
@@ -316,12 +308,12 @@ public sealed partial class Text3D : Dynamic
 		if (_useRichText)
 		{
 			_sprite3D.Texture = _subViewport?.GetTexture();
-			_sprite3D.Visible = _visible;
+			_sprite3D.Visible = Visible;
 			_label3D.Visible = false;
 		}
 		else
 		{
-			_label3D.Visible = _visible;
+			_label3D.Visible = Visible;
 			_sprite3D.Visible = false;
 		}
 	}
