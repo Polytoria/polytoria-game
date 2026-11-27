@@ -15,10 +15,16 @@ public static class GraphicsAutoDetector
 {
 	public static GraphicsPreset Detect()
 	{
-		int cores = OS.GetProcessorCount();
-		string gpu = string.Join(" ", OS.GetVideoAdapterDriverInfo());
-		bool isMobile = Globals.IsMobileBuild;
+		return Score(
+			OS.GetProcessorCount(),
+			RenderingServer.GetVideoAdapterName(),
+			RenderingServer.GetVideoAdapterType(),
+			Globals.IsMobileBuild
+		);
+	}
 
+	public static GraphicsPreset Score(int cores, string gpu, RenderingDevice.DeviceType adapterType, bool isMobile)
+	{
 		int score = 0;
 
 		if (cores <= 2) score -= 2;
@@ -30,6 +36,8 @@ public static class GraphicsAutoDetector
 		if (ContainsAny(gpu, "intel hd", "intel uhd", "vega 3", "vega 8")) score -= 3;
 		else if (ContainsAny(gpu, "iris xe", "radeon graphics", "apple m1", "apple m2")) score -= 1;
 		else if (ContainsAny(gpu, "rtx", "rx 6", "rx 7", "arc a", "apple m3", "apple m4")) score += 2;
+		else if (adapterType == RenderingDevice.DeviceType.IntegratedGpu) score -= 2;
+		else if (adapterType is RenderingDevice.DeviceType.Cpu or RenderingDevice.DeviceType.VirtualGpu) score -= 3;
 
 		return score switch
 		{
