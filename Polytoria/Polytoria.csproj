@@ -72,6 +72,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\Polytoria.MDToBBCode\Polytoria.MDToBBCode.csproj" />
 		<ProjectReference Include="..\Polytoria.SourceGen\Polytoria.SourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
@@ -134,6 +135,9 @@
 	<!-- Remove android temporary .cs files -->
 	<ItemGroup>
 		<Compile Remove="android/build/**/*.cs" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="scenes\creator\tabs\text_editor\" />
 	</ItemGroup>
 
 	<!-- CREATOR Constant -->
