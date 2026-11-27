@@ -358,7 +358,7 @@ public sealed partial class World : Instance
 					SyncVitals();
 				}
 			}
-			else if (SessionType == SessionTypeEnum.Client)
+			else if (SessionType == SessionTypeEnum.Client && Network.NetInstance != null)
 			{
 				double currentTime = Time.GetTicksUsec() / 1e6;
 				if (currentTime - _lastSyncRequest >= (_clockSyncCount < ClockSyncFastCount ? ClockSyncFastInterval : ClockSyncInterval))
