@@ -779,6 +779,26 @@ public partial class Instance : NetworkedObject
 	}
 
 	[ScriptMethod]
+	public Instance? GetFirstChild()
+	{
+		if (!Children.Any())
+		{
+			return null;
+		}
+		return Children.First();
+	}
+
+	[ScriptMethod]
+	public Instance? GetLastChild()
+	{
+		if (!Children.Any())
+		{
+			return null;
+		}
+		return Children.Last();
+	}
+
+	[ScriptMethod]
 	public Instance[] GetChildrenOfClass(string className)
 	{
 		List<Instance> instances = [];
