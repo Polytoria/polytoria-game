@@ -301,11 +301,9 @@ public sealed partial class Environment : Instance
 			ignoreRids.Add(colliderRid);
 
 			Node collider = (Node)(GodotObject)result["collider"];
-			Instance? instance = ColliderToInstance(collider);
-			if (instance is Physical p)
-			{
-				if ((p.RayPassthrough & passthroughMask) != 0) continue;
-			}
+			Physical? instance = ColliderToInstance(collider);
+			if (instance is null) continue;
+			if ((instance.RayPassthrough & passthroughMask) != 0) continue;
 
 			Vector3 hitPos = (Vector3)result["position"];
 			Vector3 normal = (Vector3)result["normal"];
@@ -398,12 +396,13 @@ public sealed partial class Environment : Instance
 			if (result.Count == 0) break;
 
 			Node collider = (Node)(GodotObject)result["collider"];
-			Instance? instance = ColliderToInstance(collider);
+			Physical? instance = ColliderToInstance(collider);
+			if (instance == null) continue;
 			Rid colliderRid = (Rid)result["rid"];
 			ignoreRids.Add(colliderRid);
 
 			// possibly janky workaround for CanCollide=true parts being hit twice
-			if (instance != null && instance == prevInstance) continue;
+			if (instance == prevInstance) continue;
 			prevInstance = instance;
 
 			Vector3 hitPos = (Vector3)result["position"];
@@ -418,19 +417,16 @@ public sealed partial class Environment : Instance
 				Instance = instance,
 			});
 
-			if (instance is Physical p)
-			{
-				if ((p.RayPassthrough & passthroughMask) != 0) continue;
-			}
+			if ((instance.RayPassthrough & passthroughMask) != 0) continue;
 			break;
 		}
 
 		return [.. rayResults];
 	}
 
-	private static Instance? ColliderToInstance(Node collider)
+	private static Physical? ColliderToInstance(Node collider)
 	{
-		Instance? instance = null;
+		Physical? instance = null;
 
 		if (collider is Area3D a3d)
 		{
@@ -439,14 +435,14 @@ public sealed partial class Environment : Instance
 
 		if (collider is PhysicsBody3D r)
 		{
-			instance = (Instance?)GetNetObjFromProxy(r);
+			instance = (Physical?)GetNetObjFromProxy(r);
 		}
 
 		return instance;
 	}
 
 	[ScriptMethod]
-	public Instance[] OverlapSphere(Vector3 origin, float radius, Instance[]? ignoreList = null)
+	public Physical[] OverlapSphere(Vector3 origin, float radius, Instance[]? ignoreList = null)
 	{
 		Transform3D t = new(Basis.Identity, origin);
 
@@ -462,7 +458,7 @@ public sealed partial class Environment : Instance
 	}
 
 	[ScriptMethod]
-	public Instance[] OverlapBox(Vector3 pos, Vector3 size, Vector3 rot, Instance[]? ignoreList = null)
+	public Physical[] OverlapBox(Vector3 pos, Vector3 size, Vector3 rot, Instance[]? ignoreList = null)
 	{
 		Transform3D t = new()
 		{
@@ -484,7 +480,7 @@ public sealed partial class Environment : Instance
 		return PerformOverlap(ignoreList, query);
 	}
 
-	private Instance[] PerformOverlap(Instance[]? ignoreList, PhysicsShapeQueryParameters3D query)
+	private Physical[] PerformOverlap(Instance[]? ignoreList, PhysicsShapeQueryParameters3D query)
 	{
 		PhysicsDirectSpaceState3D spaceState = Root.World3D.DirectSpaceState;
 		if (ignoreList != null)
@@ -493,12 +489,12 @@ public sealed partial class Environment : Instance
 		}
 
 		Godot.Collections.Array<Godot.Collections.Dictionary> results = spaceState.IntersectShape(query, MaxOverlaps);
-		HashSet<Instance> intersects = [];
+		HashSet<Physical> intersects = [];
 
 		foreach (Godot.Collections.Dictionary result in results)
 		{
 			Node collider = (Node)(GodotObject)result["collider"];
-			Instance? i = ColliderToInstance(collider);
+			Physical? i = ColliderToInstance(collider);
 
 			if (i != null)
 			{
@@ -574,7 +570,7 @@ public sealed partial class Environment : Instance
 
 			// GetRestInfo doesn't provide the collider, grab it manually
 			Node collider = (Node)GodotObject.InstanceFromId((ulong)result["collider_id"])!;
-			Instance? instance = ColliderToInstance(collider);
+			Physical? instance = ColliderToInstance(collider);
 
 			Vector3 hitPos = (Vector3)result["point"];
 			Vector3 normal = (Vector3)result["normal"];
@@ -704,7 +700,7 @@ public sealed partial class Environment : Instance
 		[ScriptProperty] public Vector3 Position { get; set; }
 		[ScriptProperty] public Vector3 Normal { get; set; }
 		[ScriptProperty] public float Distance { get; set; }
-		[ScriptProperty] public Instance? Instance { get; set; }
+		[ScriptProperty] public Physical? Instance { get; set; }
 
 		public override readonly int GetHashCode()
 		{
